@@ -6,6 +6,7 @@ import os
 import numpy as np
 
 try:
+    import qtconsole.inprocess
     from PyQt5.QtWidgets import QWidget, QSizePolicy, QVBoxLayout
     from PyQt5.QtCore import pyqtSignal
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas

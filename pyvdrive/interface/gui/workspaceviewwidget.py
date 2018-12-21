@@ -447,6 +447,11 @@ class WorkspaceViewWidget(QWidget):
 
         return False, error_message
 
+    def set_curr_log_tab(self, tab):
+        # TODO - NIGHT - Doc & Finish it
+        if tab == 'error':
+            self.ui.tabWidget_logging.setCurrentIndex(1)
+
     def set_main_window(self, main_window):
         """
         Set up the main window which generates this window
@@ -491,6 +496,38 @@ class WorkspaceViewWidget(QWidget):
                 self.ui.plainTextEdit_error.appendPlainText(text)
                 self.ui.tabWidget_logging.setCurrentIndex(1)
         # END-IF
+
+        return
+
+    def write_general_message(self, message_body, clear_info_edit=True):
+        """
+        TODO - NIGHT - Doc
+        :param message_body:
+        :param clear_info_edit:
+        :return:
+        """
+        if clear_info_edit:
+            self.ui.plainTextEdit_info.clear()
+
+        text = '{}:\n{}\n'.format(datetime.datetime.now(), message_body)
+        self.ui.plainTextEdit_info.appendPlainText(text)
+        self.ui.plainTextEdit_loggingHistory.appendPlainText(text)
+
+        return
+
+    def write_failure_message(self, message_body, clear_error_edit=True):
+        """
+        TODO - NIGHT - Doc
+        :param message_body:
+        :param clear_error_edit:
+        :return:
+        """
+        if clear_error_edit:
+            self.ui.plainTextEdit_error.clear()
+
+        text = '{}:\n{}\n'.format(datetime.datetime.now(), message_body)
+        self.ui.plainTextEdit_error.appendPlainText(text)
+        self.ui.plainTextEdit_loggingHistory.appendPlainText('[ERROR] {}'.format(text))
 
         return
 

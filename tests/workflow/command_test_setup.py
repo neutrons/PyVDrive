@@ -1,4 +1,5 @@
 # Set up the testing environment for PyVDrive commands
+from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
 import os
 import sys
 import shutil
@@ -47,7 +48,7 @@ class PyVdriveCommandTestEnvironment(object):
         return the main window's handler
         :return:
         """
-        return self._command_process_window # self._main_window
+        return self._command_process_window
 
     def run_command(self, vdrive_command):
         """
@@ -57,13 +58,18 @@ class PyVdriveCommandTestEnvironment(object):
         """
         start_time = time.time()
         status, err_msg = self._command_process.process_commands(vdrive_command)
-        # self._main_window.execute_command(vdrive_command)
         stop_time = time.time()
 
         if status:
-            print ('Test {}\nExecution (wall) time = {}'.format(vdrive_command, stop_time-start_time))
+            message = 'Test {}\nExecution (wall) time = {}'.format(vdrive_command, stop_time-start_time)
+            print (message)
+            self._command_process_window.write_general_message(message)
         else:
-            print ('Test Failed: {}\nFailure cause: {}'.format(vdrive_command, err_msg))
+            message = 'Test Failed: {}\nFailure cause: {}'.format(vdrive_command, err_msg)
+            print (message)
+            self._command_process_window.write_failure_message(message)
+
+        self._command_process_window.set_log_tab(tab='error')
 
         return
 

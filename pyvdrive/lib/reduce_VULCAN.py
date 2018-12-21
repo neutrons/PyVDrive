@@ -339,6 +339,11 @@ class ReductionSetup(object):
         # calibration
         self._calibration_base_name = 'Vulcan'
 
+        # calibration workspaces
+        self._calibration_ws_name = None
+        self._grouping_ws_name = None
+        self._mask_ws_mame = None
+
         # binning parameters
         self._binningParameters = None
         self._defaultBinSize = -0.001
@@ -1030,6 +1035,18 @@ class ReductionSetup(object):
         self.set_calibration_base_name(base_ws_name)
 
         return
+
+    def set_calibration_workspaces(self, calibration,  grouping, mask):
+        """
+        set calibration workspaces
+        :param calibration:
+        :param grouping:
+        :param mask:
+        :return:
+        """
+        self._calibration_ws_name = calibration
+        self._grouping_ws_name = grouping
+        self._mask_ws_mame = mask
 
     def set_calibration_base_name(self, base_name):
         """

@@ -1,6 +1,7 @@
 import numpy as np
 import bisect
 try:
+    import qtconsole.inprocess
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QMenu, QAction
     from PyQt5.QtGui import QCursor

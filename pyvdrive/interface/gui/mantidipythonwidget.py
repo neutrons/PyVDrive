@@ -37,6 +37,7 @@ try:
     print ('mantidipythonwidget: import PyQt5')
 except ImportError as import_err:
     # This is PyQt4 compatible
+    print ('mantidipythonwidget import PyQt5 error: {}'.format(import_err))
     from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
     from IPython.qt.inprocess import QtInProcessKernelManager
     print ('mantidipythonwidget: import PyQt4')

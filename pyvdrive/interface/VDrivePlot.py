@@ -5,6 +5,7 @@ import os
 
 # import PyQt modules
 try:
+    import qtconsole.inprocess
     from PyQt5 import QtCore as QtCore
     from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout, QSizePolicy, QLabel, QMenuBar, QStatusBar, QToolBar
     from PyQt5.QtWidgets import QFileDialog, QRadioButton, QMenu, QAction
@@ -387,6 +388,33 @@ class VdriveMainWindow(QMainWindow):
                 QtCore.QMetaObject.connectSlotsByName(self)
 
                 return
+
+            def write_general_message(self, message):
+                """
+                TODO - NIGHT - doc
+                :param message:
+                :return:
+                """
+                self.widget.write_general_message(message, clear_info_edit=False)
+
+            def write_failure_message(self, message):
+                """
+                TODO - NIGHT - doc
+                :param message:
+                :return:
+                """
+                self.widget.write_failure_message(message, clear_error_edit=False)
+
+            def set_log_tab(self, tab='error'):
+                """
+                TODO - NIGHT - doc & finish it!
+                :param tab:
+                :return:
+                """
+                self.widget.set_curr_log_tab(tab)
+
+
+        # END-DEF-CLASS
 
         self._workspaceView = WorkspacesView(self)
         self._workspaceView.widget.set_main_window(self)

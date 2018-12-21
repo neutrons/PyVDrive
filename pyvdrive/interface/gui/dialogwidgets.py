@@ -1,4 +1,5 @@
 try:
+    import qtconsole.inprocess
     from PyQt5.QtWidgets import QDialog, QVBoxLayout, QDialogButtonBox, QDateTimeEdit, QApplication
     from PyQt5.QtCore import Qt, QDateTime
 except ImportError:

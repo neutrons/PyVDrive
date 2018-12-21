@@ -64,11 +64,11 @@ class Collimator(object):
 
             # align
             run_start_date = calib_manager.check_creation_date(event_file_name)
-            has_loaded_cal = calib_manager.has_loaded(run_start_date, 3)
+            has_loaded_cal, calib_ws_collection = calib_manager.has_loaded(run_start_date, 3)
             if not has_loaded_cal:
                 calib_manager.search_load_calibration_file(run_start_date, 3, ws_name_i)
-            workspaces = calib_manager.get_loaded_calibration_workspaces(run_start_date, 3)
-            calib_ws_name = workspaces.calibration
+            # workspaces = calib_manager.get_loaded_calibration_workspaces(run_start_date, 3)
+            calib_ws_name = calib_ws_collection.calibration
             # group_ws_name = workspaces.grouping
             # mask_ws_name = workspaces.mask
 

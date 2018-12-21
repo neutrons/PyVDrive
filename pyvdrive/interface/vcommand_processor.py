@@ -2,6 +2,7 @@
 This module contains a class to handle standard VDRIVE commands
 """
 try:
+    import qtconsole.inprocess
     from PyQt5.QtWidgets import QMainWindow
     from PyQt5.QtCore import pyqtSignal
 except ImportError:

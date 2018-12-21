@@ -7,41 +7,6 @@ from shutil import copyfile
 from setuptools import setup, find_packages
 
 if sys.argv[-1] == 'pyuic':
-    # indir = 'designer'
-    # outdir = 'pyvdrive/interface/gui'
-    # files = os.listdir(indir)
-    # files = [os.path.join('designer', item) for item in files]
-    # files = [item for item in files if item.endswith('.ui')]
-    # 
-    # print (files)
-
-    # done = 0
-    # for inname in files:
-    #     base_inname = os.path.basename(inname)
-    #     outname = 'ui_' + base_inname.replace('.ui', '.py')
-    #     outname = os.path.join(outdir, outname)
-    #     if os.path.exists(outname):
-    #         if os.stat(inname).st_mtime < os.stat(outname).st_mtime:
-    #             continue
-    #     print("Converting '%s' to '%s'" % (inname, outname))
-    #     try:
-    #         # check the key package to determine whether the build shall be Qt4 or Qt5
-    #         import PyQt5
-    #         from qtconsole.rich_ipython_widget import RichIPythonWidget 
-    #         from qtconsole.inprocess import QtInProcessKernelManager
-    #         ver = 5
-    #         print ('PyQt5 can be imported. Using pyuic5!')
-    #     except ImportError:
-    #         ver = 4
-    #         print ('PyQt5 cannot be imported. Using pyuic4!')
-
-    #     command = "pyuic%d %s -o %s" % (ver, inname, outname)
-    #     os.system(command)
-    #     done += 1
-    # if not done:
-    #     print("Did not convert any '.ui' files")
-    # sys.exit(0)
-
     # copy UI files in designer to builds
     indir = 'designer'
     if os.path.exists('build/lib.linux-x86_64-2.7'):
@@ -147,8 +112,9 @@ if __name__ == "__main__":
                     'tests/workflow/idl_vbin_test.py',
                     "tests/workflow/idl_chop_test.py",
                     'tests/workflow/idl_view_test.py',
-                    # 'tests/workflow/idl_merge_test.py',
+                    'tests/workflow/idl_merge_test.py',
                     'tests/workflow/idl_info_test.py',
+                    'tests/workflow/performance_combined_test.py',
                     'tests/unit/vulcan_slice_reduce_test.py']
     scripts.extend(test_scripts)
 

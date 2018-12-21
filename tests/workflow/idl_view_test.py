@@ -2,14 +2,11 @@
 # Test the IDL-like command VIEW/VDRIVEVIEW
 import os
 import sys
+import command_test_setup
 try:
-    import qtconsole.inprocess
     from PyQt5.QtWidgets import QApplication
 except ImportError:
     from PyQt4.QtGui import QApplication
-
-# create main application
-import command_test_setup
 
 
 def test_case_archive(command_tester):

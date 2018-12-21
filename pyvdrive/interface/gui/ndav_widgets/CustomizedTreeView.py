@@ -5,6 +5,7 @@
 #       The variable set to QStandardItem can be only retrieved by QModelIndex.data()
 
 try:
+    import qtconsole.inprocess
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QTreeView, QAbstractItemView
     from PyQt5.QtGui import QStandardItemModel, QStandardItem
