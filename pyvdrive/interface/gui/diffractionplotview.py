@@ -2,6 +2,7 @@ import bisect
 import operator
 
 try:
+    import qtconsole.inprocess
     from PyQt5.QtWidgets import QApplication, QMenu, QAction, QMainWindow
     from PyQt5 import QtCore
     from PyQt5.QtGui import QCursor

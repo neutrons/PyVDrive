@@ -2,14 +2,11 @@
 # Performance test: test a combined set of commands of VBIN, CHOP, VPEAK and MERGE
 import os
 import sys
+import command_test_setup
 try:
-    import qtconsole.inprocess
     from PyQt5.QtWidgets import QApplication
 except ImportError:
     from PyQt4.QtGui import QApplication
-
-# must be after PyQt4 and PyQt5 determined
-import command_test_setup
 
 
 def test_vbin_chop_simple(tester):

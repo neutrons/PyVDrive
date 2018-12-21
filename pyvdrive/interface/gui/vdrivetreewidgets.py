@@ -4,11 +4,11 @@
 import os
 
 try:
+    import qtconsole.inprocess
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QTreeView, QAbstractItemView, QFileSystemModel, QAction
     from PyQt5.QtGui import QStandardItem
 except ImportError as import_err:
-    print (import_err)
     from PyQt4 import QtCore
     from PyQt4.QtGui import QTreeView, QAbstractItemView, QFileSystemModel, QStandardItem
     from PyQt4.QtGui import QAction

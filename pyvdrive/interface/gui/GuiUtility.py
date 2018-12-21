@@ -3,6 +3,7 @@ import datetime
 import numpy
 import platform
 try:
+    import qtconsole.inprocess
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QLineEdit, QMessageBox, QTableWidgetItem, QCheckBox, QWidget, QHBoxLayout, QFileDialog
     from PyQt5.QtGui import QStandardItemModel, QStandardItem

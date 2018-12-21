@@ -2,6 +2,7 @@
 # This QMainWindow is implemented in order to use WorkspaceViewWidget, which contains
 # IPython console, table view and figure inside, while it cannot be called directly
 try:
+    import qtconsole.inprocess
     from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout, QSizePolicy, QLabel, QMenuBar, QStatusBar, QToolBar
     from PyQt5 import QtCore
 except ImportError:

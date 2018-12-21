@@ -5,6 +5,7 @@ import os
 
 # import PyQt modules
 try:
+    import qtconsole.inprocess
     from PyQt5 import QtCore as QtCore
     from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout, QSizePolicy, QLabel, QMenuBar, QStatusBar, QToolBar
     from PyQt5.QtWidgets import QFileDialog, QRadioButton, QMenu, QAction

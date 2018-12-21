@@ -1,4 +1,5 @@
 # Set up the testing environment for PyVDrive commands
+from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
 import os
 import sys
 import shutil

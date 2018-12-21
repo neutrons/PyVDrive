@@ -3,6 +3,7 @@
 ####
 
 try:
+    import qtconsole.inprocess
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui

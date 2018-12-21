@@ -2,14 +2,13 @@
 # Test the chop and reduce command
 import sys
 import os
+# create main application
+import command_test_setup
 try:
-    import qtconsole.inprocess
     from PyQt5.QtWidgets import QApplication
 except ImportError:
     from PyQt4.QtGui import QApplication
 
-# create main application
-import command_test_setup
 
 
 def create_slice_segment_file(test_dir):

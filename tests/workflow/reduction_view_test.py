@@ -1,16 +1,12 @@
 #!/usr/bin/python
 # Test the chop and reduce command
-import sys
+import syss
+import command_test_setup
 try:
-    import qtconsole.inprocess
     from PyQt5.QtWidgets import QApplication
 except ImportError:
     print ('PyQt4 will be imported')
     from PyQt4.QtGui import QApplication
-mac_mantid_path = '/Users/wzz/MantidBuild/debug/bin/'
-sys.path.append(mac_mantid_path)
-import mantid
-from pyvdrive.interface.VDrivePlot import VdriveMainWindow
 
 
 def test_main():

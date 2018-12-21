@@ -2,14 +2,11 @@
 # Test the chop and reduce command
 import os
 import sys
+import command_test_setup
 try:
-    import qtconsole.inprocess
     from PyQt5.QtWidgets import QApplication
 except ImportError:
     from PyQt4.QtGui import QApplication
-
-# create main application
-import command_test_setup
 
 
 def create_run_file(file_name):
