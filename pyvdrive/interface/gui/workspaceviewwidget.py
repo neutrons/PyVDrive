@@ -447,6 +447,11 @@ class WorkspaceViewWidget(QWidget):
 
         return False, error_message
 
+    def set_curr_log_tab(self, tab):
+        # TODO - NIGHT - Doc & Finish it
+        if tab == 'error':
+            self.ui.tabWidget_logging.setCurrentIndex(1)
+
     def set_main_window(self, main_window):
         """
         Set up the main window which generates this window

@@ -68,6 +68,8 @@ class PyVdriveCommandTestEnvironment(object):
             print (message)
             self._command_process_window.write_failure_message(message)
 
+        self._command_process_window.set_log_tab(tab='error')
+
         return
 
     @staticmethod

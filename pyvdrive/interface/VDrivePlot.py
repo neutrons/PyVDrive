@@ -404,6 +404,17 @@ class VdriveMainWindow(QMainWindow):
                 """
                 self.widget.write_failure_message(message, clear_error_edit=False)
 
+            def set_log_tab(self, tab='error'):
+                """
+                TODO - NIGHT - doc & finish it!
+                :param tab:
+                :return:
+                """
+                self.widget.set_curr_log_tab(tab)
+
+
+        # END-DEF-CLASS
+
         self._workspaceView = WorkspacesView(self)
         self._workspaceView.widget.set_main_window(self)
         self._workspaceView.show()
