@@ -5,6 +5,7 @@ import mantid_helper
 import datatypeutility
 from reduce_VULCAN import align_bins
 import mantid_reduction
+import save_vulcan_gsas
 
 
 class VanadiumProcessingManager(object):
@@ -314,20 +315,36 @@ class VanadiumProcessingManager(object):
 
         # write to GSAS file for VDRIVE
         bank_id_list = mantid_helper.get_workspace_information(workspace_name)
-        if to_archive and len(bank_id_list) <= 2:
-            # regular
-            # base_name = '{0}-s.gda'.format(self._runNumber)
-            # van_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
-            # archive_file_name = os.path.join(van_dir, base_name)
-            # if os.access(van_dir, os.W_OK):
-            mantid_helper.save_vulcan_gsas(workspace_name, out_file_name, ipts_number,
-                                           binning_reference_file='', gss_parm_file='')
-        else:
-            # nED data: 3 banks
-            import save_vulcan_gsas
-            bin_dict = None  # use default
-            save_vulcan_gsas.save_vanadium_gss(self._smoothed_ws_dict, out_file_name, ipts_number, 'Vulcan.prm')
-        # END-IF-ELSE
+
+        default_bank_number = len(bank_id_list)
+
+        # if to_archive and len(bank_id_list) <= 2:
+        #     # regular
+        #     # base_name = '{0}-s.gda'.format(self._runNumber)
+        #     # van_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
+        #     # archive_file_name = os.path.join(van_dir, base_name)
+        #     # if os.access(van_dir, os.W_OK):
+        #     default_bank_number = 2
+        #
+        #     # mantid_helper.save_vulcan_gsas(workspace_name, out_file_name, ipts_number,
+        #     #                                binning_reference_file='', gss_parm_file='')
+        # elif
+        #     # nED data: 3 banks
+        #     default_bank_number = 3
+        #     #
+        #     #
+        #     # gsas_writer = save_vulcan_gsas.SaveVulcanGSS(use_default_tof_ref=3)
+        #     # gsas_writer =
+        #     #
+        #     #
+        #     #
+        #     # bin_dict = None  # use default
+        #     # save_vulcan_gsas.save_vanadium_gss(self._smoothed_ws_dict, out_file_name, ipts_number, 'Vulcan.prm')
+        # # END-IF-ELSE
+
+        gsas_writer = save_vulcan_gsas.SaveVulcanGSS(use_default_tof_ref=default_bank_number)
+        gsas_writer.save(diff_ws_name=workspace_name, gsas_file_name=out_file_name,
+                         ipts_number=ipts_number, gsas_param_file_name=None)
 
         return return_status, error_msg
 

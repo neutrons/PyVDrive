@@ -155,6 +155,31 @@ def get_default_binned_directory(ipts_number, check_write_and_throw=False):
     return binned_dir
 
 
+def get_run_date(ws_name, raw_file_name):
+    """
+    get the run's start or end date
+    :param ws_name:
+    :param raw_file_name:
+    :return: datetime.datetime instance with information as YY/MM/DD
+    """
+    use_creation_date = False
+    date_time = None
+
+    if mantid_helper.workspace_does_exist(ws_name):
+        # use run start time stored in workspace
+        workspace = mantid_helper.retrieve_workspace(ws_name, True)
+        try:
+            date_time = mantid_helper.get_run_start(workspace, time_unit=None)
+        except RuntimeError:
+            use_creation_date = True
+
+    # get file creation time (may not be accurate if file is copied)
+    if use_creation_date:
+        date_time = get_file_creation_date(raw_file_name)
+
+    return date_time
+
+
 def get_vulcan_record(ipts_number, auto):
     """
     Get ITPS number

@@ -1317,22 +1317,33 @@ class ProjectManager(object):
                 unit = 'TOF'
 
             try:
-                out_ws_name, gsas_ws_name, msg = self._reductionManager.reduce_event_nexus(ipts_number, run_number,
-                                                                                           raw_file_name,
-                                                                                           unit, binning_parameters,
-                                                                                           use_idl_bin,
-                                                                                           convert_to_matrix,
-                                                                                           num_banks=number_banks,
-                                                                                           roi_list=roi_list,
-                                                                                           mask_list=mask_list)
+                # reduce event NeXus file
+                out_ws_name, msg = self._reductionManager.reduce_event_nexus(ipts_number, run_number, raw_file_name,
+                                                                             unit, binning_parameters,
+                                                                             use_idl_bin,
+                                                                             convert_to_matrix,
+                                                                             num_banks=number_banks,
+                                                                             roi_list=roi_list,
+                                                                             mask_list=mask_list)
+
+                # out_ws_name, gsas_ws_name, msg = self._reductionManager.reduce_event_nexus(ipts_number, run_number,
+                #                                                                            raw_file_name,
+                #                                                                            unit, binning_parameters,
+                #                                                                            use_idl_bin,
+                #                                                                            convert_to_matrix,
+                #                                                                            num_banks=number_banks,
+                #                                                                            roi_list=roi_list,
+                #                                                                            mask_list=mask_list)
 
                 reduced_run_numbers.append((run_number, out_ws_name))
                 # save to GSAS
                 if gsas:
-                    mantid_reduction.VulcanGSASHelper.save_vulcan_gsas(gsas_ws_name, output_directory, ipts_number,
-                                                                       run_number, 'vulcan.prm')
-                # remove GSAS workspace because it won't be used anymore
-                mantid_helper.delete_workspace(gsas_ws_name)
+                    import vulcan_util
+                    run_date_time = vulcan_util.get_run_date(out_ws_name, raw_file_name)
+                    gsas_file_name = os.path.join(output_directory, '{}.gda'.format(run_number))
+                    self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
+                                                            gsas_file_name=gsas_file_name, ipts_number=ipts_number,
+                                                            gsas_param_file_name='vulcan.prm')
 
             except RuntimeError as run_error:
                 error_messages.append('Failed to reduce run {0} due to {1}'.format(run_number, run_error))
@@ -1341,6 +1352,9 @@ class ProjectManager(object):
             # manage
 
         # END-FOR
+
+        if True:
+            raise NotImplementedError('Which method is calling reduce_vulcan_runs_v2?')
 
         return reduced_run_numbers, error_messages
 

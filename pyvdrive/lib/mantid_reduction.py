@@ -23,7 +23,7 @@ class VulcanBinningHelper(object):
         initialization
         :return:
         """
-        return
+        raise NotImplementedError('VulcanBinningHelper shall be removed')
 
     def __str__(self):
         """
@@ -289,7 +289,7 @@ class VulcanGSASHelper(object):
         initialization
         :return:
         """
-        return
+        raise NotImplementedError('This shall be removed!')
 
     def __str__(self):
         """
@@ -389,6 +389,7 @@ class VulcanGSASHelper(object):
         :param workspace_name:
         :return:
         """
+        raise NotImplementedError('This method shall be replaced by SaveVulcanGSS')
         # TODO TODO - 20180813 - Doc & Check
 
         input_ws = AnalysisDataService.retrieve(workspace_name)

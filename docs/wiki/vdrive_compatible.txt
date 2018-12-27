@@ -1,0 +1,28 @@
+## GSAS File
+
+### TOF binning
+
+VDRIVE's GSAS files binned by IDL routine, which is different from Mantid's binning routine. 
+In order to make a seamless connection between PyVDrive and VDRIVE,
+from data reduction to data analysis,
+all the workspaces created in Mantid shall be rebinned to VDRIVE's TOF binnings.
+
+VDRIVE TOF binning is stored with a standard format in an HDF file.
+The format shall be like this:
+
+  ```
+  + 'entry'
+    + 'bank_map'
+       + 2D vector as (bank_id, vector_index)
+    + vector_index_0
+       + 1D vector for TOF binning
+    + vector_index+1
+       + 1D vector for TOF binning
+  ```
+
+### Inside PyVDrive
+
+Class __SaveVulcanGSS__ in __save\_vulcan\_gsas.py__ is the main algorithm to export a Mantid workspace to a VDRIVE-compatible
+GSAS file.
+
+An instance of __SaveVulcanGSS__ is initialized in the constructor of __ReductionManager__. 

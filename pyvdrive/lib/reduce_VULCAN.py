@@ -1524,8 +1524,6 @@ class PatchRecordHDF5(object):
         """search the HDF5 for the sample logs
         :return:
         """
-        import h5py
-
         try:
             h5file = h5py.File(self._h5name, 'r')
         except IOError as io_err:

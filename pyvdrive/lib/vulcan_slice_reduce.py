@@ -9,7 +9,6 @@ from mantid.api import AnalysisDataService
 import threading
 import numpy
 import os
-import h5py
 import time
 import file_utilities
 import datatypeutility

@@ -7,10 +7,10 @@ import mantid_helper
 import reduce_adv_chop
 import mantid_reduction
 import datatypeutility
-import h5py
 import numpy
 import platform
 import time
+import save_vulcan_gsas
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
 
@@ -1021,11 +1021,11 @@ class ReductionManager(object):
         :return:
         """
         # Check requirements
-        assert isinstance(instrument, str), 'Input instrument must be of type str'
+        datatypeutility.check_string_variable('Instrument name', instrument, None)
         instrument = instrument.upper()
-        assert instrument in ReductionManager.SUPPORTED_INSTRUMENT, \
-            'Instrument %s is not in the supported instruments (%s).' % (instrument,
-                                                                         ReductionManager.SUPPORTED_INSTRUMENT)
+        if instrument not in ReductionManager.SUPPORTED_INSTRUMENT:
+            raise RuntimeError('Instrument %s is not in the supported instruments (%s).'
+                               '' % (instrument, ReductionManager.SUPPORTED_INSTRUMENT))
 
         # Set up including default
         self._myInstrument = instrument
@@ -1039,18 +1039,31 @@ class ReductionManager(object):
         # calibration file and workspaces management
         self._calibrationFileManager = CalibrationManager()   # key = calibration file name
 
-        # init standard diffraction focus parameters
+        # init standard diffraction focus parameters: instrument geometry parameters
         self._diff_focus_params = self._init_vulcan_diff_focus_params()
 
         # masks and ROI
         self._loaded_masks = dict()  # [mask/roi xml] = mask_ws_name, is_roi
 
+        # gsas output
+        self._gsas_writer = save_vulcan_gsas.SaveVulcanGSS(None)
+
         return
 
     @property
     def calibration_manager(self):
-        # TODO - ...
+        """ Handler to instrument geometry calibration file manager
+        :return:
+        """
         return self._calibrationFileManager
+
+    @property
+    def gsas_writer(self):
+        """
+        instance of VDRIVE-compatible GSAS writer
+        :return:
+        """
+        return self._gsas_writer
 
     @staticmethod
     def _init_vulcan_diff_focus_params():
@@ -1199,6 +1212,9 @@ class ReductionManager(object):
                 cal_index_date = self._calibrationFileManager.get_calibration_index(run_start_date)
                 if self._calibrationFileManager.is_idl_ref_bins_loaded(cal_index_date, number_banks) is False:
                     self._calibrationFileManager.load_idl_vulcan_bins(cal_index_date, number_banks)
+
+                self._gsas_writer
+
                 binning_param_dict = self._calibrationFileManager.get_vulcan_idl_bins(cal_index_date, number_banks)
 
                 print ('[DB...BAT] {020930} Use IDL-VDRIVE GSAS Bin')
