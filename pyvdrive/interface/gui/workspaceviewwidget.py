@@ -36,6 +36,7 @@ class WorkspaceViewWidget(QWidget):
     """ Class for general-purposed plot window
     """
     # reserved command
+    # TODO - NIGHT - clear shall be renamed as it overrides IPython clear
     Reserved_Command_List = ['plot', 'refresh', 'clear', 'exit', 'vhelp', 'what']
 
     def __init__(self, parent=None):

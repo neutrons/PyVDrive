@@ -111,7 +111,6 @@ def test_ned_vrun(tester):
     return
 
 
-
 def test_ned_standard(tester):
     """
     :param tester:
@@ -242,25 +241,25 @@ def test_main():
     # simple test with 1 run
     test_ned_simple(command_tester)
 
-    # test with multiple runs
-    test_ned_multiple_runs(command_tester)
-
-    # test VRUN
-    test_ned_vrun(command_tester)
-
-    # test for standard material (Si, C, ...)
-    # TODO - 20190101 - need a good example:
-    # TODO   test_ned_standard(command_tester)
-
-    # test with user defined TOF binning and range
-    test_ned_user_bin(command_tester)
-
-    # test with various grouping
-    test_ned_multi_banks(command_tester)
-
-    # test with
-    test_ned_mask(command_tester)
-    # test_ned_roi()
+    # # test with multiple runs
+    # test_ned_multiple_runs(command_tester)
+    #
+    # # test VRUN
+    # test_ned_vrun(command_tester)
+    #
+    # # test for standard material (Si, C, ...)
+    # # TODO - 20190101 - need a good example:
+    # # TODO   test_ned_standard(command_tester)
+    #
+    # # test with user defined TOF binning and range
+    # test_ned_user_bin(command_tester)
+    #
+    # # test with various grouping
+    # test_ned_multi_banks(command_tester)
+    #
+    # # test with
+    # test_ned_mask(command_tester)
+    # # test_ned_roi()
 
     return command_tester.main_window
 

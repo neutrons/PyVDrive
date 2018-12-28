@@ -1421,11 +1421,8 @@ class VDriveAPI(object):
                                                                               output_directory=output_directory,
                                                                               d_spacing=True,
                                                                               binning_parameters=binning_parameters,
-                                                                              use_idl_bin=use_idl_bin,
-                                                                              convert_to_matrix=True,
                                                                               number_banks=num_banks,
                                                                               gsas=gsas,
-                                                                              merge_banks=merge_banks,
                                                                               merge_runs=merge_runs,
                                                                               roi_list=roi_list,
                                                                               mask_list=mask_list)

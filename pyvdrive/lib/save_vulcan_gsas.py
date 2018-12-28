@@ -33,6 +33,7 @@ class SaveVulcanGSS(object):
         lower_res_tof_vec, high_res_tof_vec = self._import_tof_ref_file(vulcan_ref_name)
 
         # convert TOF bin boundaries to Mantid binning parameters
+        # key = 'bank type', value = TOF vec, binning parameters
         self._mantid_bin_param_dict = dict()
         # lower resolution: east/west
         self._mantid_bin_param_dict['lower'] = lower_res_tof_vec, self._create_binning_parameters(lower_res_tof_vec)
@@ -149,22 +150,23 @@ class SaveVulcanGSS(object):
         """
         get VDRIVE reference TOF file name
         :param num_banks:
-        :return:
+        :return: list of tuple:  [bank ids], binning parameters, tof vector
         """
-        binning_parameter_dict = dict()
+        # TODO - NIGHT ASAP 20190101 - Make this method correct for all grouping plan
+        # binning_parameter_dict = dict()
         bank_tof_sets = list()
 
         if phase == 'prened':
             if num_banks == 1:
                 # east and west together
-                binning_parameter_dict[1] = self._mantid_bin_param_dict['lower']
+                # binning_parameter_dict[1] = self._mantid_bin_param_dict['lower']
                 bank_tof_sets.append(([1],
                                       self._mantid_bin_param_dict['lower'][0],
                                       self._mantid_bin_param_dict['lower'][1]))
             elif num_banks == 2:
                 # east and west bank separate
-                binning_parameter_dict[1] = self._mantid_bin_param_dict['lower'][1]
-                binning_parameter_dict[2] = self._mantid_bin_param_dict['lower'][1]
+                # binning_parameter_dict[1] = self._mantid_bin_param_dict['lower'][1]
+                # binning_parameter_dict[2] = self._mantid_bin_param_dict['lower'][1]
                 bank_tof_sets.append(([1, 2],
                                       self._mantid_bin_param_dict['lower'][0],
                                       self._mantid_bin_param_dict['lower'][1]))
@@ -174,16 +176,18 @@ class SaveVulcanGSS(object):
 
         elif phase == 'ned':
             # nED but pre-vulcan-X
+
+            lower_tof_vec, lower_binning_params = self._mantid_bin_param_dict['lower']
+            higher_tof_vec, higher_binnig_params = self._mantid_bin_param_dict['higher']
+
             if num_banks == 3:
                 # west(1), east(1), high(1)
-                for bank_id in range(1, 3):
-                    binning_parameter_dict[bank_id] = self._mantid_bin_param_dict['lower'][1]
-                binning_parameter_dict[3] = self._mantid_bin_param_dict['higher'][1]
+                # for bank_id in range(1, 3):
+                #     binning_parameter_dict[bank_id] = self._mantid_bin_param_dict['lower'][1]
+                # binning_parameter_dict[3] = self._mantid_bin_param_dict['higher'][1]
 
-                bank_tof_sets.append(([1, 2], self._mantid_bin_param_dict['lower'][0],
-                                      self._mantid_bin_param_dict['lower'][1]))
-                bank_tof_sets.append(([3], self._mantid_bin_param_dict['higher'][0],
-                                      self._mantid_bin_param_dict['higher'][1]))
+                bank_tof_sets.append(([1, 2], lower_binning_params, lower_tof_vec))
+                bank_tof_sets.append(([3], higher_binnig_params, higher_tof_vec))
 
             elif num_banks == 7:
                 # west (3), east (3), high (1)
@@ -196,13 +200,13 @@ class SaveVulcanGSS(object):
 
             elif num_banks == 27:
                 # west (9), east (9), high (9)
-                for bank_id in range(1, 19):
-                    binning_parameter_dict[bank_id] = self._mantid_bin_param_dict['lower']
-                for bank_id in range(19, 28):
-                    binning_parameter_dict[bank_id] = self._mantid_bin_param_dict['higher']
+                # for bank_id in range(1, 19):
+                #     binning_parameter_dict[bank_id] = self._mantid_bin_param_dict['lower']
+                # for bank_id in range(19, 28):
+                #     binning_parameter_dict[bank_id] = self._mantid_bin_param_dict['higher']
 
-                bank_tof_sets.append((range(1, 19), self._mantid_bin_param_dict['lower']))
-                bank_tof_sets.append((range(19, 28), self._mantid_bin_param_dict['higher']))
+                bank_tof_sets.append((range(1, 19), lower_binning_params, lower_tof_vec))
+                bank_tof_sets.append((range(19, 28), higher_binnig_params, higher_tof_vec))
 
             else:
                 raise RuntimeError('nED VULCAN does not allow {}-bank case. Contact developer ASAP '
@@ -212,7 +216,7 @@ class SaveVulcanGSS(object):
             raise RuntimeError('VULCAN at phase {} is not supported!'.format(phase))
         # END-IF-ELSE
 
-        return binning_parameter_dict, bank_tof_sets
+        return bank_tof_sets
 
     @staticmethod
     def _get_vulcan_phase(run_date_time):
@@ -267,6 +271,15 @@ class SaveVulcanGSS(object):
 
         bank_buffer = ''
 
+        # TODO - NIGHT ASAP - Add focused (virtual) geometry information
+        # Example:
+        # Total flight path 45.754m, tth 90deg, DIFC 16356.3
+        # Data for spectrum :0
+        # ws.getInstrument().getSource().getPos()
+        # ws.getDetector(2).getPos(): Out[15]: [0.845237,0,-1.81262]
+        # math.sqrt(0.845237**2 + 1.81262**2)
+        # 2theta = acos(v1 dot v2 / abs(v1) / abs(v2)
+
         # bank header: min TOF, max TOF, delta TOF
         bc1 = '%.1f' % (vec_x[0])
         bc2 = '%.1f' % (vec_x[-1])
@@ -301,13 +314,19 @@ class SaveVulcanGSS(object):
         """
         diff_ws = ADS.retrieve(diff_ws_name)
 
+        # set the unit to TOF
+        if diff_ws.getAxis(0).getUnit() != 'TOF':
+            api.ConvertUnits(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name, Target='TOF',
+                             EMode='Elastic')
+            diff_ws = ADS.retrieve(diff_ws_name)
+
         # convert to Histogram Data
         if not diff_ws.isHistogramData():
             api.ConvertToHistogram(diff_ws_name, diff_ws_name)
 
         # get the binning parameters
-        bin_param_dict, bin_params_set = self._get_tof_bin_params(self._get_vulcan_phase(run_date_time),
-                                                                  diff_ws.getNumberHistograms())
+        bin_params_set = self._get_tof_bin_params(self._get_vulcan_phase(run_date_time),
+                                                  diff_ws.getNumberHistograms())
 
         # rebin and then write output
         gsas_buffer_dict = dict()
@@ -346,6 +365,18 @@ class SaveVulcanGSS(object):
 # END-DEF-CLASS
 
 
+def load_vulcan_gsas(gsas_name):
+    """
+    Load VULCAN GSAS and create a Ragged workspace
+    :param gsas_name:
+    :return:
+    """
+
+    # for ws_index in range(1, len(processed_single_spec_ws_list)):
+    #     api.ConjoinWorkspaces(InputWorkspace1=output_ws_name,
+    #                           InputWorkspace2=processed_single_spec_ws_list[ws_index])
+
+    # TODO - NIGHT ASAP - Implement
 
 
 

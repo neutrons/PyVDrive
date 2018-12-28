@@ -177,6 +177,14 @@ class PyVdriveCommandTestEnvironment(object):
 
         return len(lines)
 
+    def set_failure(self, message):
+        # TODO - NIGHT
+        self._command_process_window.write_failure_message(message)
+
+    def set_success(self, message):
+        # TODO - NIGHT
+        self._command_process_window.write_general_message(message)
+
 # END-DEF-CLASS
 
 

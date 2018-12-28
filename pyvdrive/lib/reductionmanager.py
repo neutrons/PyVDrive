@@ -1152,6 +1152,7 @@ class ReductionManager(object):
 
         # use run number to check against with calibration manager
         run_start_date = self._calibrationFileManager.check_creation_date(raw_file_name)
+        # TODO FIXME - NIGHT - Date is not the date!  Refer to reduce...v2
         cal_loaded, cal_ws_collection = self._calibrationFileManager.has_loaded(run_start_date=run_start_date,
                                                                                 num_banks=number_banks,
                                                                                 search_unregistered_workspaces=True)
