@@ -6,11 +6,10 @@ import numpy
 import mantid.simpleapi as api
 from mantid.api import AnalysisDataService as ADS
 from pyvdrive.lib import datatypeutility
-import datetime
 
 
-PHASE_NED = datetime.datetime(2017, 6, 1)
-PHASE_X1 = datetime.datetime(2019, 7, 1)
+PHASE_NED = datetime(2017, 6, 1)
+PHASE_X1 = datetime(2019, 7, 1)
 
 
 class SaveVulcanGSS(object):
@@ -36,9 +35,9 @@ class SaveVulcanGSS(object):
         # convert TOF bin boundaries to Mantid binning parameters
         self._mantid_bin_param_dict = dict()
         # lower resolution: east/west
-        self._mantid_bin_param_dict['lower'] = self._create_binning_parameters(lower_res_tof_vec)
+        self._mantid_bin_param_dict['lower'] = lower_res_tof_vec, self._create_binning_parameters(lower_res_tof_vec)
         # higher resolution: high angle bank
-        self._mantid_bin_param_dict['higher'] = self._create_binning_parameters(high_res_tof_vec)
+        self._mantid_bin_param_dict['higher'] = high_res_tof_vec, self._create_binning_parameters(high_res_tof_vec)
 
         return
 
@@ -159,12 +158,16 @@ class SaveVulcanGSS(object):
             if num_banks == 1:
                 # east and west together
                 binning_parameter_dict[1] = self._mantid_bin_param_dict['lower']
-                bank_tof_sets.append(([1], self._mantid_bin_param_dict['lower']))
+                bank_tof_sets.append(([1],
+                                      self._mantid_bin_param_dict['lower'][0],
+                                      self._mantid_bin_param_dict['lower'][1]))
             elif num_banks == 2:
                 # east and west bank separate
-                binning_parameter_dict[1] = self._mantid_bin_param_dict['lower']
-                binning_parameter_dict[2] = self._mantid_bin_param_dict['lower']
-                bank_tof_sets.append(([1, 2], self._mantid_bin_param_dict['lower']))
+                binning_parameter_dict[1] = self._mantid_bin_param_dict['lower'][1]
+                binning_parameter_dict[2] = self._mantid_bin_param_dict['lower'][1]
+                bank_tof_sets.append(([1, 2],
+                                      self._mantid_bin_param_dict['lower'][0],
+                                      self._mantid_bin_param_dict['lower'][1]))
             else:
                 raise RuntimeError('Pre-nED VULCAN does not allow {}-bank case. Contact developer ASAP '
                                    'if this case is really needed.'.format(num_banks))
@@ -173,13 +176,14 @@ class SaveVulcanGSS(object):
             # nED but pre-vulcan-X
             if num_banks == 3:
                 # west(1), east(1), high(1)
-                # west(1), east(1), high(1)
                 for bank_id in range(1, 3):
-                    binning_parameter_dict[bank_id] = self._mantid_bin_param_dict['lower']
-                binning_parameter_dict[3] = self._mantid_bin_param_dict['higher']
+                    binning_parameter_dict[bank_id] = self._mantid_bin_param_dict['lower'][1]
+                binning_parameter_dict[3] = self._mantid_bin_param_dict['higher'][1]
 
-                bank_tof_sets.append(([1, 2], self._mantid_bin_param_dict['lower']))
-                bank_tof_sets.append(([3], self._mantid_bin_param_dict['higher']))
+                bank_tof_sets.append(([1, 2], self._mantid_bin_param_dict['lower'][0],
+                                      self._mantid_bin_param_dict['lower'][1]))
+                bank_tof_sets.append(([3], self._mantid_bin_param_dict['higher'][0],
+                                      self._mantid_bin_param_dict['higher'][1]))
 
             elif num_banks == 7:
                 # west (3), east (3), high (1)
@@ -217,9 +221,9 @@ class SaveVulcanGSS(object):
         :param run_date_time: datetime instance
         :return:
         """
-        assert isinstance(run_date_time, datetime.datetime), 'Run date {} must be a datetime.datetime instance ' \
-                                                             'but not of type {}'.format(run_date_time,
-                                                                                         type(run_date_time))
+        assert isinstance(run_date_time, datetime), 'Run date {} must be a datetime.datetime instance ' \
+                                                    'but not of type {}'.format(run_date_time,
+                                                                                type(run_date_time))
 
         if run_date_time < PHASE_NED:
             vulcan_phase = 'prened'

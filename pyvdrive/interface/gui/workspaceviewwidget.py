@@ -448,9 +448,28 @@ class WorkspaceViewWidget(QWidget):
         return False, error_message
 
     def set_curr_log_tab(self, tab):
-        # TODO - NIGHT - Doc & Finish it
-        if tab == 'error':
-            self.ui.tabWidget_logging.setCurrentIndex(1)
+        """
+        set the current tab for the running log information
+        :param tab: 'error', 'info', 'history'
+        :return:
+        """
+        # case insensitive
+        assert isinstance(tab, str), 'Tab (name) {} must be a string but not of type {}' \
+                                     ''.format(tab, type(tab))
+        tab = tab.lower()
+
+        if tab == 'info' or tab == 'general':
+            tab_index = 0
+        elif tab == 'error':
+            tab_index = 1
+        elif tab == 'history':
+            tab_index = 2
+        else:
+            raise RuntimeError('Case insensitive tab (name) {} is not supported.'.format(tab))
+
+        self.ui.tabWidget_logging.setCurrentIndex(tab_index)
+
+        return
 
     def set_main_window(self, main_window):
         """

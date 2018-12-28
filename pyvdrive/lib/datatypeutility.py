@@ -1,6 +1,7 @@
 # PyRS static helper methods
 import os
 import numpy
+import datetime
 
 
 def check_bool_variable(var_name, bool_var):
@@ -14,6 +15,20 @@ def check_bool_variable(var_name, bool_var):
     assert isinstance(bool_var, bool), '{0} of value {1} shall be a bool but not a {2}.' \
                                        ''.format(var_name, bool_var, type(bool_var))
 
+    return True
+
+
+def check_date_time(var_name, datetime_var):
+    """
+    check whether the input is a python datetime.datetime object
+    :param var_name:
+    :param datetime_var:
+    :return:
+    """
+    check_string_variable('Variable name', var_name)
+    assert isinstance(datetime_var, datetime.datetime), '{0} of value {1} shall be a datetime.datetime instance ' \
+                                                        'but not a {2}'.format(var_name, datetime_var,
+                                                                               type(datetime_var))
     return True
 
 

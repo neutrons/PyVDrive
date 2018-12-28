@@ -1260,18 +1260,18 @@ class ProjectManager(object):
 
         return reduce_all_success, message
 
-    def reduce_vulcan_runs_v2(self, run_number_list, output_directory, d_spacing, binning_parameters, use_idl_bin,
-                              convert_to_matrix, number_banks, gsas, merge_banks, merge_runs,
+    # TODO - 20190101 - merge_runs: how to apply this!
+    def reduce_vulcan_runs_v2(self, run_number_list, output_directory, d_spacing, binning_parameters,
+                              number_banks, gsas, merge_runs,
                               roi_list, mask_list):
         """ reduce runs in a simplied way! (it can be thought be the version 2.0!)
+        Note: this method is used by VBIN
         :param run_number_list:
         :param output_directory:
         :param d_spacing:
         :param binning_parameters:
-        :param convert_to_matrix:
-        :param number_banks:
+        :param number_banks: number of banks to focus to
         :param gsas: flag to reduce to GSAS file
-        :param merge_banks:
         :param merge_runs:
         :param roi_list:
         :param mask_list:
@@ -1318,22 +1318,14 @@ class ProjectManager(object):
 
             try:
                 # reduce event NeXus file
-                out_ws_name, msg = self._reductionManager.reduce_event_nexus(ipts_number, run_number, raw_file_name,
-                                                                             unit, binning_parameters,
-                                                                             use_idl_bin,
-                                                                             convert_to_matrix,
+                out_ws_name, msg = self._reductionManager.reduce_event_nexus(ipts_number=ipts_number,
+                                                                             run_number=run_number,
+                                                                             event_nexus_name=raw_file_name,
+                                                                             target_unit=unit,
+                                                                             binning_parameters=binning_parameters,
                                                                              num_banks=number_banks,
                                                                              roi_list=roi_list,
                                                                              mask_list=mask_list)
-
-                # out_ws_name, gsas_ws_name, msg = self._reductionManager.reduce_event_nexus(ipts_number, run_number,
-                #                                                                            raw_file_name,
-                #                                                                            unit, binning_parameters,
-                #                                                                            use_idl_bin,
-                #                                                                            convert_to_matrix,
-                #                                                                            num_banks=number_banks,
-                #                                                                            roi_list=roi_list,
-                #                                                                            mask_list=mask_list)
 
                 reduced_run_numbers.append((run_number, out_ws_name))
                 # save to GSAS
@@ -1352,9 +1344,6 @@ class ProjectManager(object):
             # manage
 
         # END-FOR
-
-        if True:
-            raise NotImplementedError('Which method is calling reduce_vulcan_runs_v2?')
 
         return reduced_run_numbers, error_messages
 

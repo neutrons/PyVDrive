@@ -7,6 +7,7 @@ import mantid_helper
 import reduce_adv_chop
 import mantid_reduction
 import datatypeutility
+import datetime
 import numpy
 import platform
 import time
@@ -38,7 +39,7 @@ class CalibrationManager(object):
 
         # set up
         self._init_vulcan_calibration_files()
-        self._init_vdrive_binning_refs()
+        # self._init_vdrive_binning_refs()
         self._init_focused_instruments()
         self._init_default_tof_bins()
 
@@ -118,9 +119,9 @@ class CalibrationManager(object):
                           27: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_27bank.h5')}
 
         self._calibration_dict = dict()
-        self._calibration_dict['2010-01-01'] = pre_ned_setup
-        self._calibration_dict['2017-06-01'] = ned_2017_setup
-        self._calibration_dict['2018-05-31'] = ned_2018_setup
+        self._calibration_dict[datetime.datetime(2010, 1, 1)] = pre_ned_setup
+        self._calibration_dict[datetime.datetime(2017, 6, 1)] = ned_2017_setup
+        self._calibration_dict[datetime.datetime(2018, 5, 30)] = ned_2018_setup
 
         return
 
@@ -128,30 +129,30 @@ class CalibrationManager(object):
         """ initialize binning references
         :return:
         """
-        base_calib_dir = '/SNS/VULCAN/shared/CALIBRATION'
-
-        # hard coded list of available calibration file names
-        pre_ned_setup = '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vdrive_log_bin.dat'
-        ned_2017_setup = '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5'
-        ned_2018_setup = os.path.join(base_calib_dir, '2018_6_1_CAL/vdrive_3bank_bin.h5')
-
-        self._vdrive_bin_ref_file_dict['2010-01-01'] = {2: pre_ned_setup}
-        self._vdrive_bin_ref_file_dict['2017-06-01'] = {3: ned_2017_setup}
-        self._vdrive_bin_ref_file_dict['2018-05-31'] = {3: ned_2018_setup}
-
-        # parse the files and create bins: better to choose the latest and with 3 banks
-        dates_list = sorted(self._vdrive_bin_ref_file_dict.keys())
-        cal_date = dates_list[-1]
-        idl_vdrive_bin_file = self._vdrive_bin_ref_file_dict[cal_date][3]
-
+        # base_calib_dir = '/SNS/VULCAN/shared/CALIBRATION'
         #
-        print ('[Calibration Initialization] Loading VDRIVE GSAS Binning Template {} valid from {}'
-               ''.format(idl_vdrive_bin_file, cal_date))
-        self._vdrive_binning_ref_dict[cal_date, 3] = \
-            mantid_reduction.VulcanBinningHelper.create_idl_bins(num_banks=3,
-                                                                 h5_bin_file_name=idl_vdrive_bin_file)
-
-        return
+        # # hard coded list of available calibration file names
+        # pre_ned_setup = '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vdrive_log_bin.dat'
+        # ned_2017_setup = '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5'
+        # ned_2018_setup = os.path.join(base_calib_dir, '2018_6_1_CAL/vdrive_3bank_bin.h5')
+        #
+        # self._vdrive_bin_ref_file_dict['2010-01-01'] = {2: pre_ned_setup}
+        # self._vdrive_bin_ref_file_dict['2017-06-01'] = {3: ned_2017_setup}
+        # self._vdrive_bin_ref_file_dict['2018-05-31'] = {3: ned_2018_setup}
+        #
+        # # parse the files and create bins: better to choose the latest and with 3 banks
+        # dates_list = sorted(self._vdrive_bin_ref_file_dict.keys())
+        # cal_date = dates_list[-1]
+        # idl_vdrive_bin_file = self._vdrive_bin_ref_file_dict[cal_date][3]
+        #
+        # #
+        # print ('[Calibration Initialization] Loading VDRIVE GSAS Binning Template {} valid from {}'
+        #        ''.format(idl_vdrive_bin_file, cal_date))
+        # self._vdrive_binning_ref_dict[cal_date, 3] = \
+        #     mantid_reduction.VulcanBinningHelper.create_idl_bins(num_banks=3,
+        #                                                          h5_bin_file_name=idl_vdrive_bin_file)
+        #
+        # return
 
     # TODO - 2018 - May move this to a utility module
     @staticmethod
@@ -216,23 +217,23 @@ class CalibrationManager(object):
 
         return
 
-    def is_idl_ref_bins_loaded(self, cal_index_date, num_banks):
-        """
-        check whether a IDL-VDRIVE GSAS binning reference has been loaded
-        :param cal_index_date:
-        :param num_banks:
-        :return:
-        """
-        datatypeutility.check_string_variable('Calibration index date', cal_index_date)
-        datatypeutility.check_int_variable('Number of banks', num_banks, (1, 1000))
+    # def is_idl_ref_bins_loaded(self, cal_index_date, num_banks):
+    #     """
+    #     check whether a IDL-VDRIVE GSAS binning reference has been loaded
+    #     :param cal_index_date:
+    #     :param num_banks:
+    #     :return:
+    #     """
+    #     datatypeutility.check_string_variable('Calibration index date', cal_index_date)
+    #     datatypeutility.check_int_variable('Number of banks', num_banks, (1, 1000))
 
-        if cal_index_date not in self._vdrive_binning_ref_dict:
-            return False
+    #     if cal_index_date not in self._vdrive_binning_ref_dict:
+    #         return False
 
-        if num_banks not in self._vdrive_binning_ref_dict[cal_index_date]:
-            return False
+    #     if num_banks not in self._vdrive_binning_ref_dict[cal_index_date]:
+    #         return False
 
-        return True
+    #     return True
 
     @staticmethod
     def get_base_name(file_name, num_banks):
@@ -247,31 +248,34 @@ class CalibrationManager(object):
 
         return base_name
 
-    def get_calibration_index(self, year_month_date):
+    def get_calibration_index(self, vulcan_run_date):
         """
         Get the calibration index defined in CalibrationManager for computational efficiency
-        :param year_month_date: an experimental run's run start time/date
+        :param vulcan_run_date: an experimental run's run start time/date
         :return: Date index of the calibration suite.  String as YYYY-MM-DD
         """
-        datatypeutility.check_string_variable('YYYY-MM-DD string', year_month_date)
-
-        # search the previous date
-        # check format first
-        if len(year_month_date) != 10 or year_month_date.count('-') != 2:
-            raise RuntimeError('Year-Month-Date string must be of format YYYY-MM-DD but not {0}'
-                               ''.format(year_month_date))
+        # check input
+        datatypeutility.check_date_time('VULCAN run start time\'s date', vulcan_run_date)
+        # datatypeutility.check_string_variable('YYYY-MM-DD string', vulcan_run_date)
+        #
+        # # search the previous date
+        # # check format first
+        # if len(vulcan_run_date) != 10 or vulcan_run_date.count('-') != 2:
+        #     raise RuntimeError('Year-Month-Date string must be of format YYYY-MM-DD but not {0}'
+        #                        ''.format(vulcan_run_date))
 
         # search the list
         date_list = sorted(self._calibration_dict.keys())
-        if year_month_date < date_list[0]:
-            raise RuntimeError('Input year-month-date {0} is too early comparing to {1}'
-                               ''.format(year_month_date, date_list[0]))
+        if vulcan_run_date < date_list[0]:
+            raise RuntimeError('Input VULCAN run date {0} is too early comparing to {1}'
+                               ''.format(vulcan_run_date, date_list[0]))
 
         # do a brute force search (as there are only very few of them)
         cal_date_index = None
         for i_date in range(len(date_list)-1, -1, -1):
-            print ('[DB...BAT] Calibration Date: {}'.format(date_list[i_date]))
-            if year_month_date > date_list[i_date]:
+            print ('[DB...BAT] Searching calibration file date: {} against run date {}'
+                   ''.format(date_list[i_date], vulcan_run_date))
+            if vulcan_run_date > date_list[i_date]:
                 cal_date_index = date_list[i_date]
                 break
             # END-IF
@@ -279,34 +283,36 @@ class CalibrationManager(object):
 
         return cal_date_index
 
-    def get_calibration_file(self, year_month_date, num_banks):
+    def get_calibration_file(self, run_start_date, num_banks):
         """
         get the calibration file by date and number of banks
-        :param year_month_date: Time stamp of the run to look for calibration file
+        :param run_start_date: Time stamp of type datetime.datetime
         :param num_banks:
         :return: calibration file date, calibration file name
         """
-        datatypeutility.check_string_variable('YYYY-MM-DD string', year_month_date)
+        # check inputs
+        datatypeutility.check_date_time('Run start date', run_start_date)
+        # datatypeutility.check_string_variable('YYYY-MM-DD string', run_start_date)
         datatypeutility.check_int_variable('Number of banks', num_banks, (1, 28))
 
         # search the previous date
-        # check format first
-        if len(year_month_date) != 10 or year_month_date.count('-') != 2:
-            raise RuntimeError('Year-Month-Date string must be of format YYYY-MM-DD but not {0}'
-                               ''.format(year_month_date))
+        # # check format first
+        # if len(run_start_date) != 10 or run_start_date.count('-') != 2:
+        #     raise RuntimeError('Year-Month-Date string must be of format YYYY-MM-DD but not {0}'
+        #                        ''.format(run_start_date))
 
         # search the list
         date_list = sorted(self._calibration_dict.keys())
-        if year_month_date < date_list[0]:
+        if run_start_date < date_list[0]:
             raise RuntimeError('Input year-month-date {0} is too early comparing to {1}'
-                               ''.format(year_month_date, date_list[0]))
+                               ''.format(run_start_date, date_list[0]))
 
-        print ('[DB...BAT] File YYYY-MM-DD: {}'.format(year_month_date))
+        print ('[DB...BAT] File YYYY-MM-DD: {}'.format(run_start_date))
         # do a brute force search (as there are only very few of them)
         cal_date_index = None
         for i_date in range(len(date_list)-1, -1, -1):
             print ('[DB...BAT] Calibration Date: {}'.format(date_list[i_date]))
-            if year_month_date > date_list[i_date]:
+            if run_start_date > date_list[i_date]:
                 cal_date_index = date_list[i_date]
                 break
             # END-IF
@@ -316,7 +322,7 @@ class CalibrationManager(object):
             calibration_file_name = self._calibration_dict[cal_date_index][num_banks]
         except KeyError as key_err:
             print ('[DB...BAT] calibration dict: {}.  {} with calibration date index = {}.  number banks = {}'
-                   ''.format(self._calibration_dict.keys(), year_month_date, cal_date_index, num_banks))
+                   ''.format(self._calibration_dict.keys(), run_start_date, cal_date_index, num_banks))
             raise key_err
 
         return cal_date_index, calibration_file_name
@@ -428,7 +434,7 @@ class CalibrationManager(object):
         """ check whether a run's corresponding calibration file has been loaded
         If check_workspace is True, then check the real workspaces if they are not in the dictionary;
         If the workspaces are there, then add the calibration files to the dictionary
-        :param run_start_date:
+        :param run_start_date: run start date to search calibration file
         :param num_banks:
         :param search_unregistered_workspaces: if True, then check the workspace names instead of dictionary.
         :return: 2-tuple (bool: has loaded to workspace?, calibration workspace collection instance)
@@ -486,7 +492,7 @@ class CalibrationManager(object):
         return has_them, calib_ws_collection
 
     def load_calibration_file(self, calibration_file_name, cal_date_index, num_banks, ref_ws_name):
-        """ load calibration file
+        """ load calibration file with
         :return:
         """
         # check inputs
@@ -518,16 +524,17 @@ class CalibrationManager(object):
         """
         # check whether this file has been loaded
         if self.has_loaded(run_start_date, bank_numbers)[0]:
+            print ('[INFO] Calibration file for run on and before {} has been loaded'
+                   ''.format(run_start_date))
             return
 
         # use run_start_date (str) to search in the calibration date time string
         cal_date_index, calibration_file_name = self.get_calibration_file(run_start_date, bank_numbers)
         print ('[DB...BAT] Located calibration file {0} with reference ID {1}'
                ''.format(calibration_file_name, cal_date_index))
-        # load
-        self.load_calibration_file(calibration_file_name, cal_date_index, bank_numbers, ref_workspace_name)
 
-        # TODO/NOW/NOW - Add create_idl_bin here! and assign to vdrive_bins_dict() for future
+        # load calibration file
+        self.load_calibration_file(calibration_file_name, cal_date_index, bank_numbers, ref_workspace_name)
 
         return
 
@@ -1158,7 +1165,7 @@ class ReductionManager(object):
             # get the calibration file and load
             # TODO - 2019010 - This shall be in another method out of chop?
             cal_file_date, cal_file_name = \
-                self._calibrationFileManager.get_calibration_file(year_month_date=run_start_date,
+                self._calibrationFileManager.get_calibration_file(run_start_date=run_start_date,
                                                                   num_banks=number_banks)
             print ('[DB...BAT] Calibration file to load: {} @ {}'.format(cal_file_name, cal_file_date))
             cal_ws_base_name = self._calibrationFileManager.get_base_name(cal_file_name, number_banks)
@@ -1514,11 +1521,11 @@ class ReductionManager(object):
 
         return new_tracker
 
-    def diffraction_focus_workspace(self, event_ws_name, output_ws_name, gsas_ws_name, binning_params, use_idl_bin,
+    def diffraction_focus_workspace(self, event_ws_name, output_ws_name, binning_params,
                                     target_unit,
                                     calibration_workspace, mask_workspace, grouping_workspace,
-                                    virtual_instrument_geometry, keep_raw_ws, convert_to_matrix):
-        """ focus workspace
+                                    virtual_instrument_geometry, keep_raw_ws):
+        """ Diffraction focus an EventWorkspace
         :param event_ws_name:
         :param output_ws_name:
         :param gsas_ws_name:
@@ -1565,18 +1572,13 @@ class ReductionManager(object):
         datatypeutility.check_string_variable('Target unit', target_unit, ['TOF', 'dSpacing'])
         datatypeutility.check_dict('Virtual (focused) instrument geometry', virtual_instrument_geometry)
 
-        # check about binning
-        input_params = None
-        if use_idl_bin:
-            input_params = binning_params
-            # now using uniform binning parameters for align and focus
+        # set up default binning parameters: only support uniform binning parameters, i.e., no ragged workspace
+        if binning_params is None:
+            # do nothing: eventually using default binning?
             if target_unit == 'TOF':
                 binning_params = '5000, -0.01, 30000'
             else:
                 binning_params = 0.5, -0.01, 3.5  # use a very coarse binning
-        elif binning_params is None:
-            # do nothing: eventually using default binning?
-            pass
         else:
             datatypeutility.check_tuple('Binning parameters', binning_params)
             if len(binning_params) == 1:
@@ -1597,36 +1599,12 @@ class ReductionManager(object):
         self._diff_focus_params['EditInstrumentGeometry'] = virtual_instrument_geometry
 
         # align and focus
-        if use_idl_bin:
-            # uniform binning among all the banks
-            binning_params = None
-
+        print ('[DB...PROGRESS...] ReductionManager: align and focus workspace from {} to {}'
+               ''.format(event_ws_name, output_ws_name))
         red_msg = mantid_reduction.align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
                                                             calibration_workspace, mask_workspace, grouping_workspace,
                                                             reduction_params_dict=self._diff_focus_params,
-                                                            convert_to_matrix=convert_to_matrix)
-
-        # TODO - FIXME - 20181211 - Need to align with new GSAS output in PyVDrive for this step!
-        if use_idl_bin:
-            # construct binning parameter dictionary
-            assert input_params
-
-            if isinstance(input_params, dict):
-                bin_param_dict = input_params
-            elif isinstance(input_params, list):
-                bin_param_dict = dict()
-                for bank_ids, binning in input_params:
-                    for bank_id in bank_ids:
-                        bin_param_dict[bank_id] = binning
-            else:
-                raise RuntimeError('Input parameters must be either dictionary or list')
-
-            # num_banks = mantid_helper.retrieve_workspace(output_ws_name).getNumberHistograms()
-            mantid_reduction.VulcanBinningHelper.rebin_workspace(output_ws_name, bin_param_dict,
-                                                                 output_ws_name=gsas_ws_name)
-            # rebin the original workspace for plotting
-            mantid_helper.rebin(output_ws_name, '-0.001', preserve=True)
-        # END-IF
+                                                            convert_to_matrix=False)
 
         # remove input event workspace
         if output_ws_name != event_ws_name and keep_raw_ws is False:
@@ -1634,9 +1612,6 @@ class ReductionManager(object):
             mantid_helper.delete_workspace(event_ws_name)
 
         return red_msg
-
-    def load_vdrive_bins(self, default=False, file_name=None):
-        raise NotImplementedError('Method disabled')
 
     def mask_detectors(self, event_ws_name, mask_file_name, is_roi=False):
         """ Mask detectors and optionally load the mask file for first time
@@ -1774,9 +1749,10 @@ class ReductionManager(object):
 
     # TODO | Code Quality - 20180713 - Find out how to reuse codes from vulcan_slice_reduce.SliceFocusVulcan
     def reduce_event_nexus(self, ipts_number, run_number, event_nexus_name, target_unit, binning_parameters,
-                           use_idl_bin, convert_to_matrix, num_banks, roi_list, mask_list):
+                           num_banks, roi_list, mask_list):
         """ Reduce event workspace including load and diffraction focus.
         It is, in fact, version 2. by using the essential parts in SNSPowderReduction
+        The result, i.e., output workspace shall be an EventWorkspace still
         :param ipts_number:
         :param run_number:
         :param event_nexus_name:
@@ -1792,42 +1768,43 @@ class ReductionManager(object):
         # Load data
         event_ws_name = self.get_event_workspace_name(run_number=run_number)
         mantid_helper.load_nexus(event_nexus_name, event_ws_name, meta_data_only=False)
-        print ('[DB...INFO] Successfully loaded {0} to {1}'.format(event_nexus_name, event_ws_name))
+        print ('[INFO] Successfully loaded {0} to {1}'.format(event_nexus_name, event_ws_name))
 
         # Mask data
         datatypeutility.check_list('Region of interest file list', roi_list)
         datatypeutility.check_list('Mask file list', mask_list)
-        for roi_file_name in roi_list:
-            self.mask_detectors(event_ws_name, roi_file_name, is_roi=True)
-        for mask_file_name in mask_list:
-            self.mask_detectors(event_ws_name, mask_file_name, is_roi=False)
+        if len(roi_list) + len(mask_list) > 0:
+            print ('[INFO] Processing masking and ROI files')
+            for roi_file_name in roi_list:
+                self.mask_detectors(event_ws_name, roi_file_name, is_roi=True)
+            for mask_file_name in mask_list:
+                self.mask_detectors(event_ws_name, mask_file_name, is_roi=False)
+        else:
+            print ('[INFO] No user specified masking and ROI files')
+        # END-IF-ELSE
 
         # get start time: it is not convenient to get date/year/month from datetime64.
         # use the simple but fragile method first
-        run_start_time = mantid_helper.get_run_start(event_ws_name, time_unit=None)
-        if run_start_time.__class__.__name__.count('DateAndTime') == 1:
-            run_start_date = str(run_start_time).split('T')[0]
-        else:
-            err_msg = 'Run start time from Mantid TSP is not DateAndTime anymore, but is {0}' \
-                      ''.format(run_start_time.__class__.__name__)
-            print ('[RAISING ERROR] {0}'.format(err_msg))
-            raise NotImplementedError(err_msg)
+        run_start_date = mantid_helper.get_run_start(event_ws_name, time_unit=None)
 
         # check (and load as an option) calibration file
         has_loaded_cal, workspaces = self._calibrationFileManager.has_loaded(run_start_date, num_banks)
         if not has_loaded_cal:
+            print ('[DB...BAT...INFO] Calibration file has not been loaded')
             self._calibrationFileManager.search_load_calibration_file(run_start_date, num_banks, event_ws_name)
             workspaces = self._calibrationFileManager.get_loaded_calibration_workspaces(run_start_date, num_banks)
+        else:
+            print ('[DB...BAT...INFO] Calibration file for {} has been loaded to {}'.format(run_start_date, workspaces))
         calib_ws_name = workspaces.calibration
         group_ws_name = workspaces.grouping
         mask_ws_name = workspaces.mask
 
         # check reference binning
-        # TODO - 20181015 - Need to consider user specified binning later
+        # No need to consider user specified binning for output GSAS
         cal_index_date = self._calibrationFileManager.get_calibration_index(run_start_date)
-        if not self._calibrationFileManager.is_idl_ref_bins_loaded(cal_index_date, num_banks):
-            self._calibrationFileManager.load_idl_vulcan_bins(cal_index_date, num_banks)
-        idl_bin_ref_vector_dict = self._calibrationFileManager.get_vulcan_idl_bins(cal_index_date, num_banks)
+        # if not self._calibrationFileManager.is_idl_ref_bins_loaded(cal_index_date, num_banks):
+        #     self._calibrationFileManager.load_idl_vulcan_bins(cal_index_date, num_banks)
+        # idl_bin_ref_vector_dict = self._calibrationFileManager.get_vulcan_idl_bins(cal_index_date, num_banks)
 
         # set tracker
         tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=None)
@@ -1836,21 +1813,14 @@ class ReductionManager(object):
         # diffraction focus
         virtual_geometry_dict = self._calibrationFileManager.get_focused_instrument_parameters(num_banks)
 
-        if use_idl_bin:
-            binning_parameters = idl_bin_ref_vector_dict
-        else:
-            binning_parameters = user_bin_ref_vector_dict
-
-        gsas_ws_name = event_ws_name + '_RaggedGSAS'
-        red_message = self.diffraction_focus_workspace(event_ws_name, event_ws_name, gsas_ws_name,
+        red_message = self.diffraction_focus_workspace(event_ws_name=event_ws_name,
+                                                       output_ws_name=event_ws_name,  # keep the workspace name
                                                        binning_params=binning_parameters,
-                                                       use_idl_bin=use_idl_bin,
                                                        target_unit=target_unit,
                                                        calibration_workspace=calib_ws_name,
                                                        mask_workspace=mask_ws_name,
                                                        grouping_workspace=group_ws_name,
                                                        virtual_instrument_geometry=virtual_geometry_dict,
-                                                       convert_to_matrix=convert_to_matrix,
                                                        keep_raw_ws=False)
 
         if target_unit.lower().count('d'):
@@ -1863,7 +1833,7 @@ class ReductionManager(object):
 
         # END-IF
 
-        return event_ws_name, gsas_ws_name, red_message
+        return event_ws_name, red_message
 
     def set_chopped_reduced_workspaces(self, run_number, slicer_key, workspace_name_list, append, compress=False):
         """

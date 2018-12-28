@@ -10,6 +10,7 @@ import mantid.simpleapi as mantidapi
 from mantid.api import AnalysisDataService as ADS
 import vdrivehelper
 import datatypeutility
+import datetime
 
 from reduce_VULCAN import align_bins
 
@@ -635,9 +636,7 @@ def get_run_start(workspace, time_unit):
     :param time_unit: nanosecond(s), second(s), None
     :return: int (nanoseconds), float (second), datetime.datetime (None)
     """
-    raise NotImplementedError('Need to prototype for time unit is None (for ')
-
-    # check the situation if workspace is a string
+    # get workspace
     if isinstance(workspace, str):
         if ADS.doesExist(workspace):
             workspace = ADS.retrieve(workspace)
@@ -646,21 +645,37 @@ def get_run_start(workspace, time_unit):
     # END-IF
 
     # get run start from proton charge
+    pcharge_log = None
     try:
         pcharge_log = workspace.run().getProperty('proton_charge')
-    except AttributeError as e:
-        raise RuntimeError('Unable to get run start due to %s.' % str(e))
-    except RuntimeError as e:
-        raise RuntimeError('Unable to get run start due to %s.' % str(e))
-
-    # Get first value in proton charge's time as run start
-    pcharge_time0 = pcharge_log.firstTime()
+    except AttributeError:
+        pass
+    except RuntimeError:
+        pass
 
     if time_unit is None:
-        # no unit defined. original run start time
-        run_start = pcharge_time0
-    else:
+        if pcharge_log:
+            pcharge_time0 = pcharge_log.times[0]
+            start_date = str(pcharge_time0)
+        else:
+            try:
+                start_date = workspace.run().getProperty('run_start').value
+            except RuntimeError as run_err:
+                raise RuntimeError('Workspace {} has neither proton_charge nor run_start in sample log.'
+                                   'Unable to get run start from it'.format(str(workspace)))
+        # END-IF
+
+        # example: '2018-05-28T15:04:33.540623666-0400' or 2018-05-28T19:04:33.540623666'
+        terms = start_date.split('T')[0].split('-')
+        year = int(terms[0])
+        month = int(terms[1])
+        date = int(terms[2])
+        run_start = datetime.datetime(year, month, date)
+
+    elif pcharge_log:
         # convert to seconds or nanoseconds
+        # Get first value in proton charge's time as run start
+        pcharge_time0 = pcharge_log.firstTime()
         run_start_ns = pcharge_time0.totalNanoseconds()
 
         # check time unit
@@ -673,6 +688,8 @@ def get_run_start(workspace, time_unit):
             run_start = run_start_ns * 1.E-9
         else:
             raise RuntimeError('Impossible to reach')
+    else:
+        raise RuntimeError('Proton charge log must exist for run start in absolute time (second/nano second)')
     # END-IF-ELSE
 
     return run_start
