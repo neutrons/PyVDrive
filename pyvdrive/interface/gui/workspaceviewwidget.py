@@ -36,8 +36,7 @@ class WorkspaceViewWidget(QWidget):
     """ Class for general-purposed plot window
     """
     # reserved command
-    # TODO - NIGHT - clear shall be renamed as it overrides IPython clear
-    Reserved_Command_List = ['plot', 'refresh', 'clear', 'exit', 'vhelp', 'what']
+    Reserved_Command_List = ['plot', 'refresh', 'clear_canvas', 'exit', 'vhelp', 'what']
 
     def __init__(self, parent=None):
         """ Init
@@ -217,7 +216,7 @@ class WorkspaceViewWidget(QWidget):
         elif command == 'refresh':
             status, exec_message = self.exec_command_refresh()
 
-        elif command == 'clear':
+        elif command == 'clear_canvas':
             status, exec_message = self.exec_command_clear(script)
 
         elif command == 'exit':
@@ -269,7 +268,7 @@ class WorkspaceViewWidget(QWidget):
             # output help
             help_str = 'Get help.'
 
-        elif command == 'clear':
+        elif command == 'clear_canvas':
             # clear canvas
             help_str = 'Clear canvas'
 
@@ -521,11 +520,13 @@ class WorkspaceViewWidget(QWidget):
 
     def write_general_message(self, message_body, clear_info_edit=True):
         """
-        TODO - NIGHT - Doc
+        write the message to general/information log
         :param message_body:
-        :param clear_info_edit:
+        :param clear_info_edit: flag to clear previous message in edit
         :return:
         """
+        assert isinstance(message_body, str), 'Message must be string'
+        assert isinstance(clear_info_edit, bool), 'Flag to clear previous information shall be bool'
         if clear_info_edit:
             self.ui.plainTextEdit_info.clear()
 
@@ -537,11 +538,14 @@ class WorkspaceViewWidget(QWidget):
 
     def write_failure_message(self, message_body, clear_error_edit=True):
         """
-        TODO - NIGHT - Doc
+        write the message to general/information log
         :param message_body:
-        :param clear_error_edit:
+        :param clear_error_edit: flag to clear previous message in edit
         :return:
         """
+        assert isinstance(message_body, str), 'Message must be string'
+        assert isinstance(clear_error_edit, bool), 'Flag to clear previous information shall be bool'
+
         if clear_error_edit:
             self.ui.plainTextEdit_error.clear()
 

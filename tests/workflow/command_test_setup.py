@@ -178,11 +178,19 @@ class PyVdriveCommandTestEnvironment(object):
         return len(lines)
 
     def set_failure(self, message):
-        # TODO - NIGHT
+        """
+        set a test failure message to error log
+        :param message:
+        :return:
+        """
         self._command_process_window.write_failure_message(message)
 
     def set_success(self, message):
-        # TODO - NIGHT
+        """
+        set a test success message to general/information log
+        :param message:
+        :return:
+        """
         self._command_process_window.write_general_message(message)
 
 # END-DEF-CLASS

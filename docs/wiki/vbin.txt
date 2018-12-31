@@ -28,23 +28,17 @@ VBIN OR VDRIVEBIN
  * BINW      : Binning parameter, i.e., log bin step
  * BANKS     : Number of banks in output GSAS file.  Allowed values are 3, 7 and 27.  Default is 3.
  * GROUP     : User specified a special group file other than usual 3/7/27 banks. (It cannot be used with BANKS)
- * RUNV      : Run number for vanadium file (file in instrument directory)
- * IParm     : User specified IPARM file
+ * RUNV      : Run number for vanadium file (file in instrument directory). See [1] for detailed inforamtion.
+ * IPARM     : User specified IPARM file.
  * FullProf  : Flag to write the reduced data to Fullprof format
  * NoGSAS    : Flag for not output GSAS file
  * ONEBANK   : Merge all the pixels to 1 bank
- * OUTPUT    : User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin
  * ROI       : Files for Mantid made region of interest file in XML format
  * MASK      : Files for Mantid made mask file in XML format
  * VDRIVEBIN : Bin boundaries will be adapted to (IDL) VDRIVE.  By default, it is 1 as True
+ * OUTPUT    : User specified output directory.  If in the single-run reduction mode and given value ends with _.gda_ or _.gsa_, output file name is thus specified.  Otherwise, the output GSAS file will be $RUNNUMBER.gda.
+ * BinFolder : It is similar to _OUTPUT_ for user to specifiy output directory.  But the file name will be $RUNNUMBER.gda
  * VERSION   : User specified version of reduction algorithm.  Mantid conventional = 1, PyVDrive simplified = 2 (default)
-
-
-### Need to confirm
-
- * PlotFlag  : 
- * NoMask    : 
- * BinFolder : 
 
 
 ### Planned
@@ -68,6 +62,16 @@ For example for run 169186 in IPTS-20280, a GSAS file will be saved as ```/SNS/V
 ### User specified directory
 
 With option _OUTPUT_, the user can specify the directory where the GSAS file will be saved to.
+
+
+## Vanadium normalization and GSAS Profile calibration [1]
+
+VULCAN's instrument team generates a pair of processed vanadium GSAS file and calibrated peak profile.
+They are named under the same vanadium run number and stored in _/SNS/VULCAN/shared/..._.
+
+Thus with argument **VRUN** given, the output GSAS will be
+ 1. normalized by vanadium spectra
+ 2. the paired IPARM file will be written to output GSAS file.
 
 
 ## Examples (Benchmark)

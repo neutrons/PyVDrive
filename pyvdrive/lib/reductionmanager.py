@@ -1098,6 +1098,149 @@ class ReductionManager(object):
                         output_directory, reduce_data_flag, save_chopped_nexus, number_banks,
                         tof_correction, vanadium, user_binning_parameter, vdrive_binning,
                         roi_list, mask_list):
+        # latest version: version 3
+
+        # Load data
+        event_ws_name = self.get_event_workspace_name(run_number=run_number)
+        mantid_helper.load_nexus(raw_file_name, event_ws_name, meta_data_only=False)
+        print ('[INFO] Successfully loaded {0} to {1}'.format(event_nexus_name, event_ws_name))
+
+        # Mask data
+        datatypeutility.check_list('Region of interest file list', roi_list)
+        datatypeutility.check_list('Mask file list', mask_list)
+        if len(roi_list) + len(mask_list) > 0:
+            print ('[INFO] Processing masking and ROI files')
+            for roi_file_name in roi_list:
+                self.mask_detectors(event_ws_name, roi_file_name, is_roi=True)
+            for mask_file_name in mask_list:
+                self.mask_detectors(event_ws_name, mask_file_name, is_roi=False)
+        else:
+            print ('[INFO] No user specified masking and ROI files')
+        # END-IF-ELSE
+
+        reduction_setup = reduce_VULCAN.ReductionSetup()
+        chop_reducer = reduce_adv_chop.AdvancedChopReduce(reduction_setup)
+        error_message = None
+        if reduce_data_flag:
+            # chop and reduce chopped data to GSAS: NOW, it is Version 2.0 speedup
+            # set up reduction parameters
+            reduction_setup.set_ipts_number(ipts_number)
+            reduction_setup.set_run_number(run_number)
+            reduction_setup.set_event_file(raw_file_name)
+            calib_ws_name, group_ws_name, mask_ws_name = self._get_calibration_workspaces_names(event_ws_name,
+                                                                                                  number_banks)
+            reduction_setup.set_calibration_workspaces(calib_ws_name, group_ws_name, mask_ws_name)
+
+            # set tracker
+            tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=None)
+            tracker.is_reduced = False
+
+            # initialize tracker
+            tracker = self.init_tracker(ipts_number, run_number, slice_key)
+            tracker.is_reduced = False
+
+            # set up the flag to save chopped raw data
+            reduction_setup.save_chopped_workspace = save_chopped_nexus
+
+            # set the flag for not being an auto reduction
+            reduction_setup.is_auto_reduction_service = False
+
+            # set up reducer
+            reduction_setup.process_configurations()
+
+            # Slice and focus the data *** V2.0
+            # determine the binning for output GSAS workspace
+            if vdrive_binning:
+                # vdrive binning
+                binning_param_dict = None
+
+            elif user_binning_parameter:
+                # user specified binning parameter
+                binning_param_dict = binning_param_dict
+            else:
+                # default binning
+                binning_param_dict = self._calibrationFileManager.get_default_binning_reference(run_start_date,
+                                                                                                number_banks)
+                print ('[DB...BAT] {020930} Use Default GSAS Bin')
+
+            # END-IF-ELSE
+            virtual_geometry_dict = self._calibrationFileManager.get_focused_instrument_parameters(num_banks)
+
+            gsas_info = {'IPTS': ipts_number, 'parm file': 'vulcan.prm'}
+            status, message = chop_reducer.execute_chop_reduction_v2(event_ws_name=event_ws_name,
+                                                                     clear_workspaces=False,
+                                                                     binning_parameters=binning_param_dict,
+                                                                     gsas_info_dict=gsas_info,
+                                                                     roi_list=roi_list,
+                                                                     mask_list=mask_list,
+                                                                     save_nexus=save_chopped_nexus,
+                                                                     virtual_instrument_geometry=virtual_geometry_dict,
+                                                                     )
+
+            # set up the reduced file names and workspaces and add to reduction tracker dictionary
+            tracker.set_reduction_status(status, message, True)
+
+            reduced, workspace_name_list = chop_reducer.get_reduced_workspaces(chopped=True)
+            error_message = self.set_chopped_reduced_workspaces(run_number, slice_key, workspace_name_list, append=True)
+            self.set_chopped_reduced_files(run_number, slice_key, chop_reducer.get_reduced_files(), append=True)
+
+            tracker.is_reduced = True
+
+        else:
+            # chop data only without reduction
+            status, ret_obj = chop_reducer.chop_data()
+
+            if not status:
+                return False, 'Unable to chop run {0} due to {1}.'.format(run_number, ret_obj)
+
+            # get chopped workspaces' names, saved NeXus file name; check them and store to lists
+            chopped_ws_name_list = list()
+            chopped_file_list = list()
+            for file_name, ws_name in ret_obj:
+                if file_name is not None:
+                    chopped_file_list.append(file_name)
+                if isinstance(ws_name, str) and mantid_helper.workspace_does_exist(ws_name):
+                    chopped_ws_name_list.append(ws_name)
+            # END-FOR
+
+            # initialize tracker
+            tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=slice_key)
+            tracker.is_reduced = False
+            tracker.is_chopped = True
+            if len(chopped_ws_name_list) > 0:
+                tracker.set_chopped_workspaces(chopped_ws_name_list, append=True)
+            if len(chopped_file_list) > 0:
+                tracker.set_chopped_nexus_files(chopped_file_list, append=True)
+        # END-IF
+
+        return True, error_message
+
+
+
+
+
+        # diffraction focus
+        virtual_geometry_dict = self._calibrationFileManager.get_focused_instrument_parameters(num_banks)
+
+        # red_message = self.diffraction_focus_workspace(event_ws_name=event_ws_name,
+        #                                                output_ws_name=event_ws_name,  # keep the workspace name
+        #                                                binning_params=binning_parameters,
+        #                                                target_unit=target_unit,
+        #                                                calibration_workspace=calib_ws_name,
+        #                                                mask_workspace=mask_ws_name,
+        #                                                grouping_workspace=group_ws_name,
+        #                                                virtual_instrument_geometry=virtual_geometry_dict,
+        #                                                keep_raw_ws=False)
+
+
+
+
+
+
+    def chop_vulcan_run_v2(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
+                        output_directory, reduce_data_flag, save_chopped_nexus, number_banks,
+                        tof_correction, vanadium, user_binning_parameter, vdrive_binning,
+                        roi_list, mask_list):
         """ Chop VULCAN run with reducing to GSAS file as an option
         :param ipts_number: IPTS number (serving as key for reference)
         :param run_number: Run number (serving as key for reference)
@@ -1748,10 +1891,33 @@ class ReductionManager(object):
 
         return reduce_good, message
 
+    def _get_calibration_workspaces_names(self, ws_name, num_banks):
+        """ Read the run start date/time to get the calibrtion workspaces' names
+        :param ws_name:
+        :param num_banks:
+        :return:
+        """
+        # get start time: it is not convenient to get date/year/month from datetime64.
+        # use the simple but fragile method first
+        run_start_date = mantid_helper.get_run_start(ws_name, time_unit=None)
+
+        has_loaded_cal, workspaces = self._calibrationFileManager.has_loaded(run_start_date, num_banks)
+        if not has_loaded_cal:
+            print ('[DB...BAT...INFO] Calibration file has not been loaded')
+            self._calibrationFileManager.search_load_calibration_file(run_start_date, num_banks, event_ws_name)
+            workspaces = self._calibrationFileManager.get_loaded_calibration_workspaces(run_start_date, num_banks)
+        else:
+            print ('[DB...BAT...INFO] Calibration file for {} has been loaded to {}'.format(run_start_date, workspaces))
+        calib_ws_name = workspaces.calibration
+        group_ws_name = workspaces.grouping
+        mask_ws_name = workspaces.mask
+
+        return calib_ws_name, group_ws_name, mask_ws_name
+
     # TODO | Code Quality - 20180713 - Find out how to reuse codes from vulcan_slice_reduce.SliceFocusVulcan
     def reduce_event_nexus(self, ipts_number, run_number, event_nexus_name, target_unit, binning_parameters,
                            num_banks, roi_list, mask_list):
-        """ Reduce event workspace including load and diffraction focus.
+        """ Reduce event workspace including load and diffraction focus. V2
         It is, in fact, version 2. by using the essential parts in SNSPowderReduction
         The result, i.e., output workspace shall be an EventWorkspace still
         :param ipts_number:
@@ -1759,8 +1925,6 @@ class ReductionManager(object):
         :param event_nexus_name:
         :param target_unit:
         :param binning_parameters:
-        :param use_idl_bin: Flag to use IDL-VDRIVE binning
-        :param convert_to_matrix:
         :param num_banks:
         :param roi_list:
         :param mask_list:
@@ -1784,21 +1948,22 @@ class ReductionManager(object):
             print ('[INFO] No user specified masking and ROI files')
         # END-IF-ELSE
 
-        # get start time: it is not convenient to get date/year/month from datetime64.
-        # use the simple but fragile method first
-        run_start_date = mantid_helper.get_run_start(event_ws_name, time_unit=None)
-
+        # # get start time: it is not convenient to get date/year/month from datetime64.
+        # # use the simple but fragile method first
+        # run_start_date = mantid_helper.get_run_start(event_ws_name, time_unit=None)
         # check (and load as an option) calibration file
-        has_loaded_cal, workspaces = self._calibrationFileManager.has_loaded(run_start_date, num_banks)
-        if not has_loaded_cal:
-            print ('[DB...BAT...INFO] Calibration file has not been loaded')
-            self._calibrationFileManager.search_load_calibration_file(run_start_date, num_banks, event_ws_name)
-            workspaces = self._calibrationFileManager.get_loaded_calibration_workspaces(run_start_date, num_banks)
-        else:
-            print ('[DB...BAT...INFO] Calibration file for {} has been loaded to {}'.format(run_start_date, workspaces))
-        calib_ws_name = workspaces.calibration
-        group_ws_name = workspaces.grouping
-        mask_ws_name = workspaces.mask
+        # has_loaded_cal, workspaces = self._calibrationFileManager.has_loaded(run_start_date, num_banks)
+        # if not has_loaded_cal:
+        #     print ('[DB...BAT...INFO] Calibration file has not been loaded')
+        #     self._calibrationFileManager.search_load_calibration_file(run_start_date, num_banks, event_ws_name)
+        #     workspaces = self._calibrationFileManager.get_loaded_calibration_workspaces(run_start_date, num_banks)
+        # else:
+        #     print ('[DB...BAT...INFO] Calibration file for {} has been loaded to {}'.format(run_start_date, workspaces))
+        # calib_ws_name = workspaces.calibration
+        # group_ws_name = workspaces.grouping
+        # mask_ws_name = workspaces.mask
+
+        calib_ws_name, group_ws_name, mask_file_name = self._get_calibration_workspaces_names(event_ws_name, num_banks)
 
         # check reference binning
         # No need to consider user specified binning for output GSAS

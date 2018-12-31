@@ -2,6 +2,8 @@ from datetime import datetime
 import os
 import os.path
 import h5py
+import math
+import random
 import numpy
 import mantid.simpleapi as api
 from mantid.api import AnalysisDataService as ADS
@@ -152,24 +154,17 @@ class SaveVulcanGSS(object):
         :param num_banks:
         :return: list of tuple:  [bank ids], binning parameters, tof vector
         """
-        # TODO - NIGHT ASAP 20190101 - Make this method correct for all grouping plan
-        # binning_parameter_dict = dict()
         bank_tof_sets = list()
 
         if phase == 'prened':
+            lower_tof_vec, lower_binning_params = self._mantid_bin_param_dict['lower']
+
             if num_banks == 1:
                 # east and west together
-                # binning_parameter_dict[1] = self._mantid_bin_param_dict['lower']
-                bank_tof_sets.append(([1],
-                                      self._mantid_bin_param_dict['lower'][0],
-                                      self._mantid_bin_param_dict['lower'][1]))
+                bank_tof_sets.append(([1], lower_binning_params, lower_tof_vec))
             elif num_banks == 2:
                 # east and west bank separate
-                # binning_parameter_dict[1] = self._mantid_bin_param_dict['lower'][1]
-                # binning_parameter_dict[2] = self._mantid_bin_param_dict['lower'][1]
-                bank_tof_sets.append(([1, 2],
-                                      self._mantid_bin_param_dict['lower'][0],
-                                      self._mantid_bin_param_dict['lower'][1]))
+                bank_tof_sets.append(([1, 2], lower_binning_params, lower_tof_vec))
             else:
                 raise RuntimeError('Pre-nED VULCAN does not allow {}-bank case. Contact developer ASAP '
                                    'if this case is really needed.'.format(num_banks))
@@ -180,31 +175,23 @@ class SaveVulcanGSS(object):
             lower_tof_vec, lower_binning_params = self._mantid_bin_param_dict['lower']
             higher_tof_vec, higher_binnig_params = self._mantid_bin_param_dict['higher']
 
-            if num_banks == 3:
-                # west(1), east(1), high(1)
-                # for bank_id in range(1, 3):
-                #     binning_parameter_dict[bank_id] = self._mantid_bin_param_dict['lower'][1]
-                # binning_parameter_dict[3] = self._mantid_bin_param_dict['higher'][1]
+            if num_banks == 2:
+                # merge west and east (as bank 1) but leave high angle alone
+                bank_tof_sets.append(([1], lower_binning_params, lower_tof_vec))
+                bank_tof_sets.append(([2], higher_binnig_params, higher_tof_vec))
 
+            elif num_banks == 3:
+                # west(1), east(1), high(1)
                 bank_tof_sets.append(([1, 2], lower_binning_params, lower_tof_vec))
                 bank_tof_sets.append(([3], higher_binnig_params, higher_tof_vec))
 
             elif num_banks == 7:
                 # west (3), east (3), high (1)
-                for bank_id in range(1, 7):
-                    binning_parameter_dict[bank_id] = self._mantid_bin_param_dict['lower']
-                binning_parameter_dict[7] = self._mantid_bin_param_dict['higher']
-
-                bank_tof_sets.append((range(1, 7), self._mantid_bin_param_dict['lower']))
-                bank_tof_sets.append(([7], self._mantid_bin_param_dict['higher']))
+                bank_tof_sets.append((range(1, 7), lower_binning_params, lower_tof_vec))
+                bank_tof_sets.append(([7], higher_binnig_params, higher_tof_vec))
 
             elif num_banks == 27:
                 # west (9), east (9), high (9)
-                # for bank_id in range(1, 19):
-                #     binning_parameter_dict[bank_id] = self._mantid_bin_param_dict['lower']
-                # for bank_id in range(19, 28):
-                #     binning_parameter_dict[bank_id] = self._mantid_bin_param_dict['higher']
-
                 bank_tof_sets.append((range(1, 19), lower_binning_params, lower_tof_vec))
                 bank_tof_sets.append((range(19, 28), higher_binnig_params, higher_tof_vec))
 
@@ -253,7 +240,72 @@ class SaveVulcanGSS(object):
         return west_east_bins, high_angle_bins
 
     @staticmethod
-    def _write_slog_bank_gsas(ws_name, bank_id, vulcan_tof_vector):
+    def _cal_l1(matrix_workspace):
+        """ Get L1
+        :param matrix_workspace:
+        :return:
+        """
+        source_pos = matrix_workspace.getInstrument().getSource().getPos()
+        sample_pos = matrix_workspace.getInstrument().getSample().getPos()
+
+        l1 = math.sqrt((source_pos.X() - sample_pos.X())**2 +
+                       (source_pos.Y() - sample_pos.Y())**2 +
+                       (source_pos.Z() - sample_pos.Z())**2)
+
+        return l1
+
+    @staticmethod
+    def _cal_2theta_l2(matrix_workspace, ws_index):
+        """
+        calculate L2 and two theta
+        :param matrix_workspace:
+        :param ws_index:
+        :return: tuple (L2, 2theta in arcs)
+        """
+        source_pos = matrix_workspace.getInstrument().getSource().getPos()
+        sample_pos = matrix_workspace.getInstrument().getSample().getPos()
+        det_pos = matrix_workspace.getDetector(ws_index).getPos()
+
+        # calculate 2theta
+        k_in = (sample_pos - source_pos).norm()
+        k_out = (det_pos - sample_pos).norm()
+        two_theta = k_in.angle(k_out)
+
+        # calculate DIFC
+        l2 = sample_pos.distance(det_pos)
+
+        return l2, two_theta
+
+    @staticmethod
+    def _cal_difc(l1, l2, two_theta_arc):
+        """
+        calculate DIFC
+        :param l1:
+        :param l2:
+        :param two_theta_arc:
+        :return:
+        """
+        neutron_mass = 1.674927211e-27
+        constant_h = 6.62606896e-34
+        difc = (2.0 * neutron_mass * math.sin(two_theta_arc * 0.5) * (l1 + l2)) / (constant_h * 1.e4)
+
+        return difc
+
+    def _get_2theta_difc(self, matrix_workspace, l1, ws_index):
+        """
+        get the DIFC
+        :param matrix_workspace:
+        :param l1:
+        :param ws_index:
+        :return:
+        """
+        l2, two_theta = self._cal_2theta_l2(matrix_workspace, ws_index)
+
+        difc = self._cal_difc(l1, l2, two_theta)
+
+        return two_theta * 180. / math.pi, difc
+
+    def _write_slog_bank_gsas(self, ws_name, bank_id, vulcan_tof_vector):
         """
         1. X: format to VDRIVE tradition (refer to ...)
         2. Y: native value
@@ -269,12 +321,20 @@ class SaveVulcanGSS(object):
         vec_e = diff_ws.readE(bank_id - 1)
         data_size = len(vec_y)
 
+        # get geometry information
+        l1 = self._cal_l1(diff_ws)
+        two_theta, difc = self._get_2theta_difc(diff_ws, l1, bank_id-1)
+
         bank_buffer = ''
 
-        # TODO - NIGHT ASAP - Add focused (virtual) geometry information
+        # write the virtual detector geometry information
         # Example:
         # Total flight path 45.754m, tth 90deg, DIFC 16356.3
         # Data for spectrum :0
+        bank_buffer += '%-80s\n' % '#'
+        bank_buffer += '%-80s\n' % 'Total flight path {}m, tth {}deg, DIFC {}'.format(l1, two_theta, difc)
+        bank_buffer += '%-80s\n' % 'Data for spectrum :{}'.format(bank_id - 1)
+
         # ws.getInstrument().getSource().getPos()
         # ws.getDetector(2).getPos(): Out[15]: [0.845237,0,-1.81262]
         # math.sqrt(0.845237**2 + 1.81262**2)
@@ -365,20 +425,41 @@ class SaveVulcanGSS(object):
 # END-DEF-CLASS
 
 
-def load_vulcan_gsas(gsas_name):
+def load_vulcan_gsas(gsas_name, gsas_ws_name):
     """
     Load VULCAN GSAS and create a Ragged workspace
     :param gsas_name:
+    :param gsas_ws_name:s
     :return:
     """
+    # load VULCAN's GSAS file into ragged workspace for vec x and vec y information
+    assert isinstance(gsas_name, str), 'GSAS file name {} must be a string but not a {}' \
+                                       ''.format(gsas_name, type(gsas_name))
+    if not os.path.exists(gsas_name):
+        raise RuntimeError('GSAS file {} does not exist.'.format(gsas_name))
 
-    # for ws_index in range(1, len(processed_single_spec_ws_list)):
-    #     api.ConjoinWorkspaces(InputWorkspace1=output_ws_name,
-    #                           InputWorkspace2=processed_single_spec_ws_list[ws_index])
+    # load GSAS to a ragged workspace
+    temp_out_name = 'temp_{}'.format(random.randint(1, 10000))
+    temp_gss_ws = api.LoadGSS(Filename=gsas_name, OutputWorkspace=temp_out_name)
 
-    # TODO - NIGHT ASAP - Implement
+    # extract, convert to point data workspace for first spectrum
+    api.ExtractSpectra(temp_out_name, WorkspaceIndexList=[0], OutputWorkspace=gsas_ws_name)
+    api.ConvertToPointData(InputWorkspace=gsas_ws_name, OutputWorkspace=gsas_ws_name)
 
+    # for the rest of the spectra
+    for iws in range(1, temp_gss_ws.getNumberHistograms()):
+        # extract, convert to point data, conjoin and clean
+        temp_out_name_i = 'temp_i_x'
+        api.ExtractSpectra(temp_out_name, WorkspaceIndexList=[iws], OutputWorkspace=temp_out_name_i)
+        api.ConvertToPointData(InputWorkspace=temp_out_name_i, OutputWorkspace=temp_out_name_i)
+        api.ConjoinWorkspaces(InputWorkspace1=gsas_name,
+                              InputWorkspace2=temp_out_name_i)
+        api.DeleteWorkspace(temp_out_name_i)
+    # END-FOR
 
+    # clean temp GSAS
+    api.DeleteWorkspace(temp_out_name)
 
+    gsas_ws = ADS.retrieve(gsas_ws_name)
 
-
+    return gsas_ws
