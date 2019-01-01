@@ -839,6 +839,8 @@ class ReductionSetup(object):
         if isinstance(auto_reduction_dir, str):
             self._pngFileName = os.path.join(auto_reduction_dir, 'VULCAN_' + str(self._runNumber) + '.png')
         else:
+            assert isinstance(self._mainGSASDir, str), 'Main GSAS dir {} must be set to a string but not of type {}' \
+                                                       ''.format(self._mainGSASDir, type(self._mainGSASDir))
             self._pngFileName = os.path.join(self._mainGSASDir, 'VULCAN_{0}.png'.format(self._runNumber))
 
         return

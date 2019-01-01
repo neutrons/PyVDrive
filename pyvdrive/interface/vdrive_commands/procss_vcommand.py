@@ -125,13 +125,13 @@ class VDriveCommand(object):
         else:
             user_bin_width = None
 
-        if 'Mytofbmin'.upper() in self._commandArgsDict:
-            user_tof_min = float(self._commandArgsDict['Mytofbmin'.upper()])
+        if 'MYTOFMIN' in self._commandArgsDict:
+            user_tof_min = float(self._commandArgsDict['MYTOFMIN'])
         else:
             user_tof_min = None
 
-        if 'Mytofbmax'.upper() in self._commandArgsDict:
-            user_tof_max = float(self._commandArgsDict['Mytofbmax'.upper()])
+        if 'MYTOFMAX'.upper() in self._commandArgsDict:
+            user_tof_max = float(self._commandArgsDict['MYTOFMAX'])
         else:
             user_tof_max = None
 
@@ -141,16 +141,20 @@ class VDriveCommand(object):
             use_default_binning = True
             binning_parameters = None
 
+        elif user_tof_min is None or user_tof_max is None or user_bin_width is None:
+            # they must be defined all
+            raise RuntimeError('User must specify MyTOFMin, MyTOFMax and BINW altogether.')
+
         else:
             # parse by set up the default value
             use_default_binning = False
 
-            if user_bin_width is None:
-                user_bin_width = 0.001   # set to default in case only TOF range is customized value
-            if user_tof_min is None:
-                user_tof_min = 5000.
-            if user_tof_max is None:
-                user_tof_max = 70000.
+            # if user_bin_width is None:
+            #     user_bin_width = 0.001   # set to default in case only TOF range is customized value
+            # if user_tof_min is None:
+            #     user_tof_min = 5000.
+            # if user_tof_max is None:
+            #     user_tof_max = 70000.
 
             binning_parameters = (user_tof_min, user_bin_width, user_tof_max)
         # END-IF-ELSE
@@ -171,7 +175,7 @@ class VDriveCommand(object):
                 run_end = int(self._commandArgsDict['RUNE'])
                 if run_end < run_number_list[0]:
                     raise RuntimeError('RUNE {0} is less than RUNS {1}'.format(run_end, run_number_list[0]))
-                run_number_list = range(run_number_list[0], run_end)
+                run_number_list = range(run_number_list[0], run_end+1)
         except KeyError:
             raise RuntimeError('RUNS is not found.')
         except (ValueError, TypeError):

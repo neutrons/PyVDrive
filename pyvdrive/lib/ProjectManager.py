@@ -11,6 +11,8 @@ import loaded_data_manager
 import vanadium_utility
 import peak_util
 import numpy
+import vulcan_util
+
 
 # TODO... NEED A DOC FOR HOW TO STORE DATA KEY (WORKSPACE NAME) ...
 
@@ -1263,7 +1265,7 @@ class ProjectManager(object):
     # TODO - 20190101 - merge_runs: how to apply this!
     def reduce_vulcan_runs_v2(self, run_number_list, output_directory, d_spacing, binning_parameters,
                               number_banks, gsas, merge_runs,
-                              roi_list, mask_list):
+                              roi_list, mask_list, no_cal_mask):
         """ reduce runs in a simplied way! (it can be thought be the version 2.0!)
         Note: this method is used by VBIN
         :param run_number_list:
@@ -1325,16 +1327,22 @@ class ProjectManager(object):
                                                                              binning_parameters=binning_parameters,
                                                                              num_banks=number_banks,
                                                                              roi_list=roi_list,
-                                                                             mask_list=mask_list)
+                                                                             mask_list=mask_list,
+                                                                             no_cal_mask=no_cal_mask)
 
                 reduced_run_numbers.append((run_number, out_ws_name))
                 # save to GSAS
                 if gsas:
-                    import vulcan_util
                     run_date_time = vulcan_util.get_run_date(out_ws_name, raw_file_name)
                     gsas_file_name = os.path.join(output_directory, '{}.gda'.format(run_number))
+                    if binning_parameters is None:
+                        align_vdrive_bin = True
+                    else:
+                        align_vdrive_bin = False
+
                     self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
                                                             gsas_file_name=gsas_file_name, ipts_number=ipts_number,
+                                                            align_vdrive_bin=align_vdrive_bin,
                                                             gsas_param_file_name='vulcan.prm')
 
             except RuntimeError as run_error:

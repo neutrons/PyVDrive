@@ -85,27 +85,32 @@ class AutoReduce(procss_vcommand.VDriveCommand):
 class VBin(procss_vcommand.VDriveCommand):
     """
     """
-    SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BANKS', 'BINW', 'SKIPXML', 'FOCUS_EW',
-                     'RUNV', 'IParm', 'FullProf', 'NoGSAS', 'PlotFlag', 'ONEBANK', 'NoMask', 'TAG',
-                     'BinFolder', 'Mytofbmax', 'Mytofbmin', 'OUTPUT', 'GROUP', 'VERSION',
-                     'ROI', 'MASK', 'VDRIVEBIN']
+    SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BANKS', 'BINW',
+                     'RUNV', 'IPARM', 'ONEBANK', 'NOMASK', 'TAG',
+                     'BINFOLDER', 'MYTOFMIN', 'MYTOFMAX', 'OUTPUT', 'GROUP', 'VERSION',
+                     'ROI', 'MASK']
+    # NOTE: Here is the list of arguments that will not be supported in March-2019 release
+    #       'SKIPXML', 'FOCUS_EW', 'FullProf', 'NoGSAS', 'PlotFlag', 'VDRIVEBIN'
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
         'RUNE': 'First run number',
-        'RUNS': 'Last run number',
+        'RUNS': 'Last run number (included)',
         'BANKS': 'Number of banks in output GSAS file.  Allowed values are 3, 7 and 27.  Default is 3.',
         'RUNV': 'Run number for vanadium file (file in instrument directory)',
-        'OneBank': 'Add 2 bank data together (=1).',
+        'ONEBANK': 'Add 2 bank data together (=1).',
         'GROUP': 'User specified a special group file other than usual 3/7/27 banks. (It cannot be used with BANKS)',
-        'Mytofbmin': 'User defined TOF min in binning parameter',
-        'Tag': '"Si/V" for instrument calibration.',
+        'MYTOFMIN': 'User defined TOF min in binning parameter. It must be used with MYTOFMAX and BINW',
+        'MYTOFMAX': 'User defined TOF max in binning parameter. It must be used with MYTOFMIN and BINW',
+        'BINW': 'Logarithm binning step. It must be used with MYTOFMIN and MYTOFMAX',
+        'TAG': '"Si/V" for instrument calibration.',
         'ROI': 'Files for Mantid made region of interest file in XML format',
         'MASK': 'Files for Mantid made mask file in XML format',
+        'NOMASK': 'Flag for not applying any mask, including the one from calibration, to reduced data',
+        'BINFOLDER': 'User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin',
         'OUTPUT': 'User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin',
         'VERSION': 'User specified version of reduction algorithm.  Mantid conventional = 1, PyVDrive simplified = 2',
-        'BINW': 'Binning parameter, i.e., log bin step',
-        'VDRIVEBIN': 'Bin boundaries will be adapted to (IDL) VDRIVE.  By default, it is 1 as True'
+        # 'VDRIVEBIN': 'Bin boundaries will be adapted to (IDL) VDRIVE.  By default, it is 1 as True'
     }
 
     def __init__(self, controller, command_args):
@@ -123,9 +128,6 @@ class VBin(procss_vcommand.VDriveCommand):
         """
         Execute command: override
         """
-        # TODO/FIXME What is SKIPXML
-        # FOCUS_EW: TODO/FIXME : anything interesting?
-
         # check and set IPTS
         try:
             self.set_ipts()
@@ -160,16 +162,16 @@ class VBin(procss_vcommand.VDriveCommand):
         standard_tuple = self.process_tag()
 
         # output directory
-        if 'OUTPUT' in self._commandArgsDict:
+        if 'OUTPUT' in self._commandArgsDict and 'BINFOLDER' in self._commandArgsDict:
+            return False, 'OUTPUT and BINFOLDER cannot be specified simultaneously'
+        elif 'BINFOLDER' in self._commandArgsDict:
+            # use BinFolder
+            output_dir = self._commandArgsDict['BINFOLDER']
+        elif 'OUTPUT' in self._commandArgsDict:
             output_dir = self._commandArgsDict['OUTPUT']
         else:
+            # neither specified: use default
             output_dir = vulcan_util.get_default_binned_directory(self._iptsNumber)
-
-        # Option FullProf is temporarily disabled
-        # if 'FULLPROF' in self._commandArgsDict:
-        #     output_fullprof = int(self._commandArgsDict['Fullprof']) == 1
-        # else:
-        #     output_fullprof = False
 
         if 'ONEBANK' in self._commandArgsDict:
             merge_to_one_bank = bool(int(self._commandArgsDict['ONEBANK']))
@@ -193,24 +195,31 @@ class VBin(procss_vcommand.VDriveCommand):
             bank_group = 3
 
         # region of interest or mask file
-        if 'ROI' in self._commandArgsDict:
+        roi_file_names = list()
+        mask_file_names = list()
+        no_mask = False
+        if 'ROI' in self._commandArgsDict and 'MASK' in self._commandArgsDict:
+            return False, 'ROI and MASK cannot be specified simultaneously.  Or it causes confusion in logic'
+        elif 'ROI' in self._commandArgsDict and 'NOMASK' in self._commandArgsDict:
+            return False, 'ROI and NOMASK cannot be specified simultaneously.  Or it causes confusion in logic'
+        elif 'MASK' in self._commandArgsDict and 'NOMASK' in self._commandArgsDict:
+            return False, 'MASK and NOMASK cannot be specified simultaneously.  Or it causes confusion in logic'
+        elif 'ROI' in self._commandArgsDict:
             roi_file_names = self.get_argument_as_list('ROI', str)
-        else:
-            roi_file_names = list()
-        if 'MASK' in self._commandArgsDict:
+        elif 'MASK' in self._commandArgsDict:
             mask_file_names = self.get_argument_as_list('MASK', str)
-        else:
-            mask_file_names = list()
+        elif 'NOMASK' in self._commandArgsDict:
+            no_mask = True
 
-        # binning parameters
-        if 'VDRIVEBIN' in self._commandArgsDict:
-            try:
-                use_idl_bin = int(self._commandArgsDict['VDRIVEBIN']) > 0
-            except ValueError:
-                return False, 'VDRIVEBIN {} must be an integer '.format(self._commandArgsDict['VDRIVEBIN'])
-        else:
-            use_idl_bin = True
-        # END-OF (VDRIVE-BIN)
+        # # binning parameters
+        # if 'VDRIVEBIN' in self._commandArgsDict:
+        #     try:
+        #         use_idl_bin = int(self._commandArgsDict['VDRIVEBIN']) > 0
+        #     except ValueError:
+        #         return False, 'VDRIVEBIN {} must be an integer '.format(self._commandArgsDict['VDRIVEBIN'])
+        # else:
+        #     use_idl_bin = True
+        # # END-OF (VDRIVE-BIN)
 
         # reduction algorithm version: set default to version 2 (the new one)
         if 'VERSION' in self._commandArgsDict:
@@ -231,12 +240,13 @@ class VBin(procss_vcommand.VDriveCommand):
                                                                        output_directory=output_dir,
                                                                        vanadium=(van_run is not None),
                                                                        binning_parameters=binning_parameters,
-                                                                       use_idl_bin=use_idl_bin,
+                                                                       # use_idl_bin=use_idl_bin,
                                                                        align_to_vdrive_bin=use_default_binning,
                                                                        num_banks=bank_group,
                                                                        merge_banks=merge_to_one_bank,
                                                                        roi_list=roi_file_names,
-                                                                       mask_list=mask_file_names)
+                                                                       mask_list=mask_file_names,
+                                                                       no_cal_mask=no_mask)
 
         else:
             # reduce event data without chopping
@@ -266,12 +276,12 @@ class VBin(procss_vcommand.VDriveCommand):
                                                                vanadium=(van_run is not None),
                                                                standard_sample_tuple=standard_tuple,
                                                                binning_parameters=binning_parameters,
-                                                               use_idl_bin=use_idl_bin,
                                                                merge_runs=False,
                                                                num_banks=bank_group,
                                                                version=reduction_alg_ver,
                                                                roi_list=roi_file_names,
-                                                               mask_list=mask_file_names)
+                                                               mask_list=mask_file_names,
+                                                               no_cal_mask=no_mask)
 
         # END-IF-ELSE
 

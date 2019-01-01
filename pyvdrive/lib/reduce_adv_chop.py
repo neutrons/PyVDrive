@@ -3,7 +3,7 @@
 import os
 import math
 import pandas as pd
-
+import  save_vulcan_gsas
 import mantid.simpleapi as mantidsimple
 from mantid.api import AnalysisDataService, ITableWorkspace, MatrixWorkspace
 from mantid.dataobjects import SplittersWorkspace
@@ -649,17 +649,22 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         #
         # return status, message
 
-    def execute_chop_reduction_v2(self, binning_parameters, gsas_info_dict, roi_list, mask_list,
-                                  clear_workspaces=False):
+    def execute_chop_reduction_v2(self, event_ws_name, binning_parameters, num_reduced_banks, calib_ws_name,
+                                  gsas_info_dict,
+                                  clear_workspaces, gsas_writer):
         """ Chop and reduce data with the upgraded algorithm for speed
         :param binning_parameters:
         :param gsas_info_dict:
-        :param roi_list:
-        :param mask_list:
         :param clear_workspaces: flag to delete output workspaces as they have been written to GSAS
+        :param gsas_writer: an instance to the object to write GSAS file
         :return:
         """
-        datatypeutility.check_list('Binning parameters', binning_parameters)
+        # check inputs
+        assert isinstance(gsas_writer, save_vulcan_gsas.SaveVulcanGSS), 'GSAS writer must be an instance of ' \
+                                                                        'SaveVulcanGSS but not a {}' \
+                                                                        ''.format(type(gsas_writer))
+        if binning_parameters is not None:
+            datatypeutility.check_list('Binning parameters', binning_parameters)
 
         # create output directory and set instance variable _choppedDataDirectory
         self.create_chop_dir()
@@ -670,27 +675,28 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
 
         # load data from file to workspace
-        raw_file_name = self._reductionSetup.get_event_file()
-        event_ws_name = os.path.split(raw_file_name)[1].split('.')[0]
+        # raw_file_name = self._reductionSetup.get_event_file()
+        # event_ws_name = os.path.split(raw_file_name)[1].split('.')[0]
         output_ws_name = event_ws_name + '_split'
 
         # set up default
 
-        runner = vulcan_slice_reduce.SliceFocusVulcan(output_dir=self._reductionSetup.get_chopped_directory()[0])
+        runner = vulcan_slice_reduce.SliceFocusVulcan(number_banks=num_reduced_banks,
+                                                      output_dir=self._reductionSetup.get_chopped_directory()[0])
         run_number = self._reductionSetup.get_run_number()
         runner.set_run_number(run_number)
 
         print ('[DB...BAT] Writing GSAS to {}'.format(self._reductionSetup.get_chopped_directory()[0]))
 
-        info, output_ws_names = runner.slice_focus_event_workspace(event_file_name=raw_file_name,
-                                                                   event_ws_name=event_ws_name,
+        info, output_ws_names = runner.slice_focus_event_workspace(event_ws_name=event_ws_name,
+                                                                   geometry_calib_ws_name=calib_ws_name,
                                                                    split_ws_name=split_ws_name,
                                                                    info_ws_name=split_info_table,
                                                                    output_ws_base=output_ws_name,
                                                                    binning_parameters=binning_parameters,
                                                                    gsas_info_dict=gsas_info_dict,
-                                                                   roi_list=roi_list,
-                                                                   mask_list=mask_list)
+                                                                   gsas_writer=gsas_writer)
+
 
         self._reducedWorkspaceList.extend(output_ws_names)
 

@@ -1262,7 +1262,7 @@ class VDriveAPI(object):
 
     def reduce_chopped_data_set(self, ipts_number, run_number, chop_child_list, raw_data_directory,
                                 output_directory, vanadium,
-                                binning_parameters, use_idl_bin, align_to_vdrive_bin,
+                                binning_parameters, use_idl_bin,
                                 merge_banks, gsas=True, num_banks=3):
         """ reduce a set of chopped data
         :param ipts_number:
@@ -1334,9 +1334,9 @@ class VDriveAPI(object):
     def reduce_data_set(self, auto_reduce, output_directory, merge_banks,
                         background=False, vanadium=False,
                         record=False, logs=False, gsas=True, output_to_fullprof=False,
-                        standard_sample_tuple=None, binning_parameters=None, use_idl_bin=True,
+                        standard_sample_tuple=None, binning_parameters=None,
                         merge_runs=False, dspace=False, num_banks=3, roi_list=None,
-                        mask_list=None,
+                        mask_list=None, no_cal_mask=False,
                         version=2):
         """
         Reduce a set of data
@@ -1425,7 +1425,8 @@ class VDriveAPI(object):
                                                                               gsas=gsas,
                                                                               merge_runs=merge_runs,
                                                                               roi_list=roi_list,
-                                                                              mask_list=mask_list)
+                                                                              mask_list=mask_list,
+                                                                              no_cal_mask=no_cal_mask)
             status = True
             message = ''
             for msg in msg_list:
@@ -1433,6 +1434,7 @@ class VDriveAPI(object):
 
         else:
             # manual reduction: Reduce runs
+            raise 'Why this still exists?  I dont see any reason!'
             # print '[INFO] Reduce Runs: {0}. Merge banks = {1}'.format(runs_to_reduce, merge_banks)
             # TODO - 20181010 - Implement roi list and mask list
             if len(roi_list) + len(mask_list) > 0:

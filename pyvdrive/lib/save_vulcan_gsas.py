@@ -152,7 +152,7 @@ class SaveVulcanGSS(object):
         """
         get VDRIVE reference TOF file name
         :param num_banks:
-        :return: list of tuple:  [bank ids], binning parameters, tof vector
+        :return: list of tuple:  [bank ids (from 1)], binning parameters, tof vector
         """
         bank_tof_sets = list()
 
@@ -266,15 +266,15 @@ class SaveVulcanGSS(object):
         sample_pos = matrix_workspace.getInstrument().getSample().getPos()
         det_pos = matrix_workspace.getDetector(ws_index).getPos()
 
-        # calculate 2theta
-        k_in = (sample_pos - source_pos).norm()
-        k_out = (det_pos - sample_pos).norm()
-        two_theta = k_in.angle(k_out)
+        # calculate in and out K and then 2theta
+        k_in = sample_pos - source_pos
+        k_out = det_pos - sample_pos
+        two_theta_arc = k_out.angle(k_in)
 
-        # calculate DIFC
-        l2 = sample_pos.distance(det_pos)
+        # calculate L2
+        l2 = det_pos.distance(sample_pos)
 
-        return l2, two_theta
+        return l2, two_theta_arc
 
     @staticmethod
     def _cal_difc(l1, l2, two_theta_arc):
@@ -316,8 +316,11 @@ class SaveVulcanGSS(object):
         """
         # get workspace
         diff_ws = ADS.retrieve(ws_name)
-        vec_x = vulcan_tof_vector
-        vec_y = diff_ws.readY(bank_id - 1)
+        if vulcan_tof_vector is None:
+            vec_x = diff_ws.readX(bank_id -1)
+        else:
+            vec_x = vulcan_tof_vector
+        vec_y = diff_ws.readY(bank_id - 1)  # convert to workspace index
         vec_e = diff_ws.readE(bank_id - 1)
         data_size = len(vec_y)
 
@@ -332,8 +335,8 @@ class SaveVulcanGSS(object):
         # Total flight path 45.754m, tth 90deg, DIFC 16356.3
         # Data for spectrum :0
         bank_buffer += '%-80s\n' % '#'
-        bank_buffer += '%-80s\n' % 'Total flight path {}m, tth {}deg, DIFC {}'.format(l1, two_theta, difc)
-        bank_buffer += '%-80s\n' % 'Data for spectrum :{}'.format(bank_id - 1)
+        bank_buffer += '%-80s\n' % '# Total flight path {}m, tth {}deg, DIFC {}'.format(l1, two_theta, difc)
+        bank_buffer += '%-80s\n' % '# Data for spectrum :{}'.format(bank_id - 1)
 
         # ws.getInstrument().getSource().getPos()
         # ws.getDetector(2).getPos(): Out[15]: [0.845237,0,-1.81262]
@@ -362,7 +365,8 @@ class SaveVulcanGSS(object):
 
         return bank_buffer
 
-    def save(self, diff_ws_name, run_date_time, gsas_file_name, ipts_number, gsas_param_file_name):
+    def save(self, diff_ws_name, run_date_time, gsas_file_name, ipts_number, gsas_param_file_name,
+             align_vdrive_bin):
         """
         Save a workspace to a GSAS file or a string
         :param diff_ws_name: diffraction data workspace
@@ -370,6 +374,7 @@ class SaveVulcanGSS(object):
         :param gsas_file_name: output file name. None as not output
         :param ipts_number:
         :param gsas_param_file_name:
+        :param align_vdrive_bin: Flag to align with VDRIVE bin edges/boundaries
         :return: string as the file content
         """
         diff_ws = ADS.retrieve(diff_ws_name)
@@ -385,8 +390,13 @@ class SaveVulcanGSS(object):
             api.ConvertToHistogram(diff_ws_name, diff_ws_name)
 
         # get the binning parameters
-        bin_params_set = self._get_tof_bin_params(self._get_vulcan_phase(run_date_time),
-                                                  diff_ws.getNumberHistograms())
+        if align_vdrive_bin:
+            bin_params_set = self._get_tof_bin_params(self._get_vulcan_phase(run_date_time),
+                                                      diff_ws.getNumberHistograms())
+        else:
+            # a binning parameter set for doing nothing
+            print ('[DB...BAT] Using user specified binning parameters')
+            bin_params_set = [(range(1, diff_ws.getNumberHistograms()+1), None, None)]
 
         # rebin and then write output
         gsas_buffer_dict = dict()
@@ -397,7 +407,9 @@ class SaveVulcanGSS(object):
             bank_id_list, bin_params, tof_vector = bin_params_set[bank_set_index]
 
             # Rebin to these banks' parameters (output = Histogram)
-            api.Rebin(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name, Params=bin_params, PreserveEvents=True)
+            if bin_params is not None:
+                api.Rebin(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name,
+                          Params=bin_params, PreserveEvents=True)
 
             # Create output
             for bank_id in bank_id_list:
