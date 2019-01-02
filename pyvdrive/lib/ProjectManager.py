@@ -1354,16 +1354,6 @@ class ProjectManager(object):
 
         return reduced_run_numbers, error_messages
 
-    def set_focus_calibration_file(self, focus_cal_file):
-        """
-        Set the time-focus calibration to reduction manager.
-        :param focus_cal_file:
-        :return:
-        """
-        self._reductionManager.set_focus_calibration_file(focus_cal_file)
-
-        return
-
     def set_reduction_flag(self, run_number, flag):
         """ Set the  reduction flag for a file in SAMPLE run dictionary of this project
         Requirements: run number is non-negative integer and flag is boolean.

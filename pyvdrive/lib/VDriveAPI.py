@@ -1973,25 +1973,6 @@ class VDriveAPI(object):
 
         return status, message
 
-    def set_focus_calibration_file(self, calibration_file):
-        """
-        Purpose:
-            Set the time focusing calibration file to reduction manager
-        Requirements:
-            Input calibration file is a string
-        Guarantees:
-            The file is set to reduction manager for future usage
-        :param calibration_file:
-        :return:
-        """
-        # Check requirement
-        assert isinstance(calibration_file, str), 'Input calibration_file must be of type str.'
-
-        # Set to reduction manager
-        self._myProject.set_focus_calibration_file(calibration_file)
-
-        return
-
     def set_ipts_config(self, ipts_number, data_dir, binned_data_dir):
         """
         Set configuration for a particular IPTS

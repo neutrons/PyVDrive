@@ -10,7 +10,6 @@ except ImportError:
     from PyQt4.QtGui import QApplication
 
 
-
 def create_slice_segment_file(test_dir):
     """
     create a slice segment file on the fly

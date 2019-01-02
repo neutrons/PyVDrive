@@ -210,24 +210,26 @@ class SliceFocusVulcan(object):
             # edit instrument
             EditInstrumentGeometry(Workspace=ws_name,
                                    PrimaryFlightPath=self._focus_instrument_dict['L1'],
-                                   SpectrumIDs=self._focus_instrument_dict['SpectrumIDs'][num_banks],
-                                   L2=self._focus_instrument_dict['L2'][num_banks],
-                                   Polar=self._focus_instrument_dict['Polar'][num_banks],
-                                   Azimuthal=self._focus_instrument_dict['Azimuthal'][num_banks])
+                                   SpectrumIDs=self._focus_instrument_dict['SpectrumIDs'][self._number_banks],
+                                   L2=self._focus_instrument_dict['L2'][self._number_banks],
+                                   Polar=self._focus_instrument_dict['Polar'][self._number_banks],
+                                   Azimuthal=self._focus_instrument_dict['Azimuthal'][self._number_banks])
+
             # convert VULCAN binning: to a different workspace that will be discarded after SaveVulcanGSS
-            if False:
-                # test to disable this
-                mantid_reduction.VulcanBinningHelper.rebin_workspace(input_ws=ws_name,
-                                                                     binning_param_dict=binning_parameter_dict,
-                                                                     output_ws_name=gsas_ws_name)
-                # rebin the original workspace that won't be deleted and kept for visualization
-                mantid_helper.rebin(ws_name, '3000., -0.001, 70000.', preserve=True)
-            else:
-                curr_ws = mantid_helper.retrieve_workspace(ws_name, True)
-                for iws in range(curr_ws.getNumberHistograms()):
-                    vec_x_i = curr_ws.readX(iws)
-                    print ('[DB...BAT] Reduced bank {}: {}, {}, {}'.format(iws + 1, vec_x_i[0], len(vec_x_i),
-                                                                           vec_x_i[-1]))
+            # NOTE: I don't think rebin is ncessary here!
+            # if False:
+            #     # test to disable this
+            #     mantid_reduction.VulcanBinningHelper.rebin_workspace(input_ws=ws_name,
+            #                                                          binning_param_dict=binning_parameter_dict,
+            #                                                          output_ws_name=gsas_ws_name)
+            #     # rebin the original workspace that won't be deleted and kept for visualization
+            #     mantid_helper.rebin(ws_name, '3000., -0.001, 70000.', preserve=True)
+            # else:
+            #     curr_ws = mantid_helper.retrieve_workspace(ws_name, True)
+            #     for iws in range(curr_ws.getNumberHistograms()):
+            #         vec_x_i = curr_ws.readX(iws)
+            #         print ('[DB...BAT] Reduced bank {}: {}, {}, {}'.format(iws + 1, vec_x_i[0], len(vec_x_i),
+            #                                                                vec_x_i[-1]))
         # END-FOR
 
         return
@@ -292,22 +294,6 @@ class SliceFocusVulcan(object):
 
         return data_key
 
-    def load_diff_calibration(self, base_name):
-        """
-        Load diffraction calibration file (.h5)
-        :param base_name:
-        :return:
-        """
-        datatypeutility.check_file_name(file_name=self._detector_calibration_file, check_exist=True,
-                                        note='Diffraction calibration/group/mask file')
-
-        # Load diffraction calibration file
-        LoadDiffCal(InputWorkspace=self._last_loaded_event_ws,
-                    Filename=self._detector_calibration_file,
-                    WorkspaceName=base_name)
-
-        return
-
     def save_nexus(self, ws_ref_id, output_file_name):
         """
         Save workspace to processed NeXus
@@ -333,6 +319,8 @@ class SliceFocusVulcan(object):
         """
         self._run_number = run_number
 
+    # TODO - 2019.01.10 - Clean
+    # TODO - NIGHT - Add group_ws_name!
     def slice_focus_event_workspace(self, event_ws_name, geometry_calib_ws_name, split_ws_name, info_ws_name,
                                     output_ws_base, binning_parameters, gsas_info_dict,
                                     gsas_writer):
@@ -465,8 +453,10 @@ class SliceFocusVulcan(object):
         t3 = time.time()
 
         # write all the processed workspaces to GSAS:  IPTS number and parm_file_name shall be passed
+        import vulcan_util
+        run_date_time = vulcan_util.get_run_date(event_ws_name, '')
         self.write_to_gsas(output_names, ipts_number=gsas_info_dict['IPTS'], parm_file_name=gsas_info_dict['parm file'],
-                           ref_tof_sets=binning_parameters)
+                           ref_tof_sets=binning_parameters, gsas_writer=gsas_writer, run_start_date=run_date_time)
 
         # write to logs
         self.write_log_records(output_names, log_type='loadframe')
@@ -515,7 +505,8 @@ class SliceFocusVulcan(object):
 
         return
 
-    def write_to_gsas(self, workspace_name_list, ipts_number, parm_file_name, ref_tof_sets, gsas_writer):
+    def write_to_gsas(self, workspace_name_list, ipts_number, parm_file_name, ref_tof_sets, gsas_writer,
+                      run_start_date):
         """
         write to GSAS
         :param workspace_name_list:
@@ -528,8 +519,9 @@ class SliceFocusVulcan(object):
             if ws_name == '':
                 continue
             gsas_file_name = os.path.join(self._output_dir, '{0}.gda'.format(index_ws))
-            gsas_writer.save(diff_ws_name=ws_name, gsas_file_name=gsas_file_name, ipts_number=ipts_number,
-                             gsas_param_file_name=parm_file_name)
+            gsas_writer.save(diff_ws_name=ws_name, run_date_time=run_start_date, gsas_file_name=gsas_file_name,
+                             ipts_number=ipts_number,
+                             gsas_param_file_name=parm_file_name, align_vdrive_bin=True, vanadium_gsas_file=None)
 
         return
 

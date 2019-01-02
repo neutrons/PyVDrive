@@ -524,12 +524,23 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
     # Edit instrument as an option
     if 'EditInstrumentGeometry' in reduction_params_dict:
         try:
+            # TODO - NIGHT - In case the number of histograms of output workspace does not match (masked a lot) ...
             mantidapi.EditInstrumentGeometry(Workspace=output_ws_name,
                                              PrimaryFlightPath=mantid_helper.VULCAN_L1,
                                              SpectrumIDs=reduction_params_dict['EditInstrumentGeometry']['SpectrumIDs'],
                                              L2=reduction_params_dict['EditInstrumentGeometry']['L2'],
                                              Polar=reduction_params_dict['EditInstrumentGeometry']['Polar'],
                                              Azimuthal=reduction_params_dict['EditInstrumentGeometry']['Azimuthal'])
+            """
+            Workspace
+            PrimaryFlightPath
+            SpectrumIDs
+            L2
+            Polar
+            Azimuthal
+            DetectorIDs
+            InstrumentName
+            """
         except RuntimeError as run_err:
             error_message = 'Non-critical failure on EditInstrumentGeometry: {}\n'.format(run_err)
             return error_message
