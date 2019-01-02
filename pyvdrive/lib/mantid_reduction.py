@@ -457,6 +457,7 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
     7. edit instruments
     8. rebin (uniform binning)
     Output: still event workspace
+    :exception RuntimeError: intolerable error
     :param event_ws_name:
     :param output_ws_name:
     :param binning_params:
@@ -464,7 +465,7 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
     :param grouping_ws_name:
     :param reduction_params_dict:
     :param convert_to_matrix:
-    :return: string as message
+    :return: string as ERROR message
     """
     # check inputs
     if not mantid_helper.is_event_workspace(event_ws_name):
@@ -480,8 +481,6 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
 
     datatypeutility.check_dict('Reduction parameter dictionary', reduction_params_dict)
 
-    reduction_message = ''
-
     # Align detector
     mantidapi.AlignDetectors(InputWorkspace=event_ws_name,
                              OutputWorkspace=output_ws_name,
@@ -496,6 +495,12 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
                          SortBy='X Value')
 
     # Diffraction focus
+    event_ws = mantid_helper.retrieve_workspace(output_ws_name)
+    if event_ws.getNumberEvents() == 0:
+        print ('[DB...BAT] {}: # events = {}'.format(event_ws, event_ws.getNumberEvents()))
+        error_message = 'Unable to reduced {} as number of events = 0'.format(event_ws_name)
+        raise RuntimeError(error_message)
+
     mantidapi.DiffractionFocussing(InputWorkspace=output_ws_name,
                                    OutputWorkspace=output_ws_name,
                                    GroupingWorkspace=grouping_ws_name,
@@ -512,6 +517,10 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
                                  OutputWorkspace=output_ws_name,
                                  Tolerance=1.E-5)
 
+    # rebin
+    if binning_params is not None:
+        mantid_helper.rebin(workspace_name=output_ws_name, params=binning_params, preserve=not convert_to_matrix)
+
     # Edit instrument as an option
     if 'EditInstrumentGeometry' in reduction_params_dict:
         try:
@@ -522,17 +531,10 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
                                              Polar=reduction_params_dict['EditInstrumentGeometry']['Polar'],
                                              Azimuthal=reduction_params_dict['EditInstrumentGeometry']['Azimuthal'])
         except RuntimeError as run_err:
-            reduction_message += 'Non-critical failure on EditInstrumentGeometry: {}\n'.format(run_err)
+            error_message = 'Non-critical failure on EditInstrumentGeometry: {}\n'.format(run_err)
+            return error_message
 
-    # rebin
-    if binning_params is not None:
-        mantid_helper.rebin(workspace_name=output_ws_name, params=binning_params, preserve=not convert_to_matrix)
-
-    # remove last \n
-    if len(reduction_message) > 0:
-        reduction_message = reduction_message[:-1]
-
-    return reduction_message
+    return ''
 
 
 # TODO - This method shall be refactored with align_and_focus_event_ws - FIXME

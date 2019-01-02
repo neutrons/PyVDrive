@@ -1287,12 +1287,8 @@ class ProjectManager(object):
         datatypeutility.check_list('Run numbers', run_number_list)
         datatypeutility.check_file_name(output_directory, check_exist=True, is_dir=True)
         datatypeutility.check_bool_variable('Flag for output unit in dSpacing', d_spacing)
-
-        # force ROI/MASK file list to be 'list()'
-        if roi_list is None:
-            roi_list = list()
-        if mask_list is None:
-            mask_list = list()
+        datatypeutility.check_list('ROI XML file list', roi_list)
+        datatypeutility.check_list('Mask XML file list', mask_list)
 
         # check binning parameters
         # if binning_parameters is None:
@@ -1303,7 +1299,7 @@ class ProjectManager(object):
             else:
                 bin_size = binning_parameters[1]
             # force the binning range to be from 0.3 to 5.0
-            binning_parameters = (0.3, float(bin_size), 5.0)
+            binning_parameters = (0.3, -abs(float(bin_size)), 5.0)
         # END-IF
 
         # reduce one by one

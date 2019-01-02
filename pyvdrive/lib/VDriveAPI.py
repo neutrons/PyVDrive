@@ -1387,7 +1387,7 @@ class VDriveAPI(object):
             raise RuntimeError('There are runs from different IPTS.  It is not supported in PyVDrive.')
         ipts_number = ipts_set.pop()
 
-        # check ROI list and Mask list
+        # check ROI list and Mask list: force ROI/MASK file list to be 'list()'
         if roi_list is None:
             roi_list = list()
         else:
@@ -1401,13 +1401,13 @@ class VDriveAPI(object):
         if auto_reduce:
             # auto reduction: auto reduction script does not work with vanadium normalization
             # print '[INFO] (Auto) reduce data: IPTS = {0}, Runs = {1}.'.format(ipts_number, runs_to_reduce)
-            status, message = self.reduce_auto_script(ipts_number=ipts_number,
+            status, error_message = self.reduce_auto_script(ipts_number=ipts_number,
                                                       run_numbers=runs_to_reduce,
                                                       output_dir=output_directory,
                                                       is_dry_run=False,
                                                       roi_list=roi_list,
                                                       mask_list=mask_list)
-            message = message
+            error_message = error_message
 
         elif dspace or version == 2:
             # user version 2 reduction algorithm
@@ -1423,9 +1423,11 @@ class VDriveAPI(object):
                                                                               mask_list=mask_list,
                                                                               no_cal_mask=no_cal_mask)
             status = True
-            message = ''
+            error_message = ''
             for msg in msg_list:
-                message += msg + '\n'
+                if msg.count('Failed'):
+                    status = False
+                error_message += msg + '\n'
 
         else:
             # manual reduction: Reduce runs
@@ -1435,7 +1437,7 @@ class VDriveAPI(object):
             if len(roi_list) + len(mask_list) > 0:
                 raise RuntimeError('ROI/MASK is not supported! ROI: {}, MASK: {}'.format(roi_list, mask_list))
             try:
-                status, message = self._myProject.reduce_runs(run_number_list=runs_to_reduce,
+                status, error_message = self._myProject.reduce_runs(run_number_list=runs_to_reduce,
                                                               output_directory=output_directory,
                                                               background=background,
                                                               vanadium=vanadium,
@@ -1451,7 +1453,7 @@ class VDriveAPI(object):
 
             except AssertionError as re:
                 status = False
-                message = '[ASSERTION ERROR] from reduce_runs due to %s' % str(re)
+                error_message = '[ASSERTION ERROR] from reduce_runs due to %s' % str(re)
             # END-TRY-EXCEPT
         # END-IF-ELSE
 
@@ -1459,7 +1461,7 @@ class VDriveAPI(object):
         reduction_state_list = None
         self._myProject.mark_runs_reduced(runs_to_reduce, reduction_state_list)
 
-        return status, message
+        return status, error_message
 
     def reduce_auto_script(self, ipts_number, run_numbers, output_dir, is_dry_run):
         """

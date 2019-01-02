@@ -197,6 +197,8 @@ class VDriveCommand(object):
             material_type = self._commandArgsDict['TAG']
             material_type = material_type.lower()
 
+            # TODO - NIGHT - Document in user manual
+
             standard_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard'
             if os.access(standard_dir, os.W_OK) is False:
                 # if standard VDRIVE default directory is not writable, then use the local one
@@ -233,6 +235,7 @@ class VDriveCommand(object):
 
             # create workspace if not existing
             if os.path.exists(standard_dir) is False:
+                # TODO - NIGHT - Implement!
                 self._create_standard_directory(standard_dir)
         else:
             standard_tuple = None

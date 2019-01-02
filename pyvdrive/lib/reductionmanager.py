@@ -1685,17 +1685,15 @@ class ReductionManager(object):
                                     calibration_workspace, grouping_workspace,
                                     virtual_instrument_geometry, keep_raw_ws):
         """ Diffraction focus an EventWorkspace
+        :exception: Intolerable error
         :param event_ws_name:
         :param output_ws_name:
-        :param gsas_ws_name:
         :param binning_params:
-        :param use_idl_bin:
         :param target_unit:
         :param calibration_workspace:
         :param grouping_workspace:
         :param virtual_instrument_geometry:
         :param keep_raw_ws:
-        :param convert_to_matrix:
         :return: string as reduction message for successful reduction
         """
         def check_binning_parameter_range(x_min, x_max, ws_unit):
@@ -1734,7 +1732,7 @@ class ReductionManager(object):
         if binning_params is None:
             # do nothing: eventually using default binning?
             if target_unit == 'TOF':
-                binning_params = '5000, -0.01, 30000'
+                binning_params = 5000, -0.01, 30000
             else:
                 binning_params = 0.5, -0.01, 3.5  # use a very coarse binning
         else:
@@ -1757,8 +1755,8 @@ class ReductionManager(object):
         self._diff_focus_params['EditInstrumentGeometry'] = virtual_instrument_geometry
 
         # align and focus
-        print ('[DB...PROGRESS...] ReductionManager: align and focus workspace from {} to {}'
-               ''.format(event_ws_name, output_ws_name))
+        print ('[DB...PROGRESS...] ReductionManager: align and focus workspace from {} to {} with binning {}'
+               ''.format(event_ws_name, output_ws_name, binning_params))
         red_msg = mantid_reduction.align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
                                                             calibration_workspace, grouping_workspace,
                                                             reduction_params_dict=self._diff_focus_params,
@@ -1818,34 +1816,10 @@ class ReductionManager(object):
                                               InputWorkspace2=mask_ws_names[ws_name_index],
                                               OutputWorkspace=combine_mask_name,
                                               OperationType=mask_operation)
-        print ('[DB...BAT] Processing masks {} and ROIs {}')
+        else:
+            combine_mask_name = mask_ws_names[0]
 
-        # # check input file
-        # datatypeutility.check_file_name(mask_file_name, check_exist=True, check_writable=False,
-        #                                 is_dir=False, note='Mask/ROI (Mantiod) XML file')
-        #
-        # if mask_file_name in self._loaded_masks:
-        #     # pre-loaded
-        #     mask_ws_name, is_roi = self._loaded_masks[mask_file_name]
-        # else:
-        #     # create workspace name
-        #     mask_ws_name = mask_file_name.lower().split('.xml')[0].replace('/', '.')
-        #     # load
-        #     if is_roi:
-        #         mask_ws_name = 'roi.' + mask_ws_name
-        #         mantid_helper.load_roi_xml(event_ws_name, mask_file_name, mask_ws_name)
-        #     else:
-        #         mask_ws_name = 'mask.' + mask_ws_name
-        #         mantid_helper.load_mask_xml(event_ws_name, mask_file_name, mask_ws_name)
-        #
-        #     # record
-        #     self._loaded_masks[mask_file_name] = mask_ws_name, is_roi
-        #
-        # # Mask detectors
-        # mantid_helper.mask_workspace(to_mask_workspace_name=event_ws_name,
-        #                              mask_workspace_name=mask_ws_name)
-
-        return mask_ws_names[0]
+        return combine_mask_name
 
     def reduce_event_nexus_ver1(self, ipts_number, run_number, event_file, output_directory, merge_banks,
                                 vanadium=False,
@@ -1995,7 +1969,6 @@ class ReductionManager(object):
         # Load data
         event_ws_name = self.get_event_workspace_name(run_number=run_number)
         mantid_helper.load_nexus(event_nexus_name, event_ws_name, meta_data_only=False)
-        print ('[INFO] Successfully loaded {0} to {1}'.format(event_nexus_name, event_ws_name))
 
         # Mask data
         datatypeutility.check_list('Region of interest file list', roi_list)
@@ -2011,21 +1984,6 @@ class ReductionManager(object):
             user_mask_name = None
         # END-IF-ELSE
 
-        # # get start time: it is not convenient to get date/year/month from datetime64.
-        # # use the simple but fragile method first
-        # run_start_date = mantid_helper.get_run_start(event_ws_name, time_unit=None)
-        # check (and load as an option) calibration file
-        # has_loaded_cal, workspaces = self._calibrationFileManager.has_loaded(run_start_date, num_banks)
-        # if not has_loaded_cal:
-        #     print ('[DB...BAT...INFO] Calibration file has not been loaded')
-        #     self._calibrationFileManager.search_load_calibration_file(run_start_date, num_banks, event_ws_name)
-        #     workspaces = self._calibrationFileManager.get_loaded_calibration_workspaces(run_start_date, num_banks)
-        # else:
-        #     print ('[DB...BAT...INFO] Calibration file for {} has been loaded to {}'.format(run_start_date, workspaces))
-        # calib_ws_name = workspaces.calibration
-        # group_ws_name = workspaces.grouping
-        # mask_ws_name = workspaces.mask
-
         calib_ws_name, group_ws_name, mask_ws_name = self._get_calibration_workspaces_names(event_ws_name, num_banks)
 
         # apply mask
@@ -2033,13 +1991,6 @@ class ReductionManager(object):
             mantid_helper.mask_workspace(event_ws_name, user_mask_name)
         if not no_cal_mask:
             mantid_helper.mask_workspace(event_ws_name, mask_ws_name)
-
-        # check reference binning
-        # No need to consider user specified binning for output GSAS
-        # cal_index_date = self._calibrationFileManager.get_calibration_index(run_start_date)
-        # if not self._calibrationFileManager.is_idl_ref_bins_loaded(cal_index_date, num_banks):
-        #     self._calibrationFileManager.load_idl_vulcan_bins(cal_index_date, num_banks)
-        # idl_bin_ref_vector_dict = self._calibrationFileManager.get_vulcan_idl_bins(cal_index_date, num_banks)
 
         # set tracker
         tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=None)

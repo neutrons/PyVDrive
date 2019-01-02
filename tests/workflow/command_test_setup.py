@@ -82,7 +82,7 @@ class PyVdriveCommandTestEnvironment(object):
         :param output_dir:
         :return:
         """
-        pretty = ''
+        pretty = '{}:\n'
 
         if os.path.exists(output_dir):
             file_names = os.listdir(output_dir)

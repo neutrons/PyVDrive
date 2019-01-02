@@ -157,6 +157,17 @@ class VBin(procss_vcommand.VDriveCommand):
             assert van_run > 0, 'Vanadium run number {0} must be positive.'.format(van_run)
         else:
             van_run = None
+        # TODO - TONIGHT - ASAP for RUNV
+        """
+        wzz@bafei:/SNS/VULCAN/shared/Calibrationfiles/Instrument/PRM$ pwd
+        /SNS/VULCAN/shared/Calibrationfiles/Instrument/PRM
+        wzz@bafei:/SNS/VULCAN/shared/Calibrationfiles/Instrument/PRM$ ls -lt | head
+        -rw-r--r-- 1  2858 users    4617 Nov 19 11:10 Vulcan-163021-s.prm
+        -rw-r--r-- 1  2858 users 1141290 Nov 19 11:10 163021-s.gda
+        -rw-r--r-- 1  2858 users    4617 Nov  2 15:58 Vulcan-163112-s.prm
+        -rw-r--r-- 1  2858 users 1141290 Nov  2 15:58 163112-s.gda
+        ... ...
+        """
 
         # TAG
         standard_tuple = self.process_tag()
@@ -284,7 +295,6 @@ class VBin(procss_vcommand.VDriveCommand):
                                                                roi_list=roi_file_names,
                                                                mask_list=mask_file_names,
                                                                no_cal_mask=no_mask)
-
         # END-IF-ELSE
 
         # process special tag for vanadium: create intensity file for each detector pixel
