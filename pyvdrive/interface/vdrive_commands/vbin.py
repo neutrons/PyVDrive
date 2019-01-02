@@ -262,7 +262,9 @@ class VBin(procss_vcommand.VDriveCommand):
 
             # set vanadium runs
             if van_run is not None:
-                self._controller.set_vanadium_to_runs(self._iptsNumber, run_number_list, van_run)
+                status, msg = self._controller.set_vanadium_to_runs(self._iptsNumber, run_number_list, van_run)
+                if not status:
+                    return False, msg
 
             # set flag
             run_number_list = list()
@@ -273,7 +275,7 @@ class VBin(procss_vcommand.VDriveCommand):
             # reduce by regular runs
             status, message = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
                                                                merge_banks=merge_to_one_bank,
-                                                               vanadium=(van_run is not None),
+                                                               vanadium=van_run,
                                                                standard_sample_tuple=standard_tuple,
                                                                binning_parameters=binning_parameters,
                                                                merge_runs=False,

@@ -334,7 +334,8 @@ class ProjectManager(object):
 
     def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus,
                  number_banks, tof_correction, output_directory,
-                 user_bin_parameter, use_idl_bin, roi_list, mask_list, nexus_file_name=None):
+                 user_bin_parameter, use_idl_bin, roi_list, mask_list, nexus_file_name=None,
+                 gsas_iparm_file='vulcan.prm'):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
         split workspaces to GSAS
@@ -410,7 +411,8 @@ class ProjectManager(object):
                                                                        user_binning_parameter=user_bin_parameter,
                                                                        vdrive_binning=use_idl_bin,
                                                                        roi_list=roi_list,
-                                                                       mask_list=mask_list)
+                                                                       mask_list=mask_list,
+                                                                       gsas_parm_name=gsas_iparm_file)
 
         # process outputs
         if status:
@@ -1343,7 +1345,8 @@ class ProjectManager(object):
                     self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
                                                             gsas_file_name=gsas_file_name, ipts_number=ipts_number,
                                                             align_vdrive_bin=align_vdrive_bin,
-                                                            gsas_param_file_name='vulcan.prm')
+                                                            gsas_param_file_name='vulcan.prm',
+                                                            vanadium_gsas_file=None)
 
             except RuntimeError as run_error:
                 error_messages.append('Failed to reduce run {0} due to {1}'.format(run_number, run_error))
@@ -1412,11 +1415,11 @@ class ProjectManager(object):
         :param van_run_number:
         :return: None
         """
-        assert isinstance(run_number_list, list), 'Run number list {0} must be a list but not a {1}.' \
-                                                  ''.format(run_number_list, type(run_number_list))
-        assert isinstance(van_run_number, int), 'Vanadium run number {0} must be an integer but not a {1}.' \
-                                                ''.format(van_run_number, type(van_run_number))
+        # check inputs
+        datatypeutility.check_list('Run numbers', run_number_list)
+        datatypeutility.check_int_variable('Vanadium run', van_file_name, (1, None))
 
+        # add vanadium information
         for run_number in run_number_list:
             self._sampleRunVanadiumDict[run_number] = van_run_number
 

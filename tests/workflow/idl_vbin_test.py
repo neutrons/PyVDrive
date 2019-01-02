@@ -190,6 +190,27 @@ def test_ned_mask(tester):
     return
 
 
+def test_ned_roi(tester):
+    """
+    Test binning with region of interest
+    :param tester:
+    :return:
+    """
+    # test directory
+    test_dir = '/tmp/vbin_ned_roi'
+    command_test_setup.set_test_dir(test_dir)
+
+    # this shall be a failed command
+    idl_command = 'VBIN,IPTS=20280,RUNS=169186,output=\'{}\',' \
+                  'mask=[tests/data/highangle_roi_0607.xml]'.format(test_dir)
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
+
+    return
+
+
 def test_multiple_masks(tester):
     """
     Testing multiple masks
@@ -239,7 +260,7 @@ def test_main():
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
     # simple test with 1 run
-    test_ned_simple(command_tester)
+    # test_ned_simple(command_tester)
 
     # # test with multiple runs
     # test_ned_multiple_runs(command_tester)
@@ -259,7 +280,7 @@ def test_main():
     #
     # # test with
     # test_ned_mask(command_tester)
-    # # test_ned_roi()
+    test_ned_roi(command_tester)
 
     return command_tester.main_window
 

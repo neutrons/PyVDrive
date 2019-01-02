@@ -445,7 +445,7 @@ def align_instrument(matrix_ws, diff_cal_ws_name):
 
 
 def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
-                             diff_cal_ws_name, mask_ws_name, grouping_ws_name,
+                             diff_cal_ws_name, grouping_ws_name,
                              reduction_params_dict, convert_to_matrix):
     """ Align and focus event workspace.  The procedure to reduce from the EventNexus includes
     1. compress event
@@ -461,7 +461,6 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
     :param output_ws_name:
     :param binning_params:
     :param diff_cal_ws_name:
-    :param mask_ws_name:
     :param grouping_ws_name:
     :param reduction_params_dict:
     :param convert_to_matrix:
@@ -474,8 +473,8 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
         diff_ws = mantid_helper.retrieve_workspace(diff_cal_ws_name)
         raise RuntimeError('Input {0} is not a Calibration workspace but a {1}'.format(diff_cal_ws_name,
                                                                                        diff_ws.__class__.__name__))
-    if not mantid_helper.is_masking_workspace(mask_ws_name):
-        raise RuntimeError('Input {0} is not a Masking workspace'.format(mask_ws_name))
+    # if not mantid_helper.is_masking_workspace(mask_ws_name):
+    #     raise RuntimeError('Input {0} is not a Masking workspace'.format(mask_ws_name))
     if not mantid_helper.is_grouping_workspace(grouping_ws_name):
         raise RuntimeError('Input {0} is not a grouping workspace'.format(grouping_ws_name))
 
@@ -488,9 +487,9 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
                              OutputWorkspace=output_ws_name,
                              CalibrationWorkspace=diff_cal_ws_name)
 
-    # Mask detectors
-    mantid_helper.mask_workspace(to_mask_workspace_name=output_ws_name,
-                                 mask_workspace_name=mask_ws_name)
+    # # Mask detectors
+    # mantid_helper.mask_workspace(to_mask_workspace_name=output_ws_name,
+    #                              mask_workspace_name=mask_ws_name)
 
     # Sort events
     mantidapi.SortEvents(InputWorkspace=output_ws_name,

@@ -347,11 +347,11 @@ class SliceFocusVulcan(object):
         :param info_ws_name:
         :param output_ws_base:
         :param binning_parameters:
-        :param gsas_info_dict: keys (IPTS, 'parm file' = 'vulcan.prm')
+        :param gsas_info_dict: required for writing GSAS files keys (IPTS, 'parm file' = 'vulcan.prm')
         :return: tuple: [1] slicing information, [2] output workspace names
         """
         # check inputs
-        datatypeutility.check_list('Binning parameters', binning_parameters)
+        # TODO FIXME : can we rmeove this check? - datatypeutility.check_list('Binning parameters', binning_parameters)
         datatypeutility.check_dict('GSAS information', gsas_info_dict)
 
         # starting time

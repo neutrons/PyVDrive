@@ -12,6 +12,7 @@ import numpy
 import platform
 import time
 import save_vulcan_gsas
+import mantid.simpleapi as mantid_api
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
 
@@ -1055,6 +1056,9 @@ class ReductionManager(object):
         # gsas output
         self._gsas_writer = save_vulcan_gsas.SaveVulcanGSS(None)
 
+        # vanadium: key = vanadium run number, value = vanadium GSAS file
+        self._vanadium_run_dict = dict()
+
         return
 
     @property
@@ -1094,10 +1098,24 @@ class ReductionManager(object):
 
         return params_dict
 
+    def add_reduced_vanadium(self, van_run_number, van_file_name):
+        """
+        add a reduced vanadium gsas file information
+        :param van_run_number:
+        :param van_file_name:
+        :return:
+        """
+        # check input
+        datatypeutility.check_int_variable('Vanadium run number', van_run_number, (1, None))
+        datatypeutility.check_file_name(van_file_name, True, False, False, 'Vanadium GSAS file')
+        self._vanadium_run_dict[van_run_number] = van_file_name
+
+        return
+
     def chop_vulcan_run(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
                         output_directory, reduce_data_flag, save_chopped_nexus, number_banks,
                         tof_correction, vanadium, user_binning_parameter, vdrive_binning,
-                        roi_list, mask_list):
+                        roi_list, mask_list, gsas_parm_name='vulcan.prm'):
         # latest version: version 3
 
         # Load data
@@ -1171,7 +1189,6 @@ class ReductionManager(object):
             if vdrive_binning:
                 # vdrive binning
                 binning_param_dict = None
-
             elif user_binning_parameter:
                 # user specified binning parameter
                 binning_param_dict = binning_param_dict
@@ -1180,17 +1197,17 @@ class ReductionManager(object):
                 binning_param_dict = self._calibrationFileManager.get_default_binning_reference(run_start_date,
                                                                                                 number_banks)
                 print ('[DB...BAT] {020930} Use Default GSAS Bin')
-
+            # END-IF-ELSE
             print ('[DB...BAT] Binning parameters: {}'.format(binning_param_dict))
 
             # END-IF-ELSE
             # virtual_geometry_dict = self._calibrationFileManager.get_focused_instrument_parameters(num_banks)
 
-            gsas_info = {'IPTS': ipts_number, 'parm file': 'vulcan.prm'}
+            gsas_info = {'IPTS': ipts_number, 'parm file': gsas_parm_name}
             status, message = chop_reducer.execute_chop_reduction_v2(event_ws_name=event_ws_name,
                                                                      calib_ws_name=calib_ws_name,
                                                                      binning_parameters=binning_param_dict,
-                                                                     gsas_info_dict=None,
+                                                                     gsas_info_dict=gsas_info,
                                                                      clear_workspaces=True,
                                                                      gsas_writer=self._gsas_writer,
                                                                      num_reduced_banks=number_banks)
@@ -1665,7 +1682,7 @@ class ReductionManager(object):
 
     def diffraction_focus_workspace(self, event_ws_name, output_ws_name, binning_params,
                                     target_unit,
-                                    calibration_workspace, mask_workspace, grouping_workspace,
+                                    calibration_workspace, grouping_workspace,
                                     virtual_instrument_geometry, keep_raw_ws):
         """ Diffraction focus an EventWorkspace
         :param event_ws_name:
@@ -1675,7 +1692,6 @@ class ReductionManager(object):
         :param use_idl_bin:
         :param target_unit:
         :param calibration_workspace:
-        :param mask_workspace:
         :param grouping_workspace:
         :param virtual_instrument_geometry:
         :param keep_raw_ws:
@@ -1744,7 +1760,7 @@ class ReductionManager(object):
         print ('[DB...PROGRESS...] ReductionManager: align and focus workspace from {} to {}'
                ''.format(event_ws_name, output_ws_name))
         red_msg = mantid_reduction.align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
-                                                            calibration_workspace, mask_workspace, grouping_workspace,
+                                                            calibration_workspace, grouping_workspace,
                                                             reduction_params_dict=self._diff_focus_params,
                                                             convert_to_matrix=False)
 
@@ -1755,25 +1771,55 @@ class ReductionManager(object):
 
         return red_msg
 
-    def load_mask_files(self, event_ws_name, mask_file_name_list, is_roi=False):
+    @staticmethod
+    def load_mask_files(event_ws_name, mask_file_name_list, is_roi=False):
         """ Mask detectors and optionally load the mask file for first time
         :param event_ws_name:
-        :param mask_file_name:
+        :param mask_file_name_list:
         :param is_roi:
         :return:
         """
-        # 1. use mask file to get hash() and check in dictionary whether a ... is loaded
+        # check
+        datatypeutility.check_list('Mask files', mask_file_name_list)
 
-        # 2. use roi file to get hash() and check in dict...
+        # return as None for empty list
+        if len(mask_file_name_list) == 0:
+            raise RuntimeError('Mask XML file names list is empty')
 
-        # 3. load mask file and roi file
+        mask_ws_names = list()
+        hash_sum = 0
+        for mask_file_name in mask_file_name_list:
+            # use mask/ROI file to get hash() and check in dictionary whether a ... is loaded
+            if is_roi:
+                mask_ws_name = 'roi_{}'.format(hash(mask_file_name))
+            else:
+                mask_ws_name = 'mask_{}'.format(hash(mask_file_name))
+            hash_sum += hash(mask_ws_name)
 
-        # 4. do binary operation among mask files or ... files
+            # load mask file and roi file if not loaded yet
+            if not mantid_helper.workspace_does_exist(mask_ws_name):
+                mantid_helper.load_mask_xml(event_ws_name, mask_file_name, mask_ws_name)
 
+            # set
+            mask_ws_names.append(mask_ws_name)
+        # END-FOR
+
+        # do binary operation among mask files or ... files
+        if is_roi:
+            mask_operation = 'AND'
+        else:
+            mask_operation = 'OR'
+
+        if len(mask_ws_names) > 1:
+            combine_mask_name = 'roi_{}_{}'.format(is_roi, hash_sum)
+            mantid_helper.clone_workspace(mask_ws_names[0], combine_mask_name)
+            for ws_name_index in range(1, len(mask_ws_names)):
+                mantid_api.BinaryOperateMasks(InputWorkspace1=combine_mask_name,
+                                              InputWorkspace2=mask_ws_names[ws_name_index],
+                                              OutputWorkspace=combine_mask_name,
+                                              OperationType=mask_operation)
         print ('[DB...BAT] Processing masks {} and ROIs {}')
 
-
-        raise 'Method deleted... Using mantid_mask instead'
         # # check input file
         # datatypeutility.check_file_name(mask_file_name, check_exist=True, check_writable=False,
         #                                 is_dir=False, note='Mask/ROI (Mantiod) XML file')
@@ -1799,7 +1845,7 @@ class ReductionManager(object):
         # mantid_helper.mask_workspace(to_mask_workspace_name=event_ws_name,
         #                              mask_workspace_name=mask_ws_name)
 
-        return
+        return mask_ws_names[0]
 
     def reduce_event_nexus_ver1(self, ipts_number, run_number, event_file, output_directory, merge_banks,
                                 vanadium=False,
@@ -1956,10 +2002,13 @@ class ReductionManager(object):
         datatypeutility.check_list('Mask file list', mask_list)
         if len(roi_list) + len(mask_list) > 0:
             print ('[INFO] Processing masking and ROI files: {} and {}'.format(roi_list, mask_list))
-            user_mask_name = self.load_mask_files(event_ws_name, roi_list, is_roi=True)
-            user_mask_name = self.load_mask_files(event_ws_name, mask_list, is_roi=False)
+            if len(roi_list) > 0:
+                user_mask_name = self.load_mask_files(event_ws_name, roi_list, is_roi=True)
+            else:
+                user_mask_name = self.load_mask_files(event_ws_name, mask_list, is_roi=False)
         else:
             print ('[INFO] No user specified masking and ROI files')
+            user_mask_name = None
         # END-IF-ELSE
 
         # # get start time: it is not convenient to get date/year/month from datetime64.
@@ -1980,8 +2029,10 @@ class ReductionManager(object):
         calib_ws_name, group_ws_name, mask_ws_name = self._get_calibration_workspaces_names(event_ws_name, num_banks)
 
         # apply mask
+        if user_mask_name:
+            mantid_helper.mask_workspace(event_ws_name, user_mask_name)
         if not no_cal_mask:
-            self.mask_detectors(event_ws_name, mask_ws_name, user_mask_name)
+            mantid_helper.mask_workspace(event_ws_name, mask_ws_name)
 
         # check reference binning
         # No need to consider user specified binning for output GSAS

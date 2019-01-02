@@ -366,7 +366,7 @@ class SaveVulcanGSS(object):
         return bank_buffer
 
     def save(self, diff_ws_name, run_date_time, gsas_file_name, ipts_number, gsas_param_file_name,
-             align_vdrive_bin):
+             align_vdrive_bin, vanadium_gsas_file):
         """
         Save a workspace to a GSAS file or a string
         :param diff_ws_name: diffraction data workspace
@@ -375,6 +375,7 @@ class SaveVulcanGSS(object):
         :param ipts_number:
         :param gsas_param_file_name:
         :param align_vdrive_bin: Flag to align with VDRIVE bin edges/boundaries
+        :param vanadium_gsas_file:
         :return: string as the file content
         """
         diff_ws = ADS.retrieve(diff_ws_name)
@@ -417,6 +418,26 @@ class SaveVulcanGSS(object):
                 gsas_buffer_dict[bank_id] = gsas_section_i
         # END-FOR
 
+        # check for vanadium GSAS file name
+        if vanadium_gsas_file is not None:
+            # check whether a workspace exists
+            # NOTE (algorithm) use hash to determine the workspace name from file location
+            van_gsas_ws_name = 'van_{}'.format(hash(vanadium_gsas_file))
+            if ADS.doesExist(van_gsas_ws_name):
+                van_ws = ADS.retrieve(van_gsas_ws_name)
+            else:
+                van_ws = load_vulcan_gsas(vanadium_gsas_file, van_gsas_ws_name)
+
+            # check whether the bins are same between GSAS workspace and vanadium workspace
+            unmatched, reason = self._compare_workspaces_dimension(van_ws, ADS.retrieve(diff_ws_name))
+            if unmatched:
+                raise RuntimeError('Vanadium GSAS file {} does not match workspace {}: {}'
+                                   ''.format(van_gsas_ws_name, diff_ws_name, reason))
+
+            # normalize
+            self._normalize_by_vanadium(diff_ws, van_ws, diff_ws_name)
+        # END-IF
+
         # header
         diff_ws = ADS.retrieve(diff_ws_name)
         gsas_header = self._generate_vulcan_gda_header(diff_ws, gsas_file_name, ipts_number, gsas_param_file_name)
@@ -434,6 +455,45 @@ class SaveVulcanGSS(object):
             g_file.close()
 
         return gsas_buffer
+
+    @staticmethod
+    def _normalize_by_vanadium(diff_ws, van_ws, diff_ws_name):
+        """ Normalize by vanadium
+        :param van_ws:
+        :param diff_ws_name:
+        :return:
+        """
+        api.Divide(LHSWorkspace=diff_ws,
+                   RHSWorkspace=van_ws,
+                   OutputWorkspace=diff_ws_name)
+        diff_ws = ADS.retrieve(diff_ws_name)
+
+        return diff_ws
+
+    @staticmethod
+    def _compare_workspaces_dimension(van_ws, diff_ws):
+        """
+        compare the workspace dimensions
+        :param van_ws:
+        :param diff_ws:
+        :return:
+        """
+        if van_ws.getNumberHistograms() != diff_ws.getNumberHistograms():
+            return False, 'Numbers of histograms are different'
+
+        for iws in range(van_ws.getNumberHistograms()):
+            van_vec_x = van_ws.readX(iws)
+            diff_vec_x = diff_ws.readX(iws)
+            if len(van_vec_x) != len(diff_vec_x):
+                return True, 'Numbers of bins are different of workspace index {}'.format(iws)
+            elif abs(van_vec_x[0] - diff_vec_x[0])/(van_vec_x[0]) > 1.E-5:
+                return True, 'X[0] are different for spectrum {}'.format(iws)
+            elif abs(van_vec_x[-1] - diff_vec_x[-1])/(van_vec_x[-1]) > 1.E-5:
+                return True, 'X[-1] are different for spectrum {}'.format(iws)
+        # END-FOR
+
+        return False, None
+
 # END-DEF-CLASS
 
 

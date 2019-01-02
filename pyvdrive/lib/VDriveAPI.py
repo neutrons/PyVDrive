@@ -1332,14 +1332,13 @@ class VDriveAPI(object):
         return sum_status, sum_message
 
     def reduce_data_set(self, auto_reduce, output_directory, merge_banks,
-                        background=False, vanadium=False,
+                        background=False, vanadium=None,
                         record=False, logs=False, gsas=True, output_to_fullprof=False,
                         standard_sample_tuple=None, binning_parameters=None,
                         merge_runs=False, dspace=False, num_banks=3, roi_list=None,
                         mask_list=None, no_cal_mask=False,
                         version=2):
-        """
-        Reduce a set of data
+        """ Reduce a set of VULCAN runs
         Purpose:
             Reduce a set of event data
         Requirements:
@@ -1350,23 +1349,23 @@ class VDriveAPI(object):
             Event data will be reduced to diffraction pattern.
         :param auto_reduce: boolean flag whether the reduction uses auto reduction script
         :param output_directory:  output directory
-        :param binning_parameters: binning parameter. [1] None for default; [2] a size 1 container as bin size
-                                           [3] a size-3 container as [TOF_min, Bin Size, TOF_max]
-        :param background: boolean flag to subtract background
-        :param vanadium: boolean flag to normalize by vanadium
+        :param merge_banks:
+        :param background:  boolean flag to subtract background
+        :param vanadium: integer as vanadium run numbers or None for not normalized
         :param record: boolean flag to output AutoRecord and etc.
         :param logs: boolean flag to output sample log files (MTS)
         :param gsas: boolean flag to produce GSAS files from reduced runs
-        :param output_to_fullprof: boolean flag tro produces Fullprof files from reduced runs
+        :param output_to_fullprof:  boolean flag tro produces Fullprof files from reduced runs
         :param standard_sample_tuple: If specified, then it should process the VULCAN standard sample as #57.
-        :param binning_parameters: None for default and otherwise using user specified
-        :param use_idl_bin: Use IDL-VDRIVE binning parameters.  It overrides binning_parameters if True
+        :param binning_parameters: binning parameter. [1] None for default; [2] a size 1 container as bin size
+                                           [3] a size-3 container as [TOF_min, Bin Size, TOF_max]
         :param merge_runs: If true, then merge the run together by calling SNSPowderReduction
         :param dspace: If true, then data will reduced to workspace in dSpacing and exported with unit dSpacing
         :param num_banks: number of banks focused to.  Now only 3, 7 and 27 are allowed; Also a special grouping file
-        :param version: reduction algorithm version in integer
         :param roi_list:
         :param mask_list:
+        :param no_cal_mask:
+        :param version: reduction algorithm version in integer
         :return: 2-tuple (boolean, object)
         """
         # Check requirements
@@ -1913,7 +1912,7 @@ class VDriveAPI(object):
         return
 
     def slice_data(self, run_number, slicer_id, reduce_data, vanadium, save_chopped_nexus, output_dir,
-                   number_banks, roi_list, mask_list, export_log_type='loadframe',
+                   number_banks, roi_list, mask_list, export_log_type='loadframe', gsas_iparam_name='not set',
                    user_bin_parameter=None, use_idl_bin=True, raw_nexus_name=None):
         """
         Slice data (corresponding to a run) by either log value or time.
@@ -1948,7 +1947,8 @@ class VDriveAPI(object):
                                                    use_idl_bin=use_idl_bin,
                                                    roi_list=roi_list,
                                                    mask_list=mask_list,
-                                                   nexus_file_name=raw_nexus_name)
+                                                   nexus_file_name=raw_nexus_name,
+                                                   gsas_iparm_file=gsas_iparam_name)
 
         print ('[INFO] Sliced data.  Status = {}, Message: {}'.format(status, message))
 
@@ -2046,20 +2046,20 @@ class VDriveAPI(object):
         :param van_run_number:
         :return:
         """
-        assert isinstance(ipts_number, int), 'ITPS number {0} must be an integer but not {1}.' \
-                                             ''.format(ipts_number, type(ipts_number))
-        assert isinstance(van_run_number, int), 'Vanadium run number {0} must be an integer but not {1}.' \
-                                                ''.format(van_run_number, type(van_run_number))
-        assert isinstance(run_number_list, list), 'Run number list {0} must be a list but not a {1}.' \
-                                                  ''.format(run_number_list, type(run_number_list))
+        # check inputs
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
+        datatypeutility.check_list('Run numbers', run_number_list)
+        datatypeutility.check_int_variable('Vanadium run number', van_run_number, (1, None))
 
+        # locate vanadium GSAS file
         file_exist, van_file_name = self._myArchiveManager.locate_vanadium_gsas_file(ipts_number, van_run_number)
         if not file_exist:
             return False, 'Unable to locate vanadium GSAS file'
 
+        self._myProject.reduction_manager.add_reduced_vanadium(van_run_number, van_file_name)
         self._myProject.set_vanadium_runs(run_number_list, van_run_number, van_file_name)
 
-        return
+        return True, None
 
     # Found not used
     # def set_slicer_helper(self, nxs_file_name, run_number)
