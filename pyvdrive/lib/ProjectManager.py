@@ -1273,7 +1273,7 @@ class ProjectManager(object):
         :param run_number_list:
         :param output_directory:
         :param d_spacing:
-        :param binning_parameters:
+        :param binning_parameters: None for default IDL binning
         :param number_banks: number of banks to focus to
         :param gsas: flag to reduce to GSAS file
         :param merge_runs:
@@ -1295,9 +1295,9 @@ class ProjectManager(object):
             mask_list = list()
 
         # check binning parameters
-        if binning_parameters is None:
-            raise RuntimeError('Binning parameters in reduce_vulcan_runs_v2 cannot be None.')
-        if d_spacing:
+        # if binning_parameters is None:
+        #     raise RuntimeError('Binning parameters in reduce_vulcan_runs_v2 cannot be None.')
+        if d_spacing and binning_parameters is not None:
             if len(binning_parameters) == 1:
                 bin_size = binning_parameters[0]
             else:

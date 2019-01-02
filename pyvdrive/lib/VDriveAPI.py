@@ -1387,10 +1387,6 @@ class VDriveAPI(object):
             raise RuntimeError('There are runs from different IPTS.  It is not supported in PyVDrive.')
         ipts_number = ipts_set.pop()
 
-        # binning_parameters is default to be None.  If None, a real default value - TEST - 20180710
-        if binning_parameters is None:
-            binning_parameters = [-0.001]
-
         # check ROI list and Mask list
         if roi_list is None:
             roi_list = list()

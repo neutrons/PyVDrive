@@ -260,7 +260,7 @@ def test_main():
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
     # simple test with 1 run
-    # test_ned_simple(command_tester)
+    test_ned_simple(command_tester)
 
     # # test with multiple runs
     # test_ned_multiple_runs(command_tester)
@@ -280,7 +280,7 @@ def test_main():
     #
     # # test with
     # test_ned_mask(command_tester)
-    test_ned_roi(command_tester)
+    # test_ned_roi(command_tester)
 
     return command_tester.main_window
 

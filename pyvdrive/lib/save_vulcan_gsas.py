@@ -126,27 +126,21 @@ class SaveVulcanGSS(object):
             total_nanosecond_stop = 0
 
         # Construct new header
-        newheader = ""
+        new_header = ""
 
         if len(title) > 80:
             title = title[0:80]
-        newheader += "%-80s\n" % title
+        new_header += "%-80s\n" % title
+        new_header += "%-80s\n" % ("Instrument parameter file: %s" % gsas_param_file_name)
+        new_header += "%-80s\n" % ("#IPTS: %s" % str(ipts))
+        new_header += "%-80s\n" % "#binned by: Mantid"
+        new_header += "%-80s\n" % ("#GSAS file name: %s" % os.path.basename(gsas_file_name))
+        new_header += "%-80s\n" % ("#GSAS IPARM file: %s" % gsas_param_file_name)
+        new_header += "%-80s\n" % ("#Pulsestart:    %d" % total_nanosecond_start)
+        new_header += "%-80s\n" % ("#Pulsestop:     %d" % total_nanosecond_stop)
+        new_header += '%-80s\n' % '#'
 
-        newheader += "%-80s\n" % ("Instrument parameter file: %s" % gsas_param_file_name)
-
-        newheader += "%-80s\n" % ("#IPTS: %s" % str(ipts))
-
-        newheader += "%-80s\n" % "#binned by: Mantid"
-
-        newheader += "%-80s\n" % ("#GSAS file name: %s" % os.path.basename(gsas_file_name))
-
-        newheader += "%-80s\n" % ("#GSAS IPARM file: %s" % gsas_param_file_name)
-
-        newheader += "%-80s\n" % ("#Pulsestart:    %d" % total_nanosecond_start)
-
-        newheader += "%-80s\n" % ("#Pulsestop:     %d" % total_nanosecond_stop)
-
-        return newheader
+        return new_header
 
     def _get_tof_bin_params(self, phase, num_banks):
         """
@@ -334,7 +328,6 @@ class SaveVulcanGSS(object):
         # Example:
         # Total flight path 45.754m, tth 90deg, DIFC 16356.3
         # Data for spectrum :0
-        bank_buffer += '%-80s\n' % '#'
         bank_buffer += '%-80s\n' % '# Total flight path {}m, tth {}deg, DIFC {}'.format(l1, two_theta, difc)
         bank_buffer += '%-80s\n' % '# Data for spectrum :{}'.format(bank_id - 1)
 
