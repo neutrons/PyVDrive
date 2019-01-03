@@ -1413,7 +1413,7 @@ class ProjectManager(object):
         """
         # check inputs
         datatypeutility.check_list('Run numbers', run_number_list)
-        datatypeutility.check_int_variable('Vanadium run', van_file_name, (1, None))
+        datatypeutility.check_int_variable('Vanadium run', van_run_number, (1, None))
 
         # add vanadium information
         for run_number in run_number_list:

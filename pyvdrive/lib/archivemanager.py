@@ -563,7 +563,7 @@ class DataArchiveManager(object):
         :param van_run_number:
         :return:
         """
-        van_gda_file = '/SNS/VULCAN/IPTS-{0}/shared/Instrument/{1}-s.gda'.format(ipts_number, van_run_number)
+        van_gda_file = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/PRM/{}-s.gda'.format(van_run_number)
 
         file_accessible = os.path.exists(van_gda_file)
 

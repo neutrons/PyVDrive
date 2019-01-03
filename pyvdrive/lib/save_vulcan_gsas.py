@@ -299,19 +299,29 @@ class SaveVulcanGSS(object):
 
         return two_theta * 180. / math.pi, difc
 
-    def _write_slog_bank_gsas(self, ws_name, bank_id, vulcan_tof_vector):
+    def _write_slog_bank_gsas(self, ws_name, bank_id, vulcan_tof_vector, van_ws):
         """
         1. X: format to VDRIVE tradition (refer to ...)
         2. Y: native value
         3. Z: error bar
         :param ws_name:
         :param bank_id:
+        :param ...
+        :param ...
         :return:
         """
+        # check vanadium: if not None, assume that number of bins and bin edges are correct
+        if van_ws is not None:
+            van_vec_y = van_ws.readY(bank_id - 1)
+            van_vec_e = van_ws.readE(bank_id - 1)
+        else:
+            van_vec_y = None
+            van_vec_e = None
+
         # get workspace
         diff_ws = ADS.retrieve(ws_name)
         if vulcan_tof_vector is None:
-            vec_x = diff_ws.readX(bank_id -1)
+            vec_x = diff_ws.readX(bank_id - 1)
         else:
             vec_x = vulcan_tof_vector
         vec_y = diff_ws.readY(bank_id - 1)  # convert to workspace index
@@ -348,13 +358,28 @@ class SaveVulcanGSS(object):
         bank_buffer += '%-80s\n' % bank_header
 
         # write lines: not multiplied by bin width
-        for index in range(data_size):
-            x_i = '%.1f' % vec_x[index]
-            y_i = '%.1f' % vec_y[index]
-            e_i = '%.2f' % vec_e[index]
-            data_line_i = '%12s%12s%12s' % (x_i, y_i, e_i)
-            bank_buffer += '%-80s\n' % data_line_i
-        # END-FOR
+        if vec_y is None:
+            for index in range(data_size):
+                x_i = '%.1f' % vec_x[index]
+                y_i = '%.1f' % vec_y[index]
+                e_i = '%.2f' % vec_e[index]
+                data_line_i = '%12s%12s%12s' % (x_i, y_i, e_i)
+                bank_buffer += '%-80s\n' % data_line_i
+            # END-FOR
+        else:
+            # normalize by vanadium
+            for index in range(data_size):
+                x_i = '%.1f' % vec_x[index]
+                y_i = '%.5f' % (vec_y[index] / van_vec_y[index])
+                if vec_y[index] < 1.E-10:
+                    alpha = 1.
+                else:
+                    alpha = vec_e[index] / vec_y[index]
+                beta = van_vec_e[index] / van_vec_y[index]
+                e_i = '%.5f' % (abs(vec_y[index]/van_vec_y[index]) * math.sqrt(alpha**2 + beta**2))
+                data_line_i = '%12s%12s%12s' % (x_i, y_i, e_i)
+                bank_buffer += '%-80s\n' % data_line_i
+            # END-FOR
 
         return bank_buffer
 
@@ -392,6 +417,22 @@ class SaveVulcanGSS(object):
             print ('[DB...BAT] Using user specified binning parameters')
             bin_params_set = [(range(1, diff_ws.getNumberHistograms()+1), None, None)]
 
+        # check for vanadium GSAS file name
+        if vanadium_gsas_file is not None:
+            # check whether a workspace exists
+            # NOTE (algorithm) use hash to determine the workspace name from file location
+            van_gsas_ws_name = 'van_{}'.format(hash(vanadium_gsas_file))
+            if ADS.doesExist(van_gsas_ws_name):
+                van_ws = ADS.retrieve(van_gsas_ws_name)
+            else:
+                van_ws = load_vulcan_gsas(vanadium_gsas_file, van_gsas_ws_name)
+            # check number of histograms
+            if van_ws.getNumberHistograms() != diff_ws.getNumberHistograms():
+                raise RuntimeError('Numbers of histograms between vanadium spectra and output GSAS are different')
+        else:
+            van_ws = None
+        # END-IF
+
         # rebin and then write output
         gsas_buffer_dict = dict()
         num_bank_sets = len(bin_params_set)
@@ -407,29 +448,19 @@ class SaveVulcanGSS(object):
 
             # Create output
             for bank_id in bank_id_list:
-                gsas_section_i = self._write_slog_bank_gsas(diff_ws_name, bank_id, tof_vector)
+                # check vanadium bin edges
+                if van_ws is not None:
+                    # check whether the bins are same between GSAS workspace and vanadium workspace
+                    unmatched, reason = self._compare_workspaces_dimension(van_ws, bank_id, tof_vector)
+                    if unmatched:
+                        raise RuntimeError('Vanadium GSAS workspace {} does not match workspace {}: {}'
+                                           ''.format(vanadium_gsas_file, diff_ws_name, reason))
+                # END-IF
+
+                # write GSAS head considering vanadium
+                gsas_section_i = self._write_slog_bank_gsas(diff_ws_name, bank_id, tof_vector, van_ws)
                 gsas_buffer_dict[bank_id] = gsas_section_i
         # END-FOR
-
-        # check for vanadium GSAS file name
-        if vanadium_gsas_file is not None:
-            # check whether a workspace exists
-            # NOTE (algorithm) use hash to determine the workspace name from file location
-            van_gsas_ws_name = 'van_{}'.format(hash(vanadium_gsas_file))
-            if ADS.doesExist(van_gsas_ws_name):
-                van_ws = ADS.retrieve(van_gsas_ws_name)
-            else:
-                van_ws = load_vulcan_gsas(vanadium_gsas_file, van_gsas_ws_name)
-
-            # check whether the bins are same between GSAS workspace and vanadium workspace
-            unmatched, reason = self._compare_workspaces_dimension(van_ws, ADS.retrieve(diff_ws_name))
-            if unmatched:
-                raise RuntimeError('Vanadium GSAS file {} does not match workspace {}: {}'
-                                   ''.format(van_gsas_ws_name, diff_ws_name, reason))
-
-            # normalize
-            self._normalize_by_vanadium(diff_ws, van_ws, diff_ws_name)
-        # END-IF
 
         # header
         diff_ws = ADS.retrieve(diff_ws_name)
@@ -464,26 +495,26 @@ class SaveVulcanGSS(object):
         return diff_ws
 
     @staticmethod
-    def _compare_workspaces_dimension(van_ws, diff_ws):
+    def _compare_workspaces_dimension(van_ws, bank_id, diff_tof_vec):
         """
         compare the workspace dimensions
         :param van_ws:
         :param diff_ws:
-        :return:
+        :return: Being different (bool), Reason (str)
         """
-        if van_ws.getNumberHistograms() != diff_ws.getNumberHistograms():
-            return False, 'Numbers of histograms are different'
+        iws = bank_id - 1
+        van_vec_x = van_ws.readX(iws)
+        diff_vec_x = diff_tof_vec
+        if len(van_vec_x) != len(diff_vec_x):
+            return True, 'Numbers of bins are different of workspace index {}'.format(iws)
 
-        for iws in range(van_ws.getNumberHistograms()):
-            van_vec_x = van_ws.readX(iws)
-            diff_vec_x = diff_ws.readX(iws)
-            if len(van_vec_x) != len(diff_vec_x):
-                return True, 'Numbers of bins are different of workspace index {}'.format(iws)
-            elif abs(van_vec_x[0] - diff_vec_x[0])/(van_vec_x[0]) > 1.E-5:
-                return True, 'X[0] are different for spectrum {}'.format(iws)
-            elif abs(van_vec_x[-1] - diff_vec_x[-1])/(van_vec_x[-1]) > 1.E-5:
-                return True, 'X[-1] are different for spectrum {}'.format(iws)
-        # END-FOR
+        if abs(van_vec_x[0] - diff_vec_x[0]) / (van_vec_x[0]) > 1.E-5:
+            # return True, 'X[0] are different for spectrum {}: {} != {}'.format(iws, van_vec_x[0], diff_vec_x[0])
+            print ('X[0] are different for spectrum {}: {} != {}'.format(iws, van_vec_x[0], diff_vec_x[0]))
+        if abs(van_vec_x[-1] - diff_vec_x[-1]) / (van_vec_x[-1]) > 1.E-5:
+            # return True, 'X[-1] are different for spectrum {}; {} != {}'.format(iws, van_vec_x[-1], diff_vec_x[-1])
+            print ('X[-1] are different for spectrum {}; {} != {}'.format(iws, van_vec_x[-1], diff_vec_x[-1]))
+        # END-IF-ELSE
 
         return False, None
 
@@ -517,9 +548,10 @@ def load_vulcan_gsas(gsas_name, gsas_ws_name):
         temp_out_name_i = 'temp_i_x'
         api.ExtractSpectra(temp_out_name, WorkspaceIndexList=[iws], OutputWorkspace=temp_out_name_i)
         api.ConvertToPointData(InputWorkspace=temp_out_name_i, OutputWorkspace=temp_out_name_i)
-        api.ConjoinWorkspaces(InputWorkspace1=gsas_name,
+        api.ConjoinWorkspaces(InputWorkspace1=gsas_ws_name,
                               InputWorkspace2=temp_out_name_i)
-        api.DeleteWorkspace(temp_out_name_i)
+        if ADS.doesExist(temp_out_name_i):
+            api.DeleteWorkspace(temp_out_name_i)
     # END-FOR
 
     # clean temp GSAS
