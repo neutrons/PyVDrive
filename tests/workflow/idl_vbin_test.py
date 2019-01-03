@@ -64,17 +64,17 @@ def test_ned_multiple_runs(tester):
     return
 
 
-def test_ned_vrun(tester):
+def test_ned_runv(tester):
     """ Test the mode simple reduction case for data collected by nED
     :param tester:
     :return:
     """
     # test directory
-    test_dir = '/tmp/vbin_ned_vrun'
+    test_dir = '/tmp/vbin_ned_runv'
     command_test_setup.set_test_dir(test_dir)
 
     # run command
-    idl_command = "VBIN,IPTS=20280,RUNS=169186,vrun=163021,output=\'{}\'".format(test_dir)
+    idl_command = "VBIN,IPTS=20280,RUNS=169186,runv=163021,output=\'{}\'".format(test_dir)
     tester.run_command(idl_command)
 
     # output summary
@@ -300,8 +300,8 @@ def test_main():
     # test multiple (2) ROI
     test_ned_multi_roi(command_tester)
 
-    # test VRUN
-    test_ned_vrun(command_tester)
+    # test RUNV
+    test_ned_runv(command_tester)
     #
     # # test for standard material (Si, C, ...)
     # # TODO - 20190101 - need a good example:

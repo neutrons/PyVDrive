@@ -74,6 +74,36 @@ Thus with argument **VRUN** given, the output GSAS will be
  2. the paired IPARM file will be written to output GSAS file.
 
 
+## TAG [2]
+
+_TAG_ is the flag to process standard samples, such as vanadium and silicon.
+So far, there are a few standards supported, including 'C', 'V', 'Si' and 'CeO2'. 
+
+With _TAG_ specified, the reduced GSAS file will be copied to certain directories and its sample log summary will be
+also recorded to the log summary file for this type of material only.
+
+Here is the examples:
+
+  -  TAG='V': Vanadium
+  	- GSAS data file is copied to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium
+  	- Log summary is written to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium/VRecord.txt
+
+
+  -  TAG='Si': Silicon
+  	- GSAS data file is copied to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Si
+  	- Log summary is written to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Si/SiRecord.txt
+
+
+  -  TAG='C': diamond 
+  	- GSAS data file is copied to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/C
+  	- Log summary is written to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium/CRecord.txt
+
+
+  -  TAG='CeO2': 
+  	- GSAS data file is copied to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/CeO2
+  	- Log summary is written to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium/CeO2Record.txt
+
+
 ## Examples (Benchmark)
 
 ### Pre-Vulcan-X examples (3-banks nED)

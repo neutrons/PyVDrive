@@ -53,7 +53,7 @@ class VDriveAPI(object):
         self._myInstrument = instrument_name
 
         # initialize (1) vdrive project for reducing data, (2) data archiving manager, and (3) slicing manager
-        self._myProject = ProjectMrg.ProjectManager('New Project')
+        self._myProject = ProjectMrg.ProjectManager(self, 'New Project', 'VULCAN')
 
         # construct the data location
         # if module_location is not None:
@@ -1418,6 +1418,7 @@ class VDriveAPI(object):
                                                                               binning_parameters=binning_parameters,
                                                                               number_banks=num_banks,
                                                                               gsas=gsas,
+                                                                              vanadium_run=vanadium,
                                                                               merge_runs=merge_runs,
                                                                               roi_list=roi_list,
                                                                               mask_list=mask_list,

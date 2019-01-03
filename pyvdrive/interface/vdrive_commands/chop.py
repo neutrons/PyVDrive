@@ -12,8 +12,9 @@ class VdriveChop(VDriveCommand):
     """
     # TODO/ISSUE/NOWNOW - Implement DT and RUNV
     SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'DBIN', 'LOADFRAME', 'FURNACE', 'BIN', 'PICKDATA', 'OUTPUT',
-                     'DRYRUN', 'PULSETIME', 'DT', 'RUNV', 'INFO', 'ROI', 'MASK', 'NEXUS', 'STARTTIME', 'STOPTIME',
-                     'VDRIVEBIN', 'NUMBANKS', 'SAVECHOPPED2NEXUS', 'IPARM']
+                     'BINFOLDER',
+                     'PULSETIME', 'DT', 'RUNV', 'INFO', 'ROI', 'MASK', 'NEXUS', 'STARTTIME', 'STOPTIME',
+                     'VDRIVEBIN', 'NUMBANKS', 'SAVECHOPPED2NEXUS', 'IPARM', 'DRYRUN', ]
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -27,7 +28,7 @@ class VdriveChop(VDriveCommand):
         'BIN': 'If bin=1, chopped data will be reduced to GSAS files',
         'OUTPUT': 'If specified, then the chopped files will be saved to the directory. Otherwise, these files '
                   'will be saved to /SNS/VULCAN/IPTS-????/shared.',
-        'BINFOLDER': 'blabla',
+        'BINFOLDER': 'It is an alias for "OUTPUT"',
         'IPARM': 'GSAS profile calibration file (.iparam). Default is vulcan.prm',
         'DRYRUN': 'If equal to 1, then it is a dry run to check input and output.',
         'HELP': 'the Log Picker Window will be launched and set up with given RUN number.\n',
@@ -419,6 +420,7 @@ class VdriveChop(VDriveCommand):
         # vanadium run
         if 'RUNV' in self._commandArgsDict:
             van_run_number = int(self._commandArgsDict['RUNV'])
+
         else:
             van_run_number = None
 

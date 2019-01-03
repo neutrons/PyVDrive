@@ -649,11 +649,17 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         #
         # return status, message
 
-    def execute_chop_reduction_v2(self, event_ws_name, binning_parameters, num_reduced_banks, calib_ws_name,
-                                  gsas_info_dict,
-                                  clear_workspaces, gsas_writer):
-        """ Chop and reduce data with the upgraded algorithm for speed
+    def execute_chop_reduction_v2(self, event_ws_name, binning_parameters, num_reduced_banks,
+                                  calib_ws_name, group_ws_name,
+                                  gsas_info_dict, clear_workspaces, gsas_writer):
+        """
+        Chop and reduce data with the upgraded algorithm for speed
+        Version: 2.0 (latest)
+        :param event_ws_name:
         :param binning_parameters:
+        :param num_reduced_banks:
+        :param calib_ws_name:
+        :param group_ws_name:
         :param gsas_info_dict:
         :param clear_workspaces: flag to delete output workspaces as they have been written to GSAS
         :param gsas_writer: an instance to the object to write GSAS file
@@ -690,6 +696,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         info, output_ws_names = runner.slice_focus_event_workspace(event_ws_name=event_ws_name,
                                                                    geometry_calib_ws_name=calib_ws_name,
+                                                                   group_ws_name=group_ws_name,
                                                                    split_ws_name=split_ws_name,
                                                                    info_ws_name=split_info_table,
                                                                    output_ws_base=output_ws_name,
@@ -697,7 +704,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                                                                    gsas_info_dict=gsas_info_dict,
                                                                    gsas_writer=gsas_writer)
 
-
+        # record
         self._reducedWorkspaceList.extend(output_ws_names)
 
         return True, info

@@ -22,13 +22,15 @@ class ProjectManager(object):
     Note:
         (1) run_info dictionary from archive manager:  'run', 'ipts', 'file', 'time'
     """
-    def __init__(self, project_name, instrument='VULCAN'):
+    def __init__(self, parent, project_name, instrument='VULCAN'):
         """ Init
         """
         # project name
         self._name = project_name
         # Data path.  With baseDataFileName, a full path to a data set can be constructed
         self._baseDataPath = None
+        # parent
+        self._parent = parent
 
         # chopping and reduction managers
         # Reduction manager
@@ -1266,7 +1268,7 @@ class ProjectManager(object):
 
     # TODO - 20190101 - merge_runs: how to apply this!
     def reduce_vulcan_runs_v2(self, run_number_list, output_directory, d_spacing, binning_parameters,
-                              number_banks, gsas, merge_runs,
+                              number_banks, gsas, vanadium_run, merge_runs,
                               roi_list, mask_list, no_cal_mask):
         """ reduce runs in a simplied way! (it can be thought be the version 2.0!)
         Note: this method is used by VBIN
@@ -1276,6 +1278,7 @@ class ProjectManager(object):
         :param binning_parameters: None for default IDL binning
         :param number_banks: number of banks to focus to
         :param gsas: flag to reduce to GSAS file
+        :param vanadium_run: van run (integer or None)
         :param merge_runs:
         :param roi_list:
         :param mask_list:
@@ -1338,11 +1341,18 @@ class ProjectManager(object):
                     else:
                         align_vdrive_bin = False
 
+                    if vanadium_run is not None:
+                        van_gsas_name, iparam_file_name = \
+                            self._parent.archive_manager.locate_process_vanadium(vanadium_run)
+                    else:
+                        van_gsas_name = None
+                        iparam_file_name = 'vulcan.prm'
+
                     self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
                                                             gsas_file_name=gsas_file_name, ipts_number=ipts_number,
                                                             align_vdrive_bin=align_vdrive_bin,
-                                                            gsas_param_file_name='vulcan.prm',
-                                                            vanadium_gsas_file=None)
+                                                            gsas_param_file_name=iparam_file_name,
+                                                            vanadium_gsas_file=van_gsas_name)
 
             except RuntimeError as run_error:
                 error_messages.append('Failed to reduce run {0} due to {1}'.format(run_number, run_error))

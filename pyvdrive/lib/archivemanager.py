@@ -9,6 +9,7 @@ import vdrivehelper
 import vulcan_util
 import datatypeutility
 import pandas
+import datatypeutility
 
 SUPPORTED_INSTRUMENT = {'VULCAN': 'VULCAN'}
 SUPPORTED_INSTRUMENT_SHORT = {'VUL': 'VULCAN'}
@@ -567,6 +568,29 @@ class DataArchiveManager(object):
         file_accessible = os.path.exists(van_gda_file)
 
         return file_accessible, van_gda_file
+
+    @staticmethod
+    def locate_process_vanadium(vanadium_run):
+        """ locate processed vanadium GSAS file and thus also the GSAS prm file related
+        :except OSError: if directory cannot be found
+        :except RuntimeError: if file cannot be found
+        :param vanadium_run:
+        :return:
+        """
+        datatypeutility.check_int_variable('Vanadium run number', vanadium_run, (1, None))
+
+        prm_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/PRM'
+        if not os.path.exists(prm_dir):
+            raise OSError('VULCAN PRM directory {} cannot be located.'.format(prm_dir))
+
+        # Note: 's' for smoothed
+        gsas_name = os.path.join(prm_dir, '{}-s.gda'.format(vanadium_run))
+        prm_name = os.path.join(prm_dir, 'Vulcan-{}-s.prm'.format(vanadium_run))
+        if not (os.path.exists(gsas_name) and os.path.exists(prm_name)):
+            raise RuntimeError('Either smoothed GSAS vanadium file {} or PRM file {} cannot be found.'
+                               ''.format(gsas_name, prm_name))
+
+        return gsas_name, prm_name
 
     def scan_runs_from_archive(self, ipts_number, run_number_list):
         """

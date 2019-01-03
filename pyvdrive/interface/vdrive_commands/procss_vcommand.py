@@ -197,10 +197,8 @@ class VDriveCommand(object):
             material_type = self._commandArgsDict['TAG']
             material_type = material_type.lower()
 
-            # TODO - NIGHT - Document in user manual
-
             standard_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard'
-            if os.access(standard_dir, os.W_OK) is False:
+            if not os.access(standard_dir, os.W_OK):
                 # if standard VDRIVE default directory is not writable, then use the local one
                 # very likely the current PyVdrive is running in a testing mode.
                 standard_dir = os.getcwd()
@@ -218,7 +216,7 @@ class VDriveCommand(object):
                 standard_dir = os.path.join(standard_dir, 'C')
                 standard_file = 'CRecord.txt'
             elif material_type == 'ceo2':
-                material_type = 'CeO3'
+                material_type = 'CeO2'
                 standard_dir = os.path.join(standard_dir, 'CeO2')
                 standard_file = 'CeO2Record.txt'
             elif len(material_type) > 0:
@@ -235,12 +233,27 @@ class VDriveCommand(object):
 
             # create workspace if not existing
             if os.path.exists(standard_dir) is False:
-                # TODO - NIGHT - Implement!
-                self._create_standard_directory(standard_dir)
+                self._create_standard_directory(standard_dir, material_type)
         else:
             standard_tuple = None
 
         return standard_tuple
+
+    @staticmethod
+    def _create_standard_directory(standard_dir, material_type):
+        """
+        create a standard sample directory for GSAS file and sample log record
+        :param standard_dir:
+        :param material_type: name/type of the standard type
+        :return:
+        """
+        try:
+            os.mkdir(standard_dir, 777)
+        except OSError as os_err:
+            raise RuntimeError('Failed to create {} for standard material {}'
+                               ''.format(standard_dir, material_type, os_err))
+
+        return
 
     def set_ipts(self):
         """
