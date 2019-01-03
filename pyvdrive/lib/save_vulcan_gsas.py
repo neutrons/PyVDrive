@@ -358,7 +358,7 @@ class SaveVulcanGSS(object):
         bank_buffer += '%-80s\n' % bank_header
 
         # write lines: not multiplied by bin width
-        if vec_y is None:
+        if van_vec_y is None:
             for index in range(data_size):
                 x_i = '%.1f' % vec_x[index]
                 y_i = '%.1f' % vec_y[index]

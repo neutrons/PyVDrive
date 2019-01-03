@@ -108,7 +108,7 @@ def test_ned_standard(tester):
     command_test_setup.set_test_dir(test_dir)
 
     # run command
-    idl_command = "VBIN,IPTS=20280,RUNS=169186,tag='Si',output=\'{}\'".format(test_dir)
+    idl_command = "VBIN,IPTS=20280,RUNS=169186,tag='SiTest',tagdir='/tmp',output=\'{}\'".format(test_dir)
     tester.run_command(idl_command)
 
     # output summary
@@ -301,14 +301,10 @@ def test_main():
     #test_ned_multi_roi(command_tester)
 
     # test RUNV
-    test_ned_runv(command_tester)
+    # test_ned_runv(command_tester)
 
-    #
-    # # test for standard material (Si, C, ...)
-    # # TODO - 20190101 - need a good example:
-    # # TODO   test_ned_standard(command_tester)
-    #
-    # test_ned_roi(command_tester)
+    # test for standard material (Si, C, ...)
+    test_ned_standard(command_tester)
 
     return command_tester.main_window
 

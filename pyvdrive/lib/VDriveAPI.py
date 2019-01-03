@@ -1411,7 +1411,6 @@ class VDriveAPI(object):
 
         elif dspace or version == 2:
             # user version 2 reduction algorithm
-            print ('[DB...BAT] GSAS Flag = {}'.format(gsas))
             run_number_list, msg_list = self._myProject.reduce_vulcan_runs_v2(run_number_list=runs_to_reduce,
                                                                               output_directory=output_directory,
                                                                               d_spacing=True,
@@ -1423,6 +1422,35 @@ class VDriveAPI(object):
                                                                               roi_list=roi_list,
                                                                               mask_list=mask_list,
                                                                               no_cal_mask=no_cal_mask)
+            if standard_sample_tuple:
+                # TODO - NIGHT / TONIGHT - Implement ASAP
+                if len(run_number_list) != 1:
+                    return False, 'Standard tag {} can only work with 1 run'.format(standard_sample_tuple)
+                run_number, ws_name = run_number_list[0]
+                print ('Output Dir: {}'.format(output_directory))
+                # 'SiTest', '/tmp/SiTest', 'SiTestRecord.txt'
+                material_name, tag_dir, standard_record_file = standard_sample_tuple
+                import reduce_VULCAN
+                print (reduce_VULCAN.RecordBase)
+                vdrivehelper.export_experiment_log(run_number_list[0], msg_list[0], standard_sample_tuple)
+                """
+                    @staticmethod
+                def generate_record_file_format():
+                """
+                """
+                sample_title_list = list()
+                sample_name_list = list()
+                sample_operation_list = list()
+                for i_sample in xrange(len(RecordBase)):
+                    sample_title_list.append(RecordBase[i_sample][0])
+                    sample_name_list.append(RecordBase[i_sample][1])
+                    sample_operation_list.append(RecordBase[i_sample][2])
+
+                return sample_title_list, sample_name_list, sample_operation_list
+
+                """
+            # END-IF
+
             status = True
             error_message = ''
             for msg in msg_list:

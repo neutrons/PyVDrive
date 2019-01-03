@@ -86,7 +86,7 @@ class VBin(procss_vcommand.VDriveCommand):
     """
     """
     SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BANKS', 'BINW',
-                     'RUNV', 'IPARM', 'ONEBANK', 'NOMASK', 'TAG',
+                     'RUNV', 'IPARM', 'ONEBANK', 'NOMASK', 'TAG', 'TAGDIR',
                      'BINFOLDER', 'MYTOFMIN', 'MYTOFMAX', 'OUTPUT', 'GROUP', 'VERSION',
                      'ROI', 'MASK']
     # NOTE: Here is the list of arguments that will not be supported in March-2019 release
@@ -126,11 +126,10 @@ class VBin(procss_vcommand.VDriveCommand):
 
     def exec_cmd(self):
         """
-
+        Execute command: override
         :return: status (bool), error message (str)
         """
         """
-        Execute command: override
         """
         # check and set IPTS
         try:
@@ -164,7 +163,10 @@ class VBin(procss_vcommand.VDriveCommand):
             van_run = None
 
         # TAG
-        standard_tuple = self.process_tag()
+        try:
+            standard_tuple = self.process_tag()
+        except RuntimeError as run_err:
+            return False, 'VBIN failed due to tag: {}'.format(run_err)
 
         # output directory
         if 'OUTPUT' in self._commandArgsDict and 'BINFOLDER' in self._commandArgsDict:
@@ -358,23 +360,3 @@ class VBin(procss_vcommand.VDriveCommand):
 
         return help_str
 
-    @staticmethod
-    def _create_standard_directory(tag_dir):
-        """
-        create a directory for standard
-        :param tag_dir:
-        :return:
-        """
-        assert isinstance(tag_dir, str), 'Standard directory {0} must be a string but not a {1}.' \
-                                         ''.format(tag_dir, type(tag_dir))
-        try:
-            os.mkdir(tag_dir)
-        except IOError as io_error:
-            raise RuntimeError('Unable to create directory {0} due to {1}'.format(tag_dir, io_error))
-        except OSError as os_error:
-            raise RuntimeError('Unable to create directory {0} due to {1}'.format(tag_dir, os_error))
-
-        # change access control
-        os.chmod(tag_dir, 0777)
-
-        return

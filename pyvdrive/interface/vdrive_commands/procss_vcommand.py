@@ -197,33 +197,37 @@ class VDriveCommand(object):
             material_type = self._commandArgsDict['TAG']
             material_type = material_type.lower()
 
-            standard_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard'
-            if not os.access(standard_dir, os.W_OK):
+            if 'TAGDIR' in self._commandArgsDict:
+                standard_dir_root = self._commandArgsDict['TAGDIR']
+            else:
+                standard_dir_root = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard'
+
+            if not os.access(standard_dir_root, os.W_OK):
                 # if standard VDRIVE default directory is not writable, then use the local one
                 # very likely the current PyVdrive is running in a testing mode.
-                standard_dir = os.getcwd()
+                raise RuntimeError('User does not have permission to write to {}'.format(standard_dir_root))
 
             if material_type == 'si':
                 material_type = 'Si'
-                standard_dir = os.path.join(standard_dir, 'Si')
+                standard_dir = os.path.join(standard_dir_root, 'Si')
                 standard_file = 'SiRecord.txt'
             elif material_type == 'v':
                 material_type = 'Vanadium'
-                standard_dir = os.path.join(standard_dir, 'Vanadium')
+                standard_dir = os.path.join(standard_dir_root, 'Vanadium')
                 standard_file = 'VRecord.txt'
             elif material_type == 'c':
                 material_type = 'C'
-                standard_dir = os.path.join(standard_dir, 'C')
+                standard_dir = os.path.join(standard_dir_root, 'C')
                 standard_file = 'CRecord.txt'
             elif material_type == 'ceo2':
                 material_type = 'CeO2'
-                standard_dir = os.path.join(standard_dir, 'CeO2')
+                standard_dir = os.path.join(standard_dir_root, 'CeO2')
                 standard_file = 'CeO2Record.txt'
             elif len(material_type) > 0:
                 # create arbitrary tag
                 # use the user specified TAG as the type of material
                 material_type = self._commandArgsDict['TAG']
-                standard_dir = os.path.join(standard_dir, material_type)
+                standard_dir = os.path.join(standard_dir_root, material_type)
                 standard_file = '{0}Record.txt'.format(material_type)
             else:
                 raise RuntimeError('TAG cannot be an empty string.')
@@ -234,8 +238,10 @@ class VDriveCommand(object):
             # create workspace if not existing
             if os.path.exists(standard_dir) is False:
                 self._create_standard_directory(standard_dir, material_type)
+            print (material_type, standard_dir)
         else:
             standard_tuple = None
+            print self._commandArgsDict.keys()
 
         return standard_tuple
 
@@ -247,11 +253,19 @@ class VDriveCommand(object):
         :param material_type: name/type of the standard type
         :return:
         """
+        datatypeutility.check_file_name(standard_dir, check_exist=False,
+                                        is_dir=True,
+                                        check_writable=True,
+                                        note='Standard (tag) directory')
+
         try:
-            os.mkdir(standard_dir, 777)
+            os.mkdir(standard_dir, 0777)
+            print ('[INFO VBIN TAG] Created directory {}'.format(standard_dir))
         except OSError as os_err:
             raise RuntimeError('Failed to create {} for standard material {}'
                                ''.format(standard_dir, material_type, os_err))
+        except IOError as io_error:
+            raise RuntimeError('Unable to create directory {0} due to {1}'.format(standard_dir, io_error))
 
         return
 
