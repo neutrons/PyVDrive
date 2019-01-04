@@ -62,6 +62,8 @@ from mantid.api import AnalysisDataService
 from mantid.kernel import DateAndTime
 import h5py
 import datatypeutility
+import vulcan_util
+
 
 # FIXME FIXME TODO TODO - Need an algorithm to locate run time with calibration file
 if os.path.exists('/SNS/VULCAN/shared/CALIBRATION'):
@@ -839,6 +841,8 @@ class ReductionSetup(object):
         if isinstance(auto_reduction_dir, str):
             self._pngFileName = os.path.join(auto_reduction_dir, 'VULCAN_' + str(self._runNumber) + '.png')
         else:
+            assert isinstance(self._mainGSASDir, str), 'Main GSAS dir {} must be set to a string but not of type {}' \
+                                                       ''.format(self._mainGSASDir, type(self._mainGSASDir))
             self._pngFileName = os.path.join(self._mainGSASDir, 'VULCAN_{0}.png'.format(self._runNumber))
 
         return
@@ -1524,8 +1528,6 @@ class PatchRecordHDF5(object):
         """search the HDF5 for the sample logs
         :return:
         """
-        import h5py
-
         try:
             h5file = h5py.File(self._h5name, 'r')
         except IOError as io_err:
@@ -1542,7 +1544,12 @@ class PatchRecordHDF5(object):
                         if isinstance(item, str):
                             node = node[item]
                         elif isinstance(item, int):
-                            node = node[item]
+                            try:
+                                node = node[item]
+                            except IndexError as index_error:
+                                print ('[WARNING] {}: {} is not a node on H5Path. FYI: {}'
+                                       ''.format(self._h5name, node, index_error))
+
                     # END-FOR
                 except KeyError as key_err:
                     if log_name == 'Notes':
@@ -1550,7 +1557,10 @@ class PatchRecordHDF5(object):
                     else:
                         raise key_err
                 # END-TRY-EXCEPT
+
                 log_value_dict[log_name] = str(node)
+            else:
+                print ('[WARNING] Log {} is not in {}\'s PATH'.format(log_name, self._h5name))
         # END-FOR
 
         h5file.close()
@@ -1900,21 +1910,8 @@ class ReduceVulcanData(object):
         sample_title_list, sample_name_list, sample_operation_list = self.generate_record_file_format()
 
         # Patch for logs that do not exist in event NeXus yet
-        sample_log_list = ['Comment', 'Sample', 'ITEM', 'Monitor1', 'Monitor2']
-        if self._reductionSetup.get_event_file().endswith('.h5'):
-            # HDF5 file
-            patcher = PatchRecordHDF5(self._reductionSetup.get_event_file(), sample_log_list)
-            patch_list = patcher.export_patch_list()
-        else:
-            # with preNexus and others. pre nED
-            patcher = PatchRecord(self._instrumentName,
-                                  self._reductionSetup.get_ipts_number(),
-                                  self._reductionSetup.get_run_number())
-            if patcher.do_not_patch:
-                patch_list = list()
-            else:
-                patch_list = patcher.export_patch_list()
-        # END-IF-ELSE
+        patch_list = generate_patch_log_list(self._instrumentName, self._reductionSetup.get_ipts_number(),
+                                             self._reductionSetup.get_run_number())
 
         # define over all message
         return_status = True
@@ -2747,6 +2744,34 @@ def check_point_data_log_binning(ws_name, standard_bin_size=0.01, tolerance=1.E-
         mantidsimple.DeleteWorkspace(Workspace=temp_ws_name)
 
     return True, ''
+
+
+def generate_patch_log_list(instrument_name, ipts_number, run_number):
+    """ Generate patch log list
+    :param instrument_name: 
+    :param ipts_number: 
+    :param run_number: 
+    :return: 
+    """
+    status, event_file_name = vulcan_util.locate_run(ipts_number, run_number)
+    if not status:
+        raise RuntimeError('IPTS-{} does not have run {}'.format(ipts_number, run_number))
+
+    sample_log_list = ['Comment', 'Sample', 'ITEM', 'Monitor1', 'Monitor2']
+    if event_file_name.endswith('.h5'):
+        # HDF5 file
+        patcher = PatchRecordHDF5(event_file_name, sample_log_list)
+        patch_list = patcher.export_patch_list()
+    else:
+        # with preNexus and others. pre nED
+        patcher = PatchRecord(instrument_name, ipts_number, run_number)
+        if patcher.do_not_patch:
+            patch_list = list()
+        else:
+            patch_list = patcher.export_patch_list()
+    # END-IF-ELSE
+
+    return patch_list
 
 
 class MainUtility(object):

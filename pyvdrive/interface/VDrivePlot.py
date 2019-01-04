@@ -390,29 +390,26 @@ class VdriveMainWindow(QMainWindow):
                 return
 
             def write_general_message(self, message):
-                """
-                TODO - NIGHT - doc
+                """ write general information, including successful execution, but excluding error,
+                to the command execution logs
                 :param message:
                 :return:
                 """
                 self.widget.write_general_message(message, clear_info_edit=False)
 
             def write_failure_message(self, message):
-                """
-                TODO - NIGHT - doc
+                """ write execution failure message
                 :param message:
                 :return:
                 """
                 self.widget.write_failure_message(message, clear_error_edit=False)
 
             def set_log_tab(self, tab='error'):
-                """
-                TODO - NIGHT - doc & finish it!
-                :param tab:
+                """ set the current tab (index) for the running logs
+                :param tab: case insensitive tab name: info/general, error, history
                 :return:
                 """
                 self.widget.set_curr_log_tab(tab)
-
 
         # END-DEF-CLASS
 

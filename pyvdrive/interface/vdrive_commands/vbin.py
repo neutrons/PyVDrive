@@ -85,27 +85,32 @@ class AutoReduce(procss_vcommand.VDriveCommand):
 class VBin(procss_vcommand.VDriveCommand):
     """
     """
-    SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BANKS', 'BINW', 'SKIPXML', 'FOCUS_EW',
-                     'RUNV', 'IParm', 'FullProf', 'NoGSAS', 'PlotFlag', 'ONEBANK', 'NoMask', 'TAG',
-                     'BinFolder', 'Mytofbmax', 'Mytofbmin', 'OUTPUT', 'GROUP', 'VERSION',
-                     'ROI', 'MASK', 'VDRIVEBIN']
+    SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BANKS', 'BINW',
+                     'RUNV', 'IPARM', 'ONEBANK', 'NOMASK', 'TAG', 'TAGDIR',
+                     'BINFOLDER', 'MYTOFMIN', 'MYTOFMAX', 'OUTPUT', 'GROUP', 'VERSION',
+                     'ROI', 'MASK']
+    # NOTE: Here is the list of arguments that will not be supported in March-2019 release
+    #       'SKIPXML', 'FOCUS_EW', 'FullProf', 'NoGSAS', 'PlotFlag', 'VDRIVEBIN'
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
         'RUNE': 'First run number',
-        'RUNS': 'Last run number',
+        'RUNS': 'Last run number (included)',
         'BANKS': 'Number of banks in output GSAS file.  Allowed values are 3, 7 and 27.  Default is 3.',
         'RUNV': 'Run number for vanadium file (file in instrument directory)',
-        'OneBank': 'Add 2 bank data together (=1).',
+        'ONEBANK': 'Add 2 bank data together (=1).',
         'GROUP': 'User specified a special group file other than usual 3/7/27 banks. (It cannot be used with BANKS)',
-        'Mytofbmin': 'User defined TOF min in binning parameter',
-        'Tag': '"Si/V" for instrument calibration.',
+        'MYTOFMIN': 'User defined TOF min in binning parameter. It must be used with MYTOFMAX and BINW',
+        'MYTOFMAX': 'User defined TOF max in binning parameter. It must be used with MYTOFMIN and BINW',
+        'BINW': 'Logarithm binning step. It must be used with MYTOFMIN and MYTOFMAX',
+        'TAG': '"Si/V" for instrument calibration.',
         'ROI': 'Files for Mantid made region of interest file in XML format',
         'MASK': 'Files for Mantid made mask file in XML format',
+        'NOMASK': 'Flag for not applying any mask, including the one from calibration, to reduced data',
+        'BINFOLDER': 'User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin',
         'OUTPUT': 'User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin',
         'VERSION': 'User specified version of reduction algorithm.  Mantid conventional = 1, PyVDrive simplified = 2',
-        'BINW': 'Binning parameter, i.e., log bin step',
-        'VDRIVEBIN': 'Bin boundaries will be adapted to (IDL) VDRIVE.  By default, it is 1 as True'
+        # 'VDRIVEBIN': 'Bin boundaries will be adapted to (IDL) VDRIVE.  By default, it is 1 as True'
     }
 
     def __init__(self, controller, command_args):
@@ -122,10 +127,10 @@ class VBin(procss_vcommand.VDriveCommand):
     def exec_cmd(self):
         """
         Execute command: override
+        :return: status (bool), error message (str)
         """
-        # TODO/FIXME What is SKIPXML
-        # FOCUS_EW: TODO/FIXME : anything interesting?
-
+        """
+        """
         # check and set IPTS
         try:
             self.set_ipts()
@@ -152,24 +157,28 @@ class VBin(procss_vcommand.VDriveCommand):
         # RUNV
         if 'RUNV' in self._commandArgsDict:
             van_run = int(self._commandArgsDict['RUNV'])
-            assert van_run > 0, 'Vanadium run number {0} must be positive.'.format(van_run)
+            if van_run < 0:
+                return False, 'Vanadium run number {0} must be positive.'.format(van_run)
         else:
             van_run = None
 
         # TAG
-        standard_tuple = self.process_tag()
+        try:
+            standard_tuple = self.process_tag()
+        except RuntimeError as run_err:
+            return False, 'VBIN failed due to tag: {}'.format(run_err)
 
         # output directory
-        if 'OUTPUT' in self._commandArgsDict:
+        if 'OUTPUT' in self._commandArgsDict and 'BINFOLDER' in self._commandArgsDict:
+            return False, 'OUTPUT and BINFOLDER cannot be specified simultaneously'
+        elif 'BINFOLDER' in self._commandArgsDict:
+            # use BinFolder
+            output_dir = self._commandArgsDict['BINFOLDER']
+        elif 'OUTPUT' in self._commandArgsDict:
             output_dir = self._commandArgsDict['OUTPUT']
         else:
+            # neither specified: use default
             output_dir = vulcan_util.get_default_binned_directory(self._iptsNumber)
-
-        # Option FullProf is temporarily disabled
-        # if 'FULLPROF' in self._commandArgsDict:
-        #     output_fullprof = int(self._commandArgsDict['Fullprof']) == 1
-        # else:
-        #     output_fullprof = False
 
         if 'ONEBANK' in self._commandArgsDict:
             merge_to_one_bank = bool(int(self._commandArgsDict['ONEBANK']))
@@ -193,24 +202,31 @@ class VBin(procss_vcommand.VDriveCommand):
             bank_group = 3
 
         # region of interest or mask file
-        if 'ROI' in self._commandArgsDict:
+        roi_file_names = list()
+        mask_file_names = list()
+        no_mask = False
+        if 'ROI' in self._commandArgsDict and 'MASK' in self._commandArgsDict:
+            return False, 'ROI and MASK cannot be specified simultaneously.  Or it causes confusion in logic'
+        elif 'ROI' in self._commandArgsDict and 'NOMASK' in self._commandArgsDict:
+            return False, 'ROI and NOMASK cannot be specified simultaneously.  Or it causes confusion in logic'
+        elif 'MASK' in self._commandArgsDict and 'NOMASK' in self._commandArgsDict:
+            return False, 'MASK and NOMASK cannot be specified simultaneously.  Or it causes confusion in logic'
+        elif 'ROI' in self._commandArgsDict:
             roi_file_names = self.get_argument_as_list('ROI', str)
-        else:
-            roi_file_names = list()
-        if 'MASK' in self._commandArgsDict:
+        elif 'MASK' in self._commandArgsDict:
             mask_file_names = self.get_argument_as_list('MASK', str)
-        else:
-            mask_file_names = list()
+        elif 'NOMASK' in self._commandArgsDict:
+            no_mask = True
 
-        # binning parameters
-        if 'VDRIVEBIN' in self._commandArgsDict:
-            try:
-                use_idl_bin = int(self._commandArgsDict['VDRIVEBIN']) > 0
-            except ValueError:
-                return False, 'VDRIVEBIN {} must be an integer '.format(self._commandArgsDict['VDRIVEBIN'])
-        else:
-            use_idl_bin = True
-        # END-OF (VDRIVE-BIN)
+        # # binning parameters
+        # if 'VDRIVEBIN' in self._commandArgsDict:
+        #     try:
+        #         use_idl_bin = int(self._commandArgsDict['VDRIVEBIN']) > 0
+        #     except ValueError:
+        #         return False, 'VDRIVEBIN {} must be an integer '.format(self._commandArgsDict['VDRIVEBIN'])
+        # else:
+        #     use_idl_bin = True
+        # # END-OF (VDRIVE-BIN)
 
         # reduction algorithm version: set default to version 2 (the new one)
         if 'VERSION' in self._commandArgsDict:
@@ -229,14 +245,14 @@ class VBin(procss_vcommand.VDriveCommand):
                                                                        chop_child_list=run_number_list,
                                                                        raw_data_directory=None,
                                                                        output_directory=output_dir,
-                                                                       vanadium=(van_run is not None),
+                                                                       vanadium=van_run,
                                                                        binning_parameters=binning_parameters,
-                                                                       use_idl_bin=use_idl_bin,
                                                                        align_to_vdrive_bin=use_default_binning,
                                                                        num_banks=bank_group,
                                                                        merge_banks=merge_to_one_bank,
                                                                        roi_list=roi_file_names,
-                                                                       mask_list=mask_file_names)
+                                                                       mask_list=mask_file_names,
+                                                                       no_cal_mask=no_mask)
 
         else:
             # reduce event data without chopping
@@ -252,7 +268,9 @@ class VBin(procss_vcommand.VDriveCommand):
 
             # set vanadium runs
             if van_run is not None:
-                self._controller.set_vanadium_to_runs(self._iptsNumber, run_number_list, van_run)
+                status, msg = self._controller.set_vanadium_to_runs(self._iptsNumber, run_number_list, van_run)
+                if not status:
+                    return False, msg
 
             # set flag
             run_number_list = list()
@@ -263,16 +281,15 @@ class VBin(procss_vcommand.VDriveCommand):
             # reduce by regular runs
             status, message = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
                                                                merge_banks=merge_to_one_bank,
-                                                               vanadium=(van_run is not None),
+                                                               vanadium=van_run,
                                                                standard_sample_tuple=standard_tuple,
                                                                binning_parameters=binning_parameters,
-                                                               use_idl_bin=use_idl_bin,
                                                                merge_runs=False,
                                                                num_banks=bank_group,
                                                                version=reduction_alg_ver,
                                                                roi_list=roi_file_names,
-                                                               mask_list=mask_file_names)
-
+                                                               mask_list=mask_file_names,
+                                                               no_cal_mask=no_mask)
         # END-IF-ELSE
 
         # process special tag for vanadium: create intensity file for each detector pixel
@@ -343,23 +360,3 @@ class VBin(procss_vcommand.VDriveCommand):
 
         return help_str
 
-    @staticmethod
-    def _create_standard_directory(tag_dir):
-        """
-        create a directory for standard
-        :param tag_dir:
-        :return:
-        """
-        assert isinstance(tag_dir, str), 'Standard directory {0} must be a string but not a {1}.' \
-                                         ''.format(tag_dir, type(tag_dir))
-        try:
-            os.mkdir(tag_dir)
-        except IOError as io_error:
-            raise RuntimeError('Unable to create directory {0} due to {1}'.format(tag_dir, io_error))
-        except OSError as os_error:
-            raise RuntimeError('Unable to create directory {0} due to {1}'.format(tag_dir, os_error))
-
-        # change access control
-        os.chmod(tag_dir, 0777)
-
-        return

@@ -4,6 +4,9 @@ import pytz
 from dateutil.parser import parse
 from datetime import datetime
 from dateutil import tz
+import datatypeutility
+import mantid
+import stat
 
 __author__ = 'wzz'
 
@@ -241,6 +244,71 @@ def get_ipts_number_from_dir(ipts_dir):
         return False, 'After IPTS-, %s is not an integer' % ipts_number_str
 
     return True, ipts_number
+
+
+def export_experiment_log(ws_name, record_file_name, sample_name_list, sample_title_list, sample_operation_list,
+                          patch_list):
+    """ Export experiment logs
+    Note: duplicate from reduce_VULCAN.ReduceVulcanData._export_experiment_log
+    :param ws_name: 
+    :param record_file_name: 
+    :param sample_title_list: 
+    :param sample_operation_list: 
+    :param patch_list: 
+    :return: 
+    """
+    # check inputs
+    datatypeutility.check_file_name(record_file_name, check_exist=False, check_writable=True,
+                                    is_dir=False, note='Standard material record file')
+    datatypeutility.check_list('Sample log names', sample_name_list)
+    datatypeutility.check_list('Sample log titles', sample_title_list)
+    datatypeutility.check_list('Sample log operations', sample_operation_list)
+
+    if len(sample_name_list) != len(sample_title_list) or len(sample_name_list) != len(sample_operation_list):
+        raise RuntimeError('Sample name list ({0}), sample title list ({1}) and sample operation list ({2}) '
+                           'must have the same size.'
+                           ''.format(len(sample_name_list), len(sample_title_list), len(sample_operation_list)))
+
+    # get file mode
+    if os.path.exists(record_file_name):
+        file_write_mode = 'append'
+    else:
+        file_write_mode = 'new'
+
+    # write
+    print ('[DB...BAT] Export (TAG) experiment log record: {}'.format(record_file_name))
+    try:
+        mantid.simpleapi.ExportExperimentLog(InputWorkspace=ws_name,
+                                             OutputFilename=record_file_name,
+                                             FileMode=file_write_mode,
+                                             SampleLogNames=sample_name_list,
+                                             SampleLogTitles=sample_title_list,
+                                             SampleLogOperation=sample_operation_list,
+                                             TimeZone="America/New_York",
+                                             OverrideLogValue=patch_list,
+                                             OrderByTitle='RUN',
+                                             RemoveDuplicateRecord=True)
+    except RuntimeError as run_err:
+        message = 'Failed to export experiment record to {} due to {}.' \
+                  ''.format(record_file_name, run_err)
+        return False, message
+    except ValueError as value_err:
+        message = 'Exporting experiment record to {0} failed due to {1}.' \
+                  ''.format(record_file_name, value_err)
+        return False, message
+
+    # Set up the mode for global access
+    file_access_mode = oct(os.stat(record_file_name)[stat.ST_MODE])
+    file_access_mode = file_access_mode[-3:]
+    if file_access_mode != '666' and file_access_mode != '676':
+        try:
+            os.chmod(record_file_name, 0666)
+        except OSError as os_err:
+            return False, '[ERROR] Unable to set file {0} to mode 666 due to {1}' \
+                          ''.format(record_file_name, os_err)
+    # END-IF
+
+    return True, ''
 
 
 if __name__ == '__main__':

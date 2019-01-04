@@ -53,7 +53,7 @@ class VDriveAPI(object):
         self._myInstrument = instrument_name
 
         # initialize (1) vdrive project for reducing data, (2) data archiving manager, and (3) slicing manager
-        self._myProject = ProjectMrg.ProjectManager('New Project')
+        self._myProject = ProjectMrg.ProjectManager(self, 'New Project', 'VULCAN')
 
         # construct the data location
         # if module_location is not None:
@@ -262,32 +262,6 @@ class VDriveAPI(object):
             reflection_list.append((peak_pos, ref_dict[peak_pos]))
 
         return reflection_list
-    #
-    # def export_gsas_file(self, run_number, gsas_file_name):
-    #     """
-    #     Purpose: export a reduced run to GSAS data file
-    #     Requirements:
-    #     1. run number is a valid integer
-    #     2. run number exists in project
-    #     3. gsas file name includes a path that is writable
-    #     Guarantees: A gsas file is written
-    #     :param run_number:
-    #     :param gsas_file_name:
-    #     :return:
-    #     """
-    #     # Check requirements
-    #     assert isinstance(run_number, int)
-    #     assert run_number > 0
-    #
-    #     assert isinstance(gsas_file_name, str)
-    #     out_dir = os.path.dirname(gsas_file_name)
-    #     assert os.access(out_dir, os.W_OK), 'Output directory {0} is not writable.'.format(out_dir)
-    #
-    #     try:
-    #         self._myProject.export_reduced_run_gsas(run_number, gsas_file_name)
-    #     except KeyError as key_err:
-    #         return False, 'Unable to export reduced run %d to GSAS file due to %s.' % (run_number, key_err)
-    #     raise
 
     @staticmethod
     def export_gsas_peak_file(bank_peak_dict, out_file_name):
@@ -1262,7 +1236,7 @@ class VDriveAPI(object):
 
     def reduce_chopped_data_set(self, ipts_number, run_number, chop_child_list, raw_data_directory,
                                 output_directory, vanadium,
-                                binning_parameters, use_idl_bin, align_to_vdrive_bin,
+                                binning_parameters, use_idl_bin,
                                 merge_banks, gsas=True, num_banks=3):
         """ reduce a set of chopped data
         :param ipts_number:
@@ -1332,14 +1306,13 @@ class VDriveAPI(object):
         return sum_status, sum_message
 
     def reduce_data_set(self, auto_reduce, output_directory, merge_banks,
-                        background=False, vanadium=False,
+                        background=False, vanadium=None,
                         record=False, logs=False, gsas=True, output_to_fullprof=False,
-                        standard_sample_tuple=None, binning_parameters=None, use_idl_bin=True,
+                        standard_sample_tuple=None, binning_parameters=None,
                         merge_runs=False, dspace=False, num_banks=3, roi_list=None,
-                        mask_list=None,
+                        mask_list=None, no_cal_mask=False,
                         version=2):
-        """
-        Reduce a set of data
+        """ Reduce a set of VULCAN runs
         Purpose:
             Reduce a set of event data
         Requirements:
@@ -1350,23 +1323,23 @@ class VDriveAPI(object):
             Event data will be reduced to diffraction pattern.
         :param auto_reduce: boolean flag whether the reduction uses auto reduction script
         :param output_directory:  output directory
-        :param binning_parameters: binning parameter. [1] None for default; [2] a size 1 container as bin size
-                                           [3] a size-3 container as [TOF_min, Bin Size, TOF_max]
-        :param background: boolean flag to subtract background
-        :param vanadium: boolean flag to normalize by vanadium
+        :param merge_banks:
+        :param background:  boolean flag to subtract background
+        :param vanadium: integer as vanadium run numbers or None for not normalized
         :param record: boolean flag to output AutoRecord and etc.
         :param logs: boolean flag to output sample log files (MTS)
         :param gsas: boolean flag to produce GSAS files from reduced runs
-        :param output_to_fullprof: boolean flag tro produces Fullprof files from reduced runs
+        :param output_to_fullprof:  boolean flag tro produces Fullprof files from reduced runs
         :param standard_sample_tuple: If specified, then it should process the VULCAN standard sample as #57.
-        :param binning_parameters: None for default and otherwise using user specified
-        :param use_idl_bin: Use IDL-VDRIVE binning parameters.  It overrides binning_parameters if True
+        :param binning_parameters: binning parameter. [1] None for default; [2] a size 1 container as bin size
+                                           [3] a size-3 container as [TOF_min, Bin Size, TOF_max]
         :param merge_runs: If true, then merge the run together by calling SNSPowderReduction
         :param dspace: If true, then data will reduced to workspace in dSpacing and exported with unit dSpacing
         :param num_banks: number of banks focused to.  Now only 3, 7 and 27 are allowed; Also a special grouping file
-        :param version: reduction algorithm version in integer
         :param roi_list:
         :param mask_list:
+        :param no_cal_mask:
+        :param version: reduction algorithm version in integer
         :return: 2-tuple (boolean, object)
         """
         # Check requirements
@@ -1388,11 +1361,7 @@ class VDriveAPI(object):
             raise RuntimeError('There are runs from different IPTS.  It is not supported in PyVDrive.')
         ipts_number = ipts_set.pop()
 
-        # binning_parameters is default to be None.  If None, a real default value - TEST - 20180710
-        if binning_parameters is None:
-            binning_parameters = [-0.001]
-
-        # check ROI list and Mask list
+        # check ROI list and Mask list: force ROI/MASK file list to be 'list()'
         if roi_list is None:
             roi_list = list()
         else:
@@ -1406,42 +1375,78 @@ class VDriveAPI(object):
         if auto_reduce:
             # auto reduction: auto reduction script does not work with vanadium normalization
             # print '[INFO] (Auto) reduce data: IPTS = {0}, Runs = {1}.'.format(ipts_number, runs_to_reduce)
-            status, message = self.reduce_auto_script(ipts_number=ipts_number,
-                                                      run_numbers=runs_to_reduce,
-                                                      output_dir=output_directory,
-                                                      is_dry_run=False,
-                                                      roi_list=roi_list,
-                                                      mask_list=mask_list)
-            message = message
+            status, error_message = self.reduce_auto_script(ipts_number=ipts_number,
+                                                            run_numbers=runs_to_reduce,
+                                                            output_dir=output_directory,
+                                                            is_dry_run=False,
+                                                            roi_list=roi_list,
+                                                            mask_list=mask_list)
+            error_message = error_message
 
         elif dspace or version == 2:
             # user version 2 reduction algorithm
-            print ('[DB...BAT] GSAS Flag = {}'.format(gsas))
             run_number_list, msg_list = self._myProject.reduce_vulcan_runs_v2(run_number_list=runs_to_reduce,
                                                                               output_directory=output_directory,
                                                                               d_spacing=True,
                                                                               binning_parameters=binning_parameters,
-                                                                              use_idl_bin=use_idl_bin,
-                                                                              convert_to_matrix=True,
                                                                               number_banks=num_banks,
                                                                               gsas=gsas,
-                                                                              merge_banks=merge_banks,
+                                                                              vanadium_run=vanadium,
                                                                               merge_runs=merge_runs,
                                                                               roi_list=roi_list,
-                                                                              mask_list=mask_list)
-            status = True
-            message = ''
+                                                                              mask_list=mask_list,
+                                                                              no_cal_mask=no_cal_mask)
+            if standard_sample_tuple:
+                if len(run_number_list) != 1:
+                    return False, 'Standard tag {} can only work with 1 run'.format(standard_sample_tuple)
+
+                # print ('Output Dir: {}'.format(output_directory))
+                # # 'SiTest', '/tmp/SiTest', 'SiTestRecord.txt'
+                # import reduce_VULCAN
+                # print (reduce_VULCAN.RecordBase)
+
+                # get information of run number and workspace
+                run_number, ws_name = run_number_list[0]
+                # convert record-tuple list to three list
+                sample_title_list = [item[0] for item in reduce_VULCAN.RecordBase]
+                sample_name_list = [item[1] for item in reduce_VULCAN.RecordBase]
+                sample_operation_list = [item[2] for item in reduce_VULCAN.RecordBase]
+                material_name, tag_dir, standard_record_file = standard_sample_tuple
+                patch_list = reduce_VULCAN.generate_patch_log_list('VULCAN', ipts_number=ipts_number,
+                                                                   run_number=run_number)
+                status, error_message = \
+                    vdrivehelper.export_experiment_log(ws_name,
+                                                       record_file_name=os.path.join(tag_dir, standard_record_file),
+                                                       sample_name_list=sample_name_list,
+                                                       sample_title_list=sample_title_list,
+                                                       sample_operation_list=sample_operation_list,
+                                                       patch_list=patch_list)
+                # copy GSAS file
+                # TODO - NIGHT - Better code quality
+                import shutil
+                src_gda = '/SNS/VULCAN/IPTS-{}/shared/binned_data/{}.gda'.format(ipts_number, run_number)
+                assert os.path.exists(src_gda), '{} does not exists'.format(src_gda)
+                shutil.copy(src_gda,
+                            tag_dir)
+
+            else:
+                status = True
+                error_message = ''
+            # END-IF
             for msg in msg_list:
-                message += msg + '\n'
+                if msg.count('Failed'):
+                    status = False
+                error_message += msg + '\n'
 
         else:
             # manual reduction: Reduce runs
+            raise 'Why this still exists?  I dont see any reason!'
             # print '[INFO] Reduce Runs: {0}. Merge banks = {1}'.format(runs_to_reduce, merge_banks)
             # TODO - 20181010 - Implement roi list and mask list
             if len(roi_list) + len(mask_list) > 0:
                 raise RuntimeError('ROI/MASK is not supported! ROI: {}, MASK: {}'.format(roi_list, mask_list))
             try:
-                status, message = self._myProject.reduce_runs(run_number_list=runs_to_reduce,
+                status, error_message = self._myProject.reduce_runs(run_number_list=runs_to_reduce,
                                                               output_directory=output_directory,
                                                               background=background,
                                                               vanadium=vanadium,
@@ -1457,7 +1462,7 @@ class VDriveAPI(object):
 
             except AssertionError as re:
                 status = False
-                message = '[ASSERTION ERROR] from reduce_runs due to %s' % str(re)
+                error_message = '[ASSERTION ERROR] from reduce_runs due to %s' % str(re)
             # END-TRY-EXCEPT
         # END-IF-ELSE
 
@@ -1465,7 +1470,7 @@ class VDriveAPI(object):
         reduction_state_list = None
         self._myProject.mark_runs_reduced(runs_to_reduce, reduction_state_list)
 
-        return status, message
+        return status, error_message
 
     def reduce_auto_script(self, ipts_number, run_numbers, output_dir, is_dry_run):
         """
@@ -1829,21 +1834,6 @@ class VDriveAPI(object):
 
         return
 
-    # def save_processed_vanadium(self, van_info_tuple, output_file_name):
-    #     """
-    #     save the processed vanadium to a GSAS file
-    #     :param van_info_tuple:
-    #     :param output_file_name:
-    #     :return: 2-tuple (boolean, str)
-    #     """
-    #     assert isinstance(output_file_name, str), 'Output file name must be a string'
-    #     assert isinstance(van_info_tuple, tuple), 'Vanadium information {0} must be a tuple but not a {1}.' \
-    #                                               ''.format(van_info_tuple, type(van_info_tuple))
-    #
-    #     return self._myProject.vanadium_processing_manager.save_vanadium_to_file(vanadium_tuple=van_info_tuple,
-    #                                                                              to_archive=False,
-    #                                                                              out_file_name=output_file_name)
-
     def save_session(self, out_file_name=None):
         """ Save current session
         :param out_file_name: target file name to save session. If left None, a default will be created
@@ -1914,7 +1904,7 @@ class VDriveAPI(object):
         return
 
     def slice_data(self, run_number, slicer_id, reduce_data, vanadium, save_chopped_nexus, output_dir,
-                   number_banks, roi_list, mask_list, export_log_type='loadframe',
+                   number_banks, roi_list, mask_list, export_log_type='loadframe', gsas_iparam_name='not set',
                    user_bin_parameter=None, use_idl_bin=True, raw_nexus_name=None):
         """
         Slice data (corresponding to a run) by either log value or time.
@@ -1949,7 +1939,8 @@ class VDriveAPI(object):
                                                    use_idl_bin=use_idl_bin,
                                                    roi_list=roi_list,
                                                    mask_list=mask_list,
-                                                   nexus_file_name=raw_nexus_name)
+                                                   nexus_file_name=raw_nexus_name,
+                                                   gsas_iparm_file=gsas_iparam_name)
 
         print ('[INFO] Sliced data.  Status = {}, Message: {}'.format(status, message))
 
@@ -1975,25 +1966,6 @@ class VDriveAPI(object):
                                                                        save_chopped_nexus, output_dir, export_log_type)
 
         return status, message
-
-    def set_focus_calibration_file(self, calibration_file):
-        """
-        Purpose:
-            Set the time focusing calibration file to reduction manager
-        Requirements:
-            Input calibration file is a string
-        Guarantees:
-            The file is set to reduction manager for future usage
-        :param calibration_file:
-        :return:
-        """
-        # Check requirement
-        assert isinstance(calibration_file, str), 'Input calibration_file must be of type str.'
-
-        # Set to reduction manager
-        self._myProject.set_focus_calibration_file(calibration_file)
-
-        return
 
     def set_ipts_config(self, ipts_number, data_dir, binned_data_dir):
         """
@@ -2047,20 +2019,20 @@ class VDriveAPI(object):
         :param van_run_number:
         :return:
         """
-        assert isinstance(ipts_number, int), 'ITPS number {0} must be an integer but not {1}.' \
-                                             ''.format(ipts_number, type(ipts_number))
-        assert isinstance(van_run_number, int), 'Vanadium run number {0} must be an integer but not {1}.' \
-                                                ''.format(van_run_number, type(van_run_number))
-        assert isinstance(run_number_list, list), 'Run number list {0} must be a list but not a {1}.' \
-                                                  ''.format(run_number_list, type(run_number_list))
+        # check inputs
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
+        datatypeutility.check_list('Run numbers', run_number_list)
+        datatypeutility.check_int_variable('Vanadium run number', van_run_number, (1, None))
 
+        # locate vanadium GSAS file
         file_exist, van_file_name = self._myArchiveManager.locate_vanadium_gsas_file(ipts_number, van_run_number)
         if not file_exist:
             return False, 'Unable to locate vanadium GSAS file'
 
+        self._myProject.reduction_manager.add_reduced_vanadium(van_run_number, van_file_name)
         self._myProject.set_vanadium_runs(run_number_list, van_run_number, van_file_name)
 
-        return
+        return True, None
 
     # Found not used
     # def set_slicer_helper(self, nxs_file_name, run_number)

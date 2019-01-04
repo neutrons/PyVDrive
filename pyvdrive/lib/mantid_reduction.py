@@ -23,7 +23,7 @@ class VulcanBinningHelper(object):
         initialization
         :return:
         """
-        return
+        raise NotImplementedError('VulcanBinningHelper shall be removed')
 
     def __str__(self):
         """
@@ -289,7 +289,7 @@ class VulcanGSASHelper(object):
         initialization
         :return:
         """
-        return
+        raise NotImplementedError('This shall be removed!')
 
     def __str__(self):
         """
@@ -389,6 +389,7 @@ class VulcanGSASHelper(object):
         :param workspace_name:
         :return:
         """
+        raise NotImplementedError('This method shall be replaced by SaveVulcanGSS')
         # TODO TODO - 20180813 - Doc & Check
 
         input_ws = AnalysisDataService.retrieve(workspace_name)
@@ -444,7 +445,7 @@ def align_instrument(matrix_ws, diff_cal_ws_name):
 
 
 def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
-                             diff_cal_ws_name, mask_ws_name, grouping_ws_name,
+                             diff_cal_ws_name, grouping_ws_name,
                              reduction_params_dict, convert_to_matrix):
     """ Align and focus event workspace.  The procedure to reduce from the EventNexus includes
     1. compress event
@@ -456,15 +457,15 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
     7. edit instruments
     8. rebin (uniform binning)
     Output: still event workspace
+    :exception RuntimeError: intolerable error
     :param event_ws_name:
     :param output_ws_name:
     :param binning_params:
     :param diff_cal_ws_name:
-    :param mask_ws_name:
     :param grouping_ws_name:
     :param reduction_params_dict:
     :param convert_to_matrix:
-    :return: string as message
+    :return: string as ERROR message
     """
     # check inputs
     if not mantid_helper.is_event_workspace(event_ws_name):
@@ -473,29 +474,33 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
         diff_ws = mantid_helper.retrieve_workspace(diff_cal_ws_name)
         raise RuntimeError('Input {0} is not a Calibration workspace but a {1}'.format(diff_cal_ws_name,
                                                                                        diff_ws.__class__.__name__))
-    if not mantid_helper.is_masking_workspace(mask_ws_name):
-        raise RuntimeError('Input {0} is not a Masking workspace'.format(mask_ws_name))
+    # if not mantid_helper.is_masking_workspace(mask_ws_name):
+    #     raise RuntimeError('Input {0} is not a Masking workspace'.format(mask_ws_name))
     if not mantid_helper.is_grouping_workspace(grouping_ws_name):
         raise RuntimeError('Input {0} is not a grouping workspace'.format(grouping_ws_name))
 
     datatypeutility.check_dict('Reduction parameter dictionary', reduction_params_dict)
-
-    reduction_message = ''
 
     # Align detector
     mantidapi.AlignDetectors(InputWorkspace=event_ws_name,
                              OutputWorkspace=output_ws_name,
                              CalibrationWorkspace=diff_cal_ws_name)
 
-    # Mask detectors
-    mantid_helper.mask_workspace(to_mask_workspace_name=output_ws_name,
-                                 mask_workspace_name=mask_ws_name)
+    # # Mask detectors
+    # mantid_helper.mask_workspace(to_mask_workspace_name=output_ws_name,
+    #                              mask_workspace_name=mask_ws_name)
 
     # Sort events
     mantidapi.SortEvents(InputWorkspace=output_ws_name,
                          SortBy='X Value')
 
     # Diffraction focus
+    event_ws = mantid_helper.retrieve_workspace(output_ws_name)
+    if event_ws.getNumberEvents() == 0:
+        print ('[DB...BAT] {}: # events = {}'.format(event_ws, event_ws.getNumberEvents()))
+        error_message = 'Unable to reduced {} as number of events = 0'.format(event_ws_name)
+        raise RuntimeError(error_message)
+
     mantidapi.DiffractionFocussing(InputWorkspace=output_ws_name,
                                    OutputWorkspace=output_ws_name,
                                    GroupingWorkspace=grouping_ws_name,
@@ -512,27 +517,35 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
                                  OutputWorkspace=output_ws_name,
                                  Tolerance=1.E-5)
 
+    # rebin
+    if binning_params is not None:
+        mantid_helper.rebin(workspace_name=output_ws_name, params=binning_params, preserve=not convert_to_matrix)
+
     # Edit instrument as an option
     if 'EditInstrumentGeometry' in reduction_params_dict:
         try:
+            # TODO - NIGHT - In case the number of histograms of output workspace does not match (masked a lot) ...
             mantidapi.EditInstrumentGeometry(Workspace=output_ws_name,
                                              PrimaryFlightPath=mantid_helper.VULCAN_L1,
                                              SpectrumIDs=reduction_params_dict['EditInstrumentGeometry']['SpectrumIDs'],
                                              L2=reduction_params_dict['EditInstrumentGeometry']['L2'],
                                              Polar=reduction_params_dict['EditInstrumentGeometry']['Polar'],
                                              Azimuthal=reduction_params_dict['EditInstrumentGeometry']['Azimuthal'])
+            """
+            Workspace
+            PrimaryFlightPath
+            SpectrumIDs
+            L2
+            Polar
+            Azimuthal
+            DetectorIDs
+            InstrumentName
+            """
         except RuntimeError as run_err:
-            reduction_message += 'Non-critical failure on EditInstrumentGeometry: {}\n'.format(run_err)
+            error_message = 'Non-critical failure on EditInstrumentGeometry: {}\n'.format(run_err)
+            return error_message
 
-    # rebin
-    if binning_params is not None:
-        mantid_helper.rebin(workspace_name=output_ws_name, params=binning_params, preserve=not convert_to_matrix)
-
-    # remove last \n
-    if len(reduction_message) > 0:
-        reduction_message = reduction_message[:-1]
-
-    return reduction_message
+    return ''
 
 
 # TODO - This method shall be refactored with align_and_focus_event_ws - FIXME

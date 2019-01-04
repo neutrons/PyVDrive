@@ -10,6 +10,7 @@ import mantid.simpleapi as mantidapi
 from mantid.api import AnalysisDataService as ADS
 import vdrivehelper
 import datatypeutility
+import datetime
 
 from reduce_VULCAN import align_bins
 
@@ -630,12 +631,12 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
 
 
 def get_run_start(workspace, time_unit):
-    """ Get run start time
+    """ Get run start time from proton charge or sample log run_start
     :param workspace:
-    :param time_unit: nanosecond(s), second(s)
-    :return:
+    :param time_unit: nanosecond(s), second(s), None
+    :return: int (nanoseconds), float (second), datetime.datetime (None)
     """
-    # check the situation if workspace is a string
+    # get workspace
     if isinstance(workspace, str):
         if ADS.doesExist(workspace):
             workspace = ADS.retrieve(workspace)
@@ -644,21 +645,37 @@ def get_run_start(workspace, time_unit):
     # END-IF
 
     # get run start from proton charge
+    pcharge_log = None
     try:
         pcharge_log = workspace.run().getProperty('proton_charge')
-    except AttributeError as e:
-        raise RuntimeError('Unable to get run start due to %s.' % str(e))
-    except RuntimeError as e:
-        raise RuntimeError('Unable to get run start due to %s.' % str(e))
-
-    # Get first value in proton charge's time as run start
-    pcharge_time0 = pcharge_log.firstTime()
+    except AttributeError:
+        pass
+    except RuntimeError:
+        pass
 
     if time_unit is None:
-        # no unit defined. original run start time
-        run_start = pcharge_time0
-    else:
+        if pcharge_log:
+            pcharge_time0 = pcharge_log.times[0]
+            start_date = str(pcharge_time0)
+        else:
+            try:
+                start_date = workspace.run().getProperty('run_start').value
+            except RuntimeError as run_err:
+                raise RuntimeError('Workspace {} has neither proton_charge nor run_start in sample log.'
+                                   'Unable to get run start from it'.format(str(workspace)))
+        # END-IF
+
+        # example: '2018-05-28T15:04:33.540623666-0400' or 2018-05-28T19:04:33.540623666'
+        terms = start_date.split('T')[0].split('-')
+        year = int(terms[0])
+        month = int(terms[1])
+        date = int(terms[2])
+        run_start = datetime.datetime(year, month, date)
+
+    elif pcharge_log:
         # convert to seconds or nanoseconds
+        # Get first value in proton charge's time as run start
+        pcharge_time0 = pcharge_log.firstTime()
         run_start_ns = pcharge_time0.totalNanoseconds()
 
         # check time unit
@@ -671,6 +688,8 @@ def get_run_start(workspace, time_unit):
             run_start = run_start_ns * 1.E-9
         else:
             raise RuntimeError('Impossible to reach')
+    else:
+        raise RuntimeError('Proton charge log must exist for run start in absolute time (second/nano second)')
     # END-IF-ELSE
 
     return run_start
@@ -1820,68 +1839,7 @@ def create_vulcan_binning_table(binning_reference_file):
     :param binning_reference_file:
     :return:
     """
-
-
-def save_vulcan_gsas(source_ws_name, out_gss_file, ipts, binning_reference_file, gss_parm_file):
-    """ Convert to VULCAN's IDL and save_to_buffer to GSAS file
-    Purpose: Convert a reduced workspace to IDL binning workspace and export to GSAS file
-    Requirements:
-    1. input source workspace is reduced
-    2. output gsas file name is a string
-    3. ipts number is integer
-    4. binning reference file exists
-    5. gss parameter file name is a string
-    :param source_ws_name:
-    :param out_gss_file:
-    :param ipts:
-    :param binning_reference_file:
-    :param gss_parm_file:
-    :return:
-    """
-    # requiring re-do! TODO FIXME FIXME
-
-    # Check requirements
-    assert isinstance(source_ws_name, str), 'source workspace name {0} must be a string but not {1}.' \
-                                            ''.format(source_ws_name, type(source_ws_name))
-    src_ws = retrieve_workspace(source_ws_name)
-    assert src_ws.getNumberHistograms() < 10, 'Source workspace {0} cannot have more than 10 histograms ({1}).' \
-                                              ''.format(source_ws_name, src_ws.getNumberHistograms())
-    
-    assert isinstance(out_gss_file, str), 'Output GSAS file name {0} must be a string but not a {1}.' \
-                                          ''.format(out_gss_file, type(out_gss_file))
-    assert isinstance(ipts, int), 'IPTS number must be an integer but not %s.' % str(type(ipts))
-    assert isinstance(binning_reference_file, str), 'Binning referece file name {0} must be a string but not a {1}.' \
-                                                    ''.format(binning_reference_file, type(binning_reference_file))
-    if len(binning_reference_file) > 0:
-        assert os.path.exists(binning_reference_file), 'Binning reference file {0} does not exist.' \
-                                                       ''.format(binning_reference_file)
-    assert isinstance(gss_parm_file, str), 'GSAS parmm file name {0} must be a string but not a {1}.' \
-                                           ''.format(gss_parm_file, type(gss_parm_file))
-
-    # using a new workspace if and only if it is required to be re-binned
-    if len(binning_reference_file) > 0:
-        final_ws_name = source_ws_name + '_IDL'
-    else:
-        final_ws_name = source_ws_name
-
-    source_ws = ADS.retrieve(source_ws_name)
-    if not source_ws.isHistogramData():
-        mantidapi.ConvertToHistogram(InputWorkspace=source_ws_name,
-                                     OutputWorkspace=source_ws_name)
-
-    # Save to GSAS
-    mantidapi.SaveVulcanGSS(InputWorkspace=source_ws_name,
-                            BinningTable=binning_table_name,
-                            OutputWorkspace=final_ws_name,
-                            GSSFilename=out_gss_file,
-                            IPTS=ipts,
-                            GSSParmFilename=gss_parm_file)
-
-    # Add special property to output workspace
-    final_ws = ADS.retrieve(final_ws_name)
-    final_ws.getRun().addProperty('VDriveBin', True, replace=True)
-
-    return
+    raise NotImplementedError('Not Implemented Yet')
 
 
 def save_event_workspace(event_ws_name, nxs_file_name):

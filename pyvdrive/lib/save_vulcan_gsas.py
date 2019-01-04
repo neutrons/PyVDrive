@@ -1,9 +1,17 @@
 from datetime import datetime
 import os
 import os.path
+import h5py
+import math
+import random
 import numpy
 import mantid.simpleapi as api
 from mantid.api import AnalysisDataService as ADS
+from pyvdrive.lib import datatypeutility
+
+
+PHASE_NED = datetime(2017, 6, 1)
+PHASE_X1 = datetime(2019, 7, 1)
 
 
 class SaveVulcanGSS(object):
@@ -11,36 +19,42 @@ class SaveVulcanGSS(object):
     class to save VULCAN GSAS
     mostly it is used as static
     """
-    def __init__(self, tof_vector_set):
+    def __init__(self, vulcan_ref_name=None):
+        """ constructor of GSAS writer for VDRIVE
+        :param vulcan_ref_name:
         """
-        initialization
-        :param tof_vector_set: an iterator on tuple as [list of bank IDs], [reference TOF vector]
-        """
-        # set up binning parameters
-        self._bin_params_set = list()
+        # set up the default reference file name
+        if vulcan_ref_name is None:
+            vulcan_ref_name = '/SNS/VULCAN/shared/CALIBRATION/VDRIVE/vdrive_tof_bin.h5'
 
-        for bank_id_list, tof_vector in tof_vector_set:
-            bin_params = self._create_binning_parameters(tof_vector)
-            assert isinstance(bank_id_list, list), 'Bank IDs {} must be given in list but not in {}' \
-                                                   ''.format(bank_id_list, type(bank_id_list))
-            if len(bank_id_list) == 0:
-                raise RuntimeError('Bank ID list in given TOF vector set has zero size')
+        datatypeutility.check_file_name(file_name=vulcan_ref_name, check_exist=True,
+                                        check_writable=False, is_dir=False,
+                                        note='VDRIVE GSAS binning reference file')
 
-            # set value
-            self._bin_params_set.append((bank_id_list[:], bin_params, tof_vector[:]))
-        # END-FOR
+        # parse the file
+        lower_res_tof_vec, high_res_tof_vec = self._import_tof_ref_file(vulcan_ref_name)
+
+        # convert TOF bin boundaries to Mantid binning parameters
+        # key = 'bank type', value = TOF vec, binning parameters
+        self._mantid_bin_param_dict = dict()
+        # lower resolution: east/west
+        self._mantid_bin_param_dict['lower'] = lower_res_tof_vec, self._create_binning_parameters(lower_res_tof_vec)
+        # higher resolution: high angle bank
+        self._mantid_bin_param_dict['higher'] = high_res_tof_vec, self._create_binning_parameters(high_res_tof_vec)
 
         return
 
     @staticmethod
     def _create_binning_parameters(tof_vector):
-        """
-        for Mantid Rebin
+        """ Create binning parameters for Mantid::Rebin
+        :param
         :return:
         """
         # Create a complicated bin parameter
         bin_params = list()
         xf = None
+        dx = None
+        x0 = None
         for ibin in range(len(tof_vector) - 1):
             x0 = tof_vector[ibin]
             xf = tof_vector[ibin + 1]
@@ -49,9 +63,11 @@ class SaveVulcanGSS(object):
             bin_params.append(dx)
         # END-FOR
 
+        # check
+        if xf is None or dx is None or x0 is None:
+            raise RuntimeError('It is impossible to have x0, dx or xf without value set')
+
         # last bin
-        if xf is None:
-            raise RuntimeError('It is impossible to have Xf without value set')
         bin_params.append(xf)
 
         # extend bin
@@ -62,23 +78,273 @@ class SaveVulcanGSS(object):
         return bin_params
 
     @staticmethod
-    def _write_slog_bank_gsas(ws_name, bank_id, vulcan_tof_vector):
+    def _generate_vulcan_gda_header(gsas_workspace, gsas_file_name, ipts, gsas_param_file_name):
+        """
+        generate a VDRIVE compatible GSAS file's header
+        :param gsas_workspace:
+        :param gsas_file_name:
+        :param ipts:
+        :param gsas_param_file_name:
+        :return: string : multiple lines
+        """
+        # check
+        assert isinstance(gsas_workspace, str) is False, 'GSAS workspace must not be a string.'
+        assert isinstance(gsas_file_name, str), 'GSAS file name {0} must be a string.'.format(gsas_file_name)
+        assert isinstance(ipts, int) or isinstance(ipts, str), 'IPTS number {0} must be either string or integer.' \
+                                                               ''.format(ipts)
+        assert isinstance(gsas_param_file_name, str), 'GSAS iparm file name {0} must be an integer.' \
+                                                      ''.format(gsas_param_file_name)
+        if isinstance(ipts, str):
+            assert ipts.isdigit(), 'IPTS {0} must be convertible to an integer.'.format(ipts)
+
+        # Get necessary information
+        title = gsas_workspace.getTitle()
+        run = gsas_workspace.getRun()
+
+        # Get information on start/stop
+        if run.hasProperty("run_start") and run.hasProperty("duration"):
+            # export processing time information
+            runstart = run.getProperty("run_start").value
+            duration = float(run.getProperty("duration").value)
+            # property run_start and duration exist
+            runstart_sec = runstart.split(".")[0]
+            runstart_ns = runstart.split(".")[1]
+
+            utctime = datetime.strptime(runstart_sec, '%Y-%m-%dT%H:%M:%S')
+            time0 = datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
+
+            delta = utctime - time0
+            try:
+                total_nanosecond_start = int(delta.total_seconds() * int(1.0E9)) + int(runstart_ns)
+            except AttributeError:
+                total_seconds = delta.days * 24 * 3600 + delta.seconds
+                total_nanosecond_start = total_seconds * int(1.0E9) + int(runstart_ns)
+            total_nanosecond_stop = total_nanosecond_start + int(duration * 1.0E9)
+        else:
+            # not both property is found
+            total_nanosecond_start = 0
+            total_nanosecond_stop = 0
+
+        # Construct new header
+        new_header = ""
+
+        if len(title) > 80:
+            title = title[0:80]
+        new_header += "%-80s\n" % title
+        new_header += "%-80s\n" % ("Instrument parameter file: %s" % gsas_param_file_name)
+        new_header += "%-80s\n" % ("#IPTS: %s" % str(ipts))
+        new_header += "%-80s\n" % "#binned by: Mantid"
+        new_header += "%-80s\n" % ("#GSAS file name: %s" % os.path.basename(gsas_file_name))
+        new_header += "%-80s\n" % ("#GSAS IPARM file: %s" % gsas_param_file_name)
+        new_header += "%-80s\n" % ("#Pulsestart:    %d" % total_nanosecond_start)
+        new_header += "%-80s\n" % ("#Pulsestop:     %d" % total_nanosecond_stop)
+        new_header += '%-80s\n' % '#'
+
+        return new_header
+
+    def _get_tof_bin_params(self, phase, num_banks):
+        """
+        get VDRIVE reference TOF file name
+        :param num_banks:
+        :return: list of tuple:  [bank ids (from 1)], binning parameters, tof vector
+        """
+        bank_tof_sets = list()
+
+        if phase == 'prened':
+            lower_tof_vec, lower_binning_params = self._mantid_bin_param_dict['lower']
+
+            if num_banks == 1:
+                # east and west together
+                bank_tof_sets.append(([1], lower_binning_params, lower_tof_vec))
+            elif num_banks == 2:
+                # east and west bank separate
+                bank_tof_sets.append(([1, 2], lower_binning_params, lower_tof_vec))
+            else:
+                raise RuntimeError('Pre-nED VULCAN does not allow {}-bank case. Contact developer ASAP '
+                                   'if this case is really needed.'.format(num_banks))
+
+        elif phase == 'ned':
+            # nED but pre-vulcan-X
+
+            lower_tof_vec, lower_binning_params = self._mantid_bin_param_dict['lower']
+            higher_tof_vec, higher_binnig_params = self._mantid_bin_param_dict['higher']
+
+            if num_banks == 2:
+                # merge west and east (as bank 1) but leave high angle alone
+                bank_tof_sets.append(([1], lower_binning_params, lower_tof_vec))
+                bank_tof_sets.append(([2], higher_binnig_params, higher_tof_vec))
+
+            elif num_banks == 3:
+                # west(1), east(1), high(1)
+                bank_tof_sets.append(([1, 2], lower_binning_params, lower_tof_vec))
+                bank_tof_sets.append(([3], higher_binnig_params, higher_tof_vec))
+
+            elif num_banks == 7:
+                # west (3), east (3), high (1)
+                bank_tof_sets.append((range(1, 7), lower_binning_params, lower_tof_vec))
+                bank_tof_sets.append(([7], higher_binnig_params, higher_tof_vec))
+
+            elif num_banks == 27:
+                # west (9), east (9), high (9)
+                bank_tof_sets.append((range(1, 19), lower_binning_params, lower_tof_vec))
+                bank_tof_sets.append((range(19, 28), higher_binnig_params, higher_tof_vec))
+
+            else:
+                raise RuntimeError('nED VULCAN does not allow {}-bank case. Contact developer ASAP '
+                                   'if this case is really needed.'.format(num_banks))
+            # END-IF-ELSE
+        else:
+            raise RuntimeError('VULCAN at phase {} is not supported!'.format(phase))
+        # END-IF-ELSE
+
+        return bank_tof_sets
+
+    @staticmethod
+    def _get_vulcan_phase(run_date_time):
+        """
+        get the Phase (prened, ned, vulcanx1, vulcanx) of VULCAN
+        :param run_date_time: datetime instance
+        :return:
+        """
+        assert isinstance(run_date_time, datetime), 'Run date {} must be a datetime.datetime instance ' \
+                                                    'but not of type {}'.format(run_date_time,
+                                                                                type(run_date_time))
+
+        if run_date_time < PHASE_NED:
+            vulcan_phase = 'prened'
+        elif run_date_time < PHASE_X1:
+            vulcan_phase = 'ned'
+        else:
+            vulcan_phase = 'vulcanx1'
+
+        return vulcan_phase
+
+    @staticmethod
+    def _import_tof_ref_file(tof_reference_h5):
+        """ Import TOF reference file for vectors
+        :param tof_reference_h5:
+        :return: 2-tuple as 2 vectors for reference TOF bins
+        """
+        # load vdrive bin file to 2 different workspaces
+        bin_file = h5py.File(tof_reference_h5, 'r')
+        west_east_bins = bin_file['west_east_bank'][:]
+        high_angle_bins = bin_file['high_angle_bank'][:]
+        bin_file.close()
+
+        return west_east_bins, high_angle_bins
+
+    @staticmethod
+    def _cal_l1(matrix_workspace):
+        """ Get L1
+        :param matrix_workspace:
+        :return:
+        """
+        source_pos = matrix_workspace.getInstrument().getSource().getPos()
+        sample_pos = matrix_workspace.getInstrument().getSample().getPos()
+
+        l1 = math.sqrt((source_pos.X() - sample_pos.X())**2 +
+                       (source_pos.Y() - sample_pos.Y())**2 +
+                       (source_pos.Z() - sample_pos.Z())**2)
+
+        return l1
+
+    @staticmethod
+    def _cal_2theta_l2(matrix_workspace, ws_index):
+        """
+        calculate L2 and two theta
+        :param matrix_workspace:
+        :param ws_index:
+        :return: tuple (L2, 2theta in arcs)
+        """
+        source_pos = matrix_workspace.getInstrument().getSource().getPos()
+        sample_pos = matrix_workspace.getInstrument().getSample().getPos()
+        det_pos = matrix_workspace.getDetector(ws_index).getPos()
+
+        # calculate in and out K and then 2theta
+        k_in = sample_pos - source_pos
+        k_out = det_pos - sample_pos
+        two_theta_arc = k_out.angle(k_in)
+
+        # calculate L2
+        l2 = det_pos.distance(sample_pos)
+
+        return l2, two_theta_arc
+
+    @staticmethod
+    def _cal_difc(l1, l2, two_theta_arc):
+        """
+        calculate DIFC
+        :param l1:
+        :param l2:
+        :param two_theta_arc:
+        :return:
+        """
+        neutron_mass = 1.674927211e-27
+        constant_h = 6.62606896e-34
+        difc = (2.0 * neutron_mass * math.sin(two_theta_arc * 0.5) * (l1 + l2)) / (constant_h * 1.e4)
+
+        return difc
+
+    def _get_2theta_difc(self, matrix_workspace, l1, ws_index):
+        """
+        get the DIFC
+        :param matrix_workspace:
+        :param l1:
+        :param ws_index:
+        :return:
+        """
+        l2, two_theta = self._cal_2theta_l2(matrix_workspace, ws_index)
+
+        difc = self._cal_difc(l1, l2, two_theta)
+
+        return two_theta * 180. / math.pi, difc
+
+    def _write_slog_bank_gsas(self, ws_name, bank_id, vulcan_tof_vector, van_ws):
         """
         1. X: format to VDRIVE tradition (refer to ...)
         2. Y: native value
         3. Z: error bar
         :param ws_name:
         :param bank_id:
+        :param ...
+        :param ...
         :return:
         """
+        # check vanadium: if not None, assume that number of bins and bin edges are correct
+        if van_ws is not None:
+            van_vec_y = van_ws.readY(bank_id - 1)
+            van_vec_e = van_ws.readE(bank_id - 1)
+        else:
+            van_vec_y = None
+            van_vec_e = None
+
         # get workspace
         diff_ws = ADS.retrieve(ws_name)
-        vec_x = vulcan_tof_vector
-        vec_y = diff_ws.readY(bank_id - 1)
+        if vulcan_tof_vector is None:
+            vec_x = diff_ws.readX(bank_id - 1)
+        else:
+            vec_x = vulcan_tof_vector
+        vec_y = diff_ws.readY(bank_id - 1)  # convert to workspace index
         vec_e = diff_ws.readE(bank_id - 1)
         data_size = len(vec_y)
 
+        # get geometry information
+        l1 = self._cal_l1(diff_ws)
+        two_theta, difc = self._get_2theta_difc(diff_ws, l1, bank_id-1)
+
         bank_buffer = ''
+
+        # write the virtual detector geometry information
+        # Example:
+        # Total flight path 45.754m, tth 90deg, DIFC 16356.3
+        # Data for spectrum :0
+        bank_buffer += '%-80s\n' % '# Total flight path {}m, tth {}deg, DIFC {}'.format(l1, two_theta, difc)
+        bank_buffer += '%-80s\n' % '# Data for spectrum :{}'.format(bank_id - 1)
+
+        # ws.getInstrument().getSource().getPos()
+        # ws.getDetector(2).getPos(): Out[15]: [0.845237,0,-1.81262]
+        # math.sqrt(0.845237**2 + 1.81262**2)
+        # 2theta = acos(v1 dot v2 / abs(v1) / abs(v2)
 
         # bank header: min TOF, max TOF, delta TOF
         bc1 = '%.1f' % (vec_x[0])
@@ -92,494 +358,205 @@ class SaveVulcanGSS(object):
         bank_buffer += '%-80s\n' % bank_header
 
         # write lines: not multiplied by bin width
-        for index in range(data_size):
-            x_i = '%.1f' % vec_x[index]
-            y_i = '%.1f' % vec_y[index]
-            e_i = '%.2f' % vec_e[index]
-            data_line_i = '%12s%12s%12s' % (x_i, y_i, e_i)
-            bank_buffer += '%-80s\n' % data_line_i
-        # END-FOR
+        if van_vec_y is None:
+            for index in range(data_size):
+                x_i = '%.1f' % vec_x[index]
+                y_i = '%.1f' % vec_y[index]
+                e_i = '%.2f' % vec_e[index]
+                data_line_i = '%12s%12s%12s' % (x_i, y_i, e_i)
+                bank_buffer += '%-80s\n' % data_line_i
+            # END-FOR
+        else:
+            # normalize by vanadium
+            for index in range(data_size):
+                x_i = '%.1f' % vec_x[index]
+                y_i = '%.5f' % (vec_y[index] / van_vec_y[index])
+                if vec_y[index] < 1.E-10:
+                    alpha = 1.
+                else:
+                    alpha = vec_e[index] / vec_y[index]
+                beta = van_vec_e[index] / van_vec_y[index]
+                e_i = '%.5f' % (abs(vec_y[index]/van_vec_y[index]) * math.sqrt(alpha**2 + beta**2))
+                data_line_i = '%12s%12s%12s' % (x_i, y_i, e_i)
+                bank_buffer += '%-80s\n' % data_line_i
+            # END-FOR
 
         return bank_buffer
 
-    def save(self, diff_ws_name, gsas_file_name, ipts_number, gsas_param_file_name, write_to_file=True):
+    def save(self, diff_ws_name, run_date_time, gsas_file_name, ipts_number, gsas_param_file_name,
+             align_vdrive_bin, vanadium_gsas_file):
         """
-
-        :param diff_ws_name: diffraction workspace name
-        :param file_name: output file name. None as not output
+        Save a workspace to a GSAS file or a string
+        :param diff_ws_name: diffraction data workspace
+        :param run_date_time: date and time of the run
+        :param gsas_file_name: output file name. None as not output
+        :param ipts_number:
+        :param gsas_param_file_name:
+        :param align_vdrive_bin: Flag to align with VDRIVE bin edges/boundaries
+        :param vanadium_gsas_file:
         :return: string as the file content
         """
         diff_ws = ADS.retrieve(diff_ws_name)
+
+        # set the unit to TOF
+        if diff_ws.getAxis(0).getUnit() != 'TOF':
+            api.ConvertUnits(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name, Target='TOF',
+                             EMode='Elastic')
+            diff_ws = ADS.retrieve(diff_ws_name)
 
         # convert to Histogram Data
         if not diff_ws.isHistogramData():
             api.ConvertToHistogram(diff_ws_name, diff_ws_name)
 
+        # get the binning parameters
+        if align_vdrive_bin:
+            bin_params_set = self._get_tof_bin_params(self._get_vulcan_phase(run_date_time),
+                                                      diff_ws.getNumberHistograms())
+        else:
+            # a binning parameter set for doing nothing
+            print ('[DB...BAT] Using user specified binning parameters')
+            bin_params_set = [(range(1, diff_ws.getNumberHistograms()+1), None, None)]
+
+        # check for vanadium GSAS file name
+        if vanadium_gsas_file is not None:
+            # check whether a workspace exists
+            # NOTE (algorithm) use hash to determine the workspace name from file location
+            van_gsas_ws_name = 'van_{}'.format(hash(vanadium_gsas_file))
+            if ADS.doesExist(van_gsas_ws_name):
+                van_ws = ADS.retrieve(van_gsas_ws_name)
+            else:
+                van_ws = load_vulcan_gsas(vanadium_gsas_file, van_gsas_ws_name)
+            # check number of histograms
+            if van_ws.getNumberHistograms() != diff_ws.getNumberHistograms():
+                raise RuntimeError('Numbers of histograms between vanadium spectra and output GSAS are different')
+        else:
+            van_ws = None
+        # END-IF
+
         # rebin and then write output
         gsas_buffer_dict = dict()
-        num_bank_sets = len(self._bin_params_set)
+        num_bank_sets = len(bin_params_set)
 
         for bank_set_index in range(num_bank_sets):
             # get value
-            bank_id_list, bin_params, tof_vector = self._bin_params_set[bank_set_index]
+            bank_id_list, bin_params, tof_vector = bin_params_set[bank_set_index]
 
             # Rebin to these banks' parameters (output = Histogram)
-            api.Rebin(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name, Params=bin_params, PreserveEvents=True)
+            if bin_params is not None:
+                api.Rebin(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name,
+                          Params=bin_params, PreserveEvents=True)
 
             # Create output
             for bank_id in bank_id_list:
-                gsas_section_i = self._write_slog_bank_gsas(diff_ws_name, bank_id, tof_vector)
+                # check vanadium bin edges
+                if van_ws is not None:
+                    # check whether the bins are same between GSAS workspace and vanadium workspace
+                    unmatched, reason = self._compare_workspaces_dimension(van_ws, bank_id, tof_vector)
+                    if unmatched:
+                        raise RuntimeError('Vanadium GSAS workspace {} does not match workspace {}: {}'
+                                           ''.format(vanadium_gsas_file, diff_ws_name, reason))
+                # END-IF
+
+                # write GSAS head considering vanadium
+                gsas_section_i = self._write_slog_bank_gsas(diff_ws_name, bank_id, tof_vector, van_ws)
                 gsas_buffer_dict[bank_id] = gsas_section_i
         # END-FOR
 
         # header
         diff_ws = ADS.retrieve(diff_ws_name)
-        gsas_header = generate_vulcan_gda_header(diff_ws, gsas_file_name, ipts_number, gsas_param_file_name)
+        gsas_header = self._generate_vulcan_gda_header(diff_ws, gsas_file_name, ipts_number, gsas_param_file_name)
 
         # form to a big string
         gsas_buffer = gsas_header
         for bank_id in sorted(gsas_buffer_dict.keys()):
             gsas_buffer += gsas_buffer_dict[bank_id]
 
-        if write_to_file:
+        if gsas_file_name:
+            datatypeutility.check_file_name(gsas_file_name, check_exist=False,
+                                            check_writable=True, is_dir=False, note='Output GSAS file')
             g_file = open(gsas_file_name, 'w')
             g_file.write(gsas_buffer)
             g_file.close()
 
         return gsas_buffer
 
+    @staticmethod
+    def _normalize_by_vanadium(diff_ws, van_ws, diff_ws_name):
+        """ Normalize by vanadium
+        :param van_ws:
+        :param diff_ws_name:
+        :return:
+        """
+        api.Divide(LHSWorkspace=diff_ws,
+                   RHSWorkspace=van_ws,
+                   OutputWorkspace=diff_ws_name)
+        diff_ws = ADS.retrieve(diff_ws_name)
+
+        return diff_ws
+
+    @staticmethod
+    def _compare_workspaces_dimension(van_ws, bank_id, diff_tof_vec):
+        """
+        compare the workspace dimensions
+        :param van_ws:
+        :param diff_ws:
+        :return: Being different (bool), Reason (str)
+        """
+        iws = bank_id - 1
+        van_vec_x = van_ws.readX(iws)
+        diff_vec_x = diff_tof_vec
+        if len(van_vec_x) != len(diff_vec_x):
+            return True, 'Numbers of bins are different of workspace index {}'.format(iws)
+
+        if abs(van_vec_x[0] - diff_vec_x[0]) / (van_vec_x[0]) > 1.E-5:
+            # return True, 'X[0] are different for spectrum {}: {} != {}'.format(iws, van_vec_x[0], diff_vec_x[0])
+            print ('X[0] are different for spectrum {}: {} != {}'.format(iws, van_vec_x[0], diff_vec_x[0]))
+        if abs(van_vec_x[-1] - diff_vec_x[-1]) / (van_vec_x[-1]) > 1.E-5:
+            # return True, 'X[-1] are different for spectrum {}; {} != {}'.format(iws, van_vec_x[-1], diff_vec_x[-1])
+            print ('X[-1] are different for spectrum {}; {} != {}'.format(iws, van_vec_x[-1], diff_vec_x[-1]))
+        # END-IF-ELSE
+
+        return False, None
+
 # END-DEF-CLASS
 
 
-def align_to_vdrive_bin(input_ws, vec_ref_tof, output_ws_name):
+def load_vulcan_gsas(gsas_name, gsas_ws_name):
     """
-    Rebin input workspace (to histogram data)
-     in order to to match VULCAN's VDRIVE-generated GSAS file
-    :param input_ws: focused workspace
-    :param vec_ref_tof: vector of TOF bins
-    :param output_ws_name:
+    Load VULCAN GSAS and create a Ragged workspace
+    :param gsas_name:
+    :param gsas_ws_name:s
     :return:
     """
-    # Create a complicated bin parameter
-    params = []
-    dx = None
-    for ibin in range(len(vec_ref_tof) - 1):
-        x0 = vec_ref_tof[ibin]
-        xf = vec_ref_tof[ibin + 1]
-        dx = xf - x0
-        params.append(x0)
-        params.append(dx)
+    # load VULCAN's GSAS file into ragged workspace for vec x and vec y information
+    assert isinstance(gsas_name, str), 'GSAS file name {} must be a string but not a {}' \
+                                       ''.format(gsas_name, type(gsas_name))
+    if not os.path.exists(gsas_name):
+        raise RuntimeError('GSAS file {} does not exist.'.format(gsas_name))
 
-    # last bin
-    assert dx is not None, 'Vector of refT has less than 2 values.  It is not supported.'
-    x0 = vec_ref_tof[-1]
-    xf = 2 * dx + x0
-    params.extend([x0, 2 * dx, xf])
+    # load GSAS to a ragged workspace
+    temp_out_name = 'temp_{}'.format(random.randint(1, 10000))
+    temp_gss_ws = api.LoadGSS(Filename=gsas_name, OutputWorkspace=temp_out_name)
 
-    # Rebin
-    tempws = api.Rebin(InputWorkspace=input_ws, Params=params, PreserveEvents=True)
+    # extract, convert to point data workspace for first spectrum
+    api.ExtractSpectra(temp_out_name, WorkspaceIndexList=[0], OutputWorkspace=gsas_ws_name)
+    api.ConvertToPointData(InputWorkspace=gsas_ws_name, OutputWorkspace=gsas_ws_name)
 
-    # Map to a new workspace with 'vdrive-bin', which is the integer value of log bins
-    numhist = tempws.getNumberHistograms()
-    newvecx = []
-    newvecy = []
-    newvece = []
-    for iws in range(numhist):
-        vecx = tempws.readX(iws)
-        vecy = tempws.readY(iws)
-        vece = tempws.readE(iws)
-        for i in range(len(vecx) - 1):
-            newvecx.append(int(vecx[i] * 10) / 10.)
-            newvecy.append(vecy[i])
-            newvece.append(vece[i])
-            # ENDFOR (i)
-    # ENDFOR (iws)
-    api.DeleteWorkspace(Workspace=tempws)
-    gsaws = api.CreateWorkspace(DataX=newvecx, DataY=newvecy, DataE=newvece, NSpec=numhist,
-                                UnitX="TOF", ParentWorkspace=input_ws, OutputWorkspace=output_ws_name)
-
-    return gsaws
-
-
-def reformat_gsas_bank(bank_line_list):
-    """
-    re-format all the lines to GSAS/VDRive compatible
-    :param bank_line_list:
-    :return:
-    """
-    # check input
-    assert isinstance(bank_line_list, list), 'Bank lines must be given by list.'
-    if len(bank_line_list) < 4:
-        raise RuntimeError('Number of lines in bank data {0} is too small.'.format(len(bank_line_list)))
-
-    # init
-    bank_data = ''
-    in_data = False
-    i_line = 0
-
-    # add the information lines till 'BANK'
-    while in_data is False and i_line < len(bank_line_list):
-        # current line
-        curr_line = bank_line_list[i_line]
-
-        if curr_line.count('BANK') == 1:
-            # bank line. need reformat
-            in_data = True
-
-            # form the new BANK line
-            tof_min = float(bank_line_list[i_line+1].split()[0])
-            tof_max = float(bank_line_list[-1].split()[0])
-
-            terms = curr_line.split()
-            # replace TOF min and TOF max (item 5 and 6)
-            terms[5] = "%.1f" % tof_min
-            terms[6] = "%.1f" % tof_max
-
-            new_bank_line = ''
-            for t in terms:
-                new_bank_line += "%s " % t
-            bank_data += "%-80s\n" % new_bank_line
-        else:
-            # regular geometry line
-            bank_data += '{0}'.format(bank_line_list[i_line])
-        i_line += 1
-    # END-WHILE
-
-    # scan data
-    for i in range(i_line, len(bank_line_list)):
-        # split the line
-        terms = bank_line_list[i].strip().split()
-        try:
-            tof = float(terms[0])
-            y = float(terms[1])
-            e = float(terms[2])
-            x_s = "%.1f" % tof
-            y_s = "%.1f" % y
-            e_s = "%.2f" % e
-
-            temp = "%12s%12s%12s" % (x_s, y_s, e_s)
-
-        except TypeError:
-            # unable to convert to X, Y, Z. then use the original line
-            temp = "%-80s" % bank_line_list[i].rstrip()
-        except ValueError:
-            # unable to convert to X, Y, Z
-            temp = '%-80s' % bank_line_list[i].rstrip()
-            print '[ERROR] Unexpected line {0}: {1} as data.'.format(i, temp)
-        # END-TRY-EXCEPTION
-
-        bank_data += "%-80s\n" % temp
+    # for the rest of the spectra
+    for iws in range(1, temp_gss_ws.getNumberHistograms()):
+        # extract, convert to point data, conjoin and clean
+        temp_out_name_i = 'temp_i_x'
+        api.ExtractSpectra(temp_out_name, WorkspaceIndexList=[iws], OutputWorkspace=temp_out_name_i)
+        api.ConvertToPointData(InputWorkspace=temp_out_name_i, OutputWorkspace=temp_out_name_i)
+        api.ConjoinWorkspaces(InputWorkspace1=gsas_ws_name,
+                              InputWorkspace2=temp_out_name_i)
+        if ADS.doesExist(temp_out_name_i):
+            api.DeleteWorkspace(temp_out_name_i)
     # END-FOR
 
-    return bank_data
+    # clean temp GSAS
+    api.DeleteWorkspace(temp_out_name)
 
+    gsas_ws = ADS.retrieve(gsas_ws_name)
 
-def generate_vulcan_gda_header(gsas_workspace, gsas_file_name, ipts, gsas_param_file_name):
-    """
-    generate a VDRIVE compatible GSAS file's header
-    :param gsas_workspace:
-    :param gsas_file_name:
-    :param ipts:
-    :param gsas_param_file_name:
-    :return: string : multiple lines
-    """
-    # check
-    assert isinstance(gsas_workspace, str) is False, 'GSAS workspace must not be a string.'
-    assert isinstance(gsas_file_name, str), 'GSAS file name {0} must be a string.'.format(gsas_file_name)
-    assert isinstance(ipts, int) or isinstance(ipts, str), 'IPTS number {0} must be either string or integer.' \
-                                                           ''.format(ipts)
-    assert isinstance(gsas_param_file_name, str), 'GSAS iparm file name {0} must be an integer.' \
-                                                  ''.format(gsas_param_file_name)
-    if isinstance(ipts, str):
-        assert ipts.isdigit(), 'IPTS {0} must be convertible to an integer.'.format(ipts)
-
-    # Get necessary information
-    title = gsas_workspace.getTitle()
-    run = gsas_workspace.getRun()
-
-    # Get information on start/stop
-    if run.hasProperty("run_start") and run.hasProperty("duration"):
-        # export processing time information
-        runstart = run.getProperty("run_start").value
-        duration = float(run.getProperty("duration").value)
-        # property run_start and duration exist
-        runstart_sec = runstart.split(".")[0]
-        runstart_ns = runstart.split(".")[1]
-
-        utctime = datetime.strptime(runstart_sec, '%Y-%m-%dT%H:%M:%S')
-        time0 = datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
-
-        delta = utctime - time0
-        try:
-            total_nanosecond_start = int(delta.total_seconds() * int(1.0E9)) + int(runstart_ns)
-        except AttributeError:
-            total_seconds = delta.days * 24 * 3600 + delta.seconds
-            total_nanosecond_start = total_seconds * int(1.0E9) + int(runstart_ns)
-        total_nanosecond_stop = total_nanosecond_start + int(duration * 1.0E9)
-    else:
-        # not both property is found
-        total_nanosecond_start = 0
-        total_nanosecond_stop = 0
-
-    # Construct new header
-    newheader = ""
-
-    if len(title) > 80:
-        title = title[0:80]
-    newheader += "%-80s\n" % title
-
-    newheader += "%-80s\n" % ("Instrument parameter file: %s" % gsas_param_file_name)
-
-    newheader += "%-80s\n" % ("#IPTS: %s" % str(ipts))
-
-    newheader += "%-80s\n" % "#binned by: Mantid"
-
-    newheader += "%-80s\n" % ("#GSAS file name: %s" % os.path.basename(gsas_file_name))
-
-    newheader += "%-80s\n" % ("#GSAS IPARM file: %s" % gsas_param_file_name)
-
-    newheader += "%-80s\n" % ("#Pulsestart:    %d" % total_nanosecond_start)
-
-    newheader += "%-80s\n" % ("#Pulsestop:     %d" % total_nanosecond_stop)
-
-    return newheader
-
-
-def read_gsas_file(gsas_file_name):
-    """read GSAS file
-    :param gsas_file_name:
-    :return: 2-tuple (1) list as headers (2) a dictionary: key = bank ID, value = list of strings (lines)
-    """
-    # check input
-    assert isinstance(gsas_file_name, str), 'Input GSAS file name {0} must be a string.'.format(gsas_file_name)
-    if os.path.exists(gsas_file_name) is False:
-        raise RuntimeError('GSAS file {0} cannot be found.'.format(gsas_file_name))
-
-    # read file to lines
-    g_file = open(gsas_file_name, 'r')
-    raw_lines = g_file.readlines()
-    g_file.close()
-
-    # cut the GSAS file into multiple sections by BANK.  create the strings other than list of lines
-    inside_bank = False
-    curr_bank_lines = list()
-    header_lines = ''
-    curr_bank_id = -1
-    bank_geometry_line = ''
-    spectrum_flag_line = ''
-    bank_data_dict = dict()
-
-    for line in raw_lines:
-        # skip empty line
-        cline = line.strip()
-        if len(cline) == 0:
-            continue
-
-        # identify geometry information lines
-        if line.count('DIFC') == 1 and line.count('path') == 1:
-            # primary path line
-            bank_geometry_line = line
-        elif line.count('Data for spectrum') == 1:
-            # secondary geometry line
-            spectrum_flag_line = line
-        elif line.startswith("BANK"):
-            # Indicate a new bank
-            if len(curr_bank_lines) == 0:
-                # first bank in the GSAS file
-                inside_bank = True
-            else:
-                # bank line for next bank. need to process the previous-current bank
-                bank_data_dict[curr_bank_id] = curr_bank_lines
-            # END-IF-ELSE
-
-            # construct the first 3 lines
-            curr_bank_lines = list()
-            curr_bank_lines.append(bank_geometry_line)
-            curr_bank_lines.append(spectrum_flag_line)
-            curr_bank_lines.append(line)
-
-            # get the current bank ID
-            curr_bank_id = int(cline.split('BANK')[1].split()[0])
-        elif inside_bank is True and cline.startswith("#") is False:
-            # Write data line
-            curr_bank_lines.append(line)
-
-        elif inside_bank is False:
-            # must be header
-            header_lines += line
-        # END-IF-ELSE
-    # END-FOR
-
-    if len(curr_bank_lines) > 0:
-        bank_data_dict[curr_bank_id] = curr_bank_lines
-    else:
-        raise NotImplementedError("Impossible to have this")
-
-    return header_lines, bank_data_dict
-
-
-def save_mantid_gsas(gsas_ws_name, gda_file_name, binning_parameters):
-    """
-    Save temporary GSAS file
-    :param gsas_ws_name:
-    :param gda_file_name:
-    :param binning_parameters:
-    :return:
-    """
-    # temp1_ws = ADS.retrieve(gsas_ws_name)
-    # print '[DB...BAT] Before aligned {0}.. vec x: {1}'.format(type(temp1_ws), temp1_ws.readX(2)[:])
-
-    aligned_gss_ws_name = '{0}_temp'.format(gsas_ws_name)
-
-    if isinstance(binning_parameters, numpy.ndarray):
-        # align to VDRIVE
-        align_to_vdrive_bin(gsas_ws_name, binning_parameters, aligned_gss_ws_name)
-    elif binning_parameters is not None:
-        api.Rebin(InputWorkspace=gsas_ws_name, OutputWorkspace=aligned_gss_ws_name, Params=binning_parameters)
-    # END-IF (rebin)
-
-    # Convert from PointData to Histogram
-    api.ConvertToHistogram(InputWorkspace=aligned_gss_ws_name, OutputWorkspace=aligned_gss_ws_name)
-
-    # Save
-    # print '[DB...VERY IMPORTANT] Save to GSAS File {0} as a temporary output'.format(gda_file_name)
-    api.SaveGSS(InputWorkspace=aligned_gss_ws_name, Filename=gda_file_name, SplitFiles=False, Append=False,
-                Format="SLOG", MultiplyByBinWidth=False, ExtendedHeader=False, UseSpectrumNumberAsBankID=True)
-
-    return gda_file_name
-
-
-def save_vanadium_gss(vanadium_workspace_dict, out_file_name, ipts_number, gsas_param_file):
-    """
-    save vanadium GSAS
-    :param vanadium_workspace_dict:
-    :param out_file_name:
-    :param ipts_number:
-    :return:
-    """
-    # check input
-    assert isinstance(vanadium_workspace_dict, dict), 'vanadium workspaces must be given by dictionary.'
-    if len(vanadium_workspace_dict) == 0:
-        raise RuntimeError('Vanadium workspace dictionary is empty.')
-
-    # save to temporary GSAS file
-    bank_buffer_dict = dict()
-    # FIXME - This is not efficient because bank 1 and bank 2 always have the same resolution
-    for bank_id in sorted(vanadium_workspace_dict.keys()):
-        # save to a temporary file
-        van_ws_name = vanadium_workspace_dict[bank_id]
-        save_mantid_gsas(van_ws_name, out_file_name, None)
-        header_lines, gsas_bank_dict = read_gsas_file(out_file_name)
-
-        # load the GSAS file and convert the header
-        bank_buffer_dict[bank_id] = gsas_bank_dict[bank_id]
-    # END-FOR
-
-    # form final output buffer
-    # original header
-    vulcan_gss_buffer = ''  # header_lines
-
-    # VDRIVE special header
-    diff_ws = ADS.retrieve(vanadium_workspace_dict.values[0])
-    header = generate_vulcan_gda_header(diff_ws, gsas_file_name=out_file_name, ipts=ipts_number,
-                                        gsas_param_file_name=gsas_param_file)
-    vulcan_gss_buffer += header
-    vulcan_gss_buffer += '%-80s\n' % '#'  # one empty comment line
-
-    # append each bank
-    for bank_id in sorted(bank_buffer_dict.keys()):
-        bank_data_str = reformat_gsas_bank(bank_buffer_dict[bank_id])
-        vulcan_gss_buffer += bank_data_str
-    # END-FOR
-
-    # save GSAS file
-    try:
-        gsas_file = open(out_file_name, 'w')
-        gsas_file.write(vulcan_gss_buffer)
-        gsas_file.close()
-    except OSError as os_err:
-        raise RuntimeError('Unable to write to {0} due to {1}'.format(out_file_name, os_err))
-
-    return
-
-
-def save_vulcan_gss(diffraction_workspace_name, binning_parameter_list, output_file_name, ipts, gsas_param_file):
-    """
-    Save a diffraction workspace to GSAS file for VDRive
-    :param diffraction_workspace_name:
-    :param binning_parameter_list:
-    :param output_file_name:
-    :param ipts:
-    :param gsas_param_file:
-    :return:
-    """
-    # input_ws = ADS.retrieve(diffraction_workspace_name)
-    # print '[DB...BAT] Input workspace to save for VULCAN gsas is of type {0}'.format(type(input_ws))
-
-    # default
-    if binning_parameter_list is None:
-        binning_parameter_list = [([1, 2], (5000., -0.001, 70000.)),
-                                  ([3], (5000., -0.0003, 70000.))]
-
-    # check
-    assert isinstance(diffraction_workspace_name, str), 'Diffraction workspace name {0} must be a string.' \
-                                                        ''.format(diffraction_workspace_name)
-    assert isinstance(binning_parameter_list, list), 'Binning parameters {0} must be given in a list.' \
-                                                     ''.format(binning_parameter_list)
-    assert isinstance(output_file_name, str), 'Output file name {0} must be a string.'.format(output_file_name)
-    output_dir = os.path.dirname(output_file_name)
-    if os.path.exists(output_dir) is False:
-        raise RuntimeError('Directory {0} for output GSAS file {1} does not exist.'
-                           ''.format(output_dir, output_file_name))
-    elif os.path.exists(output_file_name) and os.access(output_file_name, os.W_OK) is False:
-        raise RuntimeError('Output GSAS file {0} exists and current user has not priviledge to overwrite it.'
-                           ''.format(output_file_name))
-    elif os.access(output_dir, os.W_OK) is False:
-        raise RuntimeError('Current user has no writing priviledge to directory {0}'.format(output_dir))
-
-    # save to a general GSAS files and load back for the data portion
-    bank_buffer_dict = dict()
-
-    binning_parameter_list.sort()
-    for i_bin_param in range(len(binning_parameter_list)):
-        bank_id_list, binning_parameters = binning_parameter_list[i_bin_param]
-        # save GSAS to single bank temporary file
-        assert isinstance(bank_id_list, list), 'Bank IDs {0} must be given by list but not {1}.' \
-                                               ''.format(bank_id_list, type(bank_id_list))
-
-        save_mantid_gsas(diffraction_workspace_name, output_file_name, binning_parameters)
-        header_lines, gsas_bank_dict = read_gsas_file(output_file_name)
-
-        # load the GSAS file and convert the header
-        # bank_id_list = binning_parameter_list[binning_parameters]
-        for bank_id in bank_id_list:
-            bank_buffer_dict[bank_id] = gsas_bank_dict[bank_id]
-        # END-FOR
-    # END-FOR (binning_parameters)
-
-    # form final output buffer
-    # original header
-    vulcan_gss_buffer = ''  # header_lines
-
-    # VDRIVE special header
-    diff_ws = ADS.retrieve(diffraction_workspace_name)
-    header = generate_vulcan_gda_header(diff_ws, gsas_file_name=output_file_name, ipts=ipts,
-                                        gsas_param_file_name=gsas_param_file)
-    vulcan_gss_buffer += header
-    vulcan_gss_buffer += '%-80s\n' % '#'   # one empty comment line
-
-    # append each bank
-    for bank_id in sorted(bank_buffer_dict.keys()):
-        bank_data_str = reformat_gsas_bank(bank_buffer_dict[bank_id])
-        vulcan_gss_buffer += bank_data_str
-    # END-FOR
-
-    # save GSAS file
-    try:
-        gsas_file = open(output_file_name, 'w')
-        gsas_file.write(vulcan_gss_buffer)
-        gsas_file.close()
-    except OSError as os_err:
-        raise RuntimeError('Unable to write to {0} due to {1}'.format(output_file_name, os_err))
-
-    return
+    return gsas_ws

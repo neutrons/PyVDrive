@@ -1,83 +1,54 @@
-Alias
-=====
+### Alias
 
 VBIN OR VDRIVEBIN
 
-Arguments
-=========
 
-Mandatory arguments
--------------------
+## Examples (Benchmark)
 
- * IPTS
- * RUNS or CHOPRUN
 
-Optional arguments
-==================
+ - Simple binning:
+   ```
+   VBIN,IPTS=20280,RUNS=169186
+   ```
+   * Output directory: by default the result will be written to ```/SNS/VULCAN/IPTS-20280/shared/binned_data/```
+   * Output file: ```169186.gda```
 
- * CHOPRUN   : Run number for reduce chopped run
- * RUNE      : First run number
- * RUNS      : Last run number
- * TAG
-   - TAG='V':
-      * reduced data copied to */SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium*
-      * sample logs are written to *.../Vanadium/VRecord.txt*
-   - TAG='Si':
-      * reduced data copied to */SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Si*
-      * sample logs are written to *.../Si/SiRecord.txt*
- * Mytofbmin : User defined TOF min in binning parameter
- * Mytofbmax : User defined TOF max in binning parameter
- * BINW      : Binning parameter, i.e., log bin step
- * BANKS     : Number of banks in output GSAS file.  Allowed values are 3, 7 and 27.  Default is 3.
- * SKIPXML   : 
- * FOCUS_EW  : 
- * RUNV      : Run number for vanadium file (file in instrument directory)
- * IParm     : User specified IPARM file
- * FullProf  : Flag to write the reduced data to Fullprof format
- * NoGSAS    : Flag for not output GSAS file
- * PlotFlag  : 
- * ONEBANK   : Merge all the pixels to 1 bank
- * NoMask    : 
- * BinFolder : 
- * OUTPUT    : User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin
- * GROUP     : User specified a special group file other than usual 3/7/27 banks. (It cannot be used with BANKS)
- * ROI       : Files for Mantid made region of interest file in XML format
- * MASK      : Files for Mantid made mask file in XML format
- * VDRIVEBIN : Bin boundaries will be adapted to (IDL) VDRIVE.  By default, it is 1 as True
- * VERSION   : User specified version of reduction algorithm.  Mantid conventional = 1, PyVDrive simplified = 2 (default)
+ - Multiple run binning: 
+   ```
+   VBIN,IPTS=20280,RUNS=169186, RUNE=169188
+   ```
+   * Output directory: by default the result will be written to ```/SNS/VULCAN/IPTS-20280/shared/binned_data/```
+   * Output file: ```169186.gda```, ```169187.gda```, ```169188.gda```
+
+ - Simple binning with user specified GSAS IPARM file and normalized by vanadium file
+   ```
+   VBIN,IPTS=20280,RUNS=169186, iparam=VULCAN_20180230.prm, runv=12345
+   ```
+   * Output directory: by default the result will be written to ```/SNS/VULCAN/IPTS-20280/shared/binned_data/```
+   * Output file: ```169186.gda```
+
+ - Binning with multiple mask: 
+   ```
+   VBIN,IPTS=20280,RUNS=169186,RUNE=161976, mask=[tests/data/highangle_roi_0607.xml, tests/data/highangle_roi_0608.xml]
+   ```
+   Two masks, defined in individual Mantid compatible XML mask files, will be applied.
  
+ - Binning with multiple region of interest:
+   ```
+   VBIN,IPTS=20280,RUNS=169186,RUNE=161976, roi=[tests/data/highangle_roi_0607.xml, tests/data/highangle_roi_0608.xml]
+   ```
+   Only the pixels inside the regions of interest won't be masked.
 
-Coming soon
-===========
+ - Binning with user defined TOF range and bin size
+   ```
+   VBIN,IPTS=20280,RUNS=169186,binw=0.002, Mytofbmin=6000., Mytofmax=32500.
+   ```
+   In this case, all three banks will be binned to same TOF range and resolution.
 
- * OneBank
- * Bin Size and Bin Range
-
-
-Examples (Benchmark)
---------------------
-
-**Pre-Vulcan-X examples (3-banks nED)**
-
-NeXus file /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169186.nxs.h5 is used for testing
-
- - Simple binning: VBIN,IPTS=20280,RUNS=169186
- - Multiple run binning: VBIN,IPTS=20280,RUNS=169186, RUNE=169188
- - Binning for standard (Si, V): VBIN,IPTS=20280,RUNS=169186,tag='Si'
- - Binning with user defined TOF range and bin size: VBIN,IPTS=20280,RUNS=169186,binw=0.002, Mytofbmin=6000., Mytofmax=32500.
- - Separate pixels into various banks: VBIN,IPTS=20280,RUNS=169186,version=2, banks=27
- - Binning with mask: VBIN,IPTS=20280,RUNS=169186,RUNE=161976, mask=[tests/data/highangle_roi_0607.xml]
- - Binning with multiple mask: VBIN,IPTS=20280,RUNS=169186,RUNE=161976, mask=[tests/data/highangle_roi_0607.xml, tests/data/highangle_roi_0608.xml]
- - Binning with region of interest: VBIN,IPTS=20280,RUNS=169186,RUNE=161976, roi=[tests/data/highangle_roi_0607.xml]
- - Binning with multiple region of interest: VBIN,IPTS=20280,RUNS=169186,RUNE=161976, roi=[tests/data/highangle_roi_0607.xml, tests/data/highangle_roi_0608.xml]
-
-
-**These are pre-nED examples.  They are too old.**
-
- * VDRIVEBIN, IPTS=1000, RUNS=2000, RUNE=2099
- * VBIN,IPTS=14094,RUNS=96450,RUNE=96451
- * VBIN,IPTS=14094,RUNS=96450,RUNV=95542
- * VBIN,ITPS=16062,RUNS=98237,TAG='V', OUTPUT='/tmp'
- * vbin, ipts=17414, choprun=109021, runs=1, rune=99 
+ - Binning with various pixel grouping, i.e., separating pixels into various banks: 
+   ```
+   VBIN,IPTS=20280,RUNS=169186,version=2, banks=27
+   ```
+   The 27-bank setup will seperate each east/west bank's panel into 3 banks and separate the high angle bank into 3 x 3.
 
 

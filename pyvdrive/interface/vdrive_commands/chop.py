@@ -12,8 +12,9 @@ class VdriveChop(VDriveCommand):
     """
     # TODO/ISSUE/NOWNOW - Implement DT and RUNV
     SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'DBIN', 'LOADFRAME', 'FURNACE', 'BIN', 'PICKDATA', 'OUTPUT',
-                     'DRYRUN', 'PULSETIME', 'DT', 'RUNV', 'INFO', 'ROI', 'MASK', 'NEXUS', 'STARTTIME', 'STOPTIME',
-                     'VDRIVEBIN', 'NUMBANKS', 'SAVECHOPPED2NEXUS']
+                     'BINFOLDER',
+                     'PULSETIME', 'DT', 'RUNV', 'INFO', 'ROI', 'MASK', 'NEXUS', 'STARTTIME', 'STOPTIME',
+                     'VDRIVEBIN', 'NUMBANKS', 'SAVECHOPPED2NEXUS', 'IPARM', 'DRYRUN', ]
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -27,6 +28,8 @@ class VdriveChop(VDriveCommand):
         'BIN': 'If bin=1, chopped data will be reduced to GSAS files',
         'OUTPUT': 'If specified, then the chopped files will be saved to the directory. Otherwise, these files '
                   'will be saved to /SNS/VULCAN/IPTS-????/shared.',
+        'BINFOLDER': 'It is an alias for "OUTPUT"',
+        'IPARM': 'GSAS profile calibration file (.iparam). Default is vulcan.prm',
         'DRYRUN': 'If equal to 1, then it is a dry run to check input and output.',
         'HELP': 'the Log Picker Window will be launched and set up with given RUN number.\n',
         'DT': 'the period between two adjacent time segments',
@@ -119,13 +122,14 @@ class VdriveChop(VDriveCommand):
         # chop and reduce
         status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
                                                       save_chopped_nexus=True,
-                                                      output_dir=output_dir)
+                                                      output_dir=output_dir,
+                                                      gsas_iparam_name=iparm_file_name)
 
         return status, message
 
     def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce_flag, vanadium,
                           output_dir, dry_run, chop_loadframe_log, chop_furnace_log, roi_list,
-                          mask_list, use_idl_bin, num_banks, save_to_nexus):
+                          mask_list, use_idl_bin, num_banks, save_to_nexus, iparm_file_name):
         """
         Chop data by time interval
         :param run_number:
@@ -197,7 +201,8 @@ class VdriveChop(VDriveCommand):
                                                       use_idl_bin=use_idl_bin,
                                                       roi_list=roi_list,
                                                       mask_list=mask_list,
-                                                      raw_nexus_name=self._raw_nexus_file_name)
+                                                      raw_nexus_name=self._raw_nexus_file_name,
+                                                      gsas_iparam_name=iparm_file_name)
 
         return status, message
 
@@ -329,7 +334,8 @@ class VdriveChop(VDriveCommand):
         status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
                                                       vanadium=None,
                                                       save_chopped_nexus=True, output_dir=output_dir,
-                                                      export_log_type=exp_log_type)
+                                                      export_log_type=exp_log_type,
+                                                      gsas_iparam_name=iparm_file_name)
 
         return status, message
 
@@ -414,8 +420,15 @@ class VdriveChop(VDriveCommand):
         # vanadium run
         if 'RUNV' in self._commandArgsDict:
             van_run_number = int(self._commandArgsDict['RUNV'])
+
         else:
             van_run_number = None
+
+        # GSAS iparam
+        if 'IPARM' in self._commandArgsDict:
+            iparm_name = self._commandArgsDict['IPARM']
+        else:
+            iparm_name = 'vulcan.prm'
 
         # chopping method: by constant time or input
         # how to deal with sample logs
@@ -577,8 +590,8 @@ class VdriveChop(VDriveCommand):
                                                              mask_list=mask_file_names,
                                                              use_idl_bin=use_idl_bin,
                                                              num_banks=num_banks,
-                                                             save_to_nexus=save_to_nexus
-                                                             )
+                                                             save_to_nexus=save_to_nexus,
+                                                             iparm_file_name=iparm_name)
                 # elif log_name is not None:
                 #     # chop by log value
                 #     # FIXME/TODO/ISSUE/FUTURE - shall we implement this?

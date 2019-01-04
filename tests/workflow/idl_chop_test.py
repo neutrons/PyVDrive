@@ -10,7 +10,6 @@ except ImportError:
     from PyQt4.QtGui import QApplication
 
 
-
 def create_slice_segment_file(test_dir):
     """
     create a slice segment file on the fly
@@ -47,6 +46,49 @@ def test_chop_simple(tester):
     tester.show_output_files(test_dir)
 
     return
+
+
+def test_chop_van_normalized(tester):
+    """
+    chop with vanadium run (vrun)
+    :param tester:
+    :return:
+    """
+    # test directory
+    test_dir = '/tmp/chop_vrun'
+    command_test_setup.set_test_dir(test_dir)
+
+    # run command
+    idl_command = 'chop, ipts=20717, runs=170464, dbin=300, loadframe=1, ' \
+                  'runv=163021,output="{}"'.format(test_dir)
+
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
+
+    return
+
+
+def test_chop_roi(tester):
+    """
+    chop with ROI specified
+    :param tester:
+    :return:
+    """
+    # test directory
+    test_dir = '/tmp/chop_multiple_roi'
+    command_test_setup.set_test_dir(test_dir)
+
+    # run command
+    idl_command = 'chop, ipts=20717, runs=170464, dbin=300, loadframe=1,' \
+                  'roi=[tests/data/roi169186b2.xml, tests/data/roi169186b3.xml],' \
+                  'BinFolder="{}"'.format(test_dir)
+
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
 
 
 def test_chop_segment_file(tester):
@@ -147,7 +189,12 @@ def test_main():
     """
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
+    # basic chopping operation
     test_chop_simple(command_tester)
+
+    # chop with vanadium runs
+    test_chop_van_normalized(command_tester)
+
     # test_ned_standard(command_tester)
     # test_ned_user_bin(command_tester)
     # test_ned_multi_banks(command_tester)
