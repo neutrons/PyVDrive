@@ -1414,7 +1414,6 @@ class VDriveAPI(object):
                 material_name, tag_dir, standard_record_file = standard_sample_tuple
                 patch_list = reduce_VULCAN.generate_patch_log_list('VULCAN', ipts_number=ipts_number,
                                                                    run_number=run_number)
-
                 status, error_message = \
                     vdrivehelper.export_experiment_log(ws_name,
                                                        record_file_name=os.path.join(tag_dir, standard_record_file),
@@ -1422,6 +1421,14 @@ class VDriveAPI(object):
                                                        sample_title_list=sample_title_list,
                                                        sample_operation_list=sample_operation_list,
                                                        patch_list=patch_list)
+                # copy GSAS file
+                # TODO - NIGHT - Better code quality
+                import shutil
+                src_gda = '/SNS/VULCAN/IPTS-{}/shared/binned_data/{}.gda'.format(ipts_number, run_number)
+                assert os.path.exists(src_gda), '{} does not exists'.format(src_gda)
+                shutil.copy(src_gda,
+                            tag_dir)
+
             else:
                 status = True
                 error_message = ''

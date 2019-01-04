@@ -276,6 +276,7 @@ def export_experiment_log(ws_name, record_file_name, sample_name_list, sample_ti
         file_write_mode = 'new'
 
     # write
+    print ('[DB...BAT] Export (TAG) experiment log record: {}'.format(record_file_name))
     try:
         mantid.simpleapi.ExportExperimentLog(InputWorkspace=ws_name,
                                              OutputFilename=record_file_name,

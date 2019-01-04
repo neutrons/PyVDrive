@@ -1544,7 +1544,12 @@ class PatchRecordHDF5(object):
                         if isinstance(item, str):
                             node = node[item]
                         elif isinstance(item, int):
-                            node = node[item]
+                            try:
+                                node = node[item]
+                            except IndexError as index_error:
+                                print ('[WARNING] {}: {} is not a node on H5Path. FYI: {}'
+                                       ''.format(self._h5name, node, index_error))
+
                     # END-FOR
                 except KeyError as key_err:
                     if log_name == 'Notes':
@@ -1552,7 +1557,10 @@ class PatchRecordHDF5(object):
                     else:
                         raise key_err
                 # END-TRY-EXCEPT
+
                 log_value_dict[log_name] = str(node)
+            else:
+                print ('[WARNING] Log {} is not in {}\'s PATH'.format(log_name, self._h5name))
         # END-FOR
 
         h5file.close()
@@ -2739,14 +2747,15 @@ def check_point_data_log_binning(ws_name, standard_bin_size=0.01, tolerance=1.E-
 
 
 def generate_patch_log_list(instrument_name, ipts_number, run_number):
-    """
-
+    """ Generate patch log list
     :param instrument_name: 
     :param ipts_number: 
     :param run_number: 
     :return: 
     """
-    event_file_name = vulcan_util.locate_run(ipts_number, run_number)
+    status, event_file_name = vulcan_util.locate_run(ipts_number, run_number)
+    if not status:
+        raise RuntimeError('IPTS-{} does not have run {}'.format(ipts_number, run_number))
 
     sample_log_list = ['Comment', 'Sample', 'ITEM', 'Monitor1', 'Monitor2']
     if event_file_name.endswith('.h5'):
