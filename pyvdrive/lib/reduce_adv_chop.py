@@ -605,50 +605,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return
 
-    def execute_chop_reduction(self, clear_workspaces=True):
-        """
-        Execute the chopping and reduction including exporting the log files with chopped data
-        :return:
-        """
-        # TODO FIXME - 20190101 ASAP - After testing, Remove this method!
-        raise 'This one shall be gone!'
-        # # create output directory
-        # self.create_chop_dir()
-        # # get the chopped data directory if not specified
-        # if self._choppedDataDirectory is None:
-        #     self._choppedDataDirectory = self._reductionSetup.get_reduced_data_dir()
-        #
-        # # find out what kind of chopping algorithm shall be used
-        # split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
-        # print '[DB...BAT] Splitters workspace name: ', split_ws_name
-        # num_targets = self.get_number_chopped_ws(split_ws_name)
-        #
-        # # chop and reduce
-        # # FIXME/TODO/ISSUE --- getMemorySize()
-        # if num_targets < MAX_ALLOWED_WORKSPACES:
-        #     # load data and chop all at the same time
-        #     status, message, chopped_tup_list = self.chop_save_reduce()
-        #     print '[DB...BAT] chop-reduction status: {0}; chop-reduction message: {1}'.format(status, message)
-        #     output_ws_list = list()
-        #     for tup3 in chopped_tup_list:
-        #         output_ws_list.append(tup3[2])
-        #
-        #     # create the log files
-        #     self.generate_sliced_logs(output_ws_list, self._chopExportedLogType)
-        #     # clear workspace? or later
-        #     if clear_workspaces:
-        #         for ws_name in output_ws_list:
-        #             mantidsimple.DeleteWorkspace(Workspace=ws_name)
-        #     else:
-        #         self._reducedWorkspaceList.extend(output_ws_list)
-        #
-        # else:
-        #     # need to chop and reduce
-        #     print '[DB...BAT] Chopping to {0} output workspaces'.format(num_targets)
-        #     status, message = self.chop_and_reduce_large_output(self._choppedDataDirectory)
-        #
-        # return status, message
-
     def execute_chop_reduction_v2(self, event_ws_name, binning_parameters, num_reduced_banks,
                                   calib_ws_name, group_ws_name,
                                   gsas_info_dict, clear_workspaces, gsas_writer):

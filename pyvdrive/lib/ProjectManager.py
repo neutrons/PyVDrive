@@ -409,7 +409,7 @@ class ProjectManager(object):
                                                                        save_chopped_nexus=save_chopped_nexus,
                                                                        number_banks=number_banks,
                                                                        tof_correction=tof_correction,
-                                                                       vanadium=vanadium,
+                                                                       van_run_number=vanadium,
                                                                        user_binning_parameter=user_bin_parameter,
                                                                        vdrive_binning=use_idl_bin,
                                                                        roi_list=roi_list,

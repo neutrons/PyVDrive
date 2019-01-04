@@ -1112,31 +1112,75 @@ class ReductionManager(object):
 
         return
 
+    def apply_detector_efficiency(self, to_fill):
+        """
+        As name
+        :param to_fill:
+        :return:
+        """
+        #     # convert to matrix workspace to apply detector efficiency?
+        #     convert_to_matrix = self._det_eff_ws_name is not None and apply_det_efficiency
+        #     if apply_det_efficiency:
+        #         # rebin
+        #         Rebin(InputWorkspace=ws_name, OutputWorkspace=ws_name, Params=binning, PreserveEvents=not convert_to_matrix)
+        #         # apply detector efficiency
+        #         Multiply(LHSWorkspace=ws_name, RHSWorkspace=self._det_eff_ws_name, OutputWorkspace=ws_name)
+        raise NotImplementedError('ASAP')
+
+
     def chop_vulcan_run(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
                         output_directory, reduce_data_flag, save_chopped_nexus, number_banks,
-                        tof_correction, vanadium, user_binning_parameter, vdrive_binning,
-                        roi_list, mask_list, gsas_parm_name='vulcan.prm'):
-        # latest version: version 3
-
+                        tof_correction, van_run_number, user_binning_parameter, vdrive_binning,
+                        roi_list, mask_list, no_cal_mask, gsas_parm_name='vulcan.prm'):
+        """
+        Latest version: version 3
+        :param ipts_number:
+        :param run_number:
+        :param raw_file_name:
+        :param split_ws_name:
+        :param split_info_name:
+        :param slice_key:
+        :param output_directory:
+        :param reduce_data_flag:
+        :param save_chopped_nexus:
+        :param number_banks:
+        :param tof_correction:
+        :param van_run_number: None (for no-correction) or an integer (vanadium run number)
+        :param user_binning_parameter:
+        :param vdrive_binning:
+        :param roi_list:
+        :param mask_list:
+        :param no_cal_mask:
+        :param gsas_parm_name:
+        :return:
+        """
         # Load data
         event_ws_name = self.get_event_workspace_name(run_number=run_number)
         mantid_helper.load_nexus(raw_file_name, event_ws_name, meta_data_only=False)
         print ('[INFO] Successfully loaded {0} to {1}'.format(raw_file_name, event_ws_name))
 
-        # Mask data
+        # Load user specified masks/ROIs
         datatypeutility.check_list('Region of interest file list', roi_list)
         datatypeutility.check_list('Mask file list', mask_list)
-        if len(roi_list) + len(mask_list) > 0:
-            raise RuntimeError('Not Implemented Yet')
-            raise 'Exception cannot be handled'
-            print ('[INFO] Processing masking and ROI files')
-            for roi_file_name in roi_list:
-                self.load_mask_files(event_ws_name, roi_file_name, is_roi=True)
-            for mask_file_name in mask_list:
-                self.load_mask_files(event_ws_name, mask_file_name, is_roi=False)
+        if len(roi_list) > 0 and len(mask_list) > 0:
+            raise RuntimeError('Unable to support both user-specified ROI and Mask simultaneously')
+        elif len(roi_list) > 0:
+            user_mask_name = self.load_mask_files(event_ws_name, roi_list, is_roi=True)
+        elif len(mask_list) > 0:
+            user_mask_name = self.load_mask_files(event_ws_name, roi_list, is_roi=False)
         else:
             print ('[INFO] No user specified masking and ROI files')
+            user_mask_name = None
         # END-IF-ELSE
+
+        # Load geometry calibration file
+        calib_ws_name, group_ws_name, mask_ws_name = self._get_calibration_workspaces_names(event_ws_name, number_banks)
+
+        # apply mask
+        if user_mask_name:
+            mantid_helper.mask_workspace(event_ws_name, user_mask_name)
+        if not no_cal_mask:
+            mantid_helper.mask_workspace(event_ws_name, mask_ws_name)
 
         # create a reduction setup instance
         reduction_setup = reduce_VULCAN.ReductionSetup()
@@ -1163,8 +1207,6 @@ class ReductionManager(object):
         error_message = None
         if reduce_data_flag:
             # chop and reduce chopped data to GSAS: NOW, it is Version 2.0 speedup
-            calib_ws_name, group_ws_name, mask_ws_name = self._get_calibration_workspaces_names(event_ws_name,
-                                                                                                number_banks)
             reduction_setup.set_calibration_workspaces(calib_ws_name, group_ws_name, mask_ws_name)
 
             # set tracker

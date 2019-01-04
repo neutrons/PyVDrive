@@ -262,32 +262,6 @@ class VDriveAPI(object):
             reflection_list.append((peak_pos, ref_dict[peak_pos]))
 
         return reflection_list
-    #
-    # def export_gsas_file(self, run_number, gsas_file_name):
-    #     """
-    #     Purpose: export a reduced run to GSAS data file
-    #     Requirements:
-    #     1. run number is a valid integer
-    #     2. run number exists in project
-    #     3. gsas file name includes a path that is writable
-    #     Guarantees: A gsas file is written
-    #     :param run_number:
-    #     :param gsas_file_name:
-    #     :return:
-    #     """
-    #     # Check requirements
-    #     assert isinstance(run_number, int)
-    #     assert run_number > 0
-    #
-    #     assert isinstance(gsas_file_name, str)
-    #     out_dir = os.path.dirname(gsas_file_name)
-    #     assert os.access(out_dir, os.W_OK), 'Output directory {0} is not writable.'.format(out_dir)
-    #
-    #     try:
-    #         self._myProject.export_reduced_run_gsas(run_number, gsas_file_name)
-    #     except KeyError as key_err:
-    #         return False, 'Unable to export reduced run %d to GSAS file due to %s.' % (run_number, key_err)
-    #     raise
 
     @staticmethod
     def export_gsas_peak_file(bank_peak_dict, out_file_name):
@@ -1402,11 +1376,11 @@ class VDriveAPI(object):
             # auto reduction: auto reduction script does not work with vanadium normalization
             # print '[INFO] (Auto) reduce data: IPTS = {0}, Runs = {1}.'.format(ipts_number, runs_to_reduce)
             status, error_message = self.reduce_auto_script(ipts_number=ipts_number,
-                                                      run_numbers=runs_to_reduce,
-                                                      output_dir=output_directory,
-                                                      is_dry_run=False,
-                                                      roi_list=roi_list,
-                                                      mask_list=mask_list)
+                                                            run_numbers=runs_to_reduce,
+                                                            output_dir=output_directory,
+                                                            is_dry_run=False,
+                                                            roi_list=roi_list,
+                                                            mask_list=mask_list)
             error_message = error_message
 
         elif dspace or version == 2:
@@ -1423,36 +1397,35 @@ class VDriveAPI(object):
                                                                               mask_list=mask_list,
                                                                               no_cal_mask=no_cal_mask)
             if standard_sample_tuple:
-                # TODO - NIGHT / TONIGHT - Implement ASAP
                 if len(run_number_list) != 1:
                     return False, 'Standard tag {} can only work with 1 run'.format(standard_sample_tuple)
+
+                # print ('Output Dir: {}'.format(output_directory))
+                # # 'SiTest', '/tmp/SiTest', 'SiTestRecord.txt'
+                # import reduce_VULCAN
+                # print (reduce_VULCAN.RecordBase)
+
+                # get information of run number and workspace
                 run_number, ws_name = run_number_list[0]
-                print ('Output Dir: {}'.format(output_directory))
-                # 'SiTest', '/tmp/SiTest', 'SiTestRecord.txt'
+                # convert record-tuple list to three list
+                sample_title_list = [item[0] for item in reduce_VULCAN.RecordBase]
+                sample_name_list = [item[1] for item in reduce_VULCAN.RecordBase]
+                sample_operation_list = [item[2] for item in reduce_VULCAN.RecordBase]
                 material_name, tag_dir, standard_record_file = standard_sample_tuple
-                import reduce_VULCAN
-                print (reduce_VULCAN.RecordBase)
-                vdrivehelper.export_experiment_log(run_number_list[0], msg_list[0], standard_sample_tuple)
-                """
-                    @staticmethod
-                def generate_record_file_format():
-                """
-                """
-                sample_title_list = list()
-                sample_name_list = list()
-                sample_operation_list = list()
-                for i_sample in xrange(len(RecordBase)):
-                    sample_title_list.append(RecordBase[i_sample][0])
-                    sample_name_list.append(RecordBase[i_sample][1])
-                    sample_operation_list.append(RecordBase[i_sample][2])
+                patch_list = reduce_VULCAN.generate_patch_log_list('VULCAN', ipts_number=ipts_number,
+                                                                   run_number=run_number)
 
-                return sample_title_list, sample_name_list, sample_operation_list
-
-                """
+                status, error_message = \
+                    vdrivehelper.export_experiment_log(ws_name,
+                                                       record_file_name=os.path.join(tag_dir, standard_record_file),
+                                                       sample_name_list=sample_name_list,
+                                                       sample_title_list=sample_title_list,
+                                                       sample_operation_list=sample_operation_list,
+                                                       patch_list=patch_list)
+            else:
+                status = True
+                error_message = ''
             # END-IF
-
-            status = True
-            error_message = ''
             for msg in msg_list:
                 if msg.count('Failed'):
                     status = False
@@ -1853,21 +1826,6 @@ class VDriveAPI(object):
         self._currentMTSLogFileName = log_file_name
 
         return
-
-    # def save_processed_vanadium(self, van_info_tuple, output_file_name):
-    #     """
-    #     save the processed vanadium to a GSAS file
-    #     :param van_info_tuple:
-    #     :param output_file_name:
-    #     :return: 2-tuple (boolean, str)
-    #     """
-    #     assert isinstance(output_file_name, str), 'Output file name must be a string'
-    #     assert isinstance(van_info_tuple, tuple), 'Vanadium information {0} must be a tuple but not a {1}.' \
-    #                                               ''.format(van_info_tuple, type(van_info_tuple))
-    #
-    #     return self._myProject.vanadium_processing_manager.save_vanadium_to_file(vanadium_tuple=van_info_tuple,
-    #                                                                              to_archive=False,
-    #                                                                              out_file_name=output_file_name)
 
     def save_session(self, out_file_name=None):
         """ Save current session

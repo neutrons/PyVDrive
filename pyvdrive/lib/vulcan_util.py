@@ -306,7 +306,7 @@ def locate_run(ipts, run_number, base_path='/SNS/VULCAN/'):
     :param ipts:
     :param run_number:
     :param base_path:
-    :return:
+    :return: boolean (found it or not), file name
     """
     datatypeutility.check_int_variable('IPTS number', ipts, (1, None))
     datatypeutility.check_int_variable('Run number', run_number, (1, None))

@@ -4,6 +4,9 @@ import pytz
 from dateutil.parser import parse
 from datetime import datetime
 from dateutil import tz
+import datatypeutility
+import mantid
+import stat
 
 __author__ = 'wzz'
 
@@ -243,69 +246,65 @@ def get_ipts_number_from_dir(ipts_dir):
     return True, ipts_number
 
 
-def export_experiment_log(ws_name, target_file, sample_name_list): # sample_title_list, sample_operation_list, patch_list):
-    """
+def export_experiment_log(ws_name, record_file_name, sample_name_list, sample_title_list, sample_operation_list,
+                          patch_list):
+    """ Export experiment logs
     Note: duplicate from reduce_VULCAN.ReduceVulcanData._export_experiment_log
-    export experiment log
-    :param target_file:
-    :return:
+    :param ws_name: 
+    :param record_file_name: 
+    :param sample_title_list: 
+    :param sample_operation_list: 
+    :param patch_list: 
+    :return: 
     """
-    print ('Arg 0: {}'.format(ws_name))
-    print ('Arg 1: {}'.format(target_file))
-    print ('Arg 2: {}'.format(sample_name_list))
-
-
-
-
     # check inputs
-    assert isinstance(target_file, str), 'Target file name {0} must be a string but not a {1}.' \
-                                         ''.format(target_file, type(target_file))
-    assert isinstance(sample_name_list, list), 'Sample name list {0} must be a list but not a {1}.' \
-                                               ''.format(sample_name_list, type(sample_name_list))
-    assert isinstance(sample_title_list, list), 'Sample title list {0} must be a list but not a {1}.' \
-                                                ''.format(sample_title_list, type(sample_title_list))
-    assert isinstance(sample_operation_list, list), 'Sample operation list {0} must be a list but not a {1}.' \
-                                                    ''.format(sample_operation_list, type(sample_operation_list))
-    assert len(sample_name_list) == len(sample_title_list) and len(sample_name_list) == len(sample_operation_list), \
-        'Sample name list ({0}), sample title list ({1}) and sample operation list ({2}) must have the same ' \
-        'size'.format(len(sample_name_list), len(sample_title_list), len(sample_operation_list))
+    datatypeutility.check_file_name(record_file_name, check_exist=False, check_writable=True,
+                                    is_dir=False, note='Standard material record file')
+    datatypeutility.check_list('Sample log names', sample_name_list)
+    datatypeutility.check_list('Sample log titles', sample_title_list)
+    datatypeutility.check_list('Sample log operations', sample_operation_list)
+
+    if len(sample_name_list) != len(sample_title_list) or len(sample_name_list) != len(sample_operation_list):
+        raise RuntimeError('Sample name list ({0}), sample title list ({1}) and sample operation list ({2}) '
+                           'must have the same size.'
+                           ''.format(len(sample_name_list), len(sample_title_list), len(sample_operation_list)))
 
     # get file mode
-    if os.path.exists(target_file):
+    if os.path.exists(record_file_name):
         file_write_mode = 'append'
     else:
         file_write_mode = 'new'
 
     # write
     try:
-        mantidsimple.ExportExperimentLog(InputWorkspace=self._dataWorkspaceName,
-                                         OutputFilename=target_file,
-                                         FileMode=file_write_mode,
-                                         SampleLogNames=sample_name_list,
-                                         SampleLogTitles=sample_title_list,
-                                         SampleLogOperation=sample_operation_list,
-                                         TimeZone="America/New_York",
-                                         OverrideLogValue=patch_list,
-                                         OrderByTitle='RUN',
-                                         RemoveDuplicateRecord=True)
+        mantid.simpleapi.ExportExperimentLog(InputWorkspace=ws_name,
+                                             OutputFilename=record_file_name,
+                                             FileMode=file_write_mode,
+                                             SampleLogNames=sample_name_list,
+                                             SampleLogTitles=sample_title_list,
+                                             SampleLogOperation=sample_operation_list,
+                                             TimeZone="America/New_York",
+                                             OverrideLogValue=patch_list,
+                                             OrderByTitle='RUN',
+                                             RemoveDuplicateRecord=True)
     except RuntimeError as run_err:
-        message = 'Exporting experiment record to %s due to %s.' % (self._reductionSetup.get_record_file(),
-                                                                    str(run_err))
+        message = 'Failed to export experiment record to {} due to {}.' \
+                  ''.format(record_file_name, run_err)
         return False, message
     except ValueError as value_err:
         message = 'Exporting experiment record to {0} failed due to {1}.' \
-                  ''.format(self._reductionSetup.get_record_file(), value_err)
+                  ''.format(record_file_name, value_err)
         return False, message
 
     # Set up the mode for global access
-    file_access_mode = oct(os.stat(target_file)[stat.ST_MODE])
+    file_access_mode = oct(os.stat(record_file_name)[stat.ST_MODE])
     file_access_mode = file_access_mode[-3:]
     if file_access_mode != '666' and file_access_mode != '676':
         try:
-            os.chmod(target_file, 0666)
+            os.chmod(record_file_name, 0666)
         except OSError as os_err:
-            self._myLogInfo += '[ERROR] Unable to set file {0} to mode 666 due to {1}.\n' \
-                               ''.format(target_file, os_err)
+            return False, '[ERROR] Unable to set file {0} to mode 666 due to {1}' \
+                          ''.format(record_file_name, os_err)
     # END-IF
 
     return True, ''

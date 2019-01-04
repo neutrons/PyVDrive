@@ -12,26 +12,10 @@ import os
 import time
 import file_utilities
 import datatypeutility
-import mantid_mask as mask_util
 import mantid_reduction
 import mantid_helper
 import reduce_adv_chop
 import vulcan_util
-
-
-# chop data
-# ipts = 18522
-# run_number = 160560
-# event_file_name = '/SNS/VULCAN/IPTS-13924/nexus/VULCAN_160989.nxs.h5'
-# event_file_name = '/SNS/VULCAN/IPTS-{0}/nexus/VULCAN_{1}.nxs.h5'.format(ipts, run_number)
-# event_file_name = '/SNS/VULCAN/IPTS-19577/nexus/VULCAN_155771.nxs.h5'
-
-
-# NOTE: Calibration file shall be made more flexible
-# TODO - FIXME - 20180930 - Calibration file shall be disabled and passed in
-# CALIBRATION_FILES = {3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5',
-#                      7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_7bank.h5',
-#                      27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_27bank.h5'}
 
 
 class SliceFocusVulcan(object):
@@ -45,15 +29,6 @@ class SliceFocusVulcan(object):
         """
         datatypeutility.check_int_variable('Number of banks', number_banks, [1, None])
         datatypeutility.check_int_variable('Number of threads', num_threads, [1, 256])
-
-        # if number_banks in CALIBRATION_FILES:
-        #     # TODO FIXME - 20180822 - Calibration file or workspace shall be passed in
-        #     # TODO       - continue - pre-nED is not supported due to this
-        #     # TODO       - continue - flexible-bank (other than 3) is not supported due to this
-        #     self._detector_calibration_file = CALIBRATION_FILES[number_banks]
-        #     self._number_banks = number_banks
-        # else:
-        #     raise RuntimeError('{0}-bank case is not supported.'.format(number_banks))
 
         # other directories
         self._output_dir = '/tmp/'
@@ -69,12 +44,6 @@ class SliceFocusVulcan(object):
         self._det_eff_ws_name = None
 
         self._number_banks = number_banks
-
-        # calibration, grouping and mask file
-        # self._diff_base_name = 'Vulcan_Bank{0}'.format(self._number_banks)
-        # self._diff_cal_ws_name = '{0}_cal'.format(self._diff_base_name)
-        # self._group_ws_name = '{0}_group'.format(self._diff_base_name)
-        # self._mask_ws_name = '{0}_mask'.format(self._diff_base_name)
 
         self._focus_instrument_dict = dict()
         self._init_focused_instruments()
@@ -92,42 +61,6 @@ class SliceFocusVulcan(object):
         return 'Slice and focus VULCAN data into {0}-bank with {1} threads'.format(self._number_banks,
                                                                                    self._number_threads)
 
-    def diffraction_focus(self, ref_id, binning, apply_det_efficiency):
-        raise 'Not be used!  Make sure it crashes!'
-    #     """
-    #     Do diffraction focus to a workspace indexed by its reference ID
-    #     :param ref_id:
-    #     :param binning:
-    #     :param apply_det_efficiency:
-    #     :return:
-    #     """
-    #     # check input
-    #     datatypeutility.check_string_variable('Workspace/data reference ID', ref_id)
-    #     assert isinstance(binning, str) or isinstance(binning, numpy.ndarray) or isinstance(binning, list),\
-    #         'Binning parameter {0} of type is not acceptible.'.format(binning, type(binning))
-    #
-    #     # workspace
-    #     if ref_id in self._ws_name_dict:
-    #         ws_name = self._ws_name_dict[ref_id]
-    #     else:
-    #         raise RuntimeError('Workspace/data reference ID {0} does not exist.'.format(ref_id))
-    #
-    #     # convert unit to d-spacing
-    #     ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='dSpacing')
-    #
-    #     # convert to matrix workspace to apply detector efficiency?
-    #     convert_to_matrix = self._det_eff_ws_name is not None and apply_det_efficiency
-    #     if apply_det_efficiency:
-    #         # rebin
-    #         Rebin(InputWorkspace=ws_name, OutputWorkspace=ws_name, Params=binning, PreserveEvents=not convert_to_matrix)
-    #         # apply detector efficiency
-    #         Multiply(LHSWorkspace=ws_name, RHSWorkspace=self._det_eff_ws_name, OutputWorkspace=ws_name)
-    #
-    #     # sum spectra: not binned well
-    #     DiffractionFocussing(InputWorkspace=ws_name, OutputWorkspace=ws_name, GroupingWorkspace=self._group_ws_name)
-    #
-    #     return
-
     def _init_focused_instruments(self):
         """
         set up the dictionary for the instrument geometry after focusing
@@ -135,8 +68,8 @@ class SliceFocusVulcan(object):
         and the angles are in unit as degree
         :return:
         """
-        # TODO - FIXME - 20181030 - There shall be 1 and only 1 place to define focused geometry in PyVDRive!
-        # TODO                      Now it is diverted.  Grep L1 and _init_focused_instrument (same copy diffrent place)
+        # TODO - NIGHT - There shall be 1 and only 1 place to define focused geometry in PyVDRive!
+        # TODO           Now it is diverted.  Grep L1 and _init_focused_instrument (same copy diffrent place)
         self._focus_instrument_dict['L1'] = 43.753999999999998
 
         # L2, Polar and Azimuthal
@@ -489,81 +422,7 @@ class SliceFocusVulcan(object):
 
         return
 
-    def write_to_gsas_old(self, workspace_name_list, ipts_number, parm_file_name):
-        """
-        Write all the workspaces to GSAS file sequentially
-        :param parm_file_name
-        :param ipts_number
-        :param workspace_name_list:
-        :return:
-        """
-        # TODO - 20181030 - Consider to merge with mantid_reduction....save_vulcan_gsas
-        # check inputs
-        datatypeutility.check_list('Workspace name list', workspace_name_list)
-        datatypeutility.check_int_variable('IPTS number', ipts_number, (0, None))  # IPTS=1: pseudo IPTS for arb. NeXus
-        datatypeutility.check_string_variable('GSAS parm file name', parm_file_name)
-
-        for index, ws_name in enumerate(workspace_name_list):
-            # skip empty workspace
-            if len(ws_name) == 0:
-                continue
-
-            gsas_file_name = os.path.join(self._output_dir, '{0}.gda'.format(index))
-
-            # check that workspace shall be point data
-            output_workspace = AnalysisDataService.retrieve(ws_name)
-            if output_workspace.isHistogramData():
-                raise RuntimeError('Output workspace {0} of type {1} to export to {2} shall be point data '
-                                   'at this stage.'
-                                   ''.format(ws_name, type(output_workspace), gsas_file_name))
-
-            # construct the headers
-            vulcan_gsas_header = mantid_reduction.VulcanGSASHelper.create_vulcan_gsas_header(output_workspace,
-                                                                                             gsas_file_name,
-                                                                                             ipts_number,
-                                                                                             parm_file_name)
-
-            vulcan_bank_headers = list()
-            for ws_index in range(output_workspace.getNumberHistograms()):
-                bank_id = output_workspace.getSpectrum(ws_index).getSpectrumNo()
-                bank_header = mantid_reduction.VulcanGSASHelper.create_bank_header(bank_id,
-                                                                                   output_workspace.readX(ws_index))
-                vulcan_bank_headers.append(bank_header)
-            # END-IF
-
-            # Save
-            try:
-                print ('[DB...BAT] Save GSS to {} from {}'.format(gsas_file_name, format(output_workspace)))
-                SaveGSS(InputWorkspace=output_workspace, Filename=gsas_file_name, SplitFiles=False, Append=False,
-                        Format="SLOG", MultiplyByBinWidth=False,
-                        ExtendedHeader=False,
-                        UserSpecifiedGSASHeader=vulcan_gsas_header,
-                        UserSpecifiedBankHeader=vulcan_bank_headers,
-                        UseSpectrumNumberAsBankID=True,
-                        SLOGXYEPrecision=[1, 1, 2])
-                mantid_helper.delete_workspace(output_workspace)
-            except RuntimeError as run_err:
-                raise RuntimeError('Failed to call SaveGSS() due to {0}'.format(run_err))
-
-        return
-
 # END-DEF-CLASS
-
-
-# t1 = threading.Thread(target=reduce_data, args=(output_names[:half_num], ))
-# t2 = threading.Thread(target=reduce_data, args=(output_names[half_num:],))
-# t1.start()
-# t2.start()
-# t1.join()
-# t2.join()
-
-
-# # # reduce
-# for ws_name in output_names:
-#     ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='dSpacing')
-#     DiffractionFocussing(InputWorkspace=ws_name, OutputWorkspace=ws_name, GroupingWorkspace='vulcan_group')
-#     ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='TOF', ConvertFromPointData=False)
-#     # Rebin(InputWorkspace=ws_name, OutputWorkspace=ws_name, Params='5000,-0.001,50000', FullBinsOnly=True)
 
 
 # /SNS/VULCAN/IPTS-19577/nexus/VULCAN_155771.nxs.h5: Runtime = 226.181304932   Total output workspaces = 733

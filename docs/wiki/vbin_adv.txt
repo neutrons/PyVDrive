@@ -1,0 +1,171 @@
+### Alias
+
+VBIN OR VDRIVEBIN
+
+## Arguments
+
+### Mandatory arguments
+
+
+ * IPTS
+ * RUNS or CHOPRUN
+
+### Optional arguments
+
+
+ * CHOPRUN   : Run number for reduce chopped run
+ * RUNE      : First run number
+ * RUNS      : Last run number
+ * TAG
+   - TAG='V':
+      * reduced data copied to */SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium*
+      * sample logs are written to *.../Vanadium/VRecord.txt*
+   - TAG='Si':
+      * reduced data copied to */SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Si*
+      * sample logs are written to *.../Si/SiRecord.txt*
+ * Mytofbmin : User defined TOF min in binning parameter
+ * Mytofbmax : User defined TOF max in binning parameter
+ * BINW      : Binning parameter, i.e., log bin step
+ * BANKS     : Number of banks in output GSAS file.  Allowed values are 3, 7 and 27.  Default is 3.
+ * GROUP     : User specified a special group file other than usual 3/7/27 banks. (It cannot be used with BANKS)
+ * RUNV      : Run number for vanadium file (file in instrument directory). See [1] for detailed inforamtion.
+ * IPARM     : User specified IPARM file.
+ * FullProf  : Flag to write the reduced data to Fullprof format
+ * NoGSAS    : Flag for not output GSAS file
+ * ONEBANK   : Merge all the pixels to 1 bank
+ * ROI       : Files for Mantid made region of interest file in XML format
+ * MASK      : Files for Mantid made mask file in XML format
+ * VDRIVEBIN : Bin boundaries will be adapted to (IDL) VDRIVE.  By default, it is 1 as True
+ * OUTPUT    : User specified output directory.  If in the single-run reduction mode and given value ends with _.gda_ or _.gsa_, output file name is thus specified.  Otherwise, the output GSAS file will be $RUNNUMBER.gda.
+ * BinFolder : It is similar to _OUTPUT_ for user to specifiy output directory.  But the file name will be $RUNNUMBER.gda
+ * VERSION   : User specified version of reduction algorithm.  Mantid conventional = 1, PyVDrive simplified = 2 (default)
+
+
+## Outputs
+
+The diffraction focused data will be exported to a GSAS file.
+
+### Default
+
+For run with run number __RUNNUMBER__ in IPTS _IPTSNUMBER_, the exported GSAS file will be found at
+```/SNS/VULCAN/IPTS-$IPTSNUMBER/shared/binned_data/$RUNNUMBER.gda```.
+
+For example for run 169186 in IPTS-20280, a GSAS file will be saved as ```/SNS/VULCAN/IPTS-20280/shared/binned_data/169186.gda```.
+
+### User specified directory
+
+With option _OUTPUT_, the user can specify the directory where the GSAS file will be saved to.
+
+
+## Vanadium normalization and GSAS Profile calibration [1]
+
+VULCAN's instrument team generates a pair of processed vanadium GSAS file and calibrated peak profile.
+They are named under the same vanadium run number and stored in _/SNS/VULCAN/shared/..._.
+
+Thus with argument **VRUN** given, the output GSAS will be
+ 1. normalized by vanadium spectra
+ 2. the paired IPARM file will be written to output GSAS file.
+
+
+## TAG [2]
+
+_TAG_ is the flag to process standard samples, such as vanadium and silicon.
+So far, there are a few standards supported, including 'C', 'V', 'Si' and 'CeO2'. 
+
+With _TAG_ specified, the reduced GSAS file will be copied to certain directories and its sample log summary will be
+also recorded to the log summary file for this type of material only.
+
+Here is the examples:
+
+  -  TAG='V': Vanadium
+  	- GSAS data file is copied to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium
+  	- Log summary is written to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium/VRecord.txt
+
+
+  -  TAG='Si': Silicon
+  	- GSAS data file is copied to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Si
+  	- Log summary is written to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Si/SiRecord.txt
+
+
+  -  TAG='C': diamond 
+  	- GSAS data file is copied to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/C
+  	- Log summary is written to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium/CRecord.txt
+
+
+  -  TAG='CeO2': 
+  	- GSAS data file is copied to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/CeO2
+  	- Log summary is written to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium/CeO2Record.txt
+
+
+## Examples (Benchmark)
+
+### Pre-Vulcan-X examples (3-banks nED)
+
+Date: From 2018.06.30
+
+Test NeXus file: /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169186.nxs.h5
+
+ - Simple binning:
+   ```
+   VBIN,IPTS=20280,RUNS=169186
+   ```
+   * Output directory: by default the result will be written to ```/SNS/VULCAN/IPTS-20280/shared/binned_data/```
+   * Output file: ```169186.gda```
+
+ - Simple binning with user specified GSAS IPARM file and normalized by vanadium file
+   ```
+   VBIN,IPTS=20280,RUNS=169186, iparam=VULCAN_20180230.prm, runv=12345
+   ```
+   * Output directory: by default the result will be written to ```/SNS/VULCAN/IPTS-20280/shared/binned_data/```
+   * Output file: ```169186.gda```
+
+ - Multiple run binning: 
+   ```
+   VBIN,IPTS=20280,RUNS=169186, RUNE=169188
+   ```
+   * Output directory: by default the result will be written to ```/SNS/VULCAN/IPTS-20280/shared/binned_data/```
+   * Output file: ```169186.gda```, ```169187.gda```, ```169188.gda```
+
+ - Binning for standard (Si, V): 
+   ```
+   VBIN,IPTS=20280,RUNS=169186,tag='Si'
+   ```
+   * Output directory: the defalt output directory /SNS/VULCAN/IPTS-20280/shared/binned_data/
+   * Standard sample directory: besides the defalt output directory, a copy of GSAS file will be saved to /SNS/VULCAN/shared/CALIBRATION/.....
+   * Output file: ```169186.gda```
+ 
+ - Binning with multiple mask: 
+   ```
+   VBIN,IPTS=20280,RUNS=169186,RUNE=161976, mask=[tests/data/highangle_roi_0607.xml, tests/data/highangle_roi_0608.xml]
+   ```
+   Two masks, defined in individual Mantid compatible XML mask files, will be applied.
+ 
+ - Binning with multiple region of interest:
+   ```
+   VBIN,IPTS=20280,RUNS=169186,RUNE=161976, roi=[tests/data/highangle_roi_0607.xml, tests/data/highangle_roi_0608.xml]
+   ```
+   Only the pixels inside the regions of interest won't be masked.
+
+ - Binning with user defined TOF range and bin size
+   ```
+   VBIN,IPTS=20280,RUNS=169186,binw=0.002, Mytofbmin=6000., Mytofmax=32500.
+   ```
+   In this case, all three banks will be binned to same TOF range and resolution.
+
+ - Binning with various pixel grouping, i.e., separating pixels into various banks: 
+   ```
+   VBIN,IPTS=20280,RUNS=169186,version=2, banks=27
+   ```
+   The 27-bank setup will seperate each east/west bank's panel into 3 banks and separate the high angle bank into 3 x 3.
+
+
+### Pre-nED examples
+
+They are too old.
+
+ * VBIN,IPTS=14094,RUNS=96450,RUNE=96451
+ * VBIN,IPTS=14094,RUNS=96450,RUNV=95542
+ * VBIN,ITPS=16062,RUNS=98237,TAG='V', OUTPUT='/tmp'
+ * vbin, ipts=17414, choprun=109021, runs=1, rune=99 
+
+
