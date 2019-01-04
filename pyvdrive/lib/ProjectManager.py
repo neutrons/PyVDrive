@@ -398,6 +398,7 @@ class ProjectManager(object):
             ipts_number = 0
 
         # chop and (optionally) diffraction focus the binning data
+        # TODO - NIGHT - Need to pass no_calibration_mask
         status, error_message = self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
                                                                        run_number=run_number,
                                                                        raw_file_name=data_file,
@@ -414,7 +415,8 @@ class ProjectManager(object):
                                                                        vdrive_binning=use_idl_bin,
                                                                        roi_list=roi_list,
                                                                        mask_list=mask_list,
-                                                                       gsas_parm_name=gsas_iparm_file)
+                                                                       gsas_parm_name=gsas_iparm_file,
+                                                                       no_cal_mask=False)
 
         # process outputs
         if status:
