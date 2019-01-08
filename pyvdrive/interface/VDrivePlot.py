@@ -274,6 +274,14 @@ class VdriveMainWindow(QMainWindow):
 
         return
 
+    def vdrive_command_return(self, message):
+        """
+
+        :param message:
+        :return:
+        """
+        print ('[DB...TEST] VDRIVE command return: {}'.format(message))
+
     def _promote_widgets(self):
         treeView_iptsRun_layout = QVBoxLayout()
         self.ui.frame_treeView_iptsRun.setLayout(treeView_iptsRun_layout)

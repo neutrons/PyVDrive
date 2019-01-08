@@ -238,7 +238,7 @@ class VdriveCommandProcessor(object):
         """
         # create a new VdriveChop instance
         try:
-            processor = vdrive_commands.chop.VdriveChop(self._myController, arg_dict)
+            processor = vdrive_commands.chop.VdriveChop(self._myController, arg_dict, self._mainWindow)
         except vdrive_commands.procss_vcommand.CommandKeyError as comm_err:
             return False, str(comm_err)
 

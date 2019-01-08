@@ -35,6 +35,9 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         self._sliced_ws_name_list = None
 
+        # dictionary of focused virtual instrument geometry parameters
+        self._focus_instrument_geometry_dict = None
+
         return
 
     def chop_data(self, split_ws_name=None, info_ws_name=None, do_tof_correction = False):
@@ -644,6 +647,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # set up default
 
         runner = vulcan_slice_reduce.SliceFocusVulcan(number_banks=num_reduced_banks,
+                                                      focus_instrument_dict=self._focus_instrument_geometry_dict,
                                                       output_dir=self._reductionSetup.get_chopped_directory()[0])
         run_number = self._reductionSetup.get_run_number()
         runner.set_run_number(run_number)
@@ -984,6 +988,17 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             raise RuntimeError('Splitting workspace of type {0} is not supported.'.format(split_ws))
 
         return sub_split_ws_name
+
+    def set_focus_virtual_instrument(self, geom_dict):
+        """ Set the focused virtual instrument parameter
+        :param geom_dict:
+        :return:
+        """
+        datatypeutility.check_dict('Instrument geometry setup', geom_dict)
+
+        self._focus_instrument_geometry_dict = geom_dict
+
+        return
 # END-DEF-CLASS
 
 

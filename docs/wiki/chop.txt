@@ -1,7 +1,104 @@
-Alias
-=====
+## Brief Description
+
+Command **CHOP** is used to chop one or several runs by time or sample log values and optionally bin the chopped data.
+
+
+### Alias
 
 CHOP
+
+
+## Examples
+
+### Simple chop without focusing (binning)
+
+   **CHOP, IPTS=20280, RUNS=169173, DBIN=300, BIN=0**
+
+   This command will 
+   1. Slice /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169173.nxs.h5 by every 300 seconds
+   2. Do diffraction focus to each sliced segment and output as GSAS files
+   3. Save chopped workspaces to Mantid _Processed NeXus_ file
+
+
+### Simple chop by time with reduction
+
+   **CHOP, IPTS=20280, RUNS=169173, DBIN=300**
+
+   This command will 
+   1. Slice /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169173.nxs.h5 by every 300 seconds
+   2. Do diffraction focus to each sliced segment and output as GSAS files
+   3. Save GSAS to /SNS/VULCAN/IPTS-20280/shared/binned_data/169173
+
+
+### Simple chop by time with reduction with start and stop time
+
+   **CHOP, IPTS=20280, RUNS=169173, DBIN=300, StartTime=xx, StopTime=xx**
+
+   This command will 
+   1. Slice /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169173.nxs.h5 by every 300 seconds starting from xx seconds and stoping at xx seconds from run start time
+   2. Do diffraction focus to each sliced segment and output as GSAS files
+   3. Save GSAS to /SNS/VULCAN/IPTS-20280/shared/binned_data/169173
+
+
+### Simple chop by sample log value with reduction
+
+   **CHOP, IPTS=20280, RUNS=169173, LOG='TEMP',START=xx,STOP=xx,BinFolder='/tmp/sliced169173**
+
+   This command will 
+   1. Slice /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169173.nxs.h5 by every 300 seconds
+   2. Do diffraction focus to each sliced segment and output as GSAS files
+   3. Save GSAS to /tmp/sliced169173
+
+
+### Simple chop by sample log value with reduction and limited by start and stop time
+
+   **CHOP, IPTS=20280, RUNS=169173, LOG='TEMP',START=xx,STOP=xx,STARTTIME=2,StopTime=100,BinFolder='/tmp/sliced169173**
+
+   This command will 
+   1. Slice /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169173.nxs.h5 by sample log value from xx to xx with step xx.
+   1. All events before _start time_ xx is excluded
+   1. All events after _stop time_ xx is excluded
+   1. Do diffraction focus to each sliced segment and output as GSAS files
+   1. Save GSAS to /tmp/sliced169173
+
+
+
+### Chopping by user-specified segments:
+
+   **CHOP,IPTS=20280,RUNS=169173,PICKDATA=/tmp/mytimebins.txt,BinFolder='/tmp/sliced169173**
+
+   This command will
+   1. Import the user specified chop time from /tmp/mytimebins.txt
+   1. Slice /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169173.nxs.h5 by the time segment imported
+   1. All events before _start time_ xx is excluded
+   1. All events after _stop time_ xx is excluded
+   1. Do diffraction focus to each sliced segment and output as GSAS files
+   1. Save GSAS to /tmp/sliced169173
+
+#### Format of _PickData_ (time segment)
+
+
+
+
+### Chopping and focusing with vanadium normalization:
+
+
+### Chopping and focusing with user specified masks
+
+
+### Chopping and focusing with user specified ROI (region of interests)
+
+
+### Chopping and focusing to non-default number of banks
+
+    - The default number of banks for nED (but pre-Vulcan-X) runs is 3.
+    - The default number of banks for pre-nED runs is 2.
+    
+
+
+
+
+
 
 Arguments
 =========
