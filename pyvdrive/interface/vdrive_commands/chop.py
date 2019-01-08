@@ -712,6 +712,12 @@ class VdriveChop(VDriveCommand):
                 # chop by user specified time splitters
                 # TEST - Need to wait for Mantid
                 try:
+                    # TODO FIXME - NIGHT
+                    """
+                      File "/home/wzz/Projects/PyVDrive/build/lib.linux-x86_64-2.7/pyvdrive/interface/vdrive_commands/chop.py", line 715, in exec_cmd
+                      slicer_list = self.parse_pick_data(user_slice_file)
+                      NameError: global name 'user_slice_file' is not defined
+                    """
                     slicer_list = self.parse_pick_data(user_slice_file)
                     status, message = self.chop_data_manually(run_number=run_number,
                                                               slicer_list=slicer_list,

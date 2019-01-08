@@ -108,6 +108,7 @@ def test_chop_segment_file(tester):
     idl_command = 'chop, ipts=20717, runs=170464,  PICKDATA={}, loadframe=1, output="{}"' \
                   ''.format(seg_fie_name, test_dir)
 
+    # FIXME TODO - NIGHT - FROM HERE!
     tester.run_command(idl_command)
 
     # output summary
@@ -194,6 +195,12 @@ def test_main():
 
     # chop with vanadium runs
     test_chop_van_normalized(command_tester)
+
+    # chop with mask/ROI
+    test_chop_roi(command_tester)
+
+    # chop with PICKDATA
+    test_chop_segment_file(command_tester)
 
     # test_ned_standard(command_tester)
     # test_ned_user_bin(command_tester)
