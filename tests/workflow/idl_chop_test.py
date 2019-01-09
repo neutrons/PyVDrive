@@ -18,7 +18,7 @@ def create_slice_segment_file(test_dir):
     """
     file_name = os.path.join(test_dir, 'slice_segment.txt')
 
-    segment = ''
+    segment = '0.   50.\n51.     150.\n155.     300'
 
     segment_file = open(file_name, 'w')
     segment_file.write(segment)
@@ -191,13 +191,13 @@ def test_main():
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
     # basic chopping operation
-    test_chop_simple(command_tester)
+    # test_chop_simple(command_tester)
 
-    # chop with vanadium runs
-    test_chop_van_normalized(command_tester)
+    # # chop with vanadium runs
+    # test_chop_van_normalized(command_tester)
 
-    # chop with mask/ROI
-    test_chop_roi(command_tester)
+    # # chop with mask/ROI
+    # test_chop_roi(command_tester)
 
     # chop with PICKDATA
     test_chop_segment_file(command_tester)

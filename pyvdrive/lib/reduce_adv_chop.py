@@ -151,6 +151,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         # get run start time
         if is_epoch_time:
+            print ('[DB...BAT...chop_data_large] About to get pcharge.firstTime()')
             run_start_ns = raw_ws.run().getProperty('proton_charge').firstTime().totalNanoseconds()
         else:
             run_start_ns = 0
@@ -1048,7 +1049,8 @@ class WriteSlicedLogs(object):
 
         # get difference in REAL starting time (proton_charge[0])
         try:
-            real_start_time_i = workspace_i.run().getProperty('proton_charge').firstTime()
+            print ('[DB...BAT...export Log] About to get pcharge.firstTime()')
+            real_start_time_i = workspace_i.run().getProperty('proton_charge').times[0]
         except IndexError:
             print '[ERROR] Workspace {0} has proton charge with zero entry.'.format(workspace_i)
             return

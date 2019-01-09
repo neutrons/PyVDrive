@@ -493,6 +493,9 @@ def generate_event_filters_arbitrary(ws_name, split_list, relative_time, tag, au
     info_ws = retrieve_workspace(info_ws_name)
     target_set = set()
 
+    if len(split_list) == 0:
+        return False, 'Empty time slice list'
+
     print '[DB...BAT] Number of splitters = {0}'.format(len(split_list))
     for index, split_tup in enumerate(split_list):
         # print '[DB...BAT] Splitter {0}: start = {1}, stop = {2}.'.format(index, split_tup[0], split_tup[1])
@@ -675,6 +678,7 @@ def get_run_start(workspace, time_unit):
     elif pcharge_log:
         # convert to seconds or nanoseconds
         # Get first value in proton charge's time as run start
+        print ('[DB...BAT...mantid_helper] About to get pcharge.firstTime()')
         pcharge_time0 = pcharge_log.firstTime()
         run_start_ns = pcharge_time0.totalNanoseconds()
 

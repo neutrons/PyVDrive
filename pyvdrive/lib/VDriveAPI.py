@@ -346,6 +346,7 @@ class VDriveAPI(object):
         :param slice_tag: string for slice tag name
         :return: slice tag. if user gives slice tag as None, then the returned one is the auto-generated.
         """
+        # TODO FIXME - NIGHT - This method can be removed
         # get the chopper
         chopper = self._myProject.get_chopper(run_number)
 

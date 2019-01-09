@@ -296,7 +296,8 @@ class VdriveChop(VDriveCommand):
         # return status, message
 
     def chop_data_manually(self, run_number, slicer_list, reduce_flag, vanadium, output_dir, epoch_time, dry_run,
-                           chop_loadframe_log, chop_furnace_log):
+                           chop_loadframe_log, chop_furnace_log,roi_list, mask_list,  num_banks,
+                           binning_parameters,  save_to_nexus, iparm_file_name):
         """
         chop and/or reduce data with arbitrary slicers
         :param run_number:
@@ -347,17 +348,17 @@ class VdriveChop(VDriveCommand):
             return False, 'Unable to generate data slicer by time due to %s.' % error_msg
 
         # chop and reduce
-        if chop_loadframe_log:
-            exp_log_type = 'loadframe'
-        elif chop_furnace_log:
-            exp_log_type = 'furnace'
-        else:
-            exp_log_type = None
-        status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
-                                                      vanadium=None,
-                                                      save_chopped_nexus=True, output_dir=output_dir,
-                                                      export_log_type=exp_log_type,
-                                                      gsas_iparam_name=iparm_file_name)
+        status, message = self._controller.project.chop_run(run_number, slicer_key,
+                                                            reduce_flag=reduce_flag,
+                                                            vanadium=vanadium, save_chopped_nexus=save_to_nexus,
+                                                            number_banks=num_banks,
+                                                            tof_correction=False,
+                                                            output_directory=output_dir,
+                                                            user_bin_parameter=binning_parameters,
+                                                            roi_list=roi_list,
+                                                            mask_list=mask_list,
+                                                            nexus_file_name=self._raw_nexus_file_name,
+                                                            gsas_iparm_file=iparm_file_name)
 
         return status, message
 
@@ -718,7 +719,11 @@ class VdriveChop(VDriveCommand):
                       slicer_list = self.parse_pick_data(user_slice_file)
                       NameError: global name 'user_slice_file' is not defined
                     """
+                    user_slice_file = chop_option_dict['PICKDATA']
                     slicer_list = self.parse_pick_data(user_slice_file)
+
+                    print ('[DB...BAT] slice list: {}'.format(slicer_list))
+
                     status, message = self.chop_data_manually(run_number=run_number,
                                                               slicer_list=slicer_list,
                                                               reduce_flag=output_to_gsas,
@@ -727,7 +732,11 @@ class VdriveChop(VDriveCommand):
                                                               dry_run=is_dry_run,
                                                               epoch_time=(pulse_time == 1),
                                                               chop_loadframe_log=chop_load_frame,
-                                                              chop_furnace_log=chop_furnace_log)
+                                                              chop_furnace_log=chop_furnace_log,
+                                                              num_banks=num_banks, iparm_file_name=iparm_name,
+                                                              binning_parameters=binning_parameters,
+                                                              save_to_nexus=save_to_nexus,
+                                                              roi_list=roi_file_names, mask_list=mask_file_names)
                 except RuntimeError as run_err:
                     return False, 'Failed to chop: {0}'.format(run_err)
 
