@@ -247,7 +247,7 @@ class VdriveChop(VDriveCommand):
         :return:
         """
         # check inputs
-        datatypeutility.check_int_variable('Run number', int, (1, None))
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
         datatypeutility.check_file_name(output_dir, True, True, is_dir=True, note='Output directory')
 
         # dry run: return input options
@@ -269,28 +269,36 @@ class VdriveChop(VDriveCommand):
         # generate data slicer
         # get chopper
         chopper = self._controller.project.get_chopper(run_number)
-        status, slice_key = chopper.set_overlap_time_slicer(start_time, stop_time, time_interval,
+        status, slice_key_list = chopper.set_overlap_time_slicer(start_time, stop_time, time_interval,
                                                             overlap_time_interval)
 
         if not status:
-            error_msg = slice_key
+            error_msg = slice_key_list
             return False, error_msg
 
         # chop
-        status, message = self._controller.project.chop_run(run_number, slice_key,
-                                                            reduce_flag=reduce_flag,
-                                                            vanadium=vanadium, save_chopped_nexus=save_to_nexus,
-                                                            number_banks=num_banks,
-                                                            tof_correction=False,
-                                                            output_directory=output_dir,
-                                                            user_bin_parameter=binning_parameters,
-                                                            roi_list=roi_list,
-                                                            mask_list=mask_list,
-                                                            nexus_file_name=self._raw_nexus_file_name,
-                                                            gsas_iparm_file=iparm_file_name,
-                                                            overlap_mode=True)
+        for i_slice, slice_key in enumerate(slice_key_list):
+            status, message = self._controller.project.chop_run(run_number, slice_key,
+                                                                reduce_flag=reduce_flag,
+                                                                vanadium=vanadium, save_chopped_nexus=save_to_nexus,
+                                                                number_banks=num_banks,
+                                                                tof_correction=False,
+                                                                output_directory=output_dir,
+                                                                user_bin_parameter=binning_parameters,
+                                                                roi_list=roi_list,
+                                                                mask_list=mask_list,
+                                                                nexus_file_name=self._raw_nexus_file_name,
+                                                                gsas_iparm_file=iparm_file_name,
+                                                                overlap_mode=False,
+                                                                gda_start=i_slice+1)
 
-        return False, 'DT option is not implemented. Contact developer!'
+            print ('[DB...BAT] Processed: {} '.format(slice_key))
+
+            if not status:
+                return False, message
+        # END-FOR
+
+        return True, 'DT is implemented but not efficient'
 
     def chop_data_manually(self, run_number, slicer_list, reduce_flag, vanadium, output_dir, epoch_time, dry_run,
                            chop_loadframe_log, chop_furnace_log,roi_list, mask_list,  num_banks,
@@ -693,7 +701,7 @@ class VdriveChop(VDriveCommand):
                 # chopping with OVERLAPPED period
                 time_step, overlap_period = chop_option_dict['DT']
 
-                # FIXME - This is NOTE implemented and tested
+                # TEST - This is JUST implemented and SHALL be tested
                 status, message = self.chop_data_overlap_time_period(run_number=run_number,
                                                                      start_time=None,
                                                                      stop_time=None,
@@ -704,7 +712,13 @@ class VdriveChop(VDriveCommand):
                                                                      output_dir=output_dir,
                                                                      dry_run=is_dry_run,
                                                                      chop_loadframe_log=chop_load_frame,
-                                                                     chop_furnace_log=chop_furnace_log)
+                                                                     chop_furnace_log=chop_furnace_log,
+                                                                     roi_list=roi_file_names,
+                                                                     mask_list=mask_file_names,
+                                                                     num_banks=num_banks,
+                                                                     binning_parameters=binning_parameters,
+                                                                     save_to_nexus=save_to_nexus,
+                                                                     iparm_file_name=iparm_name)
 
             elif 'PICKDATA' in chop_option_dict:
                 # chop by user specified time splitters

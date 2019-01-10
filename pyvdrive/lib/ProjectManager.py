@@ -337,7 +337,8 @@ class ProjectManager(object):
     def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus,
                  number_banks, tof_correction, output_directory,
                  user_bin_parameter, roi_list, mask_list, nexus_file_name=None,
-                 gsas_iparm_file='vulcan.prm'):
+                 gsas_iparm_file='vulcan.prm',
+                 overlap_mode=False, gda_start=1):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
         split workspaces to GSAS
@@ -418,7 +419,9 @@ class ProjectManager(object):
                                                                        roi_list=roi_list,
                                                                        mask_list=mask_list,
                                                                        gsas_parm_name=gsas_iparm_file,
-                                                                       no_cal_mask=False)
+                                                                       no_cal_mask=False,
+                                                                       bin_overlap_mode=overlap_mode,
+                                                                       gda_file_start=gda_start)
 
         # process outputs
         if status:

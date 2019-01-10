@@ -1036,7 +1036,8 @@ class ReductionManager(object):
     def chop_vulcan_run(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
                         output_directory, reduce_data_flag, save_chopped_nexus, number_banks,
                         tof_correction, van_run_number, user_binning_parameter,
-                        roi_list, mask_list, no_cal_mask, gsas_parm_name='vulcan.prm'):
+                        roi_list, mask_list, no_cal_mask, gsas_parm_name='vulcan.prm', bin_overlap_mode=False,
+                        gda_file_start=1):
         """
         Latest version: version 3
         :param ipts_number:
@@ -1139,20 +1140,6 @@ class ReductionManager(object):
                 binning_param_dict = None
             else:
                 binning_param_dict = user_binning_parameter
-
-            # NOTE: disabled by new binning rule
-            # if vdrive_binning:
-            #     # vdrive binning
-            #     binning_param_dict = None
-            # elif user_binning_parameter:
-            #     # user specified binning parameter
-            #     binning_param_dict = binning_param_dict
-            # else:
-            #     # default binning
-            #     binning_param_dict = self._calibrationFileManager.get_default_binning_reference(run_start_date,
-            #                                                                                     number_banks)
-            #     print ('[DB...BAT] {020930} Use Default GSAS Bin')
-            # END-IF-ELSE
             print ('[DB...BAT] Binning parameters: {}'.format(binning_param_dict))
 
             # END-IF-ELSE
@@ -1166,7 +1153,9 @@ class ReductionManager(object):
                                                                      gsas_info_dict=gsas_info,
                                                                      clear_workspaces=True,
                                                                      gsas_writer=self._gsas_writer,
-                                                                     num_reduced_banks=number_banks)
+                                                                     num_reduced_banks=number_banks,
+                                                                     chop_overlap_mode=bin_overlap_mode,
+                                                                     gsas_file_index_start=gda_file_start)
 
             # set up the reduced file names and workspaces and add to reduction tracker dictionary
             tracker.set_reduction_status(status, message, True)

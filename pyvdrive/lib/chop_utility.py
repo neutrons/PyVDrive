@@ -393,6 +393,10 @@ class DataChopper(object):
                                 splitter_tag=None):
         """
         set slicers for constant time period with overlapping
+        will be
+        t0, t0 + dbin
+        t0 + dt, t0 + dbin + dt
+        ... ...
         :param start_time:
         :param stop_time:
         :param time_interval:
@@ -419,41 +423,49 @@ class DataChopper(object):
             start_time = 0
         if stop_time is None:
             stop_time = mantid_helper.get_run_stop(self._mtdWorkspaceName, 'second', is_relative=True)
+        print ('[DB...BAT] Run stop = {}'.format(stop_time))
 
-        num_intervals = int(math.ceil(stop_time - start_time) / float(time_interval))
-        time_period1 = time_interval - overlap_time_interval
         split_list = list()
-        time_ip1 = 0
-        for index in range(num_intervals-1):
-            time_i = index * time_interval
-            time_j = time_i + time_period1
-            time_ip1 = time_i + time_interval
-            split_list.append((time_i, time_j))
-            split_list.append((time_j, time_ip1))
-        # END-FOR
-        split_list.append((time_ip1, stop_time))
+        split_t0 = start_time
+        split_tf = -1
+        while split_tf < stop_time:
+            # get split stop time
+            split_tf = split_t0 + time_interval
+            if split_tf > stop_time:
+                split_tf = stop_time + 1.E-10
+            # add to list
+            split_list.append((split_t0, split_tf))
+            # advance the start time
+            split_t0 += overlap_time_interval
+        # END-WHILE
 
         # Determine tag
         if splitter_tag is None:
             splitter_tag = get_standard_manual_tag(self._mtdWorkspaceName)
 
-        # Generate split workspace
-        status, ret_obj = mantid_helper.generate_event_filters_arbitrary(self._mtdWorkspaceName,
-                                                                         split_list,
-                                                                         relative_time=True,
-                                                                         tag=splitter_tag,
-                                                                         auto_target=True)
-        if status:
-            split_ws_name, info_ws_name = ret_obj
-        else:
-            err_msg = ret_obj
-            return False, err_msg
+        # Generate split workspaces
+        splitter_tag_list = list()
+        for i_split, split_tup in enumerate(split_list):
+            splitter_tag_i = splitter_tag + '_{:05}'.format(i_split)
+            splitter_info_i = splitter_tag_i + '_info'
+            status, message = mantid_helper.generate_event_filters_by_time(self._mtdWorkspaceName,
+                                                                             splitter_tag_i,
+                                                                             splitter_info_i,
+                                                                             split_tup[0],
+                                                                             split_tup[1],
+                                                                             delta_time=None,
+                                                                             time_unit='second')
 
-        # Store
-        self._chopSetupDict[splitter_tag] = {'splitter': split_ws_name,
-                                             'info': info_ws_name}
+            if not status:
+                return False, message
 
-        return True, splitter_tag
+            # good
+            splitter_tag_list.append(splitter_tag_i)
+            self._chopSetupDict[splitter_tag_i] = {'splitter': splitter_tag_i,
+                                                 'info': splitter_info_i}
+        # END-FOR
+
+        return True, splitter_tag_list
 
     def set_time_slicer(self, start_time, time_step, stop_time):
         """
