@@ -475,9 +475,8 @@ def generate_event_filters_arbitrary(ws_name, split_list, relative_time, tag, au
     #     raise RuntimeError('It has not been implemented for absolute time stamp!')
 
     # check
-    assert isinstance(split_list, list), 'split list should be a list but not a %s.' \
-                                         '' % str(type(split_list))
-    assert isinstance(tag, str), 'Split tag must be a string but not %s.' % str(type(tag))
+    datatypeutility.check_list('Splitters', split_list)
+    datatypeutility.check_string_variable('Splitter tag', tag, None)
     assert len(tag) > 0, 'Split tag cannot be empty.'
 
     # create an empty workspace
@@ -697,6 +696,38 @@ def get_run_start(workspace, time_unit):
     # END-IF-ELSE
 
     return run_start
+
+
+def get_run_stop(workspace, time_unit, is_relative):
+    """
+    Get the run stop time from a workspace
+    :param workspace:
+    :param time_unit:
+    :param is_relative:
+    :return:
+    """
+    if isinstance(workspace, str):
+        workspace = retrieve_workspace(workspace, True)
+
+    # get run start from proton charge
+    try:
+        pcharge_log = workspace.run().getProperty('proton_charge')
+    except (AttributeError, RuntimeError) as error:
+        raise RuntimeError('Unable to access proton_charge log in given workspace {}'.format(workspace))
+
+    if pcharge_log.size() == 0:
+        raise RuntimeError('Workspace {} has an empty proton charge log.  Unable to determine run stop'
+                           ''.format(workspace))
+
+    run_stop_time = pcharge_log.times[-1]
+
+    if is_relative:
+        run_start_time = pcharge_log.times[0]
+        run_stop_time = float(run_stop_time - run_start_time)
+        if time_unit == 'second':
+            run_stop_time *= 1.E-9
+
+    return run_stop_time
 
 
 def get_sample_log_tsp(src_workspace, sample_log_name):

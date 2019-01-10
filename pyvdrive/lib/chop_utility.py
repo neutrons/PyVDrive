@@ -1,7 +1,7 @@
 # Classes to process sample log and chopping
-
 import os
 import random
+import math
 import mantid_helper
 from mantid.api import ITableWorkspace, MatrixWorkspace
 from mantid.dataobjects import SplittersWorkspace
@@ -389,6 +389,72 @@ class DataChopper(object):
 
         return True, slicer_key
 
+    def set_overlap_time_slicer(self, start_time, stop_time, time_interval, overlap_time_interval,
+                                splitter_tag=None):
+        """
+        set slicers for constant time period with overlapping
+        :param start_time:
+        :param stop_time:
+        :param time_interval:
+        :param overlap_time_interval:
+        :return:
+        """
+        # Check inputs
+        if start_time is not None:
+            datatypeutility.check_float_variable('Event filters starting time', start_time, (0., None))
+        if stop_time is not None:
+            datatypeutility.check_float_variable('Event filtering stopping time', stop_time, (1.E-10, None))
+        if start_time is not None and stop_time is not None and start_time >= stop_time:
+            raise RuntimeError('User specified event filters starting time {} is after stopping time {}'
+                               ''.format(start_time, stop_time))
+
+        datatypeutility.check_float_variable('Time interval', time_interval, (0., None))
+        datatypeutility.check_float_variable('Overlap time interval', overlap_time_interval, (0., None))
+        if time_interval <= overlap_time_interval:
+            raise RuntimeError('Time step/interval {} cannot be equal or less than overlapped time period '
+                               '{}'.format(time_interval, overlap_time_interval))
+
+        # create time bins
+        if start_time is None:
+            start_time = 0
+        if stop_time is None:
+            stop_time = mantid_helper.get_run_stop(self._mtdWorkspaceName, 'second', is_relative=True)
+
+        num_intervals = int(math.ceil(stop_time - start_time) / float(time_interval))
+        time_period1 = time_interval - overlap_time_interval
+        split_list = list()
+        time_ip1 = 0
+        for index in range(num_intervals-1):
+            time_i = index * time_interval
+            time_j = time_i + time_period1
+            time_ip1 = time_i + time_interval
+            split_list.append((time_i, time_j))
+            split_list.append((time_j, time_ip1))
+        # END-FOR
+        split_list.append((time_ip1, stop_time))
+
+        # Determine tag
+        if splitter_tag is None:
+            splitter_tag = get_standard_manual_tag(self._mtdWorkspaceName)
+
+        # Generate split workspace
+        status, ret_obj = mantid_helper.generate_event_filters_arbitrary(self._mtdWorkspaceName,
+                                                                         split_list,
+                                                                         relative_time=True,
+                                                                         tag=splitter_tag,
+                                                                         auto_target=True)
+        if status:
+            split_ws_name, info_ws_name = ret_obj
+        else:
+            err_msg = ret_obj
+            return False, err_msg
+
+        # Store
+        self._chopSetupDict[splitter_tag] = {'splitter': split_ws_name,
+                                             'info': info_ws_name}
+
+        return True, splitter_tag
+
     def set_time_slicer(self, start_time, time_step, stop_time):
         """
         :return:
@@ -403,7 +469,6 @@ class DataChopper(object):
         if start_time is not None and stop_time is not None and start_time >= stop_time:
             raise RuntimeError('User specified event filters starting time {} is after stopping time {}'
                                ''.format(start_time, stop_time))
-
         if start_time is None and stop_time is None and time_step is None:
             raise RuntimeError('It is not allowed to give all 3 Nones. Generate events filter by time '
                                'must specify at least one of min_time, max_time and time_interval')

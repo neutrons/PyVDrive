@@ -228,8 +228,10 @@ class VdriveChop(VDriveCommand):
 
         return status, message
 
-    def chop_data_overlap_time_period(self, run_number, start_time, stop_time, time_interval, chop_period, reduce_flag,
-                                      vanadium, output_dir, dry_run, chop_loadframe_log, chop_furnace_log):
+    def chop_data_overlap_time_period(self, run_number, start_time, stop_time, time_interval, overlap_time_interval,
+                                      reduce_flag, vanadium, output_dir, dry_run, chop_loadframe_log, chop_furnace_log,
+                                      roi_list, mask_list, num_banks, binning_parameters,
+                                      save_to_nexus, iparm_file_name):
         """
         Chop data by time interval
         :param run_number:
@@ -245,15 +247,13 @@ class VdriveChop(VDriveCommand):
         :return:
         """
         # check inputs
-        assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
-                                            '' % (str(run_number), type(run_number))
-        assert isinstance(output_dir, str) and os.path.exists(output_dir), \
-            'Directory %s must be a string (now %s) and exists.' % (str(output_dir), type(output_dir))
+        datatypeutility.check_int_variable('Run number', int, (1, None))
+        datatypeutility.check_file_name(output_dir, True, True, is_dir=True, note='Output directory')
 
         # dry run: return input options
         if dry_run:
             outputs = 'Slice IPTS-{0} Run {1} by time with ({2}, {3}, {4}) and dt = {5}' \
-                      ''.format(self._iptsNumber, run_number, start_time, time_interval, stop_time, chop_period)
+                      ''.format(self._iptsNumber, run_number, start_time, time_interval, stop_time, overlap_time_interval)
             if reduce_flag:
                 outputs += 'and reduce (to GSAS) '
             else:
@@ -266,34 +266,31 @@ class VdriveChop(VDriveCommand):
             return True, outputs
         # END-IF (dry run)
 
-        # chop and reduce
-        if chop_loadframe_log:
-            exp_log_type = 'loadframe'
-        elif chop_furnace_log:
-            exp_log_type = 'furnace'
-        else:
-            exp_log_type = None
-
         # generate data slicer
-        status, ret_obj = self._controller.gen_data_slicer_by_time(run_number, start_time, stop_time,
-                                                                      time_interval)
+        # get chopper
+        chopper = self._controller.project.get_chopper(run_number)
+        status, slice_key = chopper.set_overlap_time_slicer(start_time, stop_time, time_interval,
+                                                            overlap_time_interval)
 
-        # TODO TODO - 20180727 - Is it called for DT????
-        raise RuntimeError('Chop No Chop????')
-        if status:
-            slicer_key = ret_obj
-        else:
-            return False, 'Unable to generate data slicer by time due to {0}.'.format(ret_obj)
+        if not status:
+            error_msg = slice_key
+            return False, error_msg
+
+        # chop
+        status, message = self._controller.project.chop_run(run_number, slice_key,
+                                                            reduce_flag=reduce_flag,
+                                                            vanadium=vanadium, save_chopped_nexus=save_to_nexus,
+                                                            number_banks=num_banks,
+                                                            tof_correction=False,
+                                                            output_directory=output_dir,
+                                                            user_bin_parameter=binning_parameters,
+                                                            roi_list=roi_list,
+                                                            mask_list=mask_list,
+                                                            nexus_file_name=self._raw_nexus_file_name,
+                                                            gsas_iparm_file=iparm_file_name,
+                                                            overlap_mode=True)
 
         return False, 'DT option is not implemented. Contact developer!'
-        # status, message = self._controller.slice_data_segment_period(run_number, slicer_key,
-        #                                                              chop_period,
-        #                                                              reduce_data=reduce_flag,
-        #                                                              vanadium=vanadium, save_chopped_nexus=True,
-        #                                                              output_dir=output_dir,
-        #                                                              export_log_type=exp_log_type)
-        #
-        # return status, message
 
     def chop_data_manually(self, run_number, slicer_list, reduce_flag, vanadium, output_dir, epoch_time, dry_run,
                            chop_loadframe_log, chop_furnace_log,roi_list, mask_list,  num_banks,
@@ -701,7 +698,7 @@ class VdriveChop(VDriveCommand):
                                                                      start_time=None,
                                                                      stop_time=None,
                                                                      time_interval=time_step,
-                                                                     chop_period=overlap_period,
+                                                                     overlap_time_interval=overlap_period,
                                                                      reduce_flag=output_to_gsas,
                                                                      vanadium=van_run_number,
                                                                      output_dir=output_dir,
