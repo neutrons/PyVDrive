@@ -290,7 +290,7 @@ class VdriveChop(VDriveCommand):
                                                                 nexus_file_name=self._raw_nexus_file_name,
                                                                 gsas_iparm_file=iparm_file_name,
                                                                 overlap_mode=False,
-                                                                gda_start=i_slice+1)
+                                                                gda_start=i_slice)
 
             print ('[DB...BAT] Processed: {} '.format(slice_key))
 
