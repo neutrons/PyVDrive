@@ -35,6 +35,9 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         self._sliced_ws_name_list = None
 
+        # dictionary of focused virtual instrument geometry parameters
+        self._focus_instrument_geometry_dict = None
+
         return
 
     def chop_data(self, split_ws_name=None, info_ws_name=None, do_tof_correction = False):
@@ -148,6 +151,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         # get run start time
         if is_epoch_time:
+            print ('[DB...BAT...chop_data_large] About to get pcharge.firstTime()')
             run_start_ns = raw_ws.run().getProperty('proton_charge').firstTime().totalNanoseconds()
         else:
             run_start_ns = 0
@@ -607,7 +611,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
     def execute_chop_reduction_v2(self, event_ws_name, binning_parameters, num_reduced_banks,
                                   calib_ws_name, group_ws_name,
-                                  gsas_info_dict, clear_workspaces, gsas_writer):
+                                  gsas_info_dict, clear_workspaces, gsas_writer,
+                                  chop_overlap_mode, gsas_file_index_start):
         """
         Chop and reduce data with the upgraded algorithm for speed
         Version: 2.0 (latest)
@@ -644,6 +649,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # set up default
 
         runner = vulcan_slice_reduce.SliceFocusVulcan(number_banks=num_reduced_banks,
+                                                      focus_instrument_dict=self._focus_instrument_geometry_dict,
                                                       output_dir=self._reductionSetup.get_chopped_directory()[0])
         run_number = self._reductionSetup.get_run_number()
         runner.set_run_number(run_number)
@@ -657,8 +663,10 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                                                                    info_ws_name=split_info_table,
                                                                    output_ws_base=output_ws_name,
                                                                    binning_parameters=binning_parameters,
+                                                                   chop_overlap_mode=chop_overlap_mode,
                                                                    gsas_info_dict=gsas_info_dict,
-                                                                   gsas_writer=gsas_writer)
+                                                                   gsas_writer=gsas_writer,
+                                                                   gsas_file_index_start=gsas_file_index_start)
 
         # record
         self._reducedWorkspaceList.extend(output_ws_names)
@@ -984,6 +992,17 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             raise RuntimeError('Splitting workspace of type {0} is not supported.'.format(split_ws))
 
         return sub_split_ws_name
+
+    def set_focus_virtual_instrument(self, geom_dict):
+        """ Set the focused virtual instrument parameter
+        :param geom_dict:
+        :return:
+        """
+        datatypeutility.check_dict('Instrument geometry setup', geom_dict)
+
+        self._focus_instrument_geometry_dict = geom_dict
+
+        return
 # END-DEF-CLASS
 
 
@@ -1022,6 +1041,7 @@ class WriteSlicedLogs(object):
         :param end_series_dict:
         :return:
         """
+        import numpy
         assert isinstance(run_start_time, DateAndTime), 'Run start time {0} must be a Mantid.Kernel.DateAndTime ' \
                                                         'instance but not a {1}'.format(run_start_time,
                                                                                         type(run_start_time))
@@ -1033,14 +1053,28 @@ class WriteSlicedLogs(object):
 
         # get difference in REAL starting time (proton_charge[0])
         try:
+            print ('[DB...BAT...export Log] About to get pcharge.firstTime()')
             real_start_time_i = workspace_i.run().getProperty('proton_charge').firstTime()
         except IndexError:
             print '[ERROR] Workspace {0} has proton charge with zero entry.'.format(workspace_i)
             return
 
-        time_stamp = real_start_time_i.total_nanoseconds()
+        if isinstance(real_start_time_i, numpy.datetime64):
+            time_stamp = float(real_start_time_i)
+        else:
+            time_stamp = real_start_time_i.total_nanoseconds()
+
         # time (step) in seconds
-        diff_time = (real_start_time_i - run_start_time).total_nanoseconds() * 1.E-9
+        try:
+            diff_time = real_start_time_i - run_start_time
+        except TypeError as type_err:
+            print (type(real_start_time_i))
+            print (type(run_start_time))
+            raise TypeError('{}, {}: {}'.format(type(real_start_time_i), type(run_start_time), type_err))
+        if isinstance(real_start_time_i, numpy.datetime64):
+            diff_time = float(diff_time) * 1.E-9
+        else:
+            diff_time = diff_time.total_nanoseconds() * 1.E-9
 
         for entry in header_list:
             mts_name, log_name = entry
@@ -1126,6 +1160,7 @@ class WriteSlicedLogs(object):
             property_name_list.append(p_name)
         property_name_list.sort()
         run_start = DateAndTime(workspace.run().getProperty('run_start').value)  # Kernel.DateAndtime
+        # run_start = workspace.run().getProperty('proton_charge').times[0]
 
         # start value
         start_file_name = os.path.join(self._choppedDataDirectory,

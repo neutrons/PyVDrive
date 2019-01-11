@@ -1,7 +1,7 @@
 # Classes to process sample log and chopping
-
 import os
 import random
+import math
 import mantid_helper
 from mantid.api import ITableWorkspace, MatrixWorkspace
 from mantid.dataobjects import SplittersWorkspace
@@ -389,6 +389,84 @@ class DataChopper(object):
 
         return True, slicer_key
 
+    def set_overlap_time_slicer(self, start_time, stop_time, time_interval, overlap_time_interval,
+                                splitter_tag=None):
+        """
+        set slicers for constant time period with overlapping
+        will be
+        t0, t0 + dbin
+        t0 + dt, t0 + dbin + dt
+        ... ...
+        :param start_time:
+        :param stop_time:
+        :param time_interval:
+        :param overlap_time_interval:
+        :return:
+        """
+        # Check inputs
+        if start_time is not None:
+            datatypeutility.check_float_variable('Event filters starting time', start_time, (0., None))
+        if stop_time is not None:
+            datatypeutility.check_float_variable('Event filtering stopping time', stop_time, (1.E-10, None))
+        if start_time is not None and stop_time is not None and start_time >= stop_time:
+            raise RuntimeError('User specified event filters starting time {} is after stopping time {}'
+                               ''.format(start_time, stop_time))
+
+        datatypeutility.check_float_variable('Time interval', time_interval, (0., None))
+        datatypeutility.check_float_variable('Overlap time interval', overlap_time_interval, (0., None))
+        if time_interval <= overlap_time_interval:
+            raise RuntimeError('Time step/interval {} cannot be equal or less than overlapped time period '
+                               '{}'.format(time_interval, overlap_time_interval))
+
+        # create time bins
+        if start_time is None:
+            start_time = 0
+        if stop_time is None:
+            stop_time = mantid_helper.get_run_stop(self._mtdWorkspaceName, 'second', is_relative=True)
+        print ('[DB...BAT] Run stop = {}'.format(stop_time))
+
+        split_list = list()
+        split_t0 = start_time
+        split_tf = -1
+        while split_tf < stop_time:
+            # get split stop time
+            split_tf = split_t0 + time_interval
+            if split_tf > stop_time:
+                split_tf = stop_time + 1.E-10
+            # add to list
+            split_list.append((split_t0, split_tf))
+            # advance the start time
+            split_t0 += overlap_time_interval
+        # END-WHILE
+
+        # Determine tag
+        if splitter_tag is None:
+            splitter_tag = get_standard_manual_tag(self._mtdWorkspaceName)
+
+        # Generate split workspaces
+        splitter_tag_list = list()
+        for i_split, split_tup in enumerate(split_list):
+            splitter_tag_i = splitter_tag + '_{:05}'.format(i_split)
+            splitter_info_i = splitter_tag_i + '_info'
+            status, message = mantid_helper.generate_event_filters_by_time(self._mtdWorkspaceName,
+                                                                             splitter_tag_i,
+                                                                             splitter_info_i,
+                                                                             split_tup[0],
+                                                                             split_tup[1],
+                                                                             delta_time=None,
+                                                                             time_unit='second')
+
+            if not status:
+                return False, message
+
+            # good
+            splitter_tag_list.append(splitter_tag_i)
+            self._chopSetupDict[splitter_tag_i] = {'splitter': splitter_tag_i,
+                                                 'info': splitter_info_i}
+        # END-FOR
+
+        return True, splitter_tag_list
+
     def set_time_slicer(self, start_time, time_step, stop_time):
         """
         :return:
@@ -403,7 +481,6 @@ class DataChopper(object):
         if start_time is not None and stop_time is not None and start_time >= stop_time:
             raise RuntimeError('User specified event filters starting time {} is after stopping time {}'
                                ''.format(start_time, stop_time))
-
         if start_time is None and stop_time is None and time_step is None:
             raise RuntimeError('It is not allowed to give all 3 Nones. Generate events filter by time '
                                'must specify at least one of min_time, max_time and time_interval')

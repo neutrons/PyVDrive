@@ -21,14 +21,17 @@ import vulcan_util
 class SliceFocusVulcan(object):
     """ Class to handle the slice and focus on vulcan data
     """
-    def __init__(self, number_banks, num_threads=24, output_dir=None):
+    def __init__(self, number_banks, focus_instrument_dict, num_threads=24, output_dir=None):
         """
         initialization
         :param number_banks: number of banks to focus to
+        :param focus_instrument_dict: dictionary of parameter for instrument
+        :param output_dir:
         :param num_threads:
         """
         datatypeutility.check_int_variable('Number of banks', number_banks, [1, None])
         datatypeutility.check_int_variable('Number of threads', num_threads, [1, 256])
+        datatypeutility.check_dict('Focused instrument dictionary', focus_instrument_dict)
 
         # other directories
         self._output_dir = '/tmp/'
@@ -45,8 +48,8 @@ class SliceFocusVulcan(object):
 
         self._number_banks = number_banks
 
-        self._focus_instrument_dict = dict()
-        self._init_focused_instruments()
+        self._focus_instrument_dict = focus_instrument_dict
+        # self._init_focused_instruments()
 
         # multiple threading variables
         self._number_threads = num_threads
@@ -60,53 +63,6 @@ class SliceFocusVulcan(object):
         """
         return 'Slice and focus VULCAN data into {0}-bank with {1} threads'.format(self._number_banks,
                                                                                    self._number_threads)
-
-    def _init_focused_instruments(self):
-        """
-        set up the dictionary for the instrument geometry after focusing
-        each detector (virtual) will have 3 value as L2, polar (2theta) and azimuthal (phi)
-        and the angles are in unit as degree
-        :return:
-        """
-        # TODO - NIGHT - There shall be 1 and only 1 place to define focused geometry in PyVDRive!
-        # TODO           Now it is diverted.  Grep L1 and _init_focused_instrument (same copy diffrent place)
-        self._focus_instrument_dict['L1'] = 43.753999999999998
-
-        # L2, Polar and Azimuthal
-        self._focus_instrument_dict['L2'] = dict()
-        self._focus_instrument_dict['Polar'] = dict()
-        self._focus_instrument_dict['Azimuthal'] = dict()
-        self._focus_instrument_dict['SpectrumIDs'] = dict()
-
-        # east_bank = [2.0, 90., 0.]
-        # west_bank = [2.0, -90., 0.]
-        # high_angle_bank = [2.0, 155., 0.]
-
-        # 2 bank
-        self._focus_instrument_dict['L2'][2] = [2., 2.]
-        self._focus_instrument_dict['Polar'][2] = [-90.,  90]
-        self._focus_instrument_dict['Azimuthal'][2] = [0., 0.]
-        self._focus_instrument_dict['SpectrumIDs'][2] = [1, 2]
-
-        # 3 bank
-        self._focus_instrument_dict['L2'][3] = [2., 2., 2.]
-        self._focus_instrument_dict['Polar'][3] = [-90, 90., 155]
-        self._focus_instrument_dict['Azimuthal'][3] = [0., 0, 0.]
-        self._focus_instrument_dict['SpectrumIDs'][3] = [1, 2, 3]
-
-        # 7 bank
-        self._focus_instrument_dict['L2'][7] = None  # [2., 2., 2.]
-        self._focus_instrument_dict['Polar'][7] = None
-        self._focus_instrument_dict['Azimuthal'][7] = None
-        self._focus_instrument_dict['SpectrumIDs'][7] = range(1, 8)
-
-        # 27 banks
-        self._focus_instrument_dict['L2'][27] = None  # [2., 2., 2.]
-        self._focus_instrument_dict['Polar'][27] = None
-        self._focus_instrument_dict['Azimuthal'][27] = None
-        self._focus_instrument_dict['SpectrumIDs'][27] = range(1, 28)
-
-        return
 
     def focus_workspace_list(self, ws_name_list, gsas_ws_name_list, group_ws_name):
         """ Do diffraction focus on a list workspaces and also convert them to IDL GSAS
@@ -143,10 +99,10 @@ class SliceFocusVulcan(object):
             try:
                 EditInstrumentGeometry(Workspace=ws_name,
                                        PrimaryFlightPath=self._focus_instrument_dict['L1'],
-                                       SpectrumIDs=self._focus_instrument_dict['SpectrumIDs'][self._number_banks],
-                                       L2=self._focus_instrument_dict['L2'][self._number_banks],
-                                       Polar=self._focus_instrument_dict['Polar'][self._number_banks],
-                                       Azimuthal=self._focus_instrument_dict['Azimuthal'][self._number_banks])
+                                       SpectrumIDs=self._focus_instrument_dict['SpectrumIDs'],
+                                       L2=self._focus_instrument_dict['L2'],
+                                       Polar=self._focus_instrument_dict['Polar'],
+                                       Azimuthal=self._focus_instrument_dict['Azimuthal'])
             except RuntimeError as run_err:
                 print ('[WARNING] Non-critical error from EditInstrumentGeometry for {}: {}'
                        ''.format(ws_name, run_err))
@@ -242,8 +198,8 @@ class SliceFocusVulcan(object):
     # TODO - 2019.01.10 - Clean
     def slice_focus_event_workspace(self, event_ws_name, geometry_calib_ws_name, group_ws_name,
                                     split_ws_name, info_ws_name,
-                                    output_ws_base, binning_parameters, gsas_info_dict,
-                                    gsas_writer):
+                                    output_ws_base, binning_parameters, chop_overlap_mode,
+                                    gsas_info_dict, gsas_writer, gsas_file_index_start):
         """ Slice and diffraction focus event workspace with option to write the reduced data to GSAS file with
         SaveGSS().
         Each workspace is
@@ -277,12 +233,22 @@ class SliceFocusVulcan(object):
         t1 = time.time()
 
         # Filter events: OpenMP
+        # is relative or not?  TableWorkspace has to be relative!
+        split_ws = mantid_helper.retrieve_workspace(split_ws_name, raise_if_not_exist=True)
+        if split_ws.__class__.__name__.count('TableWorkspace'):
+            print ('[DB...BAT...Calling FilterEvents: RalativeTime')
+            is_relative_time = True
+        else:
+            is_relative_time = False
+
         result = FilterEvents(InputWorkspace=event_ws_name,
                               SplitterWorkspace=split_ws_name, InformationWorkspace=info_ws_name,
                               OutputWorkspaceBaseName=output_ws_base,
-                              FilterByPulseTime=False, GroupWorkspaces=True,
+                              FilterByPulseTime=False,
+                              GroupWorkspaces=True,
                               OutputWorkspaceIndexedFrom1=True,
-                              SplitSampleLogs=True)
+                              SplitSampleLogs=True,
+                              RelativeTime=is_relative_time)
 
         # get output workspaces' names
         output_names = None
@@ -350,10 +316,16 @@ class SliceFocusVulcan(object):
 
         t3 = time.time()
 
+        # process overlapping chop
+        if chop_overlap_mode:
+            # FIXME - Shan't be used anymore unless an optimized algorithm developed for DT option
+            output_names = self.process_overlap_chopped_data(output_names)
+
         # write all the processed workspaces to GSAS:  IPTS number and parm_file_name shall be passed
         run_date_time = vulcan_util.get_run_date(event_ws_name, '')
         self.write_to_gsas(output_names, ipts_number=gsas_info_dict['IPTS'], parm_file_name=gsas_info_dict['parm file'],
-                           ref_tof_sets=binning_parameters, gsas_writer=gsas_writer, run_start_date=run_date_time)
+                           ref_tof_sets=binning_parameters, gsas_writer=gsas_writer, run_start_date=run_date_time,
+                           gsas_file_index_start=gsas_file_index_start)
 
         # write to logs
         self.write_log_records(output_names, log_type='loadframe')
@@ -403,7 +375,7 @@ class SliceFocusVulcan(object):
         return
 
     def write_to_gsas(self, workspace_name_list, ipts_number, parm_file_name, ref_tof_sets, gsas_writer,
-                      run_start_date):
+                      run_start_date, gsas_file_index_start=1):
         """
         write to GSAS
         :param workspace_name_list:
@@ -415,7 +387,7 @@ class SliceFocusVulcan(object):
         for index_ws, ws_name in enumerate(workspace_name_list):
             if ws_name == '':
                 continue
-            gsas_file_name = os.path.join(self._output_dir, '{0}.gda'.format(index_ws))
+            gsas_file_name = os.path.join(self._output_dir, '{0}.gda'.format(index_ws + gsas_file_index_start))
             gsas_writer.save(diff_ws_name=ws_name, run_date_time=run_start_date, gsas_file_name=gsas_file_name,
                              ipts_number=ipts_number,
                              gsas_param_file_name=parm_file_name, align_vdrive_bin=True, vanadium_gsas_file=None)

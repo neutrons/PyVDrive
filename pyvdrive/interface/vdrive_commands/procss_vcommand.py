@@ -2,6 +2,28 @@
 import os
 import pyvdrive.lib.VDriveAPI as VdriveAPI
 from pyvdrive.lib import datatypeutility
+try:
+    from PyQt5.QtCore import QObject
+except ImportError as import_err:
+    print ('Process_VCommand: {}'.format(import_err))
+    from PyQt4.QtCore import QObject
+
+
+def convert_string_to(string, datatype):
+    """
+    convert a string to ...
+    :param string:
+    :param datatype:
+    :return:
+    """
+    try:
+        value = datatype(string)
+    except ValueError as value_err:
+        raise RuntimeError('Unable to parse string "{}" to a {} due to {}'.format(string, datatype, value_err))
+    except TypeError as type_err:
+        raise RuntimeError('Unable to convert a string due to {}'.format(string, type_err))
+
+    return value
 
 
 class CommandKeyError(Exception):
@@ -17,7 +39,7 @@ class CommandKeyError(Exception):
         return
 
 
-class VDriveCommand(object):
+class VDriveCommand(QObject):
     """
     Base class to process VDRIVE commands
     """
@@ -30,6 +52,10 @@ class VDriveCommand(object):
         :param controller: VDrive controller class
         :param command_args:
         """
+        # call base init
+        super(VDriveCommand, self).__init__(None)
+
+        # check input
         assert isinstance(controller, VdriveAPI.VDriveAPI), 'Controller must be a VdriveAPI.VDriveAPI' \
                                                             'instance but not %s.' % controller.__class__.__name__
         datatypeutility.check_dict('VDrive command arguments', command_args)

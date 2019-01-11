@@ -17,6 +17,7 @@ from pyvdrive.lib import mantid_helper
 from pyvdrive.lib import mantid_reduction
 from pyvdrive.lib import reductionmanager
 from pyvdrive.lib import vulcan_util
+from pyvdrive.lib import file_utilities
 
 
 class Collimator(object):
@@ -32,7 +33,11 @@ class Collimator(object):
         return
 
     def help(self):
-        print ("This is the the one")
+        """
+        help string ...
+        :return:
+        """
+        print ("Collimator analysis")
 
     def execute_scan_rotating_collimator(self, ipts_number, run_number_list, pixels, to_focus_spectra):
         """ 
@@ -63,7 +68,7 @@ class Collimator(object):
                                      meta_data_only=False)
 
             # align
-            run_start_date = calib_manager.check_creation_date(event_file_name)
+            run_start_date = file_utilities.check_file_creation_date(event_file_name)
             has_loaded_cal, calib_ws_collection = calib_manager.has_loaded(run_start_date, 3)
             if not has_loaded_cal:
                 calib_manager.search_load_calibration_file(run_start_date, 3, ws_name_i)

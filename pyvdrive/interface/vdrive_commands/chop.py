@@ -4,17 +4,25 @@ Implement VDRIVE command VCHOP
 import os
 import time
 from procss_vcommand import VDriveCommand
+from procss_vcommand import convert_string_to
 from pyvdrive.lib import datatypeutility
+try:
+    from PyQt5 import QtCore
+except ImportError as import_err:
+    print ('CHOP: {}'.format(import_err))
+    from PyQt4 import QtCore
+
 
 class VdriveChop(VDriveCommand):
     """
     Process command MERGE
     """
-    # TODO/ISSUE/NOWNOW - Implement DT and RUNV
     SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'DBIN', 'LOADFRAME', 'FURNACE', 'BIN', 'PICKDATA', 'OUTPUT',
-                     'BINFOLDER',
-                     'PULSETIME', 'DT', 'RUNV', 'INFO', 'ROI', 'MASK', 'NEXUS', 'STARTTIME', 'STOPTIME',
-                     'VDRIVEBIN', 'NUMBANKS', 'SAVECHOPPED2NEXUS', 'IPARM', 'DRYRUN', ]
+                     'BINFOLDER','MYTOFMIN', 'MYTOFMAX', 'BINW',
+                     'PULSETIME', 'DT', 'RUNV', 'ROI', 'MASK', 'NEXUS', 'STARTTIME', 'STOPTIME',
+                     'NUMBANKS', 'SAVECHOPPED2NEXUS', 'IPARM', 'DRYRUN']
+
+    reduceSignal = QtCore.pyqtSignal(str)  # signal to send out
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -26,6 +34,10 @@ class VdriveChop(VDriveCommand):
         'LOADFRAME': 'Chop LoadFrame log (MTSLoadFrame) along with',
         'FURNACE': 'Chop Furnace log (MTSFurnace) along with',
         'BIN': 'If bin=1, chopped data will be reduced to GSAS files',
+        'BANKS': 'Number of banks in the output GSAS file',
+        'MYTOFMIN': 'User defined TOF min in binning parameter. It must be used with MYTOFMAX and BINW',
+        'MYTOFMAX': 'User defined TOF max in binning parameter. It must be used with MYTOFMIN and BINW',
+        'BINW': 'Logarithm binning step. It must be used with MYTOFMIN and MYTOFMAX',
         'OUTPUT': 'If specified, then the chopped files will be saved to the directory. Otherwise, these files '
                   'will be saved to /SNS/VULCAN/IPTS-????/shared.',
         'BINFOLDER': 'It is an alias for "OUTPUT"',
@@ -38,13 +50,11 @@ class VdriveChop(VDriveCommand):
         'RUNV': 'vanadium run number',
         'ROI': 'Files for Mantid made region of interest file in XML format',
         'MASK': 'Files for Mantid made mask file in XML format',
-        'VDRIVEBIN': 'If equal to 1, using VDRIVE GSAS binning template to re-bin and output to GSAS.  Default is 3',
-        'NUMBANKS': 'Number of banks in the output GSAS file',
         'SAVECHOPPED2NEXUS': 'If equal to 1, then the chopped and reduced workspace will be save to a NeXus file. '
                              'Default is 0 (as False)'
     }
 
-    def __init__(self, controller, command_args, ipts_number=None, run_number_list=None):
+    def __init__(self, controller, command_args, main_window, ipts_number=None, run_number_list=None):
         """
         Initialization
         :param controller:
@@ -59,17 +69,24 @@ class VdriveChop(VDriveCommand):
         self._commandName = 'CHOP'
         # check argument
         self.check_command_arguments(self.SupportedArgs)
+        #
+        self._main_window = main_window
 
         # set default
         if ipts_number is not None and isinstance(ipts_number, int) and ipts_number > 0:
             self._iptsNumber = ipts_number
         if isinstance(run_number_list, list) and len(run_number_list) > 0:
             self._runNumberList = run_number_list[:]
-        
+
+        # define signal
+        # TODO - NIGHT - Do this one step by one step:
+        self.reduceSignal.connect(self._main_window.vdrive_command_return)
+
         return
 
     def chop_data_by_log(self, run_number, start_time, stop_time, log_name, min_log_value, max_log_value,
-                         log_step_value, reduce_flag, output_dir, dry_run):
+                         log_step_value, reduce_flag, num_banks, exp_log_type, binning_parameters,
+                         mask_list, roi_list, output_dir, dry_run, vanadium, iparm_file_name, save_to_nexus):
         """
         chop data by log value.
         Note: always save the chopped NeXus
@@ -85,12 +102,9 @@ class VdriveChop(VDriveCommand):
         :param dry_run:
         :return:
         """
-        # TEST/ISSUE/59 - Test
         # check inputs
-        assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
-                                            ''.format(run_number, type(run_number))
-        assert isinstance(output_dir, str) and os.path.exists(output_dir), \
-            'Directory %s must be a string (now %s) and exists.'.format(output_dir, type(output_dir))
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        datatypeutility.check_file_name(output_dir, True, True, True, 'Output directory')
 
         # dry run: return input options
         if dry_run:
@@ -120,16 +134,24 @@ class VdriveChop(VDriveCommand):
             slicer_key = ret_obj
 
         # chop and reduce
-        status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
-                                                      save_chopped_nexus=True,
-                                                      output_dir=output_dir,
-                                                      gsas_iparam_name=iparm_file_name)
+        print ('[DB...BAT] user_bin_parameters = {}  ... type = {}'.format(binning_parameters, type(binning_parameters)))
+        status, message = self._controller.project.chop_run(run_number, slicer_key, reduce_flag=reduce_flag,
+                                                            vanadium=vanadium, save_chopped_nexus=save_to_nexus,
+                                                            output_dir=output_dir,
+                                                            number_banks=num_banks,
+                                                            tof_correction=False,
+                                                            output_directory=output_dir,
+                                                            user_bin_parameter=binning_parameters,
+                                                            roi_list=roi_list,
+                                                            mask_list=mask_list,
+                                                            nexus_file_name=self._raw_nexus_file_name,
+                                                            gsas_iparam_name=iparm_file_name)
 
         return status, message
 
     def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce_flag, vanadium,
                           output_dir, dry_run, chop_loadframe_log, chop_furnace_log, roi_list,
-                          mask_list, use_idl_bin, num_banks, save_to_nexus, iparm_file_name):
+                          mask_list, num_banks, binning_parameters, save_to_nexus, iparm_file_name):
         """
         Chop data by time interval
         :param run_number:
@@ -144,7 +166,7 @@ class VdriveChop(VDriveCommand):
         :param chop_furnace_log:
         :param roi_list: list (region of interest files)
         :param mask_list: list (mask files)
-        :param use_idl_bin: use VDRIVE GSAS binning as a template
+        :param binning_parameters: binning parameters
         :return:
         """
         # check inputs
@@ -192,22 +214,24 @@ class VdriveChop(VDriveCommand):
             exp_log_type = None
 
         # chop
-        status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
-                                                      vanadium=vanadium, save_chopped_nexus=save_to_nexus,
-                                                      output_dir=output_dir,
-                                                      number_banks=num_banks,
-                                                      export_log_type=exp_log_type,
-                                                      user_bin_parameter=None,
-                                                      use_idl_bin=use_idl_bin,
-                                                      roi_list=roi_list,
-                                                      mask_list=mask_list,
-                                                      raw_nexus_name=self._raw_nexus_file_name,
-                                                      gsas_iparam_name=iparm_file_name)
+        status, message = self._controller.project.chop_run(run_number, slicer_key,
+                                                            reduce_flag=reduce_flag,
+                                                            vanadium=vanadium, save_chopped_nexus=save_to_nexus,
+                                                            number_banks=num_banks,
+                                                            tof_correction=False,
+                                                            output_directory=output_dir,
+                                                            user_bin_parameter=binning_parameters,
+                                                            roi_list=roi_list,
+                                                            mask_list=mask_list,
+                                                            nexus_file_name=self._raw_nexus_file_name,
+                                                            gsas_iparm_file=iparm_file_name)
 
         return status, message
 
-    def chop_data_by_time_period(self, run_number, start_time, stop_time, time_interval, chop_period, reduce_flag,
-                                 vanadium, output_dir, dry_run, chop_loadframe_log, chop_furnace_log):
+    def chop_data_overlap_time_period(self, run_number, start_time, stop_time, time_interval, overlap_time_interval,
+                                      reduce_flag, vanadium, output_dir, dry_run, chop_loadframe_log, chop_furnace_log,
+                                      roi_list, mask_list, num_banks, binning_parameters,
+                                      save_to_nexus, iparm_file_name):
         """
         Chop data by time interval
         :param run_number:
@@ -223,15 +247,13 @@ class VdriveChop(VDriveCommand):
         :return:
         """
         # check inputs
-        assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
-                                            '' % (str(run_number), type(run_number))
-        assert isinstance(output_dir, str) and os.path.exists(output_dir), \
-            'Directory %s must be a string (now %s) and exists.' % (str(output_dir), type(output_dir))
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        datatypeutility.check_file_name(output_dir, True, True, is_dir=True, note='Output directory')
 
         # dry run: return input options
         if dry_run:
             outputs = 'Slice IPTS-{0} Run {1} by time with ({2}, {3}, {4}) and dt = {5}' \
-                      ''.format(self._iptsNumber, run_number, start_time, time_interval, stop_time, chop_period)
+                      ''.format(self._iptsNumber, run_number, start_time, time_interval, stop_time, overlap_time_interval)
             if reduce_flag:
                 outputs += 'and reduce (to GSAS) '
             else:
@@ -244,37 +266,43 @@ class VdriveChop(VDriveCommand):
             return True, outputs
         # END-IF (dry run)
 
-        # chop and reduce
-        if chop_loadframe_log:
-            exp_log_type = 'loadframe'
-        elif chop_furnace_log:
-            exp_log_type = 'furnace'
-        else:
-            exp_log_type = None
-
         # generate data slicer
-        status, ret_obj = self._controller.gen_data_slicer_by_time(run_number, start_time, stop_time,
-                                                                      time_interval)
+        # get chopper
+        chopper = self._controller.project.get_chopper(run_number)
+        status, slice_key_list = chopper.set_overlap_time_slicer(start_time, stop_time, time_interval,
+                                                            overlap_time_interval)
 
-        # TODO TODO - 20180727 - Is it called for DT????
-        raise RuntimeError('Chop No Chop????')
-        if status:
-            slicer_key = ret_obj
-        else:
-            return False, 'Unable to generate data slicer by time due to {0}.'.format(ret_obj)
+        if not status:
+            error_msg = slice_key_list
+            return False, error_msg
 
-        return False, 'DT option is not implemented. Contact developer!'
-        # status, message = self._controller.slice_data_segment_period(run_number, slicer_key,
-        #                                                              chop_period,
-        #                                                              reduce_data=reduce_flag,
-        #                                                              vanadium=vanadium, save_chopped_nexus=True,
-        #                                                              output_dir=output_dir,
-        #                                                              export_log_type=exp_log_type)
-        #
-        # return status, message
+        # chop
+        for i_slice, slice_key in enumerate(slice_key_list):
+            status, message = self._controller.project.chop_run(run_number, slice_key,
+                                                                reduce_flag=reduce_flag,
+                                                                vanadium=vanadium, save_chopped_nexus=save_to_nexus,
+                                                                number_banks=num_banks,
+                                                                tof_correction=False,
+                                                                output_directory=output_dir,
+                                                                user_bin_parameter=binning_parameters,
+                                                                roi_list=roi_list,
+                                                                mask_list=mask_list,
+                                                                nexus_file_name=self._raw_nexus_file_name,
+                                                                gsas_iparm_file=iparm_file_name,
+                                                                overlap_mode=False,
+                                                                gda_start=i_slice)
+
+            print ('[DB...BAT] Processed: {} '.format(slice_key))
+
+            if not status:
+                return False, message
+        # END-FOR
+
+        return True, 'DT is implemented but not efficient'
 
     def chop_data_manually(self, run_number, slicer_list, reduce_flag, vanadium, output_dir, epoch_time, dry_run,
-                           chop_loadframe_log, chop_furnace_log):
+                           chop_loadframe_log, chop_furnace_log,roi_list, mask_list,  num_banks,
+                           binning_parameters,  save_to_nexus, iparm_file_name):
         """
         chop and/or reduce data with arbitrary slicers
         :param run_number:
@@ -325,19 +353,250 @@ class VdriveChop(VDriveCommand):
             return False, 'Unable to generate data slicer by time due to %s.' % error_msg
 
         # chop and reduce
-        if chop_loadframe_log:
-            exp_log_type = 'loadframe'
-        elif chop_furnace_log:
-            exp_log_type = 'furnace'
-        else:
-            exp_log_type = None
-        status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
-                                                      vanadium=None,
-                                                      save_chopped_nexus=True, output_dir=output_dir,
-                                                      export_log_type=exp_log_type,
-                                                      gsas_iparam_name=iparm_file_name)
+        status, message = self._controller.project.chop_run(run_number, slicer_key,
+                                                            reduce_flag=reduce_flag,
+                                                            vanadium=vanadium, save_chopped_nexus=save_to_nexus,
+                                                            number_banks=num_banks,
+                                                            tof_correction=False,
+                                                            output_directory=output_dir,
+                                                            user_bin_parameter=binning_parameters,
+                                                            roi_list=roi_list,
+                                                            mask_list=mask_list,
+                                                            nexus_file_name=self._raw_nexus_file_name,
+                                                            gsas_iparm_file=iparm_file_name)
 
         return status, message
+
+    def _is_dry_run(self):
+        """
+        check about DRYRUN
+        :return:
+        """
+        try:
+            if 'DRYRUN' in self._commandArgsDict and int(self._commandArgsDict['DRYRUN']) == 1:
+                # dry run
+                is_dry_run = True
+            else:
+                is_dry_run = False
+        except ValueError as run_err:
+            raise RuntimeError('DRYRUN value {} cannot be recognized due to {}.' \
+                               ''.format(self._commandArgsDict['DRYRUN'], run_err))
+
+        return is_dry_run
+
+    def _get_chop_log_setup(self):
+        """ Get LOADFRAME or FURNACE information
+        :return:
+        """
+        # chopping method: by constant time or input
+        # how to deal with sample logs
+        if 'LOADFRAME' in self._commandArgsDict:
+            chop_load_frame = True
+        else:
+            chop_load_frame = False
+        if 'FURNACE' in self._commandArgsDict:
+            chop_furnace_log = True
+        else:
+            chop_furnace_log = False
+        if chop_furnace_log and chop_load_frame:
+            raise RuntimeError('LOADFRAME and FURNACE cannot be chosen simultaneously.')
+
+        return chop_load_frame, chop_furnace_log
+
+    def _get_mask_or_roi(self):
+        """
+        Get mask or ROI files
+        :return:
+        """
+        # region of interest or mask file
+        if 'ROI' in self._commandArgsDict:
+            roi_file_names = self.get_argument_as_list('ROI', str)
+        else:
+            roi_file_names = list()
+        if 'MASK' in self._commandArgsDict:
+            mask_file_names = self.get_argument_as_list('MASK', str)
+        else:
+            mask_file_names = list()
+
+        if len(roi_file_names) > 0 and len(mask_file_names) > 0:
+            raise RuntimeError('It is not allowed to specify ROI and Mask simultaneously.')
+
+        return roi_file_names, mask_file_names
+
+    def _get_van_run(self):
+        """
+        get vanadium run number for normalization and GSAS IPARM
+        :return:
+        """
+        # vanadium run
+        if 'RUNV' in self._commandArgsDict:
+            try:
+                van_run_number = int(self._commandArgsDict['RUNV'])
+            except ValueError:
+                raise RuntimeError('RUNV value {} cannot be converted to integer'
+                                   ''.format(self._commandArgsDict['RUNV']))
+
+        else:
+            van_run_number = None
+
+        return van_run_number
+
+    def _get_gsas_iparm_name(self):
+        """ Get the GSAS IPARM file name or default written to GSAS file
+        :return:
+        """
+        # GSAS iparam
+        if 'IPARM' in self._commandArgsDict:
+            iparm_name = self._commandArgsDict['IPARM']
+        else:
+            # default
+            iparm_name = 'vulcan.prm'
+
+        return iparm_name
+
+    def _process_output_directory(self):
+        """
+        process output directory
+        :return:
+        """
+        if 'OUTPUT' in self._commandArgsDict and 'BINFOLDER' in self._commandArgsDict:
+            raise RuntimeError('OUTPUT and BINFOLER cannot be used simultaneously')
+        elif 'OUTPUT' in self._commandArgsDict:
+            output_dir = str(self._commandArgsDict['OUTPUT'])
+        elif 'BINFOLDER' in self._commandArgsDict:
+            output_dir = str(self._commandArgsDict['BINFOLDER'])
+        else:
+            output_dir = None
+        # END-IF-ELSE
+
+        # create output dir
+        if output_dir:
+            if os.path.exists(output_dir) and not os.access(output_dir, os.W_OK):
+                raise RuntimeError('Current user has no writing permit to output directory {}'.format(output_dir))
+            elif not os.path.exists(output_dir):
+                try:
+                    os.mkdir(output_dir)
+                except (OSError, IOError) as dir_err:
+                    raise RuntimeError('Unable to create output directory {} due to {}'.format(output_dir, dir_err))
+            # END-IF-ELSE
+        # END-IF-ELSE
+
+        return output_dir
+
+    def _process_chopping_setup(self):
+        """ Process the various type of chopping setup
+        :return: 4-tuple: dict, start time, stop time, pulse time
+        """
+        # start and stop time
+        if 'STARTTIME' in self._commandArgsDict:
+            start_time = convert_string_to(self._commandArgsDict['STARTTIME'], float)
+        else:
+            start_time = 0
+        if 'STOPTIME' in self._commandArgsDict:
+            stop_time = convert_string_to(self._commandArgsDict['STOPTIME'], float)
+        else:
+            stop_time = None
+
+        # extra chopping option
+        if 'PULSETIME' in self._commandArgsDict:
+            pulse_time = convert_string_to(self._commandArgsDict['PULSETIME'], int)
+        else:
+            pulse_time = 1
+
+        chop_option_dict = dict()
+        if 'DBIN' in self._commandArgsDict:
+            time_step = convert_string_to(self._commandArgsDict['DBIN'], float)
+            chop_option_dict['DBIN'] = time_step
+
+        if 'DT' in self._commandArgsDict:
+            # DT must be checked after DBIN
+            if 'DBIN' not in chop_option_dict:
+                raise RuntimeError('DT must be used with DBIN specified')
+            # set DT as a tuple from DBIN, DT and remove DBIN entry in output dictionary
+            chop_over_lap_period = convert_string_to(self._commandArgsDict['DT'], float)
+            chop_option_dict['DT'] = (chop_option_dict['DBIN'], chop_over_lap_period)
+            del chop_option_dict['DBIN']
+
+        if 'PICKDATA' in self._commandArgsDict:
+            user_slice_file = self._commandArgsDict['PICKDATA']
+            chop_option_dict['PICKDATA'] = user_slice_file
+
+        # check inputs' validity: at most 1 chopping option can be used
+        if len(chop_option_dict) > 1:
+            err_msg = 'It is not allow to use '
+            for option in chop_option_dict.keys():
+                err_msg += '{}, '.format(option)
+            err_msg += ' simultaneously.  At most one of DBIN, PICKDATA and LOG canot be used'
+            raise RuntimeError(err_msg)
+
+        return chop_option_dict, start_time, stop_time, pulse_time
+
+    def _process_vulcan_runs(self):
+        """
+        Process RUNS and RUNE
+        :return:
+        """
+        # run numbers
+        if self._iptsNumber:
+            # IPTS/run number
+            if 'RUNS' in self._commandArgsDict:
+                # get RUNS/RUNE from arguments
+                run_start = convert_string_to(self._commandArgsDict['RUNS'], int)
+                if 'RUNE' in self._commandArgsDict:
+                    run_end = convert_string_to(self._commandArgsDict['RUNE'], int)
+                else:
+                    run_end = run_start
+                self._runNumberList = range(run_start, run_end + 1)
+            elif len(self._commandArgsDict) > 0:
+                # from previously stored value
+                run_start = convert_string_to(self._commandArgsDict[0], int)
+                run_end = convert_string_to(self._commandArgsDict[-1], int)
+            else:
+                # not properly set up
+                raise RuntimeError('CHOP command requires input of argument RUNS or previously stored Run number')
+            # END-IF
+
+            # check run start and run end range
+            if run_start > run_end:
+                raise RuntimeError('Run start {} must be less or equal to run end {}'.format(run_start, run_end))
+
+            # locate the runs and add the reduction project
+            run_number_list = range(run_start, run_end + 1)
+            archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber,
+                                                                                                 run_number_list)
+            if len(error_message) > 0:
+                print '[DB...BAT] Error archive key: ', archive_key
+                return False, error_message
+            run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
+            self._controller.add_runs_to_project(run_info_list)
+        else:
+            # NeXus file
+            run_start = None
+            run_end = None
+        # END-IF
+
+        return run_start, run_end
+
+    def _process_binning_setup(self):
+        """ Processing diffraction focus and save to GSAS related setup
+        :return: bool (bin chopped data), int (number of banks)
+        """
+        if 'BIN' in self._commandArgsDict:
+            bin_run = convert_string_to(self._commandArgsDict['BIN'], int) > 0
+        else:
+            # default is True
+            bin_run = True
+
+        # number of banks in output GSAS file
+        if 'BANKS' in self._commandArgsDict:
+            num_banks = convert_string_to(self._commandArgsDict['BANKS'], int)
+            if num_banks <= 0:
+                raise RuntimeError('Banks number cannot be zero or less')
+        else:
+            # default is 3
+            num_banks = 3
+
+        return bin_run, num_banks
 
     def exec_cmd(self):
         """
@@ -360,183 +619,39 @@ class VdriveChop(VDriveCommand):
             self.set_ipts()
 
         # parse the scope of runs
-        # run numbers
-        if self._iptsNumber:
-            # IPTS/run number
-            if 'RUNS' in self._commandArgsDict:
-                # get RUNS/RUNE from arguments
-                run_start = int(self._commandArgsDict['RUNS'])
-                if 'RUNE' in self._commandArgsDict:
-                    run_end = int(self._commandArgsDict['RUNE'])
-                else:
-                    run_end = run_start
-                self._runNumberList = range(run_start, run_end + 1)
-            elif len(self._commandArgsDict) > 0:
-                # from previously stored value
-                run_start = self._commandArgsDict[0]
-                run_end = self._commandArgsDict[-1]
-                assert isinstance(run_start, int) and isinstance(run_end, int) and run_start <= run_end, \
-                    'Run start %s (%s) and run end %s (%s) must be integers and run start <= run end' % (
-                        str(run_start), str(type(run_start)), str(run_end), str(type(run_end))
-                    )
-            else:
-                # not properly set up
-                raise RuntimeError('CHOP command requires input of argument RUNS or previously stored Run number')
-                # END-IF
-
-            # check run start and run end range
-            if run_start > run_end:
-                raise RuntimeError('Run start {} must be less or equal to run end {}'.format(run_start, run_end))
-
-            # locate the runs and add the reduction project
-            run_number_list = range(run_start, run_end + 1)
-            archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber,
-                                                                                                 run_number_list)
-            if len(error_message) > 0:
-                print '[DB...BAT] Error archive key: ', archive_key
-                return False, error_message
-            run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
-            self._controller.add_runs_to_project(run_info_list)
-        else:
-            # NeXus file
-            run_start = None
-            run_end = None
-        # END-IF
-
-        if 'INFO' in self._commandArgsDict:
-            # get the chopping-help information
-            # TODO/ISSUE/33/ - organize some information
-            pass
+        run_start, run_end = self._process_vulcan_runs()
 
         try:
-            if 'DRYRUN' in self._commandArgsDict and int(self._commandArgsDict['DRYRUN']) == 1:
-                # dry run
-                is_dry_run = True
+            is_dry_run = self._is_dry_run()
+
+            # chopping options
+            chop_option_dict, start_time, stop_time, pulse_time = self._process_chopping_setup()
+
+            # ROI or Mask
+            roi_file_names, mask_file_names = self._get_mask_or_roi()
+
+            # GSAS binning section
+            output_to_gsas, num_banks = self._process_binning_setup()
+            # binning parameters
+            use_default_binning, binning_parameters = self.parse_binning()
+            # vanadium calibration
+            van_run_number = self._get_van_run()
+            iparm_name = self._get_gsas_iparm_name()
+
+            # extra sample log information
+            chop_load_frame, chop_furnace_log = self._get_chop_log_setup()
+
+            # output
+            output_dir = self._process_output_directory()
+
+            if 'SAVECHOPPED2NEXUS' in self._commandArgsDict:
+                save_to_nexus = convert_string_to(self._commandArgsDict['VDRIVEBIN'], int) > 0
             else:
-                is_dry_run = False
-        except ValueError as run_err:
-            return False, 'DRYRUN value {} cannot be recognized.'.format(self._commandArgsDict['DRYRUN'])
-
-        # vanadium run
-        if 'RUNV' in self._commandArgsDict:
-            van_run_number = int(self._commandArgsDict['RUNV'])
-
-        else:
-            van_run_number = None
-
-        # GSAS iparam
-        if 'IPARM' in self._commandArgsDict:
-            iparm_name = self._commandArgsDict['IPARM']
-        else:
-            iparm_name = 'vulcan.prm'
-
-        # chopping method: by constant time or input
-        # how to deal with sample logs
-        if 'LOADFRAME' in self._commandArgsDict:
-            chop_load_frame = True
-        else:
-            chop_load_frame = False
-        if 'Furnace' in self._commandArgsDict:
-            chop_furnace_log = True
-        else:
-            chop_furnace_log = False
-        if chop_furnace_log and chop_load_frame:
-            return False, 'Only 1 option in LOADFRAME and FURNACE can be chosen.'
-
-        if 'STARTTIME' in self._commandArgsDict:
-            start_time = float(self._commandArgsDict['STARTTIME'])
-        else:
-            start_time = 0
-        if 'STOPTIME' in self._commandArgsDict:
-            stop_time = float(self._commandArgsDict['STOPTIME'])
-        else:
-            stop_time = None
-
-        if 'DBIN' in self._commandArgsDict:
-            time_step = float(self._commandArgsDict['DBIN'])
-        else:
-            time_step = None
-        if 'DT' in self._commandArgsDict:
-            chop_period = float(self._commandArgsDict['DT'])
-        else:
-            chop_period = None
-        if 'PICKDATA' in self._commandArgsDict:
-            user_slice_file = self._commandArgsDict['PICKDATA']
-        else:
-            user_slice_file = False
-        if 'PULSETIME' in self._commandArgsDict:
-            pulse_time = int(self._commandArgsDict['PULSETIME'])
-        else:
-            pulse_time = 1
-
-        # region of interest or mask file
-        if 'ROI' in self._commandArgsDict:
-            roi_file_names = self.get_argument_as_list('ROI', str)
-        else:
-            roi_file_names = list()
-        if 'MASK' in self._commandArgsDict:
-            mask_file_names = self.get_argument_as_list('MASK', str)
-        else:
-            mask_file_names = list()
-
-        # binning parameters
-        use_idl_bin = True
-        if 'VDRIVEBIN' in self._commandArgsDict:
-            try:
-                use_idl_bin = int(self._commandArgsDict['VDRIVEBIN']) > 0
-            except ValueError:
-                return False, 'VDRIVEBIN {} must be an integer '.format(self._commandArgsDict['VDRIVEBIN'])
-        else:
-            use_idl_bin = True
-        # END-OF (VDRIVE-BIN)
-
-        # number of banks in output GSAS file
-        num_banks = 3
-        if 'NUMBANKS' in self._commandArgsDict:
-            try:
-                num_banks = int(self._commandArgsDict['VDRIVEBIN'])
-                if num_banks <= 0:
-                    return False, 'Number of banks ({}) cannot be zero or negative.'.format(num_banks)
-            except ValueError:
-                return False, 'VDRIVEBIN {} must be an integer '.format(self._commandArgsDict['VDRIVEBIN'])
-        # END-OF (NUMBANKS)
-
-        save_to_nexus = False
-        if 'SAVECHOPPED2NEXUS' in self._commandArgsDict:
-            try:
-                save_to_nexus = int(self._commandArgsDict['VDRIVEBIN']) > 0
-            except ValueError:
-                return False, 'SAVECHOPPED2NEXUS {} must be an integer' \
-                              ''.format(self._commandArgsDict['SAVECHOPPED2NEXUS'])
-        # END-OF (SAVECHOPPED2NEXUS)
-
-        # check
-        if time_step and user_slice_file:
-            return False, 'Only 1 option in DBIN and PICKDATA can be chosen.'
-        elif time_step is None and not user_slice_file:
-            message = 'pop'
-        else:
-            message = None
-
-        if message == 'pop':
-            # no choice, just pop out the window
-            return True, 'pop'
-
-        # about output
-        # binning to GSAS is by default
-        output_to_gsas = True
-        if 'BIN' in self._commandArgsDict and int(self._commandArgsDict['BIN']) == 0:
-            output_to_gsas = False
-
-        if 'OUTPUT' in self._commandArgsDict:
-            # use user defined
-            output_dir = str(self._commandArgsDict['OUTPUT'])
-        else:
-            output_dir = None
-
-        # check inputs' validity
-        if chop_period is not None and time_step is None:
-            return False, 'Chopping period (DT) = {0}. Under this case, DBIN must be given.'.format(chop_period)
+                # default to False
+                save_to_nexus = False
+            # END-IF
+        except RuntimeError as run_err:
+            return False, 'CHOP failed: {}'.format(run_err)
 
         # record time before chopping
         time1 = time.time()
@@ -546,118 +661,124 @@ class VdriveChop(VDriveCommand):
         sum_msg = 'CHOP command preparation: {} seconds\n'.format(duration_process_command)
         final_success = True
 
+        # set run numbers
         if self._iptsNumber:
-            # regular
-            for run_number in range(run_start, run_end + 1):
-                # create default directory
-                if output_dir is None:
-                    try:
-                        output_dir = self.create_default_chop_output_dir(run_number)
-                    except OSError as os_err:
-                        final_success = False
-                        sum_msg += 'Unable to chop and reduce run %d due to %s.' % (run_number, str(os_err))
-                        continue
-
-                # chop and optionally reduce
-                if chop_period is not None:
-                    # chopping with OVERLAPPED period
-                    # FIXME - This is NOTE implemented and tested
-                    status, message = self.chop_data_by_time_period(run_number=run_number,
-                                                                    start_time=None,
-                                                                    stop_time=None,
-                                                                    time_interval=time_step,
-                                                                    chop_period=chop_period,
-                                                                    reduce_flag=output_to_gsas,
-                                                                    vanadium=van_run_number,
-                                                                    output_dir=output_dir,
-                                                                    dry_run=is_dry_run,
-                                                                    chop_loadframe_log=chop_load_frame,
-                                                                    chop_furnace_log=chop_furnace_log)
-
-                elif time_step is not None:
-                    # chop by time and reduce
-                    status, message = self.chop_data_by_time(run_number=run_number,
-                                                             start_time=start_time,
-                                                             stop_time=stop_time,
-                                                             time_interval=time_step,
-                                                             reduce_flag=output_to_gsas,
-                                                             vanadium=van_run_number,
-                                                             output_dir=output_dir,
-                                                             dry_run=is_dry_run,
-                                                             chop_loadframe_log=chop_load_frame,
-                                                             chop_furnace_log=chop_furnace_log,
-                                                             roi_list=roi_file_names,
-                                                             mask_list=mask_file_names,
-                                                             use_idl_bin=use_idl_bin,
-                                                             num_banks=num_banks,
-                                                             save_to_nexus=save_to_nexus,
-                                                             iparm_file_name=iparm_name)
-                # elif log_name is not None:
-                #     # chop by log value
-                #     # FIXME/TODO/ISSUE/FUTURE - shall we implement this?
-                #     status, message = self.chop_data_by_log(run_number=run_number,
-                #                                             start_time=None,
-                #                                             stop_time=None,
-                #                                             log_name=log_name,
-                #                                             log_value_stepl=delta_log_value,
-                #                                             reduce_flag=output_to_gsas,
-                #                                             output_dir=output_dir,
-                #                                             dry_run=is_dry_run)
-                elif user_slice_file is not None:
-                    # chop by user specified time splitters
-                    # TEST - Need to wait for Mantid
-                    try:
-                        slicer_list = self.parse_pick_data(user_slice_file)
-                        status, message = self.chop_data_manually(run_number=run_number,
-                                                                  slicer_list=slicer_list,
-                                                                  reduce_flag=output_to_gsas,
-                                                                  vanadium=van_run_number,
-                                                                  output_dir=output_dir,
-                                                                  dry_run=is_dry_run,
-                                                                  epoch_time=(pulse_time == 1),
-                                                                  chop_loadframe_log=chop_load_frame,
-                                                                  chop_furnace_log=chop_furnace_log)
-                    except RuntimeError as run_err:
-                        return False, 'Failed to chop: {0}'.format(run_err)
-
-                else:
-                    # do nothing but launch log window
-                    status = True
-                    message = 'pop'
-                    return status, message
-                # END-IF-ELSE
-
-                # chop time
-                time2 = time.time()
-                duration_chop = time2 - time1
-                time1 = time.time()
-
-                final_success = final_success and status
-                sum_msg += 'Run {}: duration = {}: {}\n'.format(run_number, duration_chop, message)
-            # END-FOR (run_number)
+            run_number_list = range(run_start, run_end + 1)
+            event_nexus_file = None
         else:
-            # NeXus
-            if time_step is not None:
+            run_number_list = [-1]
+        # END-IF
+
+        # chop
+        for run_number in run_number_list:
+            # output directory
+            if output_dir is None:
+                try:
+                    output_dir = self.create_default_chop_output_dir(run_number)
+                except (OSError, IOError) as os_err:
+                    return False, 'Failed to create default chopping directory for run {} due to {}' \
+                                  ''.format(run_number, os_err)
+            # END-IF
+
+            if 'DBIN' in chop_option_dict:
+                # binning by constant time step
+                time_step = chop_option_dict['DBIN']
+
                 # chop by time and reduce
-                final_success, sum_msg = self.chop_data_by_time(run_number=-1,
-                                                                start_time=start_time,
-                                                                stop_time=stop_time,
-                                                                time_interval=time_step,
-                                                                reduce_flag=output_to_gsas,
-                                                                vanadium=van_run_number,
-                                                                output_dir=output_dir,
-                                                                dry_run=is_dry_run,
-                                                                chop_loadframe_log=chop_load_frame,
-                                                                chop_furnace_log=chop_furnace_log,
-                                                                roi_list=roi_file_names,
-                                                                mask_list=mask_file_names)
+                status, message = self.chop_data_by_time(run_number=run_number,
+                                                         start_time=start_time, stop_time=stop_time,
+                                                         time_interval=time_step,
+                                                         reduce_flag=output_dir, vanadium=van_run_number,
+                                                         num_banks=num_banks, iparm_file_name=iparm_name,
+                                                         binning_parameters=binning_parameters,
+                                                         save_to_nexus=save_to_nexus,
+                                                         output_dir=output_dir,
+                                                         dry_run=is_dry_run,
+                                                         chop_loadframe_log=chop_load_frame,
+                                                         chop_furnace_log=chop_furnace_log,
+                                                         roi_list=roi_file_names, mask_list=mask_file_names)
+            elif 'DT' in chop_option_dict:
+                # chopping with OVERLAPPED period
+                time_step, overlap_period = chop_option_dict['DT']
+
+                # TEST - This is JUST implemented and SHALL be tested
+                status, message = self.chop_data_overlap_time_period(run_number=run_number,
+                                                                     start_time=None,
+                                                                     stop_time=None,
+                                                                     time_interval=time_step,
+                                                                     overlap_time_interval=overlap_period,
+                                                                     reduce_flag=output_to_gsas,
+                                                                     vanadium=van_run_number,
+                                                                     output_dir=output_dir,
+                                                                     dry_run=is_dry_run,
+                                                                     chop_loadframe_log=chop_load_frame,
+                                                                     chop_furnace_log=chop_furnace_log,
+                                                                     roi_list=roi_file_names,
+                                                                     mask_list=mask_file_names,
+                                                                     num_banks=num_banks,
+                                                                     binning_parameters=binning_parameters,
+                                                                     save_to_nexus=save_to_nexus,
+                                                                     iparm_file_name=iparm_name)
+
+            elif 'PICKDATA' in chop_option_dict:
+                # chop by user specified time splitters
+                # TEST - Need to wait for Mantid
+                try:
+                    # TODO FIXME - NIGHT
+                    """
+                      File "/home/wzz/Projects/PyVDrive/build/lib.linux-x86_64-2.7/pyvdrive/interface/vdrive_commands/chop.py", line 715, in exec_cmd
+                      slicer_list = self.parse_pick_data(user_slice_file)
+                      NameError: global name 'user_slice_file' is not defined
+                    """
+                    user_slice_file = chop_option_dict['PICKDATA']
+                    slicer_list = self.parse_pick_data(user_slice_file)
+
+                    print ('[DB...BAT] slice list: {}'.format(slicer_list))
+
+                    status, message = self.chop_data_manually(run_number=run_number,
+                                                              slicer_list=slicer_list,
+                                                              reduce_flag=output_to_gsas,
+                                                              vanadium=van_run_number,
+                                                              output_dir=output_dir,
+                                                              dry_run=is_dry_run,
+                                                              epoch_time=(pulse_time == 1),
+                                                              chop_loadframe_log=chop_load_frame,
+                                                              chop_furnace_log=chop_furnace_log,
+                                                              num_banks=num_banks, iparm_file_name=iparm_name,
+                                                              binning_parameters=binning_parameters,
+                                                              save_to_nexus=save_to_nexus,
+                                                              roi_list=roi_file_names, mask_list=mask_file_names)
+                except RuntimeError as run_err:
+                    return False, 'Failed to chop: {0}'.format(run_err)
+
+            elif 'LOG' in chop_option_dict:
+                # chop by log value
+                # FIXME/TODO/ISSUE/FUTURE - shall we implement this?
+                status, message = self.chop_data_by_log(run_number=run_number,
+                                                        start_time=None,
+                                                        stop_time=None,
+                                                        log_name=log_name,
+                                                        log_value_stepl=delta_log_value,
+                                                        reduce_flag=output_to_gsas,
+                                                        output_dir=output_dir,
+                                                        dry_run=is_dry_run)
 
             else:
-                raise RuntimeError('NeXus file only support chop time by')
-        # END-IF-ELSE
+                # do nothing but launch log window
+                status = True
+                message = 'pop'
+            # END-IF-ELSE
+
+            # chop time
+            time2 = time.time()
+            duration_chop = time2 - time1
+            time1 = time.time()
+            final_success = final_success and status
+            sum_msg += 'Run {}: duration = {}: {}\n'.format(run_number, duration_chop, message)
+        # END-FOR (run_number)
 
         # TODO/THINK/ISSUE/55 - shall a signal be emit???
-        # self.reduceSignal.emit(command_args)
+        self.reduceSignal.emit(sum_msg)
 
         return final_success, sum_msg
 

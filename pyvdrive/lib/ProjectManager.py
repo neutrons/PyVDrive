@@ -336,8 +336,9 @@ class ProjectManager(object):
 
     def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus,
                  number_banks, tof_correction, output_directory,
-                 user_bin_parameter, use_idl_bin, roi_list, mask_list, nexus_file_name=None,
-                 gsas_iparm_file='vulcan.prm'):
+                 user_bin_parameter, roi_list, mask_list, nexus_file_name=None,
+                 gsas_iparm_file='vulcan.prm',
+                 overlap_mode=False, gda_start=1):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
         split workspaces to GSAS
@@ -356,11 +357,14 @@ class ProjectManager(object):
         :param number_banks:
         :param output_directory:
         :param user_bin_parameter: None or [NOT SURE]
-        :param use_idl_bin: True or False
         :param roi_list:
         :param mask_list:
+        :param nexus_file_name: None or string if user specifies one NeXus file
+        :param gsas_iparm_file: GSAS IPARM file
         :return:
         """
+        # TODO/ISSUE/NOWNOW 20181018 - put export_log_type ('loadframe') to chop_run; the adv_vulcan_chop support it!
+
         # check inputs' validity
         datatypeutility.check_string_variable('Slicer key', slicer_key)
         if nexus_file_name is None:
@@ -398,6 +402,7 @@ class ProjectManager(object):
             ipts_number = 0
 
         # chop and (optionally) diffraction focus the binning data
+        # TODO - NIGHT - Need to pass no_calibration_mask
         status, error_message = self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
                                                                        run_number=run_number,
                                                                        raw_file_name=data_file,
@@ -411,10 +416,12 @@ class ProjectManager(object):
                                                                        tof_correction=tof_correction,
                                                                        van_run_number=vanadium,
                                                                        user_binning_parameter=user_bin_parameter,
-                                                                       vdrive_binning=use_idl_bin,
                                                                        roi_list=roi_list,
                                                                        mask_list=mask_list,
-                                                                       gsas_parm_name=gsas_iparm_file)
+                                                                       gsas_parm_name=gsas_iparm_file,
+                                                                       no_cal_mask=False,
+                                                                       bin_overlap_mode=overlap_mode,
+                                                                       gda_file_start=gda_start)
 
         # process outputs
         if status:

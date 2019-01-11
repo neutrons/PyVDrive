@@ -9,8 +9,6 @@ import mantid_reduction
 import datatypeutility
 import datetime
 import numpy
-import platform
-import time
 import save_vulcan_gsas
 import mantid.simpleapi as mantid_api
 
@@ -87,16 +85,19 @@ class CalibrationManager(object):
         self._focus_instrument_dict['Azimuthal'][3] = [0., 0, 0.]
         self._focus_instrument_dict['SpectrumIDs'][3] = [1, 2, 3]
 
+        # TODO - ASAP - Find out the Polar and Azimuthal for 7 and 27 bank cases
         # 7 bank
-        self._focus_instrument_dict['L2'][7] = None  # [2., 2., 2.]
-        self._focus_instrument_dict['Polar'][7] = None
-        self._focus_instrument_dict['Azimuthal'][7] = None
+        self._focus_instrument_dict['L2'][7] = [2.] * 7  # [2., 2., 2.]
+        self._focus_instrument_dict['Polar'][7] = [-90.] * 3
+        self._focus_instrument_dict['Polar'][7].extend([90.] * 3)
+        self._focus_instrument_dict['Polar'][7].extend([155.])
+        self._focus_instrument_dict['Azimuthal'][7] = [0.] * 7
         self._focus_instrument_dict['SpectrumIDs'][7] = range(1, 8)
 
         # 27 banks
-        self._focus_instrument_dict['L2'][27] = None  # [2., 2., 2.]
-        self._focus_instrument_dict['Polar'][27] = None
-        self._focus_instrument_dict['Azimuthal'][27] = None
+        self._focus_instrument_dict['L2'][27] = [2.] * 27  # [2., 2., 2.]
+        self._focus_instrument_dict['Polar'][27] = [None] * 27
+        self._focus_instrument_dict['Azimuthal'][27] = [None] * 27
         self._focus_instrument_dict['SpectrumIDs'][27] = range(1, 28)
 
         return
@@ -125,68 +126,6 @@ class CalibrationManager(object):
         self._calibration_dict[datetime.datetime(2018, 5, 30)] = ned_2018_setup
 
         return
-
-    def _init_vdrive_binning_refs(self):
-        """ initialize binning references
-        :return:
-        """
-        # base_calib_dir = '/SNS/VULCAN/shared/CALIBRATION'
-        #
-        # # hard coded list of available calibration file names
-        # pre_ned_setup = '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vdrive_log_bin.dat'
-        # ned_2017_setup = '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5'
-        # ned_2018_setup = os.path.join(base_calib_dir, '2018_6_1_CAL/vdrive_3bank_bin.h5')
-        #
-        # self._vdrive_bin_ref_file_dict['2010-01-01'] = {2: pre_ned_setup}
-        # self._vdrive_bin_ref_file_dict['2017-06-01'] = {3: ned_2017_setup}
-        # self._vdrive_bin_ref_file_dict['2018-05-31'] = {3: ned_2018_setup}
-        #
-        # # parse the files and create bins: better to choose the latest and with 3 banks
-        # dates_list = sorted(self._vdrive_bin_ref_file_dict.keys())
-        # cal_date = dates_list[-1]
-        # idl_vdrive_bin_file = self._vdrive_bin_ref_file_dict[cal_date][3]
-        #
-        # #
-        # print ('[Calibration Initialization] Loading VDRIVE GSAS Binning Template {} valid from {}'
-        #        ''.format(idl_vdrive_bin_file, cal_date))
-        # self._vdrive_binning_ref_dict[cal_date, 3] = \
-        #     mantid_reduction.VulcanBinningHelper.create_idl_bins(num_banks=3,
-        #                                                          h5_bin_file_name=idl_vdrive_bin_file)
-        #
-        # return
-
-    # TODO - 2018 - May move this to a utility module
-    @staticmethod
-    def check_creation_date(file_name):
-        """
-        check the create date (year, month, date) for a file
-        :except RuntimeError: if the file does not exist
-        :param file_name: 
-        :return: 
-        """
-        datatypeutility.check_file_name(file_name, check_exist=True)
-    
-        # get the creation date in float (epoch time)
-        if platform.system() == 'Windows':
-            # windows not tested
-            epoch_time = os.path.getctime(file_name)
-        else:
-            # mac osx/linux
-            stat = os.stat(file_name)
-            try:
-                epoch_time = stat.st_birthtime
-            except AttributeError:
-                # We're probably on Linux. No easy way to get creation dates here,
-                # so we'll settle for when its content was last modified.
-                epoch_time = stat.st_mtime
-            # END-TRY
-        # END-IF-ELSE
-    
-        # convert epoch time to a string as YYYY-MM-DD
-        file_create_time = time.localtime(epoch_time)
-        file_create_time_str = time.strftime('%Y-%m-%d', file_create_time)
-    
-        return file_create_time_str
 
     @property
     def calibration_dates(self):
@@ -218,24 +157,6 @@ class CalibrationManager(object):
 
         return
 
-    # def is_idl_ref_bins_loaded(self, cal_index_date, num_banks):
-    #     """
-    #     check whether a IDL-VDRIVE GSAS binning reference has been loaded
-    #     :param cal_index_date:
-    #     :param num_banks:
-    #     :return:
-    #     """
-    #     datatypeutility.check_string_variable('Calibration index date', cal_index_date)
-    #     datatypeutility.check_int_variable('Number of banks', num_banks, (1, 1000))
-
-    #     if cal_index_date not in self._vdrive_binning_ref_dict:
-    #         return False
-
-    #     if num_banks not in self._vdrive_binning_ref_dict[cal_index_date]:
-    #         return False
-
-    #     return True
-
     @staticmethod
     def get_base_name(file_name, num_banks):
         """ get the base name for the calbration workspace, grouping workspace and mask workspace
@@ -257,13 +178,6 @@ class CalibrationManager(object):
         """
         # check input
         datatypeutility.check_date_time('VULCAN run start time\'s date', vulcan_run_date)
-        # datatypeutility.check_string_variable('YYYY-MM-DD string', vulcan_run_date)
-        #
-        # # search the previous date
-        # # check format first
-        # if len(vulcan_run_date) != 10 or vulcan_run_date.count('-') != 2:
-        #     raise RuntimeError('Year-Month-Date string must be of format YYYY-MM-DD but not {0}'
-        #                        ''.format(vulcan_run_date))
 
         # search the list
         date_list = sorted(self._calibration_dict.keys())
@@ -293,14 +207,7 @@ class CalibrationManager(object):
         """
         # check inputs
         datatypeutility.check_date_time('Run start date', run_start_date)
-        # datatypeutility.check_string_variable('YYYY-MM-DD string', run_start_date)
         datatypeutility.check_int_variable('Number of banks', num_banks, (1, 28))
-
-        # search the previous date
-        # # check format first
-        # if len(run_start_date) != 10 or run_start_date.count('-') != 2:
-        #     raise RuntimeError('Year-Month-Date string must be of format YYYY-MM-DD but not {0}'
-        #                        ''.format(run_start_date))
 
         # search the list
         date_list = sorted(self._calibration_dict.keys())
@@ -308,7 +215,7 @@ class CalibrationManager(object):
             raise RuntimeError('Input year-month-date {0} is too early comparing to {1}'
                                ''.format(run_start_date, date_list[0]))
 
-        print ('[DB...BAT] File YYYY-MM-DD: {}'.format(run_start_date))
+        # print ('[DB...BAT] File YYYY-MM-DD: {}'.format(run_start_date))
         # do a brute force search (as there are only very few of them)
         cal_date_index = None
         for i_date in range(len(date_list)-1, -1, -1):
@@ -364,10 +271,9 @@ class CalibrationManager(object):
         return self._default_tof_bins_dict[calib_date, num_banks]
 
     def get_focused_instrument_parameters(self, num_banks):
-        """
-
+        """ Get a dictionary for the focused instrument parameters including virtual detectors' positions
         :param num_banks:
-        :return:
+        :return: a dictionary for EditInstrumentGeometry
         """
         # check input
         datatypeutility.check_int_variable('Number of banks', num_banks, (1, 28))
@@ -1127,11 +1033,11 @@ class ReductionManager(object):
         #         Multiply(LHSWorkspace=ws_name, RHSWorkspace=self._det_eff_ws_name, OutputWorkspace=ws_name)
         raise NotImplementedError('ASAP')
 
-
     def chop_vulcan_run(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
                         output_directory, reduce_data_flag, save_chopped_nexus, number_banks,
-                        tof_correction, van_run_number, user_binning_parameter, vdrive_binning,
-                        roi_list, mask_list, no_cal_mask, gsas_parm_name='vulcan.prm'):
+                        tof_correction, van_run_number, user_binning_parameter,
+                        roi_list, mask_list, no_cal_mask, gsas_parm_name='vulcan.prm', bin_overlap_mode=False,
+                        gda_file_start=1):
         """
         Latest version: version 3
         :param ipts_number:
@@ -1147,7 +1053,6 @@ class ReductionManager(object):
         :param tof_correction:
         :param van_run_number: None (for no-correction) or an integer (vanadium run number)
         :param user_binning_parameter:
-        :param vdrive_binning:
         :param roi_list:
         :param mask_list:
         :param no_cal_mask:
@@ -1204,6 +1109,9 @@ class ReductionManager(object):
 
         # create an AdavancedChopReduce instance
         chop_reducer = reduce_adv_chop.AdvancedChopReduce(reduction_setup)
+        # set calibrated instrument
+        chop_reducer.set_focus_virtual_instrument(
+            self._calibrationFileManager.get_focused_instrument_parameters(number_banks))
         error_message = None
         if reduce_data_flag:
             # chop and reduce chopped data to GSAS: NOW, it is Version 2.0 speedup
@@ -1228,18 +1136,10 @@ class ReductionManager(object):
 
             # Slice and focus the data *** V2.0
             # determine the binning for output GSAS workspace
-            if vdrive_binning:
-                # vdrive binning
+            if user_binning_parameter is None:
                 binning_param_dict = None
-            elif user_binning_parameter:
-                # user specified binning parameter
-                binning_param_dict = binning_param_dict
             else:
-                # default binning
-                binning_param_dict = self._calibrationFileManager.get_default_binning_reference(run_start_date,
-                                                                                                number_banks)
-                print ('[DB...BAT] {020930} Use Default GSAS Bin')
-            # END-IF-ELSE
+                binning_param_dict = user_binning_parameter
             print ('[DB...BAT] Binning parameters: {}'.format(binning_param_dict))
 
             # END-IF-ELSE
@@ -1253,7 +1153,9 @@ class ReductionManager(object):
                                                                      gsas_info_dict=gsas_info,
                                                                      clear_workspaces=True,
                                                                      gsas_writer=self._gsas_writer,
-                                                                     num_reduced_banks=number_banks)
+                                                                     num_reduced_banks=number_banks,
+                                                                     chop_overlap_mode=bin_overlap_mode,
+                                                                     gsas_file_index_start=gda_file_start)
 
             # set up the reduced file names and workspaces and add to reduction tracker dictionary
             tracker.set_reduction_status(status, message, True)

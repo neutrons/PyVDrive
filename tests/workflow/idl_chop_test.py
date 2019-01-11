@@ -4,6 +4,7 @@ import sys
 import os
 # create main application
 import command_test_setup
+
 try:
     from PyQt5.QtWidgets import QApplication
 except ImportError:
@@ -18,7 +19,7 @@ def create_slice_segment_file(test_dir):
     """
     file_name = os.path.join(test_dir, 'slice_segment.txt')
 
-    segment = ''
+    segment = '0.   50.\n51.     150.\n155.     300'
 
     segment_file = open(file_name, 'w')
     segment_file.write(segment)
@@ -70,6 +71,49 @@ def test_chop_van_normalized(tester):
     return
 
 
+def test_chop_analysis_cluster(tester):
+    """
+    chop with vanadium run (vrun)
+    :param tester:
+    :return:
+    """
+    # test directory
+    test_dir = '/SNS/VULCAN/IPTS-20717/shared/binned_data/170464'
+    command_test_setup.set_test_dir(test_dir)
+
+    # run command
+    idl_command = 'chop, ipts=20717, runs=170464, dbin=30, loadframe=1, ' \
+                  'runv=163021,starttime=10.,stoptime=250.'
+
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
+
+    return
+
+
+def test_chop_overlap_time(tester):
+    """
+    /SNS/VULCAN/IPTS-20717/nexus/VULCAN_170464.nxs.h5
+    :param tester:
+    :return:
+    """
+    # test directory
+    test_dir = '/tmp/chop_overlap_time'
+    command_test_setup.set_test_dir(test_dir)
+
+    # run command
+    idl_command = 'chop, ipts=20717, runs=170464, dbin=100, dt=20, loadframe=1, output="{}"'.format(test_dir)
+
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
+
+    return
+
+
 def test_chop_roi(tester):
     """
     chop with ROI specified
@@ -105,7 +149,7 @@ def test_chop_segment_file(tester):
     seg_fie_name = create_slice_segment_file(test_dir)
 
     # run command
-    idl_command = 'chop, ipts=20717, runs=170464,  PICKDATA={}, loadframe=1, output="{}"' \
+    idl_command = 'chop, ipts=20717, runs=170464,  PICKDATA={}, loadframe=1, binfolder="{}"' \
                   ''.format(seg_fie_name, test_dir)
 
     tester.run_command(idl_command)
@@ -190,10 +234,22 @@ def test_main():
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
     # basic chopping operation
-    test_chop_simple(command_tester)
+    # test_chop_simple(command_tester)
 
-    # chop with vanadium runs
-    test_chop_van_normalized(command_tester)
+    # # # chop with vanadium runs
+    # test_chop_van_normalized(command_tester)
+
+    # # # chop with mask/ROI
+    # test_chop_roi(command_tester)
+
+    # # chop with PICKDATA
+    # test_chop_segment_file(command_tester)
+
+    # chop with DT
+    test_chop_overlap_time(command_tester)
+
+    # chop on analysis cluster
+    test_chop_analysis_cluster(command_tester)
 
     # test_ned_standard(command_tester)
     # test_ned_user_bin(command_tester)

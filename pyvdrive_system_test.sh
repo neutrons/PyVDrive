@@ -50,5 +50,5 @@ fi
 
 if [ "$1" = "6" ]; then
 	echo "Performance test: combined commands"
-        # PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH ./build/scripts-2.7/performance_combined_test.py
+        PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH ./build/scripts-2.7/performance_combined_test.py
 fi

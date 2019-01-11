@@ -1,110 +1,103 @@
-Alias
-=====
+## Brief Description
+
+Command **CHOP** is used to chop one or several runs by time or sample log values and optionally bin the chopped data.
+
+### Alias
 
 CHOP
 
-Arguments
-=========
+## Examples
 
-Mandatory arguments
--------------------
+### Simple chop without focusing (binning)
 
-  * IPTS: IPTS number
-  * RUNS: First run number
-  * dbin or loadframe
-  * OUTPUT:
+ - **_CHOP, IPTS=20280, RUNS=169173, DBIN=300, BIN=0_**
 
-Optional arguments
-------------------
-
-  * NEXUS     : NeXus file name (It cannot be used with IPTS/RUNS/RUNE)
-  * RUNE      : Last run number (if not specified, then only 1 run will be processed)
-  * dbin      : time step for binning interval in unit of seconds
-  * loadframe: chop load frame data
-  * DRYRUN:   if equal to 1, then it is a dry run to check input and output
-  * HELP:     the Log Picker Window will be launched and set up with given RUN number
-  * bin:      focus the chopped data and exported to gsas format.
-  * RUNV      : vanadium run number
-  * NUMBANKS  : Number of banks in the output GSAS file
-  * ROI       : Files for Mantid made region of interest file in XML format
-  * MASK      : Files for Mantid made mask file in XML format
-  * SAVECHOPPED2NEXUS: If equal to 1, then the chopped and reduced workspace will be save to a NeXus file. Default is 0 (as False)
-  * PICKDATA  : Name of a plain text 2-column data file for start and stop time for splitters.
-
-  * HELP      : the Log Picker Window will be launched and set up with given RUN number.
-  * DBIN      : time step for binning interval
-  * LOADFRAME : Chop LoadFrame log (MTSLoadFrame) along with
-  * FURNACE   : Chop Furnace log (MTSFurnace) along with
-  * BIN       : If bin=1, chopped data will be reduced to GSAS files
-  * OUTPUT    : If specified, then the chopped files will be saved to the directory. Otherwise, these files will be saved to /SNS/VULCAN/IPTS-????/shared.
-  * DRYRUN    : If equal to 1, then it is a dry run to check input and output.
-  * PULSETIME : 
-  * DT        : the period between two adjacent time segments
-  * INFO      : 
-  * STARTTIME : The starting time of the first slicer.  Default is the run start
-  * STOPTIME  : The stopping time of the last slicer. Default is the run stop
-  * VDRIVEBIN : If equal to 1, using VDRIVE GSAS binning template to re-bin and output to GSAS.  Default is 3
+   This command will 
+   1. Slice /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169173.nxs.h5 by every 300 seconds
+   2. Do diffraction focus to each sliced segment and output as GSAS files
+   3. Save chopped workspaces to Mantid _Processed NeXus_ file
 
 
-Event Slicing
-=============
+### Simple chop by time with reduction
 
-Raw runs (event NeXus files) can be sliced by time and log values.
+ - **_CHOP, IPTS=20280, RUNS=169173, DBIN=300_**
 
-
-Time segment file
------------------
-
-Time segment file constain event time segments, which are noted by starting time and stopping time in seconds.
-The time is relative time to the run start time.
-  
-
-Examples/Benchmarks
-===================
-
-**Pre-Vulcan-X (3-bank, nED)**
-
- - Simple chop by time with reduction:
-   - CHOP, IPTS=20280, RUNS=169173, DBIN=300
-   - Slice /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169173.nxs.h5 by every 300 seconds then do diffraction focus to each sliced segment and output as GSAS files
- - Simple chop by sample log value with reduction:
- - Simple chop without focusing (binning):
- - Chopping by user-specified segments:
- - Chopping and focusing with vanadium normalization:
+   This command will 
+   1. Slice /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169173.nxs.h5 by every 300 seconds
+   2. Do diffraction focus to each sliced segment and output as GSAS files
+   3. Save GSAS to /SNS/VULCAN/IPTS-20280/shared/binned_data/169173
 
 
+### Simple chop by time with reduction with start and stop time
+
+ - **_CHOP, IPTS=20280, RUNS=169173, DBIN=300, StartTime=xx, StopTime=xx_**
+
+   This command will 
+   1. Slice /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169173.nxs.h5 by every 300 seconds starting from xx seconds and stoping at xx seconds from run start time
+   2. Do diffraction focus to each sliced segment and output as GSAS files
+   3. Save GSAS to /SNS/VULCAN/IPTS-20280/shared/binned_data/169173
 
 
+### Simple chop by sample log value with reduction
 
-**Pre-nED (2-bank)**
+ - **_CHOP, IPTS=20280, RUNS=169173, LOG='TEMP',START=xx,STOP=xx,BinFolder='/tmp/sliced169173_**
 
-For each release, the following commands shall work correctly.
-
-  * CHOP, IPTS=14094, RUNS=96450, dbin=60,loadframe=1,bin=1,DRYRUN=1
-
-  * CHOP,IPTS=17263,RUNS=112811,DBIN=300,FURNACE=1,OUTPUT=/home/wzz/Projects/workspaces/VDrive/beta_test
-
-    Chop the original event file by time with 300 seconds step.  The chopped data are saved to NeXus format.
-
-  * CHOP,IPTS=17263,RUNS=112604,DBIN=150,FURNACE=1,BIN=1,OUTPUT=/home/wzz/Projects/workspaces/VDrive/beta_test/IPTS-17263/shared"
-
-  * chop, ipts=17566, runs=136841, dbin=60, loadframe=1 
-
-    chop, ipts=17566, runs=136841, dbin=60, loadframe=1, output=/tmp/
-
-  * chop,ipts=19435,runs=147049,dbin=660,bin=1,loadframe=1,runv=136773
-
-  * chop,ipts=19435,runs=147028,dbin=2,bin=1,loadframe=1,runv=136773
-
-  * chop, ipts=17414, runs=109021, dbin=1200, dt=600, loadframe=1
-
-  * chop, ipts=17414, runs=133243, bin=1, loadframe=1, pickdata='/SNS/VULCAN/IPTS-17414/shared/pickdata/pickdata_1HWQAGE.txt', pulsetime=1  
-
- * CHOP,IPTS=13183,RUNS=68607,PICKDATA="/SNS/VULCAN/IPTS-13183/shared/variablechop_serration_2nd series_4.txt",BIN=1,LOADFRAME=1,PULSETIME=1,output=/home/wzz/Projects/workspaces/VDrive/beta_test/IPTS-13183/shared
-
-In progress
------------
- 
+   This command will 
+   1. Slice /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169173.nxs.h5 by every 300 seconds
+   2. Do diffraction focus to each sliced segment and output as GSAS files
+   3. Save GSAS to /tmp/sliced169173
 
 
+### Simple chop by sample log value with reduction and limited by start and stop time
 
+ - **_CHOP, IPTS=20280, RUNS=169173, LOG='TEMP',START=xx,STOP=xx,STARTTIME=2,StopTime=100,BinFolder='/tmp/sliced169173_**
+
+   This command will 
+   1. Slice /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169173.nxs.h5 by sample log value from xx to xx with step xx.
+   1. All events before _start time_ xx is excluded
+   1. All events after _stop time_ xx is excluded
+   1. Do diffraction focus to each sliced segment and output as GSAS files
+   1. Save GSAS to /tmp/sliced169173
+
+
+### Chopping by user-specified segments:
+
+ - **_CHOP,IPTS=20280,RUNS=169173,PICKDATA=/tmp/mytimebins.txt,BinFolder='/tmp/sliced169173_**
+
+   This command will
+   1. Import the user specified chop time from /tmp/mytimebins.txt
+   1. Slice /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169173.nxs.h5 by the time segment imported
+   1. All events before _start time_ xx is excluded
+   1. All events after _stop time_ xx is excluded
+   1. Do diffraction focus to each sliced segment and output as GSAS files
+   1. Save GSAS to /tmp/sliced169173
+
+#### Format of **PickData** (time segment)
+
+  - Line 1 (to 1.gda):  _start_    _stop_
+  - Line 2 (to 2.gda):  _start_    _stop_
+  - ...
+  - Line n (to n.gda):  _start_    _stop_
+
+All the _start_ and _stop_ time are seconds from run start time. 
+
+### Chopping and focusing with vanadium normalization:
+
+ - **_CHOP,IPTS=20280,RUNS=169173,PICKDATA=/tmp/mytimebins.txt,VRUN=XXX_**
+
+### Chopping and focusing with user specified masks
+
+ - **_CHOP,IPTS=20280,RUNS=169173,PICKDATA=/tmp/mytimebins.txt,masks=[XXX.xml, YYY.xml]_**
+
+### Chopping and focusing with user specified ROI (region of interests)
+
+ - **_CHOP,IPTS=20280,RUNS=169173,PICKDATA=/tmp/mytimebins.txt,rois=[XXX.xml, YYY.xml]_**
+
+### Chopping and focusing to non-default number of banks
+
+  - The default number of banks for nED (but pre-Vulcan-X) runs is 3.
+  - The default number of banks for pre-nED runs is 2.
+    
+## Detailed Information of CHOP
+
+Please see [detailed CHOP document](https://github.com/neutrons/PyVDrive/wiki/CHOP-in-Details) for power users and instrument team.
