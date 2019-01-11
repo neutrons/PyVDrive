@@ -37,6 +37,10 @@ def test_vbin_chop_simple(tester):
 
     return
 
+def test_vbin_chop_larget_set(tester):
+    # TODO - ASAP
+    return
+
 
 def test_main():
     """
