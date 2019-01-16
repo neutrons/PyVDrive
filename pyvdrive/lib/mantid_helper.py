@@ -632,6 +632,17 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
     return True, ''
 
 
+def get_ads_memory(unit):
+    """
+    """
+    # TODO - NIGHT - Implement!
+    for ws_name in mtd.getObjectNames():
+        wksp = mtd[ws_name]
+        roi1.getMemorySize()
+
+    return 
+
+
 def get_run_start(workspace, time_unit):
     """ Get run start time from proton charge or sample log run_start
     :param workspace:
