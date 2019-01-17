@@ -27,6 +27,13 @@ VBIN OR VDRIVEBIN
  * Mytofbmax : User defined TOF max in binning parameter
  * BINW      : Binning parameter, i.e., log bin step
  * BANKS     : Number of banks in output GSAS file.  Allowed values are 3, 7 and 27.  Default is 3.
+   - Banks = 3:  unless the users have specific requirement,
+   	- all the sub-banks in each bank will be focused to the center of east bank;
+        - all the sub-banks belonged to west bank will be focused to the center of west bank;
+   - Banks = 7: unless the users have specific requirement.
+   	- all the sub-banks in each bank will be focused to the center of east bank;
+        - all the sub-banks belonged to west bank will be focused to the center of west bank;
+        - all the sub-banks of high angle bank will be focused to the center of high angle bank
  * GROUP     : User specified a special group file other than usual 3/7/27 banks. (It cannot be used with BANKS)
  * RUNV      : Run number for vanadium file (file in instrument directory). See [1] for detailed inforamtion.
  * IPARM     : User specified IPARM file.
@@ -167,5 +174,4 @@ They are too old.
  * VBIN,IPTS=14094,RUNS=96450,RUNV=95542
  * VBIN,ITPS=16062,RUNS=98237,TAG='V', OUTPUT='/tmp'
  * vbin, ipts=17414, choprun=109021, runs=1, rune=99 
-
 

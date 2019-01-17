@@ -85,8 +85,10 @@ class CalibrationManager(object):
         self._focus_instrument_dict['Azimuthal'][3] = [0., 0, 0.]
         self._focus_instrument_dict['SpectrumIDs'][3] = [1, 2, 3]
 
-        # TODO - ASAP - Find out the Polar and Azimuthal for 7 and 27 bank cases
         # 7 bank
+        # all the sub-banks in each bank will be focused to the center of east bank;
+        # all the sub-banks belonged to west bank will be focused to the center of west bank;
+        # unless the users have specific requirement.
         self._focus_instrument_dict['L2'][7] = [2.] * 7  # [2., 2., 2.]
         self._focus_instrument_dict['Polar'][7] = [-90.] * 3
         self._focus_instrument_dict['Polar'][7].extend([90.] * 3)
@@ -94,11 +96,19 @@ class CalibrationManager(object):
         self._focus_instrument_dict['Azimuthal'][7] = [0.] * 7
         self._focus_instrument_dict['SpectrumIDs'][7] = range(1, 8)
 
-        # 27 banks
+        # 27 banks: Note that
+        # all the sub-banks in each bank will be focused to the center of east bank;
+        # all the sub-banks belonged to west bank will be focused to the center of west bank;
+        # and all the sub-banks of high angle bank will be focused to the center of high angle bank
+        # unless the users have specific requirement.
         self._focus_instrument_dict['L2'][27] = [2.] * 27  # [2., 2., 2.]
         self._focus_instrument_dict['Polar'][27] = [None] * 27
-        self._focus_instrument_dict['Azimuthal'][27] = [None] * 27
+        self._focus_instrument_dict['Azimuthal'][27] = [0.] * 27
         self._focus_instrument_dict['SpectrumIDs'][27] = range(1, 28)
+        for ws_index in range(9):
+            self._focus_instrument_dict['Polar'][ws_index] = -90.
+            self._focus_instrument_dict['Polar'][ws_index + 9] = 90.
+            self._focus_instrument_dict['Polar'][ws_index + 18] = 155.
 
         return
 

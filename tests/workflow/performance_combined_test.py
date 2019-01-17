@@ -38,19 +38,75 @@ def test_vbin_chop_simple(tester):
     return
 
 
-def test_vbin_large_set():
-    # TODO - NIGHT - Implement
-    "Run: vbin,ipts=20280,runs=170461,binfolder='/tmp/'"
+def test_vbin_large_set(tester):
+    """
+    Test VBIN with a long run with large number of events
+    :return:
+    """
+    print ('[INFO] VBIN on run with large number of events')
+
+    # test directory
+    test_dir = '/tmp/vbin_large_data'
+    command_test_setup.set_test_dir(test_dir)
+
+    # run command
+    idl_command = "vbin,ipts=20280,runs=170461,binfolder=\'{}\'".format(test_dir)
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
+
+    return
 
 
-def test_chop_large_set():
-    # TODO - NIGHT - Implement
-    "Run: vbin,ipts=20280,runs=170461,binfolder='/tmp/'"
+def test_chop_large_set(tester):
+    """
+    Test CHOP with a long run with large number of events
+    :param tester:
+    :return:
+    """
+    print ('[INFO] CHOP on run with large number of events')
+
+    # test directory
+    test_dir_1 = '/tmp/chop_large_data_1'
+    test_dir_2 = '/tmp/chop_large_data_2'
+    command_test_setup.set_test_dir(test_dir)
+
+    # run command vbin
+    # TODO - DAYTIME - Find a different large run in another IPTS
+    idl_command = "vbin,ipts=20280,runs=170461,binfolder=\'{}\'".format(test_dir_1)
+    tester.run_command(idl_command)
+
+    # run command chop
+    idl_command = "chop,ipts=20280,runs=170461,dbin=300,binfolder=\'{}\'".format(test_dir_2)
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir_1)
+    tester.show_output_files(test_dir_2)
+
+    return
 
 
 def test_vbin_chop_larget_set(tester):
-    # TODO - NIGHT - Implement
-    return
+    """
+    Test VBIN and CHOP with a long run with large number of events
+    :param tester:
+    :return:
+    """
+    print ('[INFO] CHOP on run with large number of events')
+
+    # test directory
+    test_dir = '/tmp/combo_large_data'
+    command_test_setup.set_test_dir(test_dir)
+
+    # run command
+    idl_command = "chop,ipts=20280,runs=170461,dbin=300,binfolder=\'{}\'".format(test_dir)
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
+
 
 
 def test_main():

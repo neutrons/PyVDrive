@@ -632,15 +632,28 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
     return True, ''
 
 
-def get_ads_memory(unit):
+def get_ads_memory(unit='MB'):
+    """ calculate the memory of all the workspace in ADS.
+    Note that it is an estimate of how much memory used by PyVDrive.  In some case, it is different from
+    what system monitor gives
+    :param unit: unit of memory.  By default it is MB
+    :return: memory size (float) in Bytes, KB or MB depending on unit
     """
-    """
-    # TODO - NIGHT - Implement!
-    for ws_name in mtd.getObjectNames():
-        wksp = mtd[ws_name]
-        roi1.getMemorySize()
+    total_mem = 0
+    for ws_name in ADS.getObjectNames():
+        wksp = ADS[ws_name]
+        total_mem += wksp.getMemorySize()
 
-    return 
+    datatypeutility.check_string_variable('Memory unit', unit, ['MB', 'KB', 'B'])
+
+    if unit == 'MB':
+        total_mem = total_mem / 1024.0**2
+    elif unit == 'KB':
+        total_mem = total_mem / 1024
+    else:
+        total_mem = float(total_mem)
+
+    return total_mem
 
 
 def get_run_start(workspace, time_unit):

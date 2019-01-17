@@ -54,6 +54,9 @@ class SliceFocusVulcan(object):
         # multiple threading variables
         self._number_threads = num_threads
 
+        # dictionary for gsas content (multiple threading)
+        self._gsas_buffer_dict = dict()
+
         return
 
     def __str__(self):
@@ -365,12 +368,34 @@ class SliceFocusVulcan(object):
         write to all log workspaces
         :return:
         """
-
-        print ('[DB...BAT...CRITICAL: Tending to write logs for {}'.format(workspace_name_list))
-
         log_writer = reduce_adv_chop.WriteSlicedLogs(chopped_data_dir=self._output_dir, run_number=self._run_number)
 
         log_writer.generate_sliced_logs(workspace_name_list, log_type)
+
+        return
+
+    def write_gsas_files(self, workspace_name_list, ipts_number, parm_file_name, ref_tof_sets, gsas_writer,
+                      run_start_date):
+        """
+
+        :param workspace_name_list:
+        :param ipts_number:
+        :param parm_file_name:
+        :param ref_tof_sets:
+        :param gsas_writer:
+        :param run_start_date:
+        :param gsas_file_index_start:
+        :return:
+        """
+        #
+        for index_ws, ws_name in enumerate(workspace_name_list):
+            if ws_name == '':
+                continue
+            text_bufer = gsas_writer.save(diff_ws_name=ws_name, run_date_time=run_start_date, gsas_file_name=None,
+                                          ipts_number=ipts_number,
+                                          gsas_param_file_name=parm_file_name, align_vdrive_bin=True,
+                                          vanadium_gsas_file=None)
+            self._gsas_buffer_dict[ws_name] = text_bufer
 
         return
 
@@ -383,14 +408,51 @@ class SliceFocusVulcan(object):
         :param parm_file_name:
         :return:
         """
-        # TODO - NIGHT ASAP - Parallelize this section!
-        for index_ws, ws_name in enumerate(workspace_name_list):
-            if ws_name == '':
-                continue
+        # define the holder of the text buffers
+        num_workspaces = len(workspace_name_list)
+        self._gsas_buffer_dict = dict()
+
+        # thread management
+        thread_pool = [None] * self._number_threads
+
+        # define workspaces assigned to each thread
+        number_ws_per_thread = num_workspaces / self._number_threads
+        extra = num_workspaces % self._number_threads
+
+        end_sliced_ws_index = 0
+        for thread_id in range(self._number_threads):
+            start_sliced_ws_index = end_sliced_ws_index
+            end_sliced_ws_index = min(start_sliced_ws_index + number_ws_per_thread + int(thread_id < extra),
+                                      num_workspaces)
+
+            workspace_names_i = workspace_name_list[start_sliced_ws_index:end_sliced_ws_index]
+            thread_pool[thread_id] = threading.Thread(target=self.write_gsas_files,
+                                                      args=(workspace_names_i, ipts_number, parm_file_name,
+                                                            ref_tof_sets, gsas_writer, run_start_date,))
+            thread_pool[thread_id].start()
+            print ('[DB...Write GSAS] thread {0}: [{1}: {2}) ---> {3} workspaces'.
+                   format(thread_id, start_sliced_ws_index,  end_sliced_ws_index,
+                          end_sliced_ws_index-start_sliced_ws_index))
+        # END-FOR
+
+        # join the threads after the diffraction focus is finished
+        for thread_id in range(self._number_threads):
+            thread_pool[thread_id].join()
+
+        # kill any if still alive
+        for thread_id in range(self._number_threads):
+            thread_i = thread_pool[thread_id]
+            if thread_i is not None and thread_i.isAlive():
+                thread_i._Thread_stop()
+
+        # Now output GSAS workspace one to one
+        for index_ws in range(num_workspaces):
+            ws_name_i = workspace_name_list[index_ws]
             gsas_file_name = os.path.join(self._output_dir, '{0}.gda'.format(index_ws + gsas_file_index_start))
-            gsas_writer.save(diff_ws_name=ws_name, run_date_time=run_start_date, gsas_file_name=gsas_file_name,
-                             ipts_number=ipts_number,
-                             gsas_param_file_name=parm_file_name, align_vdrive_bin=True, vanadium_gsas_file=None)
+            gsas_content = self._gsas_buffer_dict[ws_name_i]
+            gsas_file = open(gsas_file_name, 'w')
+            gsas_file.write(gsas_content)
+            gsas_file.close()
 
         return
 
