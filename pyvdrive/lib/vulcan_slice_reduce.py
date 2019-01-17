@@ -374,8 +374,9 @@ class SliceFocusVulcan(object):
 
         return
 
+    # TODO - NIGHT - Clean!
     def write_gsas_files(self, workspace_name_list, ipts_number, parm_file_name, ref_tof_sets, gsas_writer,
-                      run_start_date):
+                      run_start_date, gsas_file_name_list):
         """
 
         :param workspace_name_list:
@@ -387,14 +388,16 @@ class SliceFocusVulcan(object):
         :param gsas_file_index_start:
         :return:
         """
-        #
+        # TODO - NIGHT - Shall accept vanadium GSAS file!
         for index_ws, ws_name in enumerate(workspace_name_list):
             if ws_name == '':
                 continue
-            text_bufer = gsas_writer.save(diff_ws_name=ws_name, run_date_time=run_start_date, gsas_file_name=None,
+            text_bufer = gsas_writer.save(diff_ws_name=ws_name, run_date_time=run_start_date,
+                                          gsas_file_name=gsas_file_name_list[index_ws],
                                           ipts_number=ipts_number,
                                           gsas_param_file_name=parm_file_name, align_vdrive_bin=True,
-                                          vanadium_gsas_file=None)
+                                          vanadium_gsas_file=None, write_to_file=False)
+            print ('[DB...BAT] GSAS buffer written for {}'.format(ws_name))
             self._gsas_buffer_dict[ws_name] = text_bufer
 
         return
@@ -425,10 +428,18 @@ class SliceFocusVulcan(object):
             end_sliced_ws_index = min(start_sliced_ws_index + number_ws_per_thread + int(thread_id < extra),
                                       num_workspaces)
 
+            # workspace names and gsas file names
             workspace_names_i = workspace_name_list[start_sliced_ws_index:end_sliced_ws_index]
+            gsas_file_name_list = list()
+            for index_ws in range(start_sliced_ws_index, end_sliced_ws_index):
+                gsas_file_name = '{0}.gda'.format(index_ws + gsas_file_index_start)
+                gsas_file_name_list.append(gsas_file_name)
+            assert len(gsas_file_name_list) == len(workspace_names_i)
+            
             thread_pool[thread_id] = threading.Thread(target=self.write_gsas_files,
                                                       args=(workspace_names_i, ipts_number, parm_file_name,
-                                                            ref_tof_sets, gsas_writer, run_start_date,))
+                                                            ref_tof_sets, gsas_writer, run_start_date,
+                                                            gsas_file_name_list,))
             thread_pool[thread_id].start()
             print ('[DB...Write GSAS] thread {0}: [{1}: {2}) ---> {3} workspaces'.
                    format(thread_id, start_sliced_ws_index,  end_sliced_ws_index,
@@ -448,7 +459,10 @@ class SliceFocusVulcan(object):
         # Now output GSAS workspace one to one
         for index_ws in range(num_workspaces):
             ws_name_i = workspace_name_list[index_ws]
+            if ws_name_i == '':
+                continue
             gsas_file_name = os.path.join(self._output_dir, '{0}.gda'.format(index_ws + gsas_file_index_start))
+            print ('[DB...BAT]: {}'.format(self._gsas_buffer_dict.keys()))
             gsas_content = self._gsas_buffer_dict[ws_name_i]
             gsas_file = open(gsas_file_name, 'w')
             gsas_file.write(gsas_content)

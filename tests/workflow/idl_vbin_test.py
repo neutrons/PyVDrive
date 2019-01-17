@@ -289,7 +289,7 @@ def test_main():
     test_ned_multiple_runs(command_tester)
 
     ## test with various grouping
-    # TODO BAD NOW test_ned_multi_banks(command_tester)
+    test_ned_multi_banks(command_tester)
 
     ## test single mask
     test_ned_single_mask(command_tester)

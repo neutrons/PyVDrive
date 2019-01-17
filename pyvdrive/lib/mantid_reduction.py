@@ -526,13 +526,14 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
         try:
             # TODO - NIGHT - In case the number of histograms of output workspace does not match (masked a lot) ...
             # TODO - FIXME - 27 bank Polar and Azimuthal are all None
-            # print (reduction_params_dict['EditInstrumentGeometry'].keys())
-            # print (output_ws_name)
-            # print (mantid_helper.VULCAN_L1)
-            # print (reduction_params_dict['EditInstrumentGeometry']['SpectrumIDs'])
-            # print (reduction_params_dict['EditInstrumentGeometry']['L2'])
-            # print (reduction_params_dict['EditInstrumentGeometry']['Polar'])
-            # print (reduction_params_dict['EditInstrumentGeometry']['Azimuthal'])
+            print (reduction_params_dict['EditInstrumentGeometry'].keys())
+            print (output_ws_name)
+            print (mantid_helper.VULCAN_L1)
+            print (reduction_params_dict['EditInstrumentGeometry']['SpectrumIDs'])
+            print (reduction_params_dict['EditInstrumentGeometry']['L2'])
+            print (reduction_params_dict['EditInstrumentGeometry']['Polar'])
+            print (reduction_params_dict['EditInstrumentGeometry']['Azimuthal'])
+
             mantidapi.EditInstrumentGeometry(Workspace=output_ws_name,
                                              PrimaryFlightPath=mantid_helper.VULCAN_L1,
                                              SpectrumIDs=reduction_params_dict['EditInstrumentGeometry']['SpectrumIDs'],

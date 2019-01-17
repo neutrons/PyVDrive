@@ -59,7 +59,7 @@ def test_vbin_large_set(tester):
     return
 
 
-def test_chop_large_set(tester):
+def test_vbin_chop_large_set(tester):
     """
     Test CHOP with a long run with large number of events
     :param tester:
@@ -68,13 +68,13 @@ def test_chop_large_set(tester):
     print ('[INFO] CHOP on run with large number of events')
 
     # test directory
-    test_dir_1 = '/tmp/chop_large_data_1'
-    test_dir_2 = '/tmp/chop_large_data_2'
-    command_test_setup.set_test_dir(test_dir)
+    test_dir_1 = '/tmp/combo_large_data_1'
+    test_dir_2 = '/tmp/combo_large_data_2'
+    command_test_setup.set_test_dir(test_dir_1)
+    command_test_setup.set_test_dir(test_dir_2)
 
     # run command vbin
-    # TODO - DAYTIME - Find a different large run in another IPTS
-    idl_command = "vbin,ipts=20280,runs=170461,binfolder=\'{}\'".format(test_dir_1)
+    idl_command = "vbin,ipts=19589,runs=167677,binfolder=\'{}\'".format(test_dir_1)
     tester.run_command(idl_command)
 
     # run command chop
@@ -88,7 +88,7 @@ def test_chop_large_set(tester):
     return
 
 
-def test_vbin_chop_larget_set(tester):
+def test_chop_large_set(tester):
     """
     Test VBIN and CHOP with a long run with large number of events
     :param tester:
@@ -97,7 +97,7 @@ def test_vbin_chop_larget_set(tester):
     print ('[INFO] CHOP on run with large number of events')
 
     # test directory
-    test_dir = '/tmp/combo_large_data'
+    test_dir = '/tmp/chop_large_data'
     command_test_setup.set_test_dir(test_dir)
 
     # run command
@@ -117,7 +117,16 @@ def test_main():
 
     test_vbin_chop_simple(command_tester)
 
+    # large data set for chopping
+    # test_chop_large_set(command_tester)
+
+    # large data set combo
+    test_vbin_chop_large_set(command_tester)
+
     return command_tester.main_window
+
+
+# FIXME TODO - NIGHT - Consider (1) delete original event workspace (2) compress events (3) any other good idea?
 
 
 def main(argv):

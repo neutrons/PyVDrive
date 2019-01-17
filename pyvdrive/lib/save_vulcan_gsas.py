@@ -384,7 +384,7 @@ class SaveVulcanGSS(object):
         return bank_buffer
 
     def save(self, diff_ws_name, run_date_time, gsas_file_name, ipts_number, gsas_param_file_name,
-             align_vdrive_bin, vanadium_gsas_file):
+             align_vdrive_bin, vanadium_gsas_file, write_to_file=True):
         """
         Save a workspace to a GSAS file or a string
         :param diff_ws_name: diffraction data workspace
@@ -471,12 +471,15 @@ class SaveVulcanGSS(object):
         for bank_id in sorted(gsas_buffer_dict.keys()):
             gsas_buffer += gsas_buffer_dict[bank_id]
 
-        if gsas_file_name:
+        if write_to_file:
             datatypeutility.check_file_name(gsas_file_name, check_exist=False,
                                             check_writable=True, is_dir=False, note='Output GSAS file')
             g_file = open(gsas_file_name, 'w')
             g_file.write(gsas_buffer)
             g_file.close()
+        else:
+            print ('[DB...BAT] No file written for {}'.format(diff_ws_name))
+            pass
 
         return gsas_buffer
 

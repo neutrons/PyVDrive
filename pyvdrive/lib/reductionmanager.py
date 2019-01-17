@@ -106,9 +106,9 @@ class CalibrationManager(object):
         self._focus_instrument_dict['Azimuthal'][27] = [0.] * 27
         self._focus_instrument_dict['SpectrumIDs'][27] = range(1, 28)
         for ws_index in range(9):
-            self._focus_instrument_dict['Polar'][ws_index] = -90.
-            self._focus_instrument_dict['Polar'][ws_index + 9] = 90.
-            self._focus_instrument_dict['Polar'][ws_index + 18] = 155.
+            self._focus_instrument_dict['Polar'][27][ws_index] = -90.
+            self._focus_instrument_dict['Polar'][27][ws_index + 9] = 90.
+            self._focus_instrument_dict['Polar'][27][ws_index + 18] = 155.
 
         return
 
