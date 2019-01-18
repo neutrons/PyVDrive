@@ -1043,11 +1043,12 @@ class ReductionManager(object):
         #         Multiply(LHSWorkspace=ws_name, RHSWorkspace=self._det_eff_ws_name, OutputWorkspace=ws_name)
         raise NotImplementedError('ASAP')
 
+    # TODO - NIGHT - Code quality
     def chop_vulcan_run(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
                         output_directory, reduce_data_flag, save_chopped_nexus, number_banks,
-                        tof_correction, van_run_number, user_binning_parameter,
-                        roi_list, mask_list, no_cal_mask, gsas_parm_name='vulcan.prm', bin_overlap_mode=False,
-                        gda_file_start=1):
+                        tof_correction, user_binning_parameter,
+                        roi_list, mask_list, no_cal_mask, van_gda_name, gsas_parm_name='vulcan.prm',
+                        bin_overlap_mode=False, gda_file_start=1):
         """
         Latest version: version 3
         :param ipts_number:
@@ -1061,7 +1062,7 @@ class ReductionManager(object):
         :param save_chopped_nexus:
         :param number_banks:
         :param tof_correction:
-        :param van_run_number: None (for no-correction) or an integer (vanadium run number)
+        :param van_gda_name: None (for no-correction) or an integer (vanadium run number)
         :param user_binning_parameter:
         :param roi_list:
         :param mask_list:
@@ -1155,7 +1156,7 @@ class ReductionManager(object):
             # END-IF-ELSE
             # virtual_geometry_dict = self._calibrationFileManager.get_focused_instrument_parameters(num_banks)
 
-            gsas_info = {'IPTS': ipts_number, 'parm file': gsas_parm_name}
+            gsas_info = {'IPTS': ipts_number, 'parm file': gsas_parm_name, 'vanadium': van_gda_name}
             status, message = chop_reducer.execute_chop_reduction_v2(event_ws_name=event_ws_name,
                                                                      calib_ws_name=calib_ws_name,
                                                                      group_ws_name=group_ws_name,

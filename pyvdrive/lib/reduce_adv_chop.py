@@ -621,7 +621,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         :param num_reduced_banks:
         :param calib_ws_name:
         :param group_ws_name:
-        :param gsas_info_dict:
+        :param gsas_info_dict: keys: 'IPTS', 'parm file', 'vanadium'
         :param clear_workspaces: flag to delete output workspaces as they have been written to GSAS
         :param gsas_writer: an instance to the object to write GSAS file
         :return:

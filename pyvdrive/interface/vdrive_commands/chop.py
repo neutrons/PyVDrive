@@ -79,11 +79,12 @@ class VdriveChop(VDriveCommand):
             self._runNumberList = run_number_list[:]
 
         # define signal
-        # TODO - NIGHT - Do this one step by one step:
+        # TODO - NIGHT - Do this one step by one step: Long exec separate thread
         self.reduceSignal.connect(self._main_window.vdrive_command_return)
 
         return
 
+    # TODO - NIGHT - Code quality
     def chop_data_by_log(self, run_number, start_time, stop_time, log_name, min_log_value, max_log_value,
                          log_step_value, reduce_flag, num_banks, exp_log_type, binning_parameters,
                          mask_list, roi_list, output_dir, dry_run, vanadium, iparm_file_name, save_to_nexus):
@@ -270,7 +271,7 @@ class VdriveChop(VDriveCommand):
         # get chopper
         chopper = self._controller.project.get_chopper(run_number)
         status, slice_key_list = chopper.set_overlap_time_slicer(start_time, stop_time, time_interval,
-                                                            overlap_time_interval)
+                                                                 overlap_time_interval)
 
         if not status:
             error_msg = slice_key_list

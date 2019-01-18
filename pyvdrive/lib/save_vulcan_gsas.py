@@ -383,6 +383,7 @@ class SaveVulcanGSS(object):
 
         return bank_buffer
 
+    # TODO FIXME - NIGHT - vanadium gsas file shall be imported in other method for parallel calls to save()
     def save(self, diff_ws_name, run_date_time, gsas_file_name, ipts_number, gsas_param_file_name,
              align_vdrive_bin, vanadium_gsas_file, write_to_file=True):
         """
@@ -548,6 +549,7 @@ def load_vulcan_gsas(gsas_name, gsas_ws_name):
     # for the rest of the spectra
     for iws in range(1, temp_gss_ws.getNumberHistograms()):
         # extract, convert to point data, conjoin and clean
+        # TODO FIXME - NIGHT - temp workspace shall be more unique!
         temp_out_name_i = 'temp_i_x'
         api.ExtractSpectra(temp_out_name, WorkspaceIndexList=[iws], OutputWorkspace=temp_out_name_i)
         api.ConvertToPointData(InputWorkspace=temp_out_name_i, OutputWorkspace=temp_out_name_i)

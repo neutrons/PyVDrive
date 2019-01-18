@@ -216,8 +216,7 @@ class SliceFocusVulcan(object):
         :param info_ws_name:
         :param output_ws_base:
         :param binning_parameters: None for IDL binning; otherwise, use defined binning
-
-        :param gsas_info_dict: required for writing GSAS files keys (IPTS, 'parm file' = 'vulcan.prm')
+        :param gsas_info_dict: required for writing GSAS files keys (IPTS, 'parm file' = 'vulcan.prm', 'vanadium')
         :return: tuple: [1] slicing information, [2] output workspace names
         """
         # check inputs
@@ -327,6 +326,7 @@ class SliceFocusVulcan(object):
         # write all the processed workspaces to GSAS:  IPTS number and parm_file_name shall be passed
         run_date_time = vulcan_util.get_run_date(event_ws_name, '')
         self.write_to_gsas(output_names, ipts_number=gsas_info_dict['IPTS'], parm_file_name=gsas_info_dict['parm file'],
+                           vanadium_gsas_name=gsas_info_dict['vanadium'],
                            ref_tof_sets=binning_parameters, gsas_writer=gsas_writer, run_start_date=run_date_time,
                            gsas_file_index_start=gsas_file_index_start)
 
@@ -375,7 +375,7 @@ class SliceFocusVulcan(object):
         return
 
     # TODO - NIGHT - Clean!
-    def write_gsas_files(self, workspace_name_list, ipts_number, parm_file_name, ref_tof_sets, gsas_writer,
+    def write_gsas_files(self, workspace_name_list, ipts_number, van_gsas_name, parm_file_name, ref_tof_sets, gsas_writer,
                       run_start_date, gsas_file_name_list):
         """
 
@@ -396,13 +396,15 @@ class SliceFocusVulcan(object):
                                           gsas_file_name=gsas_file_name_list[index_ws],
                                           ipts_number=ipts_number,
                                           gsas_param_file_name=parm_file_name, align_vdrive_bin=True,
-                                          vanadium_gsas_file=None, write_to_file=False)
+                                          vanadium_gsas_file=van_gsas_name, write_to_file=False)
             print ('[DB...BAT] GSAS buffer written for {}'.format(ws_name))
             self._gsas_buffer_dict[ws_name] = text_bufer
 
         return
 
-    def write_to_gsas(self, workspace_name_list, ipts_number, parm_file_name, ref_tof_sets, gsas_writer,
+    # TODO - NIGHT - Code quality
+    def write_to_gsas(self, workspace_name_list, ipts_number, parm_file_name, vanadium_gsas_name,
+                      ref_tof_sets, gsas_writer,
                       run_start_date, gsas_file_index_start=1):
         """
         write to GSAS
@@ -437,7 +439,8 @@ class SliceFocusVulcan(object):
             assert len(gsas_file_name_list) == len(workspace_names_i)
             
             thread_pool[thread_id] = threading.Thread(target=self.write_gsas_files,
-                                                      args=(workspace_names_i, ipts_number, parm_file_name,
+                                                      args=(workspace_names_i, ipts_number, vanadium_gsas_name,
+                                                            parm_file_name,
                                                             ref_tof_sets, gsas_writer, run_start_date,
                                                             gsas_file_name_list,))
             thread_pool[thread_id].start()

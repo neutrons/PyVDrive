@@ -373,8 +373,6 @@ class ProjectManager(object):
         else:
             # if nexus file is given but not run number, then using a pseudo run number 0
             run_number = 0
-        if vanadium is not None:
-            datatypeutility.check_int_variable('Vanadium run number', vanadium, (1, None))
 
         # get chopping helper
         try:
@@ -401,6 +399,15 @@ class ProjectManager(object):
             data_file = nexus_file_name
             ipts_number = 0
 
+        # vanadium and iparam
+        if vanadium is not None:
+            datatypeutility.check_int_variable('Vanadium run number', vanadium, (1, None))
+            van_gsas_name, iparam_file_name = \
+                self._parent.archive_manager.locate_process_vanadium(vanadium)
+        else:
+            van_gsas_name = None
+            iparam_file_name = gsas_iparm_file
+
         # chop and (optionally) diffraction focus the binning data
         # TODO - NIGHT - Need to pass no_calibration_mask
         status, error_message = self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
@@ -414,11 +421,11 @@ class ProjectManager(object):
                                                                        save_chopped_nexus=save_chopped_nexus,
                                                                        number_banks=number_banks,
                                                                        tof_correction=tof_correction,
-                                                                       van_run_number=vanadium,
                                                                        user_binning_parameter=user_bin_parameter,
                                                                        roi_list=roi_list,
                                                                        mask_list=mask_list,
-                                                                       gsas_parm_name=gsas_iparm_file,
+                                                                       van_gda_name=van_gsas_name,
+                                                                       gsas_parm_name=iparam_file_name,
                                                                        no_cal_mask=False,
                                                                        bin_overlap_mode=overlap_mode,
                                                                        gda_file_start=gda_start)
