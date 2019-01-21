@@ -1411,6 +1411,25 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     return out_ws_name
 
 
+def load_grouping_file(grouping_file_name, grouping_ws_name):
+    """
+    Load a detector grouping file (saved by SaveDetectorsGroupingFile) to a GroupingWorkspace
+    :param grouping_file_name:
+    :param grouping_ws_name:
+    :return:
+    """
+    # check input
+    datatypeutility.check_file_name(grouping_file_name, check_exist=True,
+                                    check_writable=False, is_dir=False, note='Detector grouping file')
+    datatypeutility.check_string_variable('Nmae of GroupingWorkspace to load {} to'.format(grouping_file_name),
+                                          grouping_ws_name)
+
+    mantid.simpleapi.LoadDetectorsGroupingFile(InputFile=grouping_file_name,
+                                               OutputWorkspace=grouping_ws_name)
+
+    return
+
+
 def load_calibration_file(calib_file_name, output_name, ref_ws_name):
     """
     load calibration file
@@ -1467,17 +1486,24 @@ def load_mask_xml(data_ws_name, mask_file_name, mask_ws_name=None):
     return mask_ws_name
 
 
-def load_nexus(data_file_name, output_ws_name, meta_data_only):
+def load_nexus(data_file_name, output_ws_name, meta_data_only, max_time=None):
     """ Load NeXus file
     :param data_file_name:
     :param output_ws_name:
     :param meta_data_only:
+    :param max_time: relative max time (stop time) to load from Event Nexus file in unit of seconds
     :return: 2-tuple
     """
     try:
-        out_ws = mantidapi.Load(Filename=data_file_name,
-                                OutputWorkspace=output_ws_name,
-                                MetaDataOnly=meta_data_only)
+        if max_time is None:
+            out_ws = mantidapi.Load(Filename=data_file_name,
+                                    OutputWorkspace=output_ws_name,
+                                    MetaDataOnly=meta_data_only)
+        else:
+            out_ws = mantidapi.LoadEventNexus(Filename=data_file_name,
+                                              OutputWorkspace=output_ws_name,
+                                              FilterByTimeStop=max_time)
+
     except RuntimeError as e:
         return False, 'Unable to load Nexus file %s due to %s' % (data_file_name, str(e))
 

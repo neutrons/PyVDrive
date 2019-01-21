@@ -1,13 +1,17 @@
 # This is the second round of cross-correlation in order to
 # cross-correlate/align 3 already-focused banks (west, east and high angle) to the same peak positions
 import sys
-import lib_cross_correlation as lib
+import os
+import pyvdrive.lib.lib_cross_correlation as lib
+from pyvdrive.lib import mantid_helper
 
 
 # (hard coded) diamond peak position in d-Spacing
 Diamond_Peaks_1 = 1.2614
 peakpos2 = 1.2614
 peakpos3 = 1.07577
+
+
 
 
 def cross_instrument_calibration():
@@ -66,13 +70,19 @@ def parse_inputs(arg_list):
         items = arg_i.split('=')
         arg_name = items[0]
         if arg_name == '--focus':
+            arg_dict['num_banks'] = int(items[1])
+        elif arg_name == '--grouping':
+            arg_dict['grouping'] = str(items[1])
+        elif arg_name == '--input':
+            arg_dict['input'] = str(items[1])
+        elif arg_name == '--nexus':
             arg_dict['nexus'] = str(items[1])
         elif arg_name == '--output':
             arg_dict['output'] = str(items[1])
-        elif arg_name == '--input':
-            arg_dict['input'] = str(items[1])
         elif arg_name == '--ref':
             arg_dict['ref'] = str(items[1])
+        elif arg_name == '--test':
+            arg_dict['testmode'] = int(items[1]) == 1
         else:
             print ('Argument {} is not supported'.format(arg_name))
     # END-FOR
@@ -86,21 +96,91 @@ def main(argv):
     :param argv:
     :return:
     """
-    if len(argv) < 2:
+    def prompt_message(input_arg):
         print ('Cross correlate upon calibrated and focus diamond data.')
-        print ('> {} --focus=xxx.nxs --input=zz.h --output=yyy --ref=zzz.nxs'.format(argv[0]))
-        print ('  --focus: focused 3 bank diamond data in NeXus file format')
+        print ('> {} --nexus=xxx.nxs --input=zz.h5 --output=yyy --ref=zzz.nxs'.format(input_arg[0]))
+        print ('> Or')
+        print ('> {} --nexus=xxx.nxs --focus=3 --grouping=zz.nxs --output=yyy --ref=zzz.nxs'.format(input_arg[0]))
+        print ('  --nexus: event nexus file name for diamond')
+        print ('  --focus: integer for how many banks to focus to')
+        print ('  --grouping: name of file saved from detectors grouping workspace.  --focus and --group are a pair')
+        print ('  --input: an existing calibration file serving as the start.  --focus can be ignored')
         print ('  --output: output diff-cal file name in .h5 format')
         print ('  --ref: reference workspace with set of spectra')
+        print ('  --test: only load the first 300 seconds for testing purpose')
+        print ('\n{} will generate \n\t1. calibration files with 1-fit\n\t2. calibration files with 2-fit\n'
+               '\t3. an ascii file with number of events per spectrum for further analysis')
+        print ('\nLatest hint:\n')
+        print ('--nexus=??? --focus=3 --grouping=/SNS/VULCAN/shared/CALIBRATION/vulcan_prex_3bank_group.xml')
+        return
+    # END
+
+    if len(argv) < 2:
+        prompt_message(argv)
         sys.exit(0)
 
     input_args = parse_inputs(argv[1:])
 
     # load data
-    lib.load_processed_nexus(input_args['nexus'], 'vulcan_diamond_3bank')
+    diamond_ws_name = os.path.basename(input_args['nexus']).split('.')[0] + '_diamond'
+    if input_args['testmode']:
+        mantid_helper.load_nexus(data_file_name=input_args['nexus'],
+                                 output_ws_name=diamond_ws_name,
+                                 meta_data_only=False,
+                                 max_time=300)
+        print ('[WARNING] Testing mode only have first 300 seconds data loaded!')
+    else:
+        mantid_helper.load_nexus(data_file_name=input_args['nexus'],
+                                 output_ws_name=diamond_ws_name,
+                                 meta_data_only=False)
+
+    # load grouping workspace
+    grouping_file = input_args['grouping']
+    group_ws_name = os.path.basename(grouping_file).split('.')[0]
+    mantid_helper.load_grouping_file(grouping_file_name=grouping_file,
+                                     grouping_ws_name=group_ws_name)
+
+    # do cross correlation: 1 fit
+    if input_args['focus'] == 3:
+        lib.cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name, fit_time=1, flag='1fit')
+
+        # check the difference between DIFCs
+        lib.check_correct_difcs_3banks(ws_name='vulcan_diamond')
+
+        # export h5 (calibration, grouping and masking)
+        lib.export_diff_cal_h5(ref_ws_name='vulcan_diamond', offset_ws='vulcan_diamond_1fit_offset,',
+                               mask_ws='vulcan_diamond_2fit_mask',
+                               num_groups=3)
+
+        # export DIFC table
+        lib.export_difc(offset_ws=xx, file_name=input_arg_dict['difc'])
+
+    # do cross correlation: 2 fit
+    if input_args['focus'] == 3:
+        cal_ws_dict, mask_ws_dict = lib.cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name,
+                                                                           fit_time=2, flag='2fit')
+
+        # do cross correlation: 1 fit
+        lib.check_correct_difcs_3banks(ws_name='vulcan_diamond')
+
+        # export
+        lib.export_diff_cal_h5(ref_ws_name='vulcan_diamond', offset_ws='vulcan_diamond_2fit_offset,',
+                               mask_ws='vulcan_diamond_2fit_mask',
+                               num_groups=3)
+        # export DIFC table
+        lib.export_difc(offset_ws=xx, file_name=input_arg_dict['difc'])
+
+
+    # do cross correlation for the first time
+    first_time_fit = os.path.basename(input_args['nexus']).split('.')[0].replace('VULCAN_', '') + '_fit1'
+    lib.cross_correlate_vulcan_data_3banks(diamond_ws_name=diamond_ws_name,
+                                           group_ws_name=group_ws_name,
+                                           fit_time=1,
+                                           flag=first_time_fit)
 
     # cross correlation on the aligned and reduced data
-    shift_dict = cross_instrument_calibration()
+    # shift_dict = cross_instrument_calibration()
+    shift_dict = lib.instrument_wide_cross_correlation()
 
     # load the calibration file to be modified from
     workspace_dict = lib.load_calibration_file(input_args['input'], input_args['ref'])
@@ -109,7 +189,10 @@ def main(argv):
     workspace_dict = apply_second_cc(workspace_dict, shift_dict)
 
     # save
-    lib.save_calibration(workspace_dict)
+    lib.combine_save_calibration(workspace_dict)
+
+    if input_args['testmode']:
+        print ('[WARNING] Testing mode only have first 300 seconds data loaded!')
 
     return
 

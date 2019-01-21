@@ -84,6 +84,9 @@ def main(argv):
     :param argv:
     :return:
     """
+    # TODO - NIGHT - Merge to vulcan_cal_instrument_calibration
+    raise NotImplementedError('This will be moved to ')
+
     if len(argv) == 1:
         print ('Help: {} --help'.format(argv[0]))
         sys.exit(0)

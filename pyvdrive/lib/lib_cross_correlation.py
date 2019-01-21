@@ -6,12 +6,12 @@ from mantid.simpleapi import CrossCorrelate, GetDetectorOffsets, SaveCalFile, Co
 from mantid.simpleapi import RenameWorkspace, Plus, CreateWorkspace, Load, CreateGroupingWorkspace
 from mantid.simpleapi import CloneWorkspace, DeleteWorkspace, LoadDiffCal
 from mantid.simpleapi import Load, LoadDiffCal, AlignDetectors, DiffractionFocussing, Rebin, EditInstrumentGeometry
-from mantid.simpleapi import ConvertToMatrixWorkspace, CrossCorrelate, GetDetectorOffsets
+from mantid.simpleapi import ConvertToMatrixWorkspace, CrossCorrelate, GetDetectorOffsets, GeneratePythonScript
 import bisect
 import numpy
 import datetime
-# import mantid
-# print mantid
+import datatypeutility
+import mantid_helper
 
 
 def analyze_outputs(cross_correlation_ws_dict, getdetoffset_result_ws_dict):
@@ -67,21 +67,22 @@ def calculate_difc(ws, ws_index):
     return difc
 
 
-def check_correct_difcs(ws_name, cal_table_name='vulcan_diamond_2fit_cal'):
+def check_correct_difcs_3banks(ws_name, cal_table_name):
     """
     check and correct DIFCs if necessary: it is for 3 banks
     :param ws_name:
+    :param cal_table_name: name of Calibration workspace (a TableWorkspace)
     :return:
     """
     # west bank
-    ws = mtd[ws_name]   # ['vulcan_diamond']
+    diamond_event_ws = mtd[ws_name]   # ['vulcan_diamond']
     cal_table_ws = mtd[cal_table_name]
     difc_col_index = 1
     # west_spec_vec = numpy.arange(0, 3234)
     west_idf_vec = numpy.ndarray(shape=(3234,), dtype='float')
     west_cal_vec = numpy.ndarray(shape=(3234,), dtype='float')
     for irow in range(0, 3234):
-        west_idf_vec[irow] = calculate_difc(ws, irow)
+        west_idf_vec[irow] = calculate_difc(diamond_event_ws, irow)
         west_cal_vec[irow] = cal_table_ws.cell(irow, difc_col_index)
     # CreateWorkspace(DataX=west_spec_vec, DataY=west_difc_vec, NSpec=1, OutputWorkspace='west_idf_difc')
 
@@ -90,24 +91,23 @@ def check_correct_difcs(ws_name, cal_table_name='vulcan_diamond_2fit_cal'):
     east_idf_vec = numpy.ndarray(shape=(3234,), dtype='float')
     east_cal_vec = numpy.ndarray(shape=(3234,), dtype='float')
     for irow in range(3234, 6468):
-        east_idf_vec[irow - 3234] = calculate_difc(ws, irow)
+        east_idf_vec[irow - 3234] = calculate_difc(diamond_event_ws, irow)
         east_cal_vec[irow - 3234] = cal_table_ws.cell(irow, difc_col_index)
-    # CreateWorkspace(DataX=east_spec_vec, DataY=east_difc_vec, NSpec=1, OutputWorkspace='east_idf_difc')
 
     # high angle bank
     # highangle_spec_vec = numpy.arange(6468, 24900)
     highangle_idf_vec = numpy.ndarray(shape=(24900 - 6468,), dtype='float')
     highangle_cal_vec = numpy.ndarray(shape=(24900 - 6468,), dtype='float')
     for irow in range(6468, 24900):
-        highangle_idf_vec[irow - 6468] = calculate_difc(ws, irow)
+        highangle_idf_vec[irow - 6468] = calculate_difc(diamond_event_ws, irow)
         highangle_cal_vec[irow - 6468] = cal_table_ws.cell(irow, difc_col_index)
 
     mask_ws = mtd['vulcan_diamond_2fit_mask']
 
-    # do correction: west
+    # correct the unphysical (bad) calibrated DIFC to default DIF: west, east and high angle
     correct_difc_to_default(west_idf_vec, west_cal_vec, cal_table_ws, 0, 20, 1, mask_ws)
     correct_difc_to_default(east_idf_vec, east_cal_vec, cal_table_ws, 3234, 20, 1, mask_ws)
-    correct_difc_to_default(west_idf_vec, west_cal_vec, cal_table_ws, 6468, 20, 1, mask_ws)
+    correct_difc_to_default(highangle_idf_vec, highangle_idf_vec, cal_table_ws, 6468, 20, 1, mask_ws)
 
     return
 
@@ -177,10 +177,25 @@ def calculate_model(data_ws_name, ws_index, fit_param_table_name):
     return
 
 
+def find_reference_spectrum(diamond_event_ws):
+    # find reference workspace (i.e., detector)
+
+    # Find good peak for reference: strongest???
+    ymax = 0
+    for s in range(0, diamond_event_ws.getNumberHistograms()):
+        y_s = diamond_event_ws.readY(s)
+        midBin = int(diamond_event_ws.blocksize() / 2)
+        if y_s[midBin] > ymax:
+            reference_ws_index = s
+            ymax = y_s[midBin]
+
+    return reference_ws_index
+
+
 def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, reference_ws_index, cc_number, max_offset,
                  binning, index='', peak_fit_time=1):
     """
-    cross correlation calibration on a
+    cross correlation calibration on a specified subset of spectra in a diamond workspace
     :param ws_name:
     :param peak_position:
     :param peak_min:
@@ -191,25 +206,19 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
     :param max_offset:
     :param binning:
     :param index:
-    :param peak_fit_time:
-    :return:
+    :param peak_fit_time: number of peak fitting in GetDetectorOffsets
+    :return: OffsetsWorkspace name, MaskWorkspace name
     """
-    workspace = mtd[ws_name]
+    # get reference of input workspace
+    diamond_event_ws = mantid_helper.retrieve_workspace(ws_name, True)
 
-    # find reference workspace
-    if reference_ws_index is None:
-        # Find good peak for reference: strongest???
-        ymax = 0
-        for s in range(0, workspace.getNumberHistograms()):
-            y_s = workspace.readY(s)
-            midBin = int(workspace.blocksize() / 2)
-            if y_s[midBin] > ymax:
-                reference_ws_index = s
-                ymax = y_s[midBin]
-    # END-IF
-    det_pos = workspace.getDetector(reference_ws_index).getPos()
-    twotheta = calculate_detector_2theta(workspace, reference_ws_index)
-    print ('Reference spectra = {0}  @ {1}   2-theta = {2}'.format(reference_ws_index, det_pos, twotheta))
+    datatypeutility.check_int_variable('Reference workspace index', reference_ws_index,
+                                       (0, diamond_event_ws.getNumberHistograms()))
+
+    # get reference detector position
+    det_pos = diamond_event_ws.getDetector(reference_ws_index).getPos()
+    twotheta = calculate_detector_2theta(diamond_event_ws, reference_ws_index)
+    print ('[INFO] Reference spectra = {0}  @ {1}   2-theta = {2}'.format(reference_ws_index, det_pos, twotheta))
 
     # Cross correlate spectra using interval around peak at peakpos (d-Spacing)
     cc_ws_name = 'cc_' + ws_name + '_' + index
@@ -246,6 +255,7 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
                        )
 
     # check result and remove interval result
+    # TODO - FUTURE NEXT - consider whether the cross correlate workspace shall be removed or not
     if False and mtd.doesExist(ws_name + "cc" + index):
         mtd.remove(ws_name + "cc")
 
@@ -288,14 +298,16 @@ def correct_difc_to_default(idf_difc_vec, cal_difc_vec, cal_table, row_shift, di
     return
 
 
-def cross_correlate_vulcan_data(diamond_ws_name, group_ws_name, fit_time=1, flag='1fit'):
+# TODO - FUTURE - Convert this method to a more general form
+def cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name, fit_time=1, flag='1fit'):
     """
-    main entrance cross-correlation (for VULCAN west/east/high angle)
+    main entrance cross-correlation (for VULCAN west/east/high angle).
+    Note: it only works for VULCAN dated from 2017.06.01 to 2019.10.01
     :param diamond_ws_name:
     :param group_ws_name:
     :param fit_time:
     :param flag:
-    :return:
+    :return: 2-tuple: offset workspace dictionary, mask workspace dictionary. keys are west, east and 'high angle'
     """
     # peak position in d-Spacing
     peakpos1 = 1.2614
@@ -333,9 +345,20 @@ def cross_correlate_vulcan_data(diamond_ws_name, group_ws_name, fit_time=1, flag
     west_offset_clone = CloneWorkspace(InputWorkspace=west_offset, OutputWorkspace=str(west_offset) + '_copy')
     west_mask_clone = CloneWorkspace(InputWorkspace=west_mask, OutputWorkspace=str(west_mask) + '_copy')
 
-    save_calibration(diamond_ws_name + '_{0}'.format(flag),
-                     [(west_offset, west_mask), (east_offset, east_mask), (ha_offset, ha_mask)],
-                     group_ws_name, 'vulcan_{0}'.format(flag))
+    # merge
+    offset_ws_name, mask_ws_name = merge_calibration(diamond_ws_name,
+                                                     [(west_offset, west_mask), (east_offset, east_mask),
+                                                      (ha_offset, ha_mask)])
+    # save
+    time_now = datetime.datetime.now()
+    file_base_name = 'VULCAN_Calibration_{}-{}-{}_{}-{}-{}'.format(time_now.year, time_now.month, time_now.day,
+                                                                   time_now.hour, time_now.minute,
+                                                                   time_now.second)
+    save_calibration(offset_ws_name, mask_ws_name, group_ws_name, file_base_name)
+
+    # combine_save_calibration(diamond_ws_name + '_{0}'.format(flag),
+    #                          [(west_offset, west_mask), (east_offset, east_mask), (ha_offset, ha_mask)],
+    #                          group_ws_name, 'vulcan_{0}'.format(flag))
 
     offset_dict = {'west': west_offset_clone, 'east': east_offset, 'high angle': ha_offset}
     mask_dict = {'west': west_mask_clone, 'east': east_mask, 'high angle': ha_mask}
@@ -389,13 +412,40 @@ def cross_correlate_vulcan_data_2bank(diamond_ws_name, group_ws_name, fit_time=1
                                            OutputWorkspace=str(westeast_offset) + '_copy')
     westeast_mask_clone = CloneWorkspace(InputWorkspace=westeast_mask, OutputWorkspace=str(westeast_mask) + '_copy')
 
-    save_calibration(diamond_ws_name + '_{0}'.format(flag), [(westeast_offset, westeast_mask), (ha_offset, ha_mask)],
-                     group_ws_name, 'vulcan_{0}'.format(flag))
+    combine_save_calibration(diamond_ws_name + '_{0}'.format(flag), [(westeast_offset, westeast_mask), (ha_offset, ha_mask)],
+                             group_ws_name, 'vulcan_{0}'.format(flag))
 
     offset_dict = {'westeast': westeast_offset_clone, 'high angle': ha_offset}
     mask_dict = {'westeast': westeast_mask_clone, 'high angle': ha_mask}
 
     return offset_dict, mask_dict
+
+
+def instrument_wide_cross_correlation(focused_ws_name, reference_ws_index, min_d, max_d):
+    """
+
+    :param focused_ws_name:
+    :param reference_ws_index:
+    :param min_d:
+    :param max_d:
+    :return:
+    """
+    """
+    Main algorithm to do cross-correlation among different banks of VULCAN.
+    This is the second round calibration using the data file
+    1. calibrated by previous calibration file based on inner bank cross correlation
+    2. diffraction focused
+    For the instrument with west, east and high angle banks, the input file shall be a 3 bank
+    :return:
+    """
+    CrossCorrelate(InputWorkspace='vulcan_diamond_3bank', OutputWorkspace='cc_vulcan_diamond_3bank', ReferenceSpectra=1,
+                   WorkspaceIndexMax=2, XMin=1.0649999999999999, XMax=1.083)
+    GetDetectorOffsets(InputWorkspace='cc_vulcan_diamond_3bank', Step=0.00029999999999999997,
+                       DReference=1.0757699999999999, XMin=-20, XMax=20, OutputWorkspace='zz_test_3bank',
+                       FitEachPeakTwice=True, PeakFitResultTableWorkspace='ddd', OutputFitResult=True,
+                       MinimumPeakHeight=1)
+
+    return shift_dict
 
 
 def test_cross_correlate_vulcan_data(wkspName, group_ws_name):
@@ -431,8 +481,8 @@ def test_cross_correlate_vulcan_data(wkspName, group_ws_name):
                                       [6468, 24900 - 1],
                                       ref_ws_index, cc_number, 1, -0.0003, 'high_angle')
 
-    save_calibration(wkspName, [(west_offset, west_mask), (east_offset, east_mask), (ha_offset, ha_mask)],
-                     group_ws_name, 'vulcan_vz_test')
+    combine_save_calibration(wkspName, [(west_offset, west_mask), (east_offset, east_mask), (ha_offset, ha_mask)],
+                             group_ws_name, 'vulcan_vz_test')
 
     return
 
@@ -530,7 +580,7 @@ def get_masked_ws_indexes(mask_ws):
 
 def initialize_calibration(nxs_file_name, must_load=False):
     """
-    initialize the cross-correlation calibration by loading data if it is not loaded
+    initialize the cross-correlation calibration by loading diamond data and grouping workspace if they are not loaded
     :return:
     """
     # set workspace name
@@ -676,7 +726,78 @@ def reduced_powder_data(ipts_number, run_number, calib_file_name, event_ws_name=
     return
 
 
-def save_calibration(ws_name, offset_mask_list, group_ws_name, calib_file_prefix):
+# TODO - NIGHT - better coding quality
+def merge_calibration(diamond_ws_name, offset_mask_ws_list):
+    """
+    merge cross-correlated calibration and offset workspaces, which are on partial workspaces
+    :param diamond_ws_name:
+    :param offset_mask_ws_list:
+    :return:
+    """
+    offset_ws_name0, mask_ws_name0 = offset_mask_ws_list[0]
+    offset_ws_name = diamond_ws_name + '_offset'
+    mask_ws_name = diamond_ws_name + '_mask'
+    if offset_ws_name != offset_ws_name0:
+        RenameWorkspace(InputWorkspace=offset_ws_name0, OutputWorkspace=offset_ws_name)
+    if mask_ws_name != mask_ws_name0:
+        RenameWorkspace(InputWorkspace=mask_ws_name0, OutputWorkspace=mask_ws_name)
+
+    print ('Number of masked spectra = {0} in {1}'.format(mtd[mask_ws_name].getNumberMasked(), mask_ws_name))
+    for ituple in range(1, len(offset_mask_ws_list)):
+        offset_ws_name_i, mask_ws_name_i = offset_mask_ws_list[ituple]
+        # use Plus to combine 2 offsets workspace
+        Plus(LHSWorkspace=offset_ws_name, RHSWorkspace=offset_ws_name_i,
+             OutputWorkspace=offset_ws_name)
+        # merge masks workspace
+        merge_2_masks(mask_ws_name, mask_ws_name_i, mask_ws_name + '_temp')
+        # delete previous combined mask workspace and rename merged mask workspace to target MaskWorkspace
+        DeleteWorkspace(Workspace=mask_ws_name)
+        RenameWorkspace(InputWorkspace=mask_ws_name+'_temp', OutputWorkspace=mask_ws_name)
+        print ('Number of masked spectra = {0} in {1}'.format(mtd[mask_ws_name].getNumberMasked(), mask_ws_name))
+
+    return offset_ws_name, mask_ws_name
+
+
+def save_calibration(offset_ws_name, mask_ws_name, group_ws_name, calib_file_prefix):
+    """
+    save calibration (calibration table, mask and grouping) to legacy .cal and current .h5 file
+    :param offset_ws_name:
+    :param mask_ws_name:
+    :param group_ws_name:
+    :param calib_file_prefix:
+    :return:
+    """
+    # for the sake of legacy .cal file
+    SaveCalFile(OffsetsWorkspace=offset_ws_name,
+                GroupingWorkspace=group_ws_name,
+                MaskWorkspace=mask_ws_name,
+                Filename=os.path.join(os.getcwd(), calib_file_prefix + '.cal'))
+
+    # save for the .h5 version that is a standard now
+    out_file_name = os.path.join(os.getcwd(), calib_file_prefix + '.h5')
+    if os.path.exists(out_file_name):
+        os.unlink(out_file_name)
+    calib_ws_name = offset_ws_name+'_diff_cal'
+
+    # need to convert the offsets workspace to difc calibration workspace
+    ConvertDiffCal(OffsetsWorkspace=offset_ws_name,
+                   OutputWorkspace=calib_ws_name)
+    # save
+    SaveDiffCal(CalibrationWorkspace=calib_ws_name,
+                GroupingWorkspace=group_ws_name,
+                MaskWorkspace=mask_ws_name,
+                Filename=out_file_name)
+
+    # last: save python file
+    GeneratePythonScript(InputWorkspace=calib_ws_name, Filename=calib_file_prefix + '.py')
+
+    print ('Calibration file is saved as {0} from {1}, {2} and {3}'
+           ''.format(out_file_name, calib_ws_name, mask_ws_name, group_ws_name))
+
+    return calib_ws_name, offset_ws_name, mask_ws_name
+
+
+def combine_save_calibration(ws_name, offset_mask_list, group_ws_name, calib_file_prefix):
     """ Save calibration workspace, mask workspace and group workspace to a standard .h5 calibration file.
     It is to merge the offset workspace and mask workspace from the cross-correlation.
     :param ws_name:
@@ -685,6 +806,7 @@ def save_calibration(ws_name, offset_mask_list, group_ws_name, calib_file_prefix
     :param calib_file_prefix:
     :return:
     """
+    raise NotImplementedError('Shall be replaced by merge_calibration and save_calibration ')
     # combine the offset and mask workspaces
     offset_ws_name0, mask_ws_name0 = offset_mask_list[0]
     offset_ws_name = ws_name + '_offset'
