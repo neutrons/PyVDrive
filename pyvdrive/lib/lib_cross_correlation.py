@@ -67,7 +67,7 @@ def calculate_difc(ws, ws_index):
     return difc
 
 
-def check_correct_difcs_3banks(ws_name, cal_table_name):
+def check_correct_difcs_3banks(ws_name, cal_table_name, mask_ws_name):
     """
     check and correct DIFCs if necessary: it is for 3 banks
     :param ws_name:
@@ -102,7 +102,7 @@ def check_correct_difcs_3banks(ws_name, cal_table_name):
         highangle_idf_vec[irow - 6468] = calculate_difc(diamond_event_ws, irow)
         highangle_cal_vec[irow - 6468] = cal_table_ws.cell(irow, difc_col_index)
 
-    mask_ws = mtd['vulcan_diamond_2fit_mask']
+    mask_ws = mtd[mask_ws_name]
 
     # correct the unphysical (bad) calibrated DIFC to default DIF: west, east and high angle
     correct_difc_to_default(west_idf_vec, west_cal_vec, cal_table_ws, 0, 20, 1, mask_ws)
@@ -220,6 +220,9 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
     twotheta = calculate_detector_2theta(diamond_event_ws, reference_ws_index)
     print ('[INFO] Reference spectra = {0}  @ {1}   2-theta = {2}'.format(reference_ws_index, det_pos, twotheta))
 
+    # TODO - NIGHT - shall change from bank to bank
+    Rebin(InputWorkspace=ws_name, OutputWorkspace=ws_name, Params='0.5, -0.001, 3.')
+
     # Cross correlate spectra using interval around peak at peakpos (d-Spacing)
     cc_ws_name = 'cc_' + ws_name + '_' + index
     CrossCorrelate(InputWorkspace=ws_name,
@@ -240,6 +243,7 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
     # TODO - THIS IS AN IMPORTANT PARAMETER TO SET THE MASK
     min_peak_height = 1.0
 
+    print ('[DB...BAT] ref peak pos = {}, xrange = {}, {}'.format(peak_position, -cc_number, cc_number))
     GetDetectorOffsets(InputWorkspace=cc_ws_name,
                        OutputWorkspace=offset_ws_name,
                        MaskWorkspace=mask_ws_name,
@@ -307,7 +311,10 @@ def cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name, fit_time=
     :param group_ws_name:
     :param fit_time:
     :param flag:
-    :return: 2-tuple: offset workspace dictionary, mask workspace dictionary. keys are west, east and 'high angle'
+    :return: 3-tuple: 1. offset workspace dictionary and 2 mask workspace dictionary.
+                      keys are west, east and 'high angle',
+                      3. 3-tuple: (difc calib, mask workspae, grouping workspace)
+
     """
     # peak position in d-Spacing
     peakpos1 = 1.2614
@@ -354,7 +361,7 @@ def cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name, fit_time=
     file_base_name = 'VULCAN_Calibration_{}-{}-{}_{}-{}-{}'.format(time_now.year, time_now.month, time_now.day,
                                                                    time_now.hour, time_now.minute,
                                                                    time_now.second)
-    save_calibration(offset_ws_name, mask_ws_name, group_ws_name, file_base_name)
+    calib_ws_name, dummy1, dummy2 = save_calibration(offset_ws_name, mask_ws_name, group_ws_name, file_base_name)
 
     # combine_save_calibration(diamond_ws_name + '_{0}'.format(flag),
     #                          [(west_offset, west_mask), (east_offset, east_mask), (ha_offset, ha_mask)],
@@ -363,7 +370,7 @@ def cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name, fit_time=
     offset_dict = {'west': west_offset_clone, 'east': east_offset, 'high angle': ha_offset}
     mask_dict = {'west': west_mask_clone, 'east': east_mask, 'high angle': ha_mask}
 
-    return offset_dict, mask_dict
+    return offset_dict, mask_dict, (calib_ws_name, mask_ws_name, group_ws_name)
 
 
 def cross_correlate_vulcan_data_2bank(diamond_ws_name, group_ws_name, fit_time=1, flag='1fit'):
@@ -537,28 +544,28 @@ def evaluate_cc_quality(data_ws_name, fit_param_table_name):
     return cost_list, bad_ws_index_list
 
 
-# TODO - 20180912 - Clean
-def export_diff_cal_h5(ref_ws_name, offset_ws, mask_ws, num_groups):
-    """ Export diff cal to h5 format
-    :param ref_ws_name:
-    :return:
-    """
-    # Load an existing 3-bank calibration file for grouping
-    exist3bank = '/SNS/users/wzz/Projects/VULCAN/CalibrationInstrument/Calibration_20180530/VULCAN_calibrate_2018_04_12.h5'
-    LoadDiffCal(InputWorkspace=ref_ws_name,
-                Filename=exist3bank,
-                WorkspaceName='vulcan_old_3banks')
-
-    today = datetime.datetime.now()
-    for ws_name in mtd.getObjectNames():
-        print ws_name
-    offset_ws_obj = mtd['vulcan_diamond_2fit_cal']
-    SaveDiffCal(CalibrationWorkspace=offset_ws_obj,
-                GroupingWorkspace='vulcan_old_3banks_group',
-                MaskWorkspace=mask_ws,
-                Filename='VULCAN_calibrate_{}_{:02}_{:02}.h5'.format(today.year, today.month, today.day))
-
-    return
+# # TODO - 20180912 - Clean
+# def export_diff_cal_h5(ref_ws_name, offset_ws, mask_ws, num_groups):
+#     """ Export diff cal to h5 format
+#     :param ref_ws_name:
+#     :return:
+#     """
+#     # Load an existing 3-bank calibration file for grouping
+#     exist3bank = '/SNS/users/wzz/Projects/VULCAN/CalibrationInstrument/Calibration_20180530/VULCAN_calibrate_2018_04_12.h5'
+#     LoadDiffCal(InputWorkspace=ref_ws_name,
+#                 Filename=exist3bank,
+#                 WorkspaceName='vulcan_old_3banks')
+#
+#     today = datetime.datetime.now()
+#     for ws_name in mtd.getObjectNames():
+#         print ws_name
+#     offset_ws_obj = mtd['vulcan_diamond_2fit_cal']
+#     SaveDiffCal(CalibrationWorkspace=offset_ws_obj,
+#                 GroupingWorkspace='vulcan_old_3banks_group',
+#                 MaskWorkspace=mask_ws,
+#                 Filename='VULCAN_calibrate_{}_{:02}_{:02}.h5'.format(today.year, today.month, today.day))
+#
+#     return
 
 
 def get_masked_ws_indexes(mask_ws):
@@ -765,7 +772,7 @@ def save_calibration(offset_ws_name, mask_ws_name, group_ws_name, calib_file_pre
     :param mask_ws_name:
     :param group_ws_name:
     :param calib_file_prefix:
-    :return:
+    :return:  calib_ws_name, offset_ws_name, mask_ws_name
     """
     # for the sake of legacy .cal file
     SaveCalFile(OffsetsWorkspace=offset_ws_name,
@@ -787,6 +794,12 @@ def save_calibration(offset_ws_name, mask_ws_name, group_ws_name, calib_file_pre
                 GroupingWorkspace=group_ws_name,
                 MaskWorkspace=mask_ws_name,
                 Filename=out_file_name)
+
+    # save DIFC to files
+    # TODO - NIGHT - Implement writing DIFC from calibration workspace
+    print ('[DB...BAT] Writing DIFC to file')
+    calib_ws = mantid_helper.retrieve_workspace(calib_ws_name)
+    print ('[DB...BAT] Calibration workspace: type {}, {}'.format(calib_ws, calib_ws.id))
 
     # last: save python file
     GeneratePythonScript(InputWorkspace=calib_ws_name, Filename=calib_file_prefix + '.py')

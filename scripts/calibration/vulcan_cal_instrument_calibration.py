@@ -66,6 +66,9 @@ def parse_inputs(arg_list):
     """
     arg_dict = dict()
 
+    # define default
+    arg_dict['testmode'] = False
+
     for arg_i in arg_list:
         items = arg_i.split('=')
         arg_name = items[0]
@@ -80,7 +83,7 @@ def parse_inputs(arg_list):
         elif arg_name == '--output':
             arg_dict['output'] = str(items[1])
         elif arg_name == '--ref':
-            arg_dict['ref'] = str(items[1])
+            arg_dict['ref_cal'] = str(items[1])
         elif arg_name == '--test':
             arg_dict['testmode'] = int(items[1]) == 1
         else:
@@ -133,63 +136,57 @@ def main(argv):
         mantid_helper.load_nexus(data_file_name=input_args['nexus'],
                                  output_ws_name=diamond_ws_name,
                                  meta_data_only=False)
+    mantid_helper.mtd_convert_units(diamond_ws_name, 'dSpacing')
 
     # load grouping workspace
-    grouping_file = input_args['grouping']
-    group_ws_name = os.path.basename(grouping_file).split('.')[0]
-    mantid_helper.load_grouping_file(grouping_file_name=grouping_file,
+    if 'grouping' in input_args:
+        raise RuntimeError('Mantid does not support 3-bank nED geometry yet')
+        group_ws_name = input_args['grouping']
+        group_ws_name = os.path.basename(grouping_file).split('.')[0]
+        mantid_helper.load_grouping_file(grouping_file_name=grouping_file,
                                      grouping_ws_name=group_ws_name)
+    elif 'ref_cal' in input_args:
+        # using reference calibration file for grouping workspace
+        outputs = mantid_helper.load_calibration_file(input_args['ref_cal'], 'cal_template', diamond_ws_name)
+        group_ws = outputs.OutputGroupingWorkspace
+        group_ws_name = group_ws.name()
+        print (outputs)
+    else:
+        # not specified
+        raise RuntimeError('No detector grouping is specified')
 
     # do cross correlation: 1 fit
-    if input_args['focus'] == 3:
-        lib.cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name, fit_time=1, flag='1fit')
+    if input_args['num_banks'] == 3:
+        results = lib.cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name, fit_time=1, flag='1fit')
+        difc_1ft_cal_name = results[2][0]
+        mask_ws_name = results[2][1]
 
         # check the difference between DIFCs
-        lib.check_correct_difcs_3banks(ws_name='vulcan_diamond')
-
-        # export h5 (calibration, grouping and masking)
-        lib.export_diff_cal_h5(ref_ws_name='vulcan_diamond', offset_ws='vulcan_diamond_1fit_offset,',
-                               mask_ws='vulcan_diamond_2fit_mask',
-                               num_groups=3)
-
-        # export DIFC table
-        lib.export_difc(offset_ws=xx, file_name=input_arg_dict['difc'])
+        lib.check_correct_difcs_3banks(diamond_ws_name, difc_1ft_cal_name, mask_ws_name)
 
     # do cross correlation: 2 fit
-    if input_args['focus'] == 3:
-        cal_ws_dict, mask_ws_dict = lib.cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name,
-                                                                           fit_time=2, flag='2fit')
+    if input_args['num_banks'] == 3:
+        results = lib.cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name, fit_time=2, flag='2fit')
+        difc_2fit_cal_name = results[2][0]
+        mask_ws_name = results[2][1]
 
         # do cross correlation: 1 fit
-        lib.check_correct_difcs_3banks(ws_name='vulcan_diamond')
+        lib.check_correct_difcs_3banks(diamond_ws_name, difc_2fit_cal_name, mask_ws_name)
 
-        # export
-        lib.export_diff_cal_h5(ref_ws_name='vulcan_diamond', offset_ws='vulcan_diamond_2fit_offset,',
-                               mask_ws='vulcan_diamond_2fit_mask',
-                               num_groups=3)
-        # export DIFC table
-        lib.export_difc(offset_ws=xx, file_name=input_arg_dict['difc'])
-
-
-    # do cross correlation for the first time
-    first_time_fit = os.path.basename(input_args['nexus']).split('.')[0].replace('VULCAN_', '') + '_fit1'
-    lib.cross_correlate_vulcan_data_3banks(diamond_ws_name=diamond_ws_name,
-                                           group_ws_name=group_ws_name,
-                                           fit_time=1,
-                                           flag=first_time_fit)
-
-    # cross correlation on the aligned and reduced data
-    # shift_dict = cross_instrument_calibration()
-    shift_dict = lib.instrument_wide_cross_correlation()
-
-    # load the calibration file to be modified from
-    workspace_dict = lib.load_calibration_file(input_args['input'], input_args['ref'])
-
-    # modify the calibration file
-    workspace_dict = apply_second_cc(workspace_dict, shift_dict)
-
-    # save
-    lib.combine_save_calibration(workspace_dict)
+    # TODO - NIGHT - Implement instrument wise cross correlation after analysis is finished
+    #
+    # # cross correlation on the aligned and reduced data
+    # # shift_dict = cross_instrument_calibration()
+    # shift_dict = lib.instrument_wide_cross_correlation()
+    #
+    # # load the calibration file to be modified from
+    # workspace_dict = lib.load_calibration_file(input_args['input'], input_args['ref'])
+    #
+    # # modify the calibration file
+    # workspace_dict = apply_second_cc(workspace_dict, shift_dict)
+    #
+    # # save
+    # lib.combine_save_calibration(workspace_dict)
 
     if input_args['testmode']:
         print ('[WARNING] Testing mode only have first 300 seconds data loaded!')
@@ -198,10 +195,5 @@ def main(argv):
 
 
 if __name__ == '__main__':
-
-    calib_file_name = '/SNS/users/wzz/Projects/VULCAN/Calibration_20180530/vulcan_2fit.h5'
-    
-        
-    
-
+    main(sys.argv)
 

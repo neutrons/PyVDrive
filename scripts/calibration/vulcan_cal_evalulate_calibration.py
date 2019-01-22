@@ -4,10 +4,8 @@ import sys
 import os
 from mantid.simpleapi import Load, LoadDiffCal, SaveNexusProcessed
 from mantid.api import AnalysisDataService as mtd
-
-import lib_cross_correlation as lib
-
-
+from pyvdrive.lib import mantid_helper
+from pyvdrive.lib import lib_cross_correlation
 
 
 
@@ -15,29 +13,21 @@ def analysize_mask():
     """
     """
     # TODO - 20180910 - Implement!
+    assert mask_ws.getNumberHistograms() == event_ws.getNumberHistograms(), 'blabla'
 
-    # 1. Load original event workspace
+
+
+    for ws_index in range(mask_ws.getNumberHistograms()):
+        if mask_ws.readY(ws_index)[0] < 0.1:
+            continue
+
+        # analyze masking information
+        if event_ws.getSpectrum(ws_index).getNumberEvents() == 0:
+            case_i = 1  # no event
+        elif event_ws.getSpectrum:
+            pass
 
     # 2. For each bank, sort the masked workspace from highest ban
-
-
-def align_detectors():
-
-    AlignDetectors(InputWorkspace='vulcan_diamond', OutputWorkspace='vulcan_diamond',
-                   CalibrationWorkspace='vulcan_cal')
-
-def diffraction_focus():
-
-    DiffractionFocussing(InputWorkspace='vulcan_diamond', OutputWorkspace='vulcan_diamond',
-                         GroupingWorkspace='vulcan_group')
-
-    Rebin(InputWorkspace='vulcan_diamond', OutputWorkspace='vulcan_diamond', Params='0.5,-0.0003,3')
-
-    ConvertToMatrixWorkspace(InputWorkspace='vulcan_diamond', OutputWorkspace='vulcan_diamond_3bank')
-
-    EditInstrumentGeometry(Workspace='vulcan_diamond_3bank', PrimaryFlightPath=42, SpectrumIDs='1-3', L2='2,2,2',
-                           Polar='89.9284,90.0716,150.059', Azimuthal='0,0,0', DetectorIDs='1-3',
-                           InstrumentName='vulcan_3bank')
 
 
 def parse_inputs(argv):
@@ -84,9 +74,6 @@ def main(argv):
     :param argv:
     :return:
     """
-    # TODO - NIGHT - Merge to vulcan_cal_instrument_calibration
-    raise NotImplementedError('This will be moved to ')
-
     if len(argv) == 1:
         print ('Help: {} --help'.format(argv[0]))
         sys.exit(0)
@@ -95,45 +82,61 @@ def main(argv):
     if '--help' in argv:
         print_help(script_name=argv[0])
         sys.exit(1)
-
-    # parse input arguments
-    input_arg_dict = parse_inputs(argv[1:])
+    else:
+        # parse input arguments
+        input_arg_dict = parse_inputs(argv[1:])
 
     # load event data
     if 'event_nexus' in input_arg_dict:
-        event_ws = load_raw_nexus(file_name=input_arg_dict['event_nexus'], ipts=None, run_number=None)
+        event_nexus_name = input_arg_dict['event_nexus']
     else:
         ipts_number = input_arg_dict['ipts']
         run_number = input_arg_dict['run']
-        event_ws = lib.load_raw_nexus(file_name=None, ipts=ipts_number, run_number=run_number)
-    # END-IF
+        event_nexus_name = '/SNS/VULCAN/IPTS-{}/nexus/VULCAN_{}.nxs.h5'.format(ipts_number, run_number)
+    event_ws_name = os.path.basename(event_nexus_name).split('.')[0] + '_event'
+    event_ws = mantid_helper.load_nexus(data_file_name=event_nexus_name,
+                                        output_ws_name=event_ws_name,
+                                        meta_data_only=False,
+                                        max_time=300)
 
     # load calibration file
-    calib_ws, mask_ws, group_ws = lib.load_calibration_file(ref_ws_name=event_ws, 
-                                                            calib_file_name=input_arg_dict['calib_file'],
-                                                            calib_ws_base_name='vulcan')
+    base_cal_name = os.path.basename(input_arg_dict['calib_file'].split('.')[0])
+    outputs = mantid_helper.load_calibration_file(calib_file_name=input_arg_dict['calib_file'],
+                                                  output_name=base_cal_name,
+                                                  ref_ws_name=event_ws_name)
+    print ('[DB...BAT] Outputs: {}'.format(outputs))
+
 
     # analyze the masking
-    # zero_count_mask_ws, low_count_mask_ws, regular_count_mask_ws =\
-    #     analysize_mask(event_ws, mask_ws, output_dir=os.getcwd())
+    zero_count_mask_ws, low_count_mask_ws, regular_count_mask_ws = analysize_mask(event_ws, mask_ws,
+                                                                                  output_dir=os.getcwd())
 
     # export the
-    focus_ws_name = lib.align_focus_event_ws(event_ws_name=str(event_ws), calib_ws_name=calib_ws,
-            group_ws_name=group_ws)
+    from pyvdrive.lib import mantid_reduction
+    focus_ws_name = mantid_reduction.align_and_focus_event_ws(event_ws_name=xx,
+                                                              output_ws_name=yy,
+                                                              binning_params=zz,
+                                                              diff_cal_ws_name=outputs.xx,
+                                                              grouping_ws_name=outputs.grp,
+                                                              reduction_params_dict=dict(),
+                                                              convert_to_matrix=False)
+
     if 'output' in input_arg_dict:
         SaveNexusProcessed(InputWorkspace=focus_ws_name, Filename=input_arg_dict['output'],
                            Title='{} calibrated by {}'.format(str(event_ws), input_arg_dict['calib_file']))
 
-    from matplotlib import pyplot as plt
+    # from matplotlib import pyplot as plt
+    #
+    # focus_ws = mtd[focus_ws_name]
+    #
+    # for bank_id in range(3):
+    #     vec_x = focus_ws.readX(bank_id)
+    #     vec_y = focus_ws.readY(bank_id)
+    #     plt.plot(vec_x[:len(vec_y)], vec_y, label='bank {}'.format(bank_id+1))
+    # plt.legend()
+    # plt.show()
 
-    focus_ws = mtd[focus_ws_name]
-
-    for bank_id in range(3):
-        vec_x = focus_ws.readX(bank_id)
-        vec_y = focus_ws.readY(bank_id)
-        plt.plot(vec_x[:len(vec_y)], vec_y, label='bank {}'.format(bank_id+1))
-    plt.legend()
-    plt.show()
+    print ('WARNING!!! Event file is loaded for 300 seconds for test purpose')
 
 if __name__ == '__main__':
     main(sys.argv)
