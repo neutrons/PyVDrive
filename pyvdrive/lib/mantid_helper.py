@@ -1436,7 +1436,7 @@ def load_calibration_file(calib_file_name, output_name, ref_ws_name, load_cal=Fa
     :param calib_file_name:
     :param output_name: this is NOT calibration workspace name but the root name for calib, mask and group
     :param ref_ws_name:
-    :return: output workspaces
+    :return: (1) output workspaces (2) output offsets workspace (as LoadDiffCal_returns cannot have an arbitrary member)
     """
     # check
     datatypeutility.check_file_name(calib_file_name, check_exist=True, check_writable=False, is_dir=False,
@@ -1479,10 +1479,13 @@ def load_calibration_file(calib_file_name, output_name, ref_ws_name, load_cal=Fa
     # set up output
     if outputs is None:
         outputs = outputs_cal
+        offset_ws = outputs_cal.OutputOffsetsWorkspace
     elif outputs_cal is not None:
-        outputs.OffsetsWorkspace = outputs_cal.OffsetsWorkspace
+        offset_ws = outputs_cal.OutputOffsetsWorkspace
+    else:
+        offset_ws = None
 
-    return outputs
+    return outputs, offset_ws
 
 
 def load_mask_xml(data_ws_name, mask_file_name, mask_ws_name=None):

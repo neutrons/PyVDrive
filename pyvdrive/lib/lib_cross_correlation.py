@@ -293,12 +293,47 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
         # failed to do cross correlation
         return None, run_err
 
+    # Do analysis to the calibration result
+    # TODO - NIGHT - Make it better
+    # it returns full set of spectra
+    print ('[INFO] OffsetsWorkspace {}: spectra number = {}'.format(offset_ws_name, mtd[offset_ws_name].getNumberHistograms()))
+    analyze_mask(diamond_event_ws, mtd[offset_ws_name], ws_index_range[0], ws_index_range[1], None)
+
     # check result and remove interval result
     # TODO - FUTURE NEXT - consider whether the cross correlate workspace shall be removed or not
     if False and mtd.doesExist(ws_name + "cc" + index):
         mtd.remove(ws_name + "cc")
 
     return offset_ws_name, mask_ws_name
+
+
+# TODO - NIGHT - Implement!
+def analyze_mask(event_ws, mask_ws, wi_start, wi_stop, output_dir):
+    """ analyze mask workspace
+    """
+    assert mask_ws.getNumberHistograms() == event_ws.getNumberHistograms(), 'blabla'
+
+    num_masked = 0
+    zero_masked = 0
+    for ws_index in range(wi_start, wi_stop+1):
+        if mask_ws.readY(ws_index)[0] < 0.1:
+            continue
+
+        num_masked += 1
+
+        # analyze masking information
+        if event_ws.getSpectrum(ws_index).getNumberEvents() == 0:
+            case_i = 1  # no event
+            zero_masked += 1
+        elif event_ws.getSpectrum:
+            pass
+
+    # 2. For each bank, sort the masked workspace from highest ban
+
+    print ('[REPORT] From {} to {}: Masked = {} including (1) zero counts = {}'
+           ''.format(wi_start, wi_stop-1, num_masked, zero_masked))
+
+    return None, None, None
 
 
 def correct_difc_to_default(idf_difc_vec, cal_difc_vec, cal_table, row_shift, difc_tol, difc_col_index, mask_ws):

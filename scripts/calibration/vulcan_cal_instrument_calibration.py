@@ -12,8 +12,6 @@ peakpos2 = 1.2614
 peakpos3 = 1.07577
 
 
-
-
 def cross_instrument_calibration():
     """
     Main algorithm to do cross-correlation among different banks of VULCAN.
@@ -127,6 +125,7 @@ def main(argv):
 
     # load data
     diamond_ws_name = os.path.basename(input_args['nexus']).split('.')[0] + '_diamond'
+    print ('[INFO] Loading {}'.format(input_args['nexus']))
     if input_args['testmode']:
         mantid_helper.load_nexus(data_file_name=input_args['nexus'],
                                  output_ws_name=diamond_ws_name,
@@ -149,11 +148,10 @@ def main(argv):
     elif 'ref_cal' in input_args:
         # using reference calibration file for grouping workspace
         ref_ws_name = os.path.basename(input_args['ref_cal']).split('.')[0]
-        outputs = mantid_helper.load_calibration_file(input_args['ref_cal'], ref_ws_name, diamond_ws_name,
+        outputs, ref_offset_ws = mantid_helper.load_calibration_file(input_args['ref_cal'], ref_ws_name, diamond_ws_name,
                                                       load_cal=False)
         group_ws = outputs.OutputGroupingWorkspace
         group_ws_name = group_ws.name()
-        print (outputs)
     else:
         # not specified
         raise RuntimeError('No detector grouping is specified')
@@ -164,22 +162,28 @@ def main(argv):
                                                          calib_flag={'west': False, 'east': False, 'high angle': True},
                                                          flag='1fit')
         offset_ws_dict, mask_ws_dict = results
-        if ref_ws_name is None:
+        if ref_offset_ws is None:
             # no reference offsetworkspace
-            lib.merge_save_detector_calibration(ref_calib_ws=outputs.OutputCalWorkspace,
+            rt = lib.merge_detector_calibration(ref_calib_ws=outputs.OutputCalWorkspace,
                                                 ref_grouping_ws=group_ws_name, ref_mask_ws=outputs.OutputMaskWorkspace,
-                                                offset_ws_dict=offset_ws_dict, mask_ws_dict=mask_ws_name,
+                                                offset_ws_dict=offset_ws_dict, mask_ws_dict=mask_ws_dict,
                                                 num_banks=3, output_ws_name='VULCAN_1ft', flag='1f')
+            diff_cal_ws, out_offset_ws, out_mask_ws = rt
+            difc_1fit_cal_name = str(diff_cal_ws)
+
+            # TODO - NIGHT - Save!
+            raise
+
         else:
+            # TODO - NIGHT - need returned workspaces
             # with regular reference workspace
-            lib.merge_save_mask_detector(ref_offset_ws=ref_ws_name, ref_calib_ws=outputs.OutputCalWorkspace,
+            lib.merge_save_mask_detector(ref_offset_ws=ref_offset_ws, ref_calib_ws=outputs.OutputCalWorkspace,
                                          ref_grouping_ws=group_ws_name, ref_mask_ws=outputs.OutputMaskWorkspace,
                                          offset_ws_dict=offset_ws_dict, mask_ws_dict=mask_ws_name,
                                          num_banks=3, output_ws_name='VULCAN_1ft', flag='1f')
 
-
         # check the difference between DIFCs
-        lib.check_correct_difcs_3banks(diamond_ws_name, difc_1ft_cal_name, mask_ws_name)
+        lib.check_correct_difcs_3banks(diamond_ws_name, difc_1fit_cal_name, str(out_mask_ws))
 
     # do cross correlation: 2 fit
     if input_args['num_banks'] == 3:
@@ -209,6 +213,8 @@ def main(argv):
 
     if input_args['testmode']:
         print ('[WARNING] Testing mode only have first 300 seconds data loaded!')
+
+    # TODO - NIGHT - Need to write a report to compare the masked spectra for reference, 1-fit and 2-fit mask workspaces
 
     return
 

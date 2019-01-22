@@ -100,9 +100,9 @@ def main(argv):
 
     # load calibration file
     base_cal_name = os.path.basename(input_arg_dict['calib_file'].split('.')[0])
-    outputs = mantid_helper.load_calibration_file(calib_file_name=input_arg_dict['calib_file'],
-                                                  output_name=base_cal_name,
-                                                  ref_ws_name=event_ws_name)
+    outputs, offset_ws = mantid_helper.load_calibration_file(calib_file_name=input_arg_dict['calib_file'],
+                                                             output_name=base_cal_name,
+                                                             ref_ws_name=event_ws_name)
     print ('[DB...BAT] Outputs: {}'.format(outputs))
     grouping_ws = outputs.OutputGroupingWorkspace
     calib_ws = outputs.OutputCalWorkspace

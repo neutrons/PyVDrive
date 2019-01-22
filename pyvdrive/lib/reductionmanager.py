@@ -418,7 +418,7 @@ class CalibrationManager(object):
 
         # load calibration
         base_name = self.get_base_name(calibration_file_name, num_banks)
-        outputs = mantid_helper.load_calibration_file(calibration_file_name, base_name, ref_ws_name)
+        outputs, offset_ws = mantid_helper.load_calibration_file(calibration_file_name, base_name, ref_ws_name)
         # get output workspaces for their names
         calib_ws_collection = DetectorCalibrationWorkspaces()
         calib_ws_collection.calibration = outputs.OutputCalWorkspace.name()
