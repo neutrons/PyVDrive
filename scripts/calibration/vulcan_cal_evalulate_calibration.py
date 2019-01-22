@@ -9,10 +9,12 @@ from pyvdrive.lib import lib_cross_correlation
 
 
 
-def analysize_mask():
+def analysize_mask(event_ws, mask_ws, output_dir):
     """
     """
     # TODO - 20180910 - Implement!
+    print (mask_ws)
+    print (event_ws)
     assert mask_ws.getNumberHistograms() == event_ws.getNumberHistograms(), 'blabla'
 
 
@@ -28,6 +30,8 @@ def analysize_mask():
             pass
 
     # 2. For each bank, sort the masked workspace from highest ban
+
+    return None, None, None
 
 
 def parse_inputs(argv):
@@ -94,7 +98,7 @@ def main(argv):
         run_number = input_arg_dict['run']
         event_nexus_name = '/SNS/VULCAN/IPTS-{}/nexus/VULCAN_{}.nxs.h5'.format(ipts_number, run_number)
     event_ws_name = os.path.basename(event_nexus_name).split('.')[0] + '_event'
-    event_ws = mantid_helper.load_nexus(data_file_name=event_nexus_name,
+    status, event_ws = mantid_helper.load_nexus(data_file_name=event_nexus_name,
                                         output_ws_name=event_ws_name,
                                         meta_data_only=False,
                                         max_time=300)
@@ -105,7 +109,9 @@ def main(argv):
                                                   output_name=base_cal_name,
                                                   ref_ws_name=event_ws_name)
     print ('[DB...BAT] Outputs: {}'.format(outputs))
-
+    grouping_ws = outputs.OutputGroupingWorkspace
+    calib_ws = outputs.OutputCalWorkspace
+    mask_ws = outputs.OutputMaskWorkspace
 
     # analyze the masking
     zero_count_mask_ws, low_count_mask_ws, regular_count_mask_ws = analysize_mask(event_ws, mask_ws,
