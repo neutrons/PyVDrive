@@ -69,6 +69,7 @@ def parse_inputs(arg_list):
     # define default
     arg_dict['testmode'] = False
 
+    # TODO - NIGHT - Add input to select banks to calibrate
     for arg_i in arg_list:
         items = arg_i.split('=')
         arg_name = items[0]
@@ -144,10 +145,12 @@ def main(argv):
         group_ws_name = input_args['grouping']
         group_ws_name = os.path.basename(grouping_file).split('.')[0]
         mantid_helper.load_grouping_file(grouping_file_name=grouping_file,
-                                     grouping_ws_name=group_ws_name)
+                                         grouping_ws_name=group_ws_name)
     elif 'ref_cal' in input_args:
         # using reference calibration file for grouping workspace
-        outputs = mantid_helper.load_calibration_file(input_args['ref_cal'], 'cal_template', diamond_ws_name)
+        ref_ws_name = os.path.basename(input_args['ref_cal']).split('.')[0]
+        outputs = mantid_helper.load_calibration_file(input_args['ref_cal'], ref_ws_name, diamond_ws_name,
+                                                      load_cal=False)
         group_ws = outputs.OutputGroupingWorkspace
         group_ws_name = group_ws.name()
         print (outputs)
@@ -157,16 +160,32 @@ def main(argv):
 
     # do cross correlation: 1 fit
     if input_args['num_banks'] == 3:
-        results = lib.cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name, fit_time=1, flag='1fit')
-        difc_1ft_cal_name = results[2][0]
-        mask_ws_name = results[2][1]
+        results = lib.cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name, fit_time=1,
+                                                         calib_flag={'west': False, 'east': False, 'high angle': True},
+                                                         flag='1fit')
+        offset_ws_dict, mask_ws_dict = results
+        if ref_ws_name is None:
+            # no reference offsetworkspace
+            lib.merge_save_detector_calibration(ref_calib_ws=outputs.OutputCalWorkspace,
+                                                ref_grouping_ws=group_ws_name, ref_mask_ws=outputs.OutputMaskWorkspace,
+                                                offset_ws_dict=offset_ws_dict, mask_ws_dict=mask_ws_name,
+                                                num_banks=3, output_ws_name='VULCAN_1ft', flag='1f')
+        else:
+            # with regular reference workspace
+            lib.merge_save_mask_detector(ref_offset_ws=ref_ws_name, ref_calib_ws=outputs.OutputCalWorkspace,
+                                         ref_grouping_ws=group_ws_name, ref_mask_ws=outputs.OutputMaskWorkspace,
+                                         offset_ws_dict=offset_ws_dict, mask_ws_dict=mask_ws_name,
+                                         num_banks=3, output_ws_name='VULCAN_1ft', flag='1f')
+
 
         # check the difference between DIFCs
         lib.check_correct_difcs_3banks(diamond_ws_name, difc_1ft_cal_name, mask_ws_name)
 
     # do cross correlation: 2 fit
     if input_args['num_banks'] == 3:
-        results = lib.cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name, fit_time=2, flag='2fit')
+        results = lib.cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name, fit_time=2,
+                                                         calib_flag={'west': False, 'east': False, 'high angle': True},
+                                                         flag='2fit')
         difc_2fit_cal_name = results[2][0]
         mask_ws_name = results[2][1]
 

@@ -8,16 +8,11 @@ from pyvdrive.lib import mantid_helper
 from pyvdrive.lib import lib_cross_correlation
 
 
-
+# TODO - 20180910 - Implement!
 def analysize_mask(event_ws, mask_ws, output_dir):
+    """ analyze mask workspace
     """
-    """
-    # TODO - 20180910 - Implement!
-    print (mask_ws)
-    print (event_ws)
     assert mask_ws.getNumberHistograms() == event_ws.getNumberHistograms(), 'blabla'
-
-
 
     for ws_index in range(mask_ws.getNumberHistograms()):
         if mask_ws.readY(ws_index)[0] < 0.1:
@@ -99,9 +94,9 @@ def main(argv):
         event_nexus_name = '/SNS/VULCAN/IPTS-{}/nexus/VULCAN_{}.nxs.h5'.format(ipts_number, run_number)
     event_ws_name = os.path.basename(event_nexus_name).split('.')[0] + '_event'
     status, event_ws = mantid_helper.load_nexus(data_file_name=event_nexus_name,
-                                        output_ws_name=event_ws_name,
-                                        meta_data_only=False,
-                                        max_time=300)
+                                                output_ws_name=event_ws_name,
+                                                meta_data_only=False,
+                                                max_time=300)
 
     # load calibration file
     base_cal_name = os.path.basename(input_arg_dict['calib_file'].split('.')[0])
@@ -119,11 +114,11 @@ def main(argv):
 
     # export the
     from pyvdrive.lib import mantid_reduction
-    focus_ws_name = mantid_reduction.align_and_focus_event_ws(event_ws_name=xx,
-                                                              output_ws_name=yy,
-                                                              binning_params=zz,
-                                                              diff_cal_ws_name=outputs.xx,
-                                                              grouping_ws_name=outputs.grp,
+    focus_ws_name = mantid_reduction.align_and_focus_event_ws(event_ws_name=event_ws_name,
+                                                              output_ws_name=event_ws_name,
+                                                              binning_params='-0.001',
+                                                              diff_cal_ws_name=calib_ws,
+                                                              grouping_ws_name=grouping_ws,
                                                               reduction_params_dict=dict(),
                                                               convert_to_matrix=False)
 

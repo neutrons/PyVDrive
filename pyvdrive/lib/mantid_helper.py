@@ -1430,7 +1430,7 @@ def load_grouping_file(grouping_file_name, grouping_ws_name):
     return
 
 
-def load_calibration_file(calib_file_name, output_name, ref_ws_name):
+def load_calibration_file(calib_file_name, output_name, ref_ws_name, load_cal=False):
     """
     load calibration file
     :param calib_file_name:
@@ -1443,20 +1443,44 @@ def load_calibration_file(calib_file_name, output_name, ref_ws_name):
                                     note='Calibration file')
     datatypeutility.check_string_variable('Calibration/grouping/masking workspace name', output_name)
 
+    # determine file names
+    diff_cal_file = None   # new .h5 file
+    offset_cal_file = None   # old .cal file
     if calib_file_name.endswith('.h5'):
-        # new diff calib file
-        outputs = mantidapi.LoadDiffCal(InputWorkspace=ref_ws_name,
-                                        Filename=calib_file_name,
-                                        WorkspaceName=output_name)
-
-    elif calib_file_name.endswith('.dat'):
-        # old style calibration file
-        outputs = mantidapi.LoadCalFile(Filename=calib_file_name,
-                                        Output=output_name)
-
+        diff_cal_file = calib_file_name
+        if load_cal:
+            offset_cal_file = diff_cal_file.replace('.h5', '.cal')
+            if not os.path.exists(offset_cal_file):
+                raise RuntimeError('User intends to load {1} alogn with {0}.  But {1} cannot be found.'
+                                   ''.format(diff_cal_file, offset_cal_file))
+        # END-IF
+    elif calib_file_name.endswith('.cal'):
+        offset_cal_file = calib_file_name
     else:
         raise RuntimeError('Calibration file {} does not end with .h5 or .dat.  Unable to support'
                            ''.format(calib_file_name))
+
+    # Load files
+    if offset_cal_file:
+        # old style calibration file
+        outputs_cal = mantidapi.LoadCalFile(Filename=offset_cal_file,
+                                            Output=output_name)
+    else:
+        outputs_cal = None
+
+    if diff_cal_file:
+        # new diff calib file
+        outputs = mantidapi.LoadDiffCal(InputWorkspace=ref_ws_name,
+                                        Filename=diff_cal_file,
+                                        WorkspaceName=output_name)
+    else:
+        outputs = None
+
+    # set up output
+    if outputs is None:
+        outputs = outputs_cal
+    elif outputs_cal is not None:
+        outputs.OffsetsWorkspace = outputs_cal.OffsetsWorkspace
 
     return outputs
 

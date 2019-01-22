@@ -41,6 +41,37 @@ def analyze_outputs(cross_correlation_ws_dict, getdetoffset_result_ws_dict):
     return cost_ws_dict
 
 
+def apply_reference_calibration(calib_ws, ref_calib_ws, bank_name):
+    """
+    apply reference calibration to output
+    :param calib_ws_name:
+    :param ref_calib_ws:
+    :param bank_name:
+    :return:
+    """
+    if bank_name == 'west':
+        row_range = range(0, 3234)
+    elif bank_name == 'east':
+        row_range = range(3234, 6468)
+    elif bank_name == 'high angle':
+        row_range = range(6468, 24900)
+    else:
+        raise RuntimeError('balbal {}'.format(bank_name))
+
+    # apply
+    if isinstance(calib_ws, str):
+        calib_ws = mantid_helper.retrieve_workspace(calib_ws, True)
+    if isinstance(ref_calib_ws, str):
+        ref_calib_ws = mantid_helper.retrieve_workspace(ref_calib_ws, True)
+    num_cols = calib_ws.columnCount()
+
+    for row_index in row_range:
+        for col_index in range(num_cols):
+            calib_ws.setCell(row_index, col_index, ref_calib_ws.cell(row_index, col_index))
+
+    return
+
+
 def calculate_difc(ws, ws_index):
     """ Calculate DIFC of one spectrum
     :param ws:
@@ -221,7 +252,7 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
     print ('[INFO] Reference spectra = {0}  @ {1}   2-theta = {2}'.format(reference_ws_index, det_pos, twotheta))
 
     # TODO - NIGHT - shall change from bank to bank
-    Rebin(InputWorkspace=ws_name, OutputWorkspace=ws_name, Params='0.5, -0.001, 3.')
+    Rebin(InputWorkspace=ws_name, OutputWorkspace=ws_name, Params='0.5, -{}, 3.'.format(abs(binning)))
 
     # Cross correlate spectra using interval around peak at peakpos (d-Spacing)
     cc_ws_name = 'cc_' + ws_name + '_' + index
@@ -244,19 +275,23 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
     min_peak_height = 1.0
 
     print ('[DB...BAT] ref peak pos = {}, xrange = {}, {}'.format(peak_position, -cc_number, cc_number))
-    GetDetectorOffsets(InputWorkspace=cc_ws_name,
-                       OutputWorkspace=offset_ws_name,
-                       MaskWorkspace=mask_ws_name,
-                       Step=abs(binning),
-                       DReference=peak_position,
-                       XMin=-cc_number,
-                       XMax=cc_number,
-                       MaxOffset=max_offset,
-                       FitEachPeakTwice=fit_twice,
-                       PeakFunction='Gaussian',  # 'PseudoVoigt', # Gaussian
-                       MinimumPeakHeight=min_peak_height,  # any peak is lower than 1 shall be masked!
-                       PeakFitResultTableWorkspace=cc_ws_name + '_fit'
-                       )
+    try:
+        GetDetectorOffsets(InputWorkspace=cc_ws_name,
+                           OutputWorkspace=offset_ws_name,
+                           MaskWorkspace=mask_ws_name,
+                           Step=abs(binning),
+                           DReference=peak_position,
+                           XMin=-cc_number,
+                           XMax=cc_number,
+                           MaxOffset=max_offset,
+                           FitEachPeakTwice=fit_twice,
+                           PeakFunction='Gaussian',  # 'PseudoVoigt', # Gaussian
+                           MinimumPeakHeight=min_peak_height,  # any peak is lower than 1 shall be masked!
+                           PeakFitResultTableWorkspace=cc_ws_name + '_fit'
+                           )
+    except RuntimeError as run_err:
+        # failed to do cross correlation
+        return None, run_err
 
     # check result and remove interval result
     # TODO - FUTURE NEXT - consider whether the cross correlate workspace shall be removed or not
@@ -303,17 +338,16 @@ def correct_difc_to_default(idf_difc_vec, cal_difc_vec, cal_table, row_shift, di
 
 
 # TODO - FUTURE - Convert this method to a more general form
-def cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name, fit_time=1, flag='1fit'):
+def cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name, calib_flag, fit_time=1, flag='1fit'):
     """
     main entrance cross-correlation (for VULCAN west/east/high angle).
     Note: it only works for VULCAN dated from 2017.06.01 to 2019.10.01
     :param diamond_ws_name:
     :param group_ws_name:
+    :param calib_flag: a 3-element dict of boolean as the flag whether there is need to calibrate this bank
     :param fit_time:
     :param flag:
-    :return: 3-tuple: 1. offset workspace dictionary and 2 mask workspace dictionary.
-                      keys are west, east and 'high angle',
-                      3. 3-tuple: (difc calib, mask workspae, grouping workspace)
+    :return: 2-tuple: (difc calib, mask workspae, grouping workspace)
 
     """
     # peak position in d-Spacing
@@ -321,56 +355,172 @@ def cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name, fit_time=
     peakpos2 = 1.2614
     peakpos3 = 1.07577
 
+    offset_ws_dict = dict()
+    mask_ws_dict = dict()
+
     # West bank
-    ref_ws_index = 1613
-    peak_width = 0.04  # modified from 0.005
-    cc_number_west = 80
-    west_offset, west_mask = cc_calibrate(diamond_ws_name, peakpos1, peakpos1 - peak_width, peakpos1 + peak_width,
-                                          [0, 3234 - 1],
-                                          ref_ws_index, cc_number_west, 1, -0.0003, 'west_{0}'.format(flag),
-                                          peak_fit_time=fit_time)
+    if calib_flag['west']:
+        ref_ws_index = 1613
+        peak_width = 0.04  # modified from 0.005
+        cc_number_west = 80
+        west_offset, west_mask = cc_calibrate(diamond_ws_name, peakpos1, peakpos1 - peak_width, peakpos1 + peak_width,
+                                              [0, 3234 - 1],
+                                              ref_ws_index, cc_number_west, 1, -0.0003, 'west_{0}'.format(flag),
+                                              peak_fit_time=fit_time)
+        if west_offset is None:
+            err_msg = west_mask
+            print ('[ERROR] Unable to calibrate West Bank by cross correlation: {}'.format(err_msg))
+        else:
+            offset_ws_dict['west'] = west_offset
+            mask_ws_dict['west'] = west_mask
+    # END-IF
 
     # East bank
-    ref_ws_index = 4847 - 7  # 4854 ends with an even right-shift spectrum
-    peak_width = 0.04
-    cc_number_east = 80
-    east_offset, east_mask = cc_calibrate(diamond_ws_name, peakpos2, peakpos2 - peak_width, peakpos2 + peak_width,
-                                          [3234, 6468 - 1],
-                                          ref_ws_index, cc_number_east, 1, -0.0003, 'east_{0}'.format(flag),
+    if calib_flag['east']:
+        ref_ws_index = 4847 - 7  # 4854 ends with an even right-shift spectrum
+        peak_width = 0.04
+        cc_number_east = 80
+        east_offset, east_mask = cc_calibrate(diamond_ws_name, peakpos2, peakpos2 - peak_width, peakpos2 + peak_width,
+                                              [3234, 6468 - 1],
+                                              ref_ws_index, cc_number_east, 1, -0.0003, 'east_{0}'.format(flag),
+                                              peak_fit_time=fit_time)
+        if east_offset is None:
+            err_msg = east_mask
+            print ('[ERROR] Unable to calibrate West Bank by cross correlation: {}'.format(err_msg))
+        else:
+            offset_ws_dict['east'] = east_offset
+            mask_ws_dict['east'] = east_mask
+    # END-IF
+
+    # High angle
+    if calib_flag['high angle']:
+        # High angle bank
+        ref_ws_index = 15555
+        peak_width = 0.01
+        cc_number = 20
+        ha_offset, ha_mask = cc_calibrate(diamond_ws_name, peakpos3, peakpos3 - peak_width, peakpos3 + peak_width,
+                                          [6468, 24900 - 1],
+                                          ref_ws_index, cc_number=cc_number, max_offset=1, binning=-0.0003,
+                                          index='high_angle_{0}'.format(flag),
                                           peak_fit_time=fit_time)
+        if ha_offset is None:
+            err_msg = ha_mask
+            print ('[ERROR] Unable to calibrate West Bank by cross correlation: {}'.format(err_msg))
+        else:
+            offset_ws_dict['high angle'] = ha_offset
+            mask_ws_dict['high angle'] = ha_mask
+    # END-IF
 
-    # High angle bank
-    ref_ws_index = 15555
-    peak_width = 0.01
-    cc_number = 20
-    ha_offset, ha_mask = cc_calibrate(diamond_ws_name, peakpos3, peakpos3 - peak_width, peakpos3 + peak_width,
-                                      [6468, 24900 - 1],
-                                      ref_ws_index, cc_number=cc_number, max_offset=1, binning=-0.0003,
-                                      index='high_angle_{0}'.format(flag),
-                                      peak_fit_time=fit_time)
+    if len(offset_ws_dict) == 0:
+        raise RuntimeError('No bank is calibrated.  Either none of them is flagged Or all of them failed')
 
-    west_offset_clone = CloneWorkspace(InputWorkspace=west_offset, OutputWorkspace=str(west_offset) + '_copy')
-    west_mask_clone = CloneWorkspace(InputWorkspace=west_mask, OutputWorkspace=str(west_mask) + '_copy')
+    return offset_ws_dict, mask_ws_dict
+
+
+def merge_detector_calibration(ref_calib_ws, ref_mask_ws, ref_grouping_ws,
+                               offset_ws_dict, mask_ws_dict,
+                               num_banks, output_ws_name, flag):
+    """ Note: only work for 3 banks
+    :param ref_calib_ws:
+    :param ref_mask_ws:
+    :param ref_grouping_ws:
+    :param offset_ws_dict:
+    :param mask_ws_dict:
+    :param num_banks:
+    :param output_ws_name:
+    :param flag:
+    :return:
+    """
+    # get the starting offset workspace and mask workspace
+    bank_name = offset_ws_dict.keys()[0]
+    out_offset_ws = CloneWorkspace(InputWorkspace=offset_ws_dict[bank_name],
+                                   OutputWorkspace=output_ws_name + '_offset')
+    out_mask_ws = CloneWorkspace(InputWorkspace=mask_ws_dict[bank_name],
+                                 OutputWorkspace=output_ws_name + '_mask')
+    applied = {bank_name: True}
+    print ('Offsets and Mask of {} is cloned for output'.format(bank_name))
 
     # merge
-    offset_ws_name, mask_ws_name = merge_calibration(diamond_ws_name,
-                                                     [(west_offset, west_mask), (east_offset, east_mask),
-                                                      (ha_offset, ha_mask)])
+    for bank_name in offset_ws_dict.keys():
+        # avoid duplicate operation
+        if bank_name in applied:
+            print ('[INFO] {} has been applied to output before merging'.format(bank_name))
+            continue
+
+        # merge
+        merge_calibration(out_offset_ws, offset_ws_dict[bank_name],
+                          out_mask_ws, mask_ws_dict[bank_name])
+    # END-FOR
+
+    # convert to diff calibratin table:  convert the offsets workspace to difc calibration workspace
+    calib_ws_name = output_ws_name + '_cal'
+    ConvertDiffCal(OffsetsWorkspace=out_offset_ws,
+                   OutputWorkspace=calib_ws_name)
+
+    # apply reference to
+    for bank_name in ['west', 'east', 'high angle']:
+        # skip calibrated banks
+        if bank_name in offset_ws_dict.keys():
+            continue
+
+        print ('[INFO] Applying {}:{} to {}'.format(ref_calib_ws, bank_name, calib_ws_name))
+        apply_reference_calibration(calib_ws_name, ref_calib_ws, bank_name)
+    # END-FOR
+
+    if len(offset_ws_dict.keys()) < num_banks:
+        out_offset_ws = None
+
+    return calib_ws_name, out_offset_ws, out_mask_ws
+
+
+def merge_save_mask_detector(ref_offset_ws, ref_calib_ws, ref_mask_ws, ref_grouping_ws,
+                             offset_ws_dict, mask_ws_dict,
+                             num_banks, output_ws_name, flag):
+
+    # get the starting offset workspace and mask workspace
+    applied = dict()
+    if num_banks == len(offset_ws_dict):
+        out_offset_ws = CloneWorkspace(InputWorkspace=offset_ws_dict['west'],
+                                       OutputWorkspace=output_ws_name + '_offset')
+        out_mask_ws = CloneWorkspace(InputWorkspace=offset_ws_dict['west'],
+                                     OutputWorkspace=output_ws_name + '_mask')
+        applied['west'] = True
+    else:
+        out_offset_ws = CloneWorkspace(InputWorkspace=ref_offset_ws,
+                                       OutputWorkspace=output_ws_name + '_offset')
+        out_mask_ws = CloneWorkspace(InputWorkspace=ref_mask_ws,
+                                     OutputWorkspace=output_ws_name + '_mask')
+        applied['west'] = False
+
+    # merge
+    for bank_name in offset_ws_dict.keys():
+        # avoid duplicate operation
+        if bank_name in applied:
+            print ('[INFO] {} has been applied to output before merging'.format(bank_name))
+            continue
+
+        # merge
+        merge_calibration(out_offset_ws, offset_ws_dict[bank_name],
+                          out_mask_ws, mask_ws_dict[bank_name])
+    # END-FOR
+    # offset_ws_name, mask_ws_name = merge_calibration(diamond_ws_name, out_offset_ws
+    #                                                  [(west_offset, west_mask), (east_offset, east_mask),
+    #                                                   (ha_offset, ha_mask)])
     # save
     time_now = datetime.datetime.now()
-    file_base_name = 'VULCAN_Calibration_{}-{}-{}_{}-{}-{}'.format(time_now.year, time_now.month, time_now.day,
+    file_base_name = 'VULCAN_Calibration_{}-{}-{}_{}-{}-{}_{}'.format(time_now.year, time_now.month, time_now.day,
                                                                    time_now.hour, time_now.minute,
-                                                                   time_now.second)
-    calib_ws_name, dummy1, dummy2 = save_calibration(offset_ws_name, mask_ws_name, group_ws_name, file_base_name)
+                                                                   time_now.second, flag)
+    calib_ws_name, dummy1, dummy2 = save_calibration(out_offset_ws, out_mask_ws, ref_grouping_ws, file_base_name)
 
-    # combine_save_calibration(diamond_ws_name + '_{0}'.format(flag),
-    #                          [(west_offset, west_mask), (east_offset, east_mask), (ha_offset, ha_mask)],
-    #                          group_ws_name, 'vulcan_{0}'.format(flag))
+    # # combine_save_calibration(diamond_ws_name + '_{0}'.format(flag),
+    # #                          [(west_offset, west_mask), (east_offset, east_mask), (ha_offset, ha_mask)],
+    # #                          group_ws_name, 'vulcan_{0}'.format(flag))
+    #
+    # offset_dict = {'west': west_offset_clone, 'east': east_offset, 'high angle': ha_offset}
+    # mask_dict = {'west': west_mask_clone, 'east': east_mask, 'high angle': ha_mask}
 
-    offset_dict = {'west': west_offset_clone, 'east': east_offset, 'high angle': ha_offset}
-    mask_dict = {'west': west_mask_clone, 'east': east_mask, 'high angle': ha_mask}
-
-    return offset_dict, mask_dict, (calib_ws_name, mask_ws_name, group_ws_name)
+    return calib_ws_name, out_offset_ws, out_mask_ws
 
 
 def cross_correlate_vulcan_data_2bank(diamond_ws_name, group_ws_name, fit_time=1, flag='1fit'):
@@ -734,13 +884,14 @@ def reduced_powder_data(ipts_number, run_number, calib_file_name, event_ws_name=
 
 
 # TODO - NIGHT - better coding quality
-def merge_calibration(diamond_ws_name, offset_mask_ws_list):
+def merge_calibration_all(diamond_ws_name, offset_mask_ws_list):
     """
     merge cross-correlated calibration and offset workspaces, which are on partial workspaces
     :param diamond_ws_name:
     :param offset_mask_ws_list:
     :return:
     """
+    raise RuntimeError('Not used any more.  Kept as a  reference')
     offset_ws_name0, mask_ws_name0 = offset_mask_ws_list[0]
     offset_ws_name = diamond_ws_name + '_offset'
     mask_ws_name = diamond_ws_name + '_mask'
@@ -761,6 +912,29 @@ def merge_calibration(diamond_ws_name, offset_mask_ws_list):
         DeleteWorkspace(Workspace=mask_ws_name)
         RenameWorkspace(InputWorkspace=mask_ws_name+'_temp', OutputWorkspace=mask_ws_name)
         print ('Number of masked spectra = {0} in {1}'.format(mtd[mask_ws_name].getNumberMasked(), mask_ws_name))
+
+    return offset_ws_name, mask_ws_name
+
+
+# TODO - NIGHT - better coding quality
+def merge_calibration(offset_ws_name, partial_offset_ws_name, mask_ws_name, partial_mask_ws_name):
+    """
+    merge cross-correlated calibration and offset workspaces, which are on partial workspaces
+    :param diamond_ws_name:
+    :param offset_mask_ws_list:
+    :return:
+    """
+    # use Plus to combine 2 offsets workspace
+    Plus(LHSWorkspace=offset_ws_name, RHSWorkspace=partial_offset_ws_name,
+         OutputWorkspace=offset_ws_name)
+
+    # mask:
+    # merge masks workspace
+    merge_2_masks(mask_ws_name, partial_mask_ws_name, mask_ws_name + '_temp')
+    # delete previous combined mask workspace and rename merged mask workspace to target MaskWorkspace
+    DeleteWorkspace(Workspace=mask_ws_name)
+    RenameWorkspace(InputWorkspace=mask_ws_name + '_temp', OutputWorkspace=mask_ws_name)
+    print ('Number of masked spectra = {0} in {1}'.format(mtd[mask_ws_name].getNumberMasked(), mask_ws_name))
 
     return offset_ws_name, mask_ws_name
 
