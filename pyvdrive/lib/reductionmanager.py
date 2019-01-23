@@ -130,10 +130,15 @@ class CalibrationManager(object):
                           7: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_7bank.h5'),
                           27: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_27bank.h5')}
 
+        ned_2019_setup = {3: os.path.join(base_calib_dir, '2019_1_20/VULCAN_calibrate_2019_01_21.h5'),
+                          7: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_7bank.h5'),
+                          27: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_27bank.h5')}
+
         self._calibration_dict = dict()
         self._calibration_dict[datetime.datetime(2010, 1, 1)] = pre_ned_setup
         self._calibration_dict[datetime.datetime(2017, 6, 1)] = ned_2017_setup
         self._calibration_dict[datetime.datetime(2018, 5, 30)] = ned_2018_setup
+        self._calibration_dict[datetime.datetime(2019, 1, 1)] = ned_2019_setup
 
         return
 

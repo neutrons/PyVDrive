@@ -1774,8 +1774,7 @@ def mtd_convert_units(ws_name, target_unit):
     """
     # Check requirements
     assert isinstance(ws_name, str), 'Input workspace name is not a string but is a %s.' % str(type(ws_name))
-    workspace = retrieve_workspace(ws_name)
-    assert workspace
+    workspace = retrieve_workspace(ws_name, True)
     assert isinstance(target_unit, str), 'Input target unit should be a string,' \
                                          'but is %s.' % str(type(target_unit))
     
@@ -1898,7 +1897,7 @@ def parse_mask_roi_xml(xml_file_name):
     return is_roi, det_id_list
 
 
-def rebin(workspace_name, params, preserve):
+def rebin(workspace_name, params, preserve, output_ws_name=None):
     """
     rebin the workspace
     :param workspace_name:
@@ -1912,10 +1911,13 @@ def rebin(workspace_name, params, preserve):
         or isinstance(params, numpy.ndarray), 'Params {0} of type {1} is not supported.' \
                                                  ''.format(params, type(params))
 
-    mantidapi.Rebin(InputWorkspace=workspace_name, OutputWorkspace=workspace_name,
+    if output_ws_name is None:
+        output_ws_name = workspace_name
+
+    mantidapi.Rebin(InputWorkspace=workspace_name, OutputWorkspace=output_ws_name,
                     Params=params,
                     PreserveEvents=preserve)
-    return
+    return output_ws_name
 
 
 def retrieve_workspace(ws_name, raise_if_not_exist=False):

@@ -2,31 +2,10 @@
 # It is to evaluate the calibration result
 import sys
 import os
-from mantid.simpleapi import Load, LoadDiffCal, SaveNexusProcessed
+from mantid.simpleapi import LoadDiffCal, SaveNexusProcessed, GeneratePythonScript
 from mantid.api import AnalysisDataService as mtd
 from pyvdrive.lib import mantid_helper
 from pyvdrive.lib import lib_cross_correlation
-
-
-# TODO - 20180910 - Implement!
-def analysize_mask(event_ws, mask_ws, output_dir):
-    """ analyze mask workspace
-    """
-    assert mask_ws.getNumberHistograms() == event_ws.getNumberHistograms(), 'blabla'
-
-    for ws_index in range(mask_ws.getNumberHistograms()):
-        if mask_ws.readY(ws_index)[0] < 0.1:
-            continue
-
-        # analyze masking information
-        if event_ws.getSpectrum(ws_index).getNumberEvents() == 0:
-            case_i = 1  # no event
-        elif event_ws.getSpectrum:
-            pass
-
-    # 2. For each bank, sort the masked workspace from highest ban
-
-    return None, None, None
 
 
 def parse_inputs(argv):
@@ -95,8 +74,7 @@ def main(argv):
     event_ws_name = os.path.basename(event_nexus_name).split('.')[0] + '_event'
     status, event_ws = mantid_helper.load_nexus(data_file_name=event_nexus_name,
                                                 output_ws_name=event_ws_name,
-                                                meta_data_only=False,
-                                                max_time=300)
+                                                meta_data_only=False)   # max_time=300)
 
     # load calibration file
     base_cal_name = os.path.basename(input_arg_dict['calib_file'].split('.')[0])
@@ -108,23 +86,53 @@ def main(argv):
     calib_ws = outputs.OutputCalWorkspace
     mask_ws = outputs.OutputMaskWorkspace
 
-    # analyze the masking
-    zero_count_mask_ws, low_count_mask_ws, regular_count_mask_ws = analysize_mask(event_ws, mask_ws,
-                                                                                  output_dir=os.getcwd())
-
     # export the
     from pyvdrive.lib import mantid_reduction
-    focus_ws_name = mantid_reduction.align_and_focus_event_ws(event_ws_name=event_ws_name,
+
+    # mask workspaces
+    mantid_helper.mask_workspace(event_ws_name, mask_ws.name())
+
+    message = mantid_reduction.align_and_focus_event_ws(event_ws_name=event_ws_name,
                                                               output_ws_name=event_ws_name,
                                                               binning_params='-0.001',
                                                               diff_cal_ws_name=str(calib_ws),
                                                               grouping_ws_name=str(grouping_ws),
                                                               reduction_params_dict=dict(),
                                                               convert_to_matrix=False)
+    focus_ws_name = event_ws_name
 
     if 'output' in input_arg_dict:
-        SaveNexusProcessed(InputWorkspace=focus_ws_name, Filename=input_arg_dict['output'],
-                           Title='{} calibrated by {}'.format(str(event_ws), input_arg_dict['calib_file']))
+        file_name = input_arg_dict['output']
+    else:
+        file_name = '{}_{}'.format(event_ws_name, base_cal_name)
+
+    # output:
+    # 2 sets of banks dspacing
+    mantid_helper.mtd_convert_units(focus_ws_name, 'dSpacing')
+    out_ws_name = mantid_helper.rebin(focus_ws_name, '0.3, -0.001, 5.0', output_ws_name=focus_ws_name+'temp',
+                                      preserve=False)
+    SaveNexusProcessed(InputWorkspace=out_ws_name, Filename=file_name + '_d_low.nxs',
+                       Title='{} calibrated by {}'.format(event_nexus_name, input_arg_dict['calib_file']))
+    out_ws_name = mantid_helper.rebin(focus_ws_name, '0.3, -0.0003, 5.0', output_ws_name=focus_ws_name+'temp',
+                                      preserve=False)
+    SaveNexusProcessed(InputWorkspace=out_ws_name, Filename=file_name + '_d_high.nxs',
+                       Title='{} calibrated by {}'.format(event_nexus_name, input_arg_dict['calib_file']))
+
+    # 2 sets of banks TOF
+    mantid_helper.mtd_convert_units(focus_ws_name, 'TOF')
+    out_ws_name = mantid_helper.rebin(focus_ws_name, '2000., -0.001, 70000', output_ws_name=focus_ws_name+'temp',
+                                      preserve=False)
+    SaveNexusProcessed(InputWorkspace=out_ws_name, Filename=file_name + '_tof_low.nxs',
+                       Title='{} calibrated by {}'.format(event_nexus_name, input_arg_dict['calib_file']))
+    out_ws_name = mantid_helper.rebin(focus_ws_name, '2000., -0.0003, 70000', output_ws_name=focus_ws_name+'temp',
+                                      preserve=False)
+    SaveNexusProcessed(InputWorkspace=out_ws_name, Filename=file_name + '_tof_high.nxs',
+                       Title='{} calibrated by {}'.format(event_nexus_name, input_arg_dict['calib_file']))
+
+
+    # GeneratePythonScript(InputWorkspace=event_ws_name, Filename='eval_temp.py')
+    # SaveNexusProcessed(InputWorkspace=focus_ws_name, Filename=file_name,
+    #                    Title='{} calibrated by {}'.format(str(event_ws), input_arg_dict['calib_file']))
 
     # from matplotlib import pyplot as plt
     #
