@@ -2,6 +2,7 @@
 # cross-correlate/align 3 already-focused banks (west, east and high angle) to the same peak positions
 import sys
 import os
+import datetime
 import pyvdrive.lib.lib_cross_correlation as lib
 from pyvdrive.lib import mantid_helper
 
@@ -165,14 +166,34 @@ def main(argv):
         if ref_offset_ws is None:
             # no reference offsetworkspace
             rt = lib.merge_detector_calibration(ref_calib_ws=outputs.OutputCalWorkspace,
-                                                ref_grouping_ws=group_ws_name, ref_mask_ws=outputs.OutputMaskWorkspace,
+                                                ref_mask_ws=outputs.OutputMaskWorkspace,
                                                 offset_ws_dict=offset_ws_dict, mask_ws_dict=mask_ws_dict,
-                                                num_banks=3, output_ws_name='VULCAN_1ft', flag='1f')
+                                                num_banks=3, output_ws_name='VULCAN_1fit')
             diff_cal_ws, out_offset_ws, out_mask_ws = rt
+            out_mask_name = out_mask_ws.name()
+            print ('Merged output workspace: {}'.format(out_mask_name))
+
             difc_1fit_cal_name = str(diff_cal_ws)
 
-            # TODO - NIGHT - Save!
-            raise
+            # check the difference between DIFCs
+            lib.check_correct_difcs_3banks(diamond_ws_name, difc_1fit_cal_name, out_mask_name)
+
+            # Save!
+            flag = '1fit'
+            time_now = datetime.datetime.now()
+            file_base_name = 'VULCAN_Calibration_{}-{}-{}_{}-{}-{}_{}'.format(time_now.year, time_now.month,
+                                                                              time_now.day,
+                                                                              time_now.hour, time_now.minute,
+                                                                              time_now.second, flag)
+            if out_offset_ws is None:
+                out_offset_name = None
+            else:
+                out_offset_name = str(out_offset_ws)
+            calib_ws_name, offset_ws_name, mask_ws_name = lib.save_calibration(offset_ws_name=out_offset_name,
+                                                                               mask_ws_name=str(out_mask_ws),
+                                                                               group_ws_name=group_ws_name,
+                                                                               calib_ws_name=str(diff_cal_ws),
+                                                                               calib_file_prefix=file_base_name)
 
         else:
             # TODO - NIGHT - need returned workspaces
@@ -182,19 +203,54 @@ def main(argv):
                                          offset_ws_dict=offset_ws_dict, mask_ws_dict=mask_ws_name,
                                          num_banks=3, output_ws_name='VULCAN_1ft', flag='1f')
 
-        # check the difference between DIFCs
-        lib.check_correct_difcs_3banks(diamond_ws_name, difc_1fit_cal_name, str(out_mask_ws))
+        # END-IF-ELSE: merge and save partial calibration
+    # END-IF
 
     # do cross correlation: 2 fit
     if input_args['num_banks'] == 3:
         results = lib.cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name, fit_time=2,
                                                          calib_flag={'west': False, 'east': False, 'high angle': True},
                                                          flag='2fit')
-        difc_2fit_cal_name = results[2][0]
-        mask_ws_name = results[2][1]
+        offset_ws_dict, mask_ws_dict = results
+        if ref_offset_ws is None:
+            # no reference offsetworkspace
+            rt = lib.merge_detector_calibration(ref_calib_ws=outputs.OutputCalWorkspace,
+                                                ref_mask_ws=outputs.OutputMaskWorkspace,
+                                                offset_ws_dict=offset_ws_dict, mask_ws_dict=mask_ws_dict,
+                                                num_banks=3, output_ws_name='VULCAN_2fit')
+            diff_cal_ws, out_offset_ws, out_mask_ws = rt
+            difc_2fit_cal_name = str(diff_cal_ws)
 
-        # do cross correlation: 1 fit
-        lib.check_correct_difcs_3banks(diamond_ws_name, difc_2fit_cal_name, mask_ws_name)
+            # check the difference between DIFCs
+            lib.check_correct_difcs_3banks(diamond_ws_name, difc_2fit_cal_name, str(out_mask_ws))
+
+            # Save!
+            flag = '2fit'
+            time_now = datetime.datetime.now()
+            file_base_name = 'VULCAN_Calibration_{}-{}-{}_{}-{}-{}_{}'.format(time_now.year, time_now.month,
+                                                                              time_now.day,
+                                                                              time_now.hour, time_now.minute,
+                                                                              time_now.second, flag)
+            if out_offset_ws is None:
+                out_offset_name = None
+            else:
+                out_offset_name = str(out_offset_ws)
+            calib_ws_name, offset_ws_name, mask_ws_name = lib.save_calibration(offset_ws_name=out_offset_name,
+                                                                               mask_ws_name=str(out_mask_ws),
+                                                                               group_ws_name=group_ws_name,
+                                                                               calib_ws_name=str(diff_cal_ws),
+                                                                               calib_file_prefix=file_base_name)
+
+        else:
+            # TODO - NIGHT - need returned workspaces
+            # with regular reference workspace
+            lib.merge_save_mask_detector(ref_offset_ws=ref_offset_ws, ref_calib_ws=outputs.OutputCalWorkspace,
+                                         ref_grouping_ws=group_ws_name, ref_mask_ws=outputs.OutputMaskWorkspace,
+                                         offset_ws_dict=offset_ws_dict, mask_ws_dict=mask_ws_name,
+                                         num_banks=3, output_ws_name='VULCAN_2fit', flag='2fit')
+
+        # END-IF-ELSE: merge and save partial calibration
+    # END-IF
 
     # TODO - NIGHT - Implement instrument wise cross correlation after analysis is finished
     #

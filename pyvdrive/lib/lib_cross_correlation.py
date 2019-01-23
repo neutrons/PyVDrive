@@ -72,6 +72,46 @@ def apply_reference_calibration(calib_ws, ref_calib_ws, bank_name):
     return
 
 
+def apply_reference_mask(out_mask_ws, ref_mask_ws, bank_name):
+    """
+    apply reference mask to output
+    :param out_mask_ws:
+    :param ref_mask_ws:
+    :param bank_name:
+    :return:
+    """
+    if bank_name == 'west':
+        ws_index_range = range(0, 3234)
+    elif bank_name == 'east':
+        ws_index_range = range(3234, 6468)
+    elif bank_name == 'high angle':
+        ws_index_range = range(6468, 24900)
+    else:
+        raise RuntimeError('balbal {}'.format(bank_name))
+
+    # apply
+    if isinstance(out_mask_ws, str):
+        mask_ws = mantid_helper.retrieve_workspace(out_mask_ws, True)
+    else:
+        mask_ws = out_mask_ws
+    if isinstance(ref_mask_ws, str):
+        ref_mask_ws = mantid_helper.retrieve_workspace(ref_mask_ws, True)
+
+    # static
+    num_masked = 0
+    for iws in ws_index_range:
+        ref_y_i = ref_mask_ws.dataY(iws)[0]
+        mask_ws.dataY(iws)[0] = ref_y_i
+        if ref_y_i > 0.5:
+            num_masked += 1
+    # END-FOR
+
+    print ('[REPORT] Apply {} masked detectors from workspace {} range workspace index {}:{}'
+           ''.format(num_masked, ref_mask_ws, ws_index_range[0], ws_index_range[-1]))
+
+    return
+
+
 def calculate_difc(ws, ws_index):
     """ Calculate DIFC of one spectrum
     :param ws:
@@ -297,7 +337,7 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
     # TODO - NIGHT - Make it better
     # it returns full set of spectra
     print ('[INFO] OffsetsWorkspace {}: spectra number = {}'.format(offset_ws_name, mtd[offset_ws_name].getNumberHistograms()))
-    analyze_mask(diamond_event_ws, mtd[offset_ws_name], ws_index_range[0], ws_index_range[1], None)
+    analyze_mask(diamond_event_ws, mtd[mask_ws_name], ws_index_range[0], ws_index_range[1], None)
 
     # check result and remove interval result
     # TODO - FUTURE NEXT - consider whether the cross correlate workspace shall be removed or not
@@ -314,7 +354,10 @@ def analyze_mask(event_ws, mask_ws, wi_start, wi_stop, output_dir):
     assert mask_ws.getNumberHistograms() == event_ws.getNumberHistograms(), 'blabla'
 
     num_masked = 0
+    num_masked_is_masked = 0
     zero_masked = 0
+    zero_masked_is_masked = 0
+    event_spectrum_list = list()
     for ws_index in range(wi_start, wi_stop+1):
         if mask_ws.readY(ws_index)[0] < 0.1:
             continue
@@ -322,9 +365,24 @@ def analyze_mask(event_ws, mask_ws, wi_start, wi_stop, output_dir):
         num_masked += 1
 
         # analyze masking information
+        num_events_i = event_ws.getSpectrum(ws_index).getNumberEvents()
+        if event_ws.getSpectrum(ws_index).getNumberEvents() == 0:
+            zero_masked += 1
+        else:
+            event_spectrum_list.append((num_events_i, ws_index))
+    
+    # method 2: shall be same result as method 1
+    for ws_index in range(wi_start, wi_stop+1):
+        if not mask_ws.getDetector(ws_index).isMasked():
+            continue
+
+        num_masked_is_masked += 1
+        mask_ws.dataY(ws_index)[0] = 1.0
+
+        # analyze masking information
         if event_ws.getSpectrum(ws_index).getNumberEvents() == 0:
             case_i = 1  # no event
-            zero_masked += 1
+            zero_masked_is_masked += 1
         elif event_ws.getSpectrum:
             pass
 
@@ -332,6 +390,13 @@ def analyze_mask(event_ws, mask_ws, wi_start, wi_stop, output_dir):
 
     print ('[REPORT] From {} to {}: Masked = {} including (1) zero counts = {}'
            ''.format(wi_start, wi_stop-1, num_masked, zero_masked))
+    print ('[REPORT] From {} to {}: Masked = {} including (1) zero counts = {}'
+           ''.format(wi_start, wi_stop-1, num_masked_is_masked, zero_masked_is_masked))
+
+    event_spectrum_list.sort(reverse=True)
+    for i in range(min(10, len(event_spectrum_list))):
+        num_events_i, ws_index = event_spectrum_list[i]
+        print ('[REPORT] ws-index = {}, num events = {}, masked!'.format(ws_index, num_events_i))
 
     return None, None, None
 
@@ -452,18 +517,17 @@ def cross_correlate_vulcan_data_3banks(diamond_ws_name, group_ws_name, calib_fla
     return offset_ws_dict, mask_ws_dict
 
 
-def merge_detector_calibration(ref_calib_ws, ref_mask_ws, ref_grouping_ws,
+def merge_detector_calibration(ref_calib_ws, ref_mask_ws,
                                offset_ws_dict, mask_ws_dict,
-                               num_banks, output_ws_name, flag):
-    """ Note: only work for 3 banks
+                               num_banks, output_ws_name):
+    """ Merge detector calibration and masks
+    Note: only work for 3 banks
     :param ref_calib_ws:
     :param ref_mask_ws:
-    :param ref_grouping_ws:
     :param offset_ws_dict:
     :param mask_ws_dict:
     :param num_banks:
     :param output_ws_name:
-    :param flag:
     :return:
     """
     # get the starting offset workspace and mask workspace
@@ -500,7 +564,9 @@ def merge_detector_calibration(ref_calib_ws, ref_mask_ws, ref_grouping_ws,
 
         print ('[INFO] Applying {}:{} to {}'.format(ref_calib_ws, bank_name, calib_ws_name))
         apply_reference_calibration(calib_ws_name, ref_calib_ws, bank_name)
+        apply_reference_mask(out_mask_ws, ref_mask_ws, bank_name)
     # END-FOR
+    out_mask_ws = apply_masks(out_mask_ws)
 
     if len(offset_ws_dict.keys()) < num_banks:
         out_offset_ws = None
@@ -828,6 +894,28 @@ def load_raw_nexus(file_name=None, ipts=None, run_number=None, output_ws_name=No
     return output_ws_name
 
 
+def apply_masks(mask_ws):
+    """
+    apply masked Y to detector
+    :param mask_ws:
+    :return:
+    """
+    # collect the masked spectra
+    mask_wsindex_list = list()
+    for iws in range(mask_ws.getNumberHistograms()):
+        if mask_ws.readY(iws)[0] > 0.5:
+            mask_wsindex_list.append(iws)
+
+    # mask all detectors explicitly
+    mask_ws_name = mask_ws.name()
+    mask_ws.maskDetectors(WorkspaceIndexList=mask_wsindex_list)
+    mask_ws = mtd[mask_ws_name]
+
+    print ('[INFO] {}: # Masked Detectors = {}'.format(mask_ws.name(), len(mask_wsindex_list)))
+
+    return mask_ws
+
+
 def merge_2_masks(lhs_mask_name, rhs_mask_name, output_mask_name):
     """
     Merge (add) 2 MaskWorkspaces
@@ -843,23 +931,23 @@ def merge_2_masks(lhs_mask_name, rhs_mask_name, output_mask_name):
          OutputWorkspace=output_mask_name)
 
     # now time to set everything right
-    lhs_mask = mtd[lhs_mask_name]
-    rhs_mask = mtd[rhs_mask_name]
+    # lhs_mask = mtd[lhs_mask_name]
+    # rhs_mask = mtd[rhs_mask_name]
     ohs_mask = mtd[output_mask_name]
 
-    # collect the masked spectra
-    mask_wsindex_list = list()
-    for iws in range(lhs_mask.getNumberHistograms()):
-        if lhs_mask.readY(iws)[0] > 0.5:
-            mask_wsindex_list.append(iws)
-    for iws in range(rhs_mask.getNumberHistograms()):
-        if rhs_mask.readY(iws)[0] > 0.5:
-            mask_wsindex_list.append(iws)
+    apply_masks(mask_ws=ohs_mask)
 
-    # mask all detectors explicitly
-    ohs_mask.maskDetectors(WorkspaceIndexList=mask_wsindex_list)
-
-    print ('[INFO] {}: # Masked Detectors = {}'.format(output_mask_name, len(mask_wsindex_list)))
+    # # collect the masked spectra
+    # mask_wsindex_list = list()
+    # for iws in range(lhs_mask.getNumberHistograms()):
+    #     if lhs_mask.readY(iws)[0] > 0.5:
+    #         mask_wsindex_list.append(iws)
+    # for iws in range(rhs_mask.getNumberHistograms()):
+    #     if rhs_mask.readY(iws)[0] > 0.5:
+    #         mask_wsindex_list.append(iws)
+    #
+    # # mask all detectors explicitly
+    # ohs_mask.maskDetectors(WorkspaceIndexList=mask_wsindex_list)
 
     return
 
@@ -974,7 +1062,7 @@ def merge_calibration(offset_ws_name, partial_offset_ws_name, mask_ws_name, part
     return offset_ws_name, mask_ws_name
 
 
-def save_calibration(offset_ws_name, mask_ws_name, group_ws_name, calib_file_prefix):
+def save_calibration(offset_ws_name, mask_ws_name, group_ws_name, calib_ws_name, calib_file_prefix):
     """
     save calibration (calibration table, mask and grouping) to legacy .cal and current .h5 file
     :param offset_ws_name:
@@ -984,39 +1072,67 @@ def save_calibration(offset_ws_name, mask_ws_name, group_ws_name, calib_file_pre
     :return:  calib_ws_name, offset_ws_name, mask_ws_name
     """
     # for the sake of legacy .cal file
-    SaveCalFile(OffsetsWorkspace=offset_ws_name,
-                GroupingWorkspace=group_ws_name,
-                MaskWorkspace=mask_ws_name,
-                Filename=os.path.join(os.getcwd(), calib_file_prefix + '.cal'))
+    if offset_ws_name is not None:
+        SaveCalFile(OffsetsWorkspace=offset_ws_name,
+                    GroupingWorkspace=group_ws_name,
+                    MaskWorkspace=mask_ws_name,
+                    Filename=os.path.join(os.getcwd(), calib_file_prefix + '.cal'))
+    # END-IF
 
     # save for the .h5 version that is a standard now
+    # convert OffsetsWorkspace to calibration workspace
+    if calib_ws_name is None:
+        if offset_ws_name is None:
+            raise RuntimeError('OffsetsWorkspace and CalibrationWorkspace cannot be None simultaneously.')
+        calib_ws_name = offset_ws_name+'_diff_cal'
+
+        # need to convert the offsets workspace to difc calibration workspace
+        ConvertDiffCal(OffsetsWorkspace=offset_ws_name,
+                       OutputWorkspace=calib_ws_name)
+    # END-IF
+
+    # save
+    #  get file name and unlink existing one
     out_file_name = os.path.join(os.getcwd(), calib_file_prefix + '.h5')
     if os.path.exists(out_file_name):
         os.unlink(out_file_name)
-    calib_ws_name = offset_ws_name+'_diff_cal'
 
-    # need to convert the offsets workspace to difc calibration workspace
-    ConvertDiffCal(OffsetsWorkspace=offset_ws_name,
-                   OutputWorkspace=calib_ws_name)
-    # save
     SaveDiffCal(CalibrationWorkspace=calib_ws_name,
                 GroupingWorkspace=group_ws_name,
                 MaskWorkspace=mask_ws_name,
                 Filename=out_file_name)
 
-    # save DIFC to files
-    # TODO - NIGHT - Implement writing DIFC from calibration workspace
-    print ('[DB...BAT] Writing DIFC to file')
-    calib_ws = mantid_helper.retrieve_workspace(calib_ws_name)
-    print ('[DB...BAT] Calibration workspace: type {}, {}'.format(calib_ws, calib_ws.id))
-
-    # last: save python file
-    GeneratePythonScript(InputWorkspace=calib_ws_name, Filename=calib_file_prefix + '.py')
-
+    # Save python file
+    py_name = os.path.join(os.getcwd(), calib_file_prefix + '.py')
+    GeneratePythonScript(InputWorkspace=calib_ws_name, Filename=py_name)
     print ('Calibration file is saved as {0} from {1}, {2} and {3}'
            ''.format(out_file_name, calib_ws_name, mask_ws_name, group_ws_name))
 
+    # Save DIFC
+    difc_file_name = os.path.join(os.getcwd(), calib_file_prefix + '_difc.dat')
+    export_difc(calib_ws_name, difc_file_name)
+
     return calib_ws_name, offset_ws_name, mask_ws_name
+
+
+def export_difc(calib_ws_name, out_file_name):
+    """
+    Export DIFC file
+    :param calib_ws_name:
+    :param out_file_name:
+    :return:
+    """
+    calib_ws = mantid_helper.retrieve_workspace(calib_ws_name)
+
+    wbuf = '{}\n'.format(calib_ws.getColumnNames())
+    for ir in range(calib_ws.rowCount()):
+        wbuf += '{}   {}   {}\n'.format(calib_ws.cell(ir, 0), calib_ws.cell(ir, 1), calib_ws.cell(ir, 2))
+
+    out_file = open(out_file_name, 'w')
+    out_file.write(wbuf)
+    out_file.close()
+
+    return
 
 
 def combine_save_calibration(ws_name, offset_mask_list, group_ws_name, calib_file_prefix):

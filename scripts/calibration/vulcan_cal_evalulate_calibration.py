@@ -117,8 +117,8 @@ def main(argv):
     focus_ws_name = mantid_reduction.align_and_focus_event_ws(event_ws_name=event_ws_name,
                                                               output_ws_name=event_ws_name,
                                                               binning_params='-0.001',
-                                                              diff_cal_ws_name=calib_ws,
-                                                              grouping_ws_name=grouping_ws,
+                                                              diff_cal_ws_name=str(calib_ws),
+                                                              grouping_ws_name=str(grouping_ws),
                                                               reduction_params_dict=dict(),
                                                               convert_to_matrix=False)
 
