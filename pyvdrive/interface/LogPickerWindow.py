@@ -639,15 +639,16 @@ class WindowLogPicker(QMainWindow):
         :return:
         """
         # Get run number
+        ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber)
         run_number = GuiUtility.parse_integer(self.ui.lineEdit_runNumber)
-        if run_number is None:
-            GuiUtility.pop_dialog_error(self, 'Unable to load run as value is not specified.')
+        if run_number is None or ipts_number is None:
+            GuiUtility.pop_dialog_error(self, 'Unable to load: both IPTS or run value must be specified.')
             return
 
         # Get sample logs
         try:
-            log_name_with_size = True
-            self._logNameList, run_info_str = self._myParent.load_sample_run(run_number, None, log_name_with_size)
+            self._logNameList, run_info_str = self._myParent.load_sample_run(ipts_number, run_number, None,
+                                                                             smart=True)
             self._logNameList.sort()
 
             # Update class variables, add a new entry to sample log value holder

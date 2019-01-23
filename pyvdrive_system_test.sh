@@ -17,7 +17,7 @@ if [ $1 ]; then
     CMD=$1
 else
     CMD=
-    echo "Options: (1) vbin (2) chop (3) view  (4) vpeak  (5) merge  (6) performance test"
+    echo "Options: (1) vbin (2) chop (3) view  (4) vpeak  (5) merge  (6) performance test  (7) Chopping UI test"
     echo "Options: Test all commands: \"all\""
 fi
 
@@ -51,4 +51,9 @@ fi
 if [ "$1" = "6" ]; then
 	echo "Performance test: combined commands"
         PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH ./build/scripts-2.7/performance_combined_test.py
+fi
+
+if [ "$1" = "7" ]; then
+	echo "Event slicing UI test"
+        PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH ./build/scripts-2.7/gui_test_slice_assistant.py
 fi

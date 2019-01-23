@@ -36,7 +36,7 @@ class QuickChopDialog(QDialog):
         super(QuickChopDialog, self).__init__(parent)
 
         # init UI
-        ui_path = os.path.join(os.path.dirname(__file__), "gui/import.ui")
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/ChopDialog.ui")
         self.ui = load_ui(ui_path, baseinstance=self)
 
         # set up the default value of the widgets

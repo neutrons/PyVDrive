@@ -115,6 +115,7 @@ if __name__ == "__main__":
                     'tests/workflow/idl_merge_test.py',
                     'tests/workflow/idl_info_test.py',
                     'tests/workflow/performance_combined_test.py',
+                    'tests/workflow/gui_test_slice_assistant.py',
                     'tests/unit/vulcan_slice_reduce_test.py']
     scripts.extend(test_scripts)
 
