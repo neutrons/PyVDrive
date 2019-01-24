@@ -402,7 +402,7 @@ class SaveVulcanGSS(object):
 
         self._van_ws_names[vanadium_gsas_file] = van_gsas_ws_name
 
-        return van_ws
+        return van_ws.name()
 
     def save(self, diff_ws_name, run_date_time, gsas_file_name, ipts_number, gsas_param_file_name,
              align_vdrive_bin, van_ws_name, write_to_file=True):
@@ -441,6 +441,7 @@ class SaveVulcanGSS(object):
 
         # check for vanadium GSAS file name
         if van_ws_name is not None:
+            print ('[DB...BAT] van_ws_name: {} of type {}'.format(van_ws_name, type(van_ws_name)))
             # check whether a workspace exists
             if not ADS.doesExist(van_ws_name):
                 raise RuntimeError('Vanadium workspace {} does not exist in Mantid ADS'.format(van_ws_name))
