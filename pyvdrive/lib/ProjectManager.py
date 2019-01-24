@@ -432,6 +432,8 @@ class ProjectManager(object):
 
         # process outputs
         if status:
+            if output_directory is None:
+                output_directory = '/SNS/VULCAN/IPTS-{}/shared/binned_data/{}'.format(ipts_number, run_number)
             message = 'IPTS-{0} Run {1} is chopped, reduced (?={2}) and saved to {3}\nWarning: {4}' \
                       ''.format(ipts_number, run_number, reduce_flag, output_directory, error_message)
         else:
