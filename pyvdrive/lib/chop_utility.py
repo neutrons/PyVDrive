@@ -195,9 +195,9 @@ class DataChopper(object):
         # get proton charge
         proton_charge_property = mantid_helper.get_sample_log_tsp(self._mtdWorkspaceName, 'proton_charge')
         pc_times = proton_charge_property.times
-
+        # these are numpy.datetime64 object.  cannot be add to string like {}.format()
         info_str += 'run start: {0}; run stop:  {1}' \
-                    ''.format(pc_times[0], pc_times[-1])
+                    ''.format(str(pc_times[0]), str(pc_times[-1]))
 
         return info_str
 

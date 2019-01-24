@@ -5,7 +5,7 @@ import sys
 from pyvdrive.interface.VDrivePlot import VdriveMainWindow
 try:
     from PyQt5.QtWidgets import QApplication
-except ImportError as import_error:
+except (ImportError, RuntimeError) as import_error:
     print ('[ild_vbin_test] Import PyQt5/qtconsole Error: {}'.format(import_error))
     from PyQt4.QtGui import QApplication
 

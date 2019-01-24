@@ -8,9 +8,11 @@ from procss_vcommand import convert_string_to
 from pyvdrive.lib import datatypeutility
 try:
     from PyQt5 import QtCore
-except ImportError as import_err:
+    from PyQt5.QtCore import pyqtSignal
+except (ImportError, RuntimeError) as import_err:
     print ('CHOP: {}'.format(import_err))
     from PyQt4 import QtCore
+    from PyQt4.QtCore import pyqtSignal
 
 
 class VdriveChop(VDriveCommand):

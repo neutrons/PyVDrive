@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 import os
 import os.path
 import h5py
@@ -10,8 +10,8 @@ from mantid.api import AnalysisDataService as ADS
 from pyvdrive.lib import datatypeutility
 
 
-PHASE_NED = datetime(2017, 6, 1)
-PHASE_X1 = datetime(2019, 7, 1)
+PHASE_NED = datetime.datetime(2017, 6, 1)
+PHASE_X1 = datetime.datetime(2019, 7, 1)
 
 
 class SaveVulcanGSS(object):
@@ -113,8 +113,8 @@ class SaveVulcanGSS(object):
             runstart_sec = runstart.split(".")[0]
             runstart_ns = runstart.split(".")[1]
 
-            utctime = datetime.strptime(runstart_sec, '%Y-%m-%dT%H:%M:%S')
-            time0 = datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
+            utctime = datetime.datetime.strptime(runstart_sec, '%Y-%m-%dT%H:%M:%S')
+            time0 = datetime.datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
 
             delta = utctime - time0
             try:
@@ -209,7 +209,7 @@ class SaveVulcanGSS(object):
         :param run_date_time: datetime instance
         :return:
         """
-        assert isinstance(run_date_time, datetime), 'Run date {} must be a datetime.datetime instance ' \
+        assert isinstance(run_date_time,datetime.datetime), 'Run date {} must be a datetime.datetime instance ' \
                                                     'but not of type {}'.format(run_date_time,
                                                                                 type(run_date_time))
 
