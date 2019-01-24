@@ -4,7 +4,7 @@ from mantid.simpleapi import Load, LoadEventNexus, GenerateEventsFilter, FilterE
 from mantid.simpleapi import AlignDetectors, ConvertUnits, RenameWorkspace, ExtractSpectra, CloneWorkspace, Rebin
 from mantid.simpleapi import ConvertToPointData, ConjoinWorkspaces, SaveGSS, Multiply, CreateWorkspace
 from mantid.simpleapi import DiffractionFocussing, CreateEmptyTableWorkspace, CreateWorkspace
-from mantid.simpleapi import EditInstrumentGeometry
+from mantid.simpleapi import EditInstrumentGeometry, GeneratePythonScript
 from mantid.api import AnalysisDataService
 import threading
 import numpy
@@ -323,6 +323,15 @@ class SliceFocusVulcan(object):
         if chop_overlap_mode:
             # FIXME - Shan't be used anymore unless an optimized algorithm developed for DT option
             output_names = self.process_overlap_chopped_data(output_names)
+        # END-IF
+
+        # save ONE python script for future reference
+        if len(output_names) > 1:
+            python_name = os.path.join(self._output_dir,
+                                       '{}_{}.py'.format(self._run_number, split_ws_name))
+            GeneratePythonScript(InputWorkspace=output_names[1], Filename=python_name)
+        else:
+            print ('[ERROR] No output workspace to export to GSAS!')
 
         # write all the processed workspaces to GSAS:  IPTS number and parm_file_name shall be passed
         run_date_time = vulcan_util.get_run_date(event_ws_name, '')
@@ -342,6 +351,7 @@ class SliceFocusVulcan(object):
                         'SaveGSS = {3}'.format(t1 - t0, t2 - t1, t3 - t2, tf - t3, self._number_threads)
         print (process_info)
 
+        # FIXME - FUTURE - Whether this for-loop is useful?
         end_sliced_ws_index = 0
         for thread_id in range(self._number_threads):
             start_sliced_ws_index = end_sliced_ws_index
@@ -453,11 +463,6 @@ class SliceFocusVulcan(object):
                                                       args=(workspace_names_i, ipts_number, van_diff_ws_name,
                                                             parm_file_name, gsas_writer, run_start_date,
                                                             gsas_file_name_list,))
-
-            """
-            self, workspace_name_list, ipts_number, van_ws_name, parm_file_name, gsas_writer,
-                         run_start_date, gsas_file_name_list):
-            """
 
             thread_pool[thread_id].start()
             print ('[DB...Write GSAS] thread {0}: [{1}: {2}) ---> {3} workspaces'.

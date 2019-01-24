@@ -54,8 +54,11 @@ class EventFilteringAssistantTestEnvironment(object):
         :param run_number:
         :return:
         """
+        # self._slice_window.ui.lineEdit_iptsNumber.setText('{}'.format(22126))
+        # self._slice_window.ui.lineEdit_runNumber.setText('{}'.format(171898))
+
         self._slice_window.ui.lineEdit_iptsNumber.setText('{}'.format(22126))
-        self._slice_window.ui.lineEdit_runNumber.setText('{}'.format(171898))
+        self._slice_window.ui.lineEdit_runNumber.setText('{}'.format(171899))
 
         self._slice_window.do_load_run()
 

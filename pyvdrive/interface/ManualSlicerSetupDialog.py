@@ -1,26 +1,25 @@
+import os
 try:
     import qtconsole.inprocess
     from PyQt5 import QtWidgets, QtCore
-    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.QtWidgets import QVBoxLayout, QDialog, QFileDialog, QInputDialog
     from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtCore import pyqtSignal
-except ImportError:
+except (ImportError, RuntimeError):
     from PyQt4 import QtGui, QtCore
-    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.QtGui import QVBoxLayout, QDialog, QFileDialog, QInputDialog
     from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtCore import pyqtSignal
-
-try:
-    _fromUtf8 = QtCore.QString.fromUtf8
-except AttributeError:
-    def _fromUtf8(s):
-        return s
-
+# try:
+#     _fromUtf8 = QtCore.QString.fromUtf8
+# except AttributeError:
+#     def _fromUtf8(s):
+#         return s
 from pyvdrive.interface.gui.vdrivetablewidgets import DataSlicerSegmentTable
 import gui.GuiUtility as GuiUtil
 
 
-class ManualSlicerSetupTableDialog(QtGui.QDialog):
+class ManualSlicerSetupTableDialog(QDialog):
     """
     extended dialog to work with the manual event slicers (in time) table
     """
@@ -132,7 +131,7 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
             return
 
         # pop a dialog for the name of the slicer
-        slicer_name, status = QtGui.QInputDialog.getText(self, 'Input Slicer Name', 'Enter slicer name:')
+        slicer_name, status = QInputDialog.getText(self, 'Input Slicer Name', 'Enter slicer name:')
         # return if rejected with
         if status is False:
             return
@@ -253,7 +252,7 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
 
         # pop a dialog for the name of the slicer
         file_filter = 'Data Files (*.dat);; All Files (*.*)'
-        file_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Time slicer file name',
+        file_name = str(QFileDialog.getSaveFileName(self, 'Time slicer file name',
                                                           self.controller.get_working_dir(),
                                                           file_filter))
         if len(file_name) == 0:
@@ -299,7 +298,7 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
 
         # get the name of the target
         # pop a dialog for the name of the slicer
-        target, status = QtGui.QInputDialog.getText(self, 'Input Target',
+        target, status = QInputDialog.getText(self, 'Input Target',
                                                     'Enter chopping target for selected rows:')
         # return if rejected with
         if status is False:

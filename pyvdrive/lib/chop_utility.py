@@ -762,8 +762,7 @@ def save_slicers(time_segment_list, file_name):
     :return:
     """
     # Check
-    assert isinstance(file_name, str), 'File name %s must be a string but not of type %s.' \
-                                       '' % (str(file_name), type(file_name))
+    datatypeutility.check_file_name(file_name, False, True, False, 'Target file name for segments')
     assert isinstance(time_segment_list, list), 'Time segment list must be a list but not of type %s.' \
                                                 '' % type(time_segment_list)
 

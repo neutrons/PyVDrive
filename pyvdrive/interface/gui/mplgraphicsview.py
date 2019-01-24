@@ -921,8 +921,10 @@ class MplGraphicsView(QWidget):
         :return:
         """
         # check
-        assert isinstance(ikey, int), 'Line key must be an integer.'
-        assert ikey in self._my1DPlotDict, 'Line with ID %d is not on canvas. ' % ikey
+        assert isinstance(ikey, int), 'Line key {} must be an integer.'.format(ikey)
+        if ikey not in self._my1DPlotDict:
+            raise RuntimeError('Line with ID {} is not on canvas (registered IDS: {})'
+                               ' '.format(ikey, self._my1DPlotDict.keys()))
 
         return self._myCanvas.updateLine(ikey, vecx, vecy, linestyle, linecolor, marker, markercolor, label)
 
@@ -930,8 +932,6 @@ class MplGraphicsView(QWidget):
         """
         Update indicator with new color
         :param i_key:
-        :param vec_x:
-        :param vec_y:
         :param color:
         :return:
         """

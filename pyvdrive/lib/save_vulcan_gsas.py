@@ -106,15 +106,20 @@ class SaveVulcanGSS(object):
 
         # Get information on start/stop
         if run.hasProperty("run_start") and run.hasProperty("duration"):
+            # TODO - NIGHT - Need to adopt numpy.datetime64 to calculate aboslute time
             # export processing time information
             runstart = run.getProperty("run_start").value
             duration = float(run.getProperty("duration").value)
             # property run_start and duration exist
             runstart_sec = runstart.split(".")[0]
             runstart_ns = runstart.split(".")[1]
-
-            utctime = datetime.datetime.strptime(runstart_sec, '%Y-%m-%dT%H:%M:%S')
-            time0 = datetime.datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
+            try:
+                utctime = datetime.datetime.strptime(runstart_sec, '%Y-%m-%dT%H:%M:%S')
+                time0 = datetime.datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
+            except AttributeError as attrib_error:
+                print ('[DB...BAT] run start sec = {}'.format(str(runstart_sec)))
+                raise RuntimeError('Unable to convert run start {} to UTC time due to {}'
+                                   ''.format(runstart_sec, attrib_error))
 
             delta = utctime - time0
             try:
@@ -136,7 +141,7 @@ class SaveVulcanGSS(object):
         new_header += "%-80s\n" % title
         new_header += "%-80s\n" % ("Instrument parameter file: %s" % gsas_param_file_name)
         new_header += "%-80s\n" % ("#IPTS: %s" % str(ipts))
-        new_header += "%-80s\n" % "#binned by: Mantid"
+        new_header += "%-80s\n" % ("#binned by: Mantid (refrence workspace: {}".format(str(gsas_workspace)))
         new_header += "%-80s\n" % ("#GSAS file name: %s" % os.path.basename(gsas_file_name))
         new_header += "%-80s\n" % ("#GSAS IPARM file: %s" % gsas_param_file_name)
         new_header += "%-80s\n" % ("#Pulsestart:    %d" % total_nanosecond_start)
