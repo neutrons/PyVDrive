@@ -636,7 +636,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
             i_stop = (np.abs(vec_x - x_stop)).argmin()
             if i_start == i_stop:
                 # empty!
-                print '[DB...WARNING] Range: %d to %d  (%f to %f) cannot generate any vector. ' \
+                print '[SampleLogView WARNING] Range: %d to %d  (%f to %f) cannot generate any vector. ' \
                       '' % (i_start, i_stop, vec_x[i_start], vec_x[i_stop])
                 continue
             elif i_start > i_stop:

@@ -26,6 +26,7 @@ except AttributeError:
 import gui.GuiUtility as GuiUtility
 from pyvdrive.interface.gui.vdrivetreewidgets import VdriveRunManagerTree
 from pyvdrive.interface.gui.samplelogview import LogGraphicsView
+from pyvdrive.lib import datatypeutility
 import LoadMTSLogWindow
 import QuickChopDialog
 
@@ -424,6 +425,7 @@ class WindowLogPicker(QMainWindow):
         # pop up the dialog
         self._quickChopDialog = QuickChopDialog.QuickChopDialog(self, self._currRunNumber, raw_file_name)
         result = self._quickChopDialog.exec_()
+        print ('[DB...BAT] Quick Chop Dialog - result: {}'.format(result))
 
         # quit if user cancels the operation
         if result == 0:
@@ -441,15 +443,26 @@ class WindowLogPicker(QMainWindow):
             to_reduce_gsas = self._quickChopDialog.reduce_data
         # END-IF-ELSE
 
-        # get chop manager
-        assert isinstance(self._currSlicerKey, str), 'Slicer key %s must be a string but not %s.' \
-                                                     '' % (str(self._currSlicerKey), type(self._currSlicerKey))
-        status, message = self.get_controller().slice_data(run_number, self._currSlicerKey,
-                                                           reduce_data=to_reduce_gsas,
-                                                           vanadium=None,
-                                                           save_chopped_nexus=to_save_nexus,
-                                                           output_dir=output_dir,
-                                                           export_log_type='loadframe')
+        # check slicer keys
+        if self._currSlicerKey is None:
+            GuiUtility.pop_dialog_error(self, 'Slicer has not been set up yet.')
+        else:
+            datatypeutility.check_string_variable('Current slicer key', self._currSlicerKey, None)
+        # slice data
+        status, message = self.get_controller().project.chop_run(run_number, self._currSlicerKey,
+                                                                 reduce_flag=to_reduce_gsas,
+                                                                 vanadium=None,
+                                                                 save_chopped_nexus=to_save_nexus,
+                                                                 number_banks=3,  # TODO - NIGHT - Shall be settable
+                                                                 tof_correction=False,
+                                                                 output_directory=output_dir,
+                                                                 user_bin_parameter=None,
+                                                                 roi_list=list(),
+                                                                 mask_list=list(),
+                                                                 nexus_file_name=None,
+                                                                 gsas_iparm_file=None,
+                                                                 overlap_mode=False,
+                                                                 gda_start=0)
         if status:
             GuiUtility.pop_dialog_information(self, message)
         else:

@@ -32,11 +32,17 @@ class EventFilteringAssistantTestEnvironment(object):
         return self._slice_window
 
     def chop_by_time(self):
+        """
 
+        :return:
+        """
+        # select time slicing
         self._slice_window.ui.radioButton_timeSlicer.setChecked(True)
-
+        # specify time step
         self._slice_window.ui.lineEdit_slicerLogValueStep.setText('200')
-
+        # set up slicer
+        self._slice_window.do_setup_uniform_slicer()
+        # chop
         self._slice_window.do_chop()
 
         return
