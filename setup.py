@@ -11,8 +11,12 @@ if sys.argv[-1] == 'pyuic':
     indir = 'designer'
     if os.path.exists('build/lib.linux-x86_64-2.7'):
         outdir1 = 'build/lib.linux-x86_64-2.7/pyvdrive/interface/gui'
+    else:
+        outdir1 = None
     if os.path.exists('build/lib'):
         outdir2 = 'build/lib/pyvdrive/interface/gui'
+    else:
+        outdir2 = None
     files = os.listdir(indir)
     # UI file only
     files = [item for item in files if item.endswith('.ui')]
@@ -23,18 +27,22 @@ if sys.argv[-1] == 'pyuic':
     for ui_name in files:
         # target name
         base_ui_name = os.path.basename(ui_name)
-        dest_ui_name1 = os.path.join(outdir1, base_ui_name)
-        dest_ui_name2 = os.path.join(outdir2, base_ui_name)
+        if outdir1:
+            dest_ui_name1 = os.path.join(outdir1, base_ui_name)
+        if outdir2:
+            dest_ui_name2 = os.path.join(outdir2, base_ui_name)
         # need to copy?
-        if not (os.path.exists(dest_ui_name1) and os.stat(ui_name).st_mtime < os.stat(dest_ui_name1).st_mtime):
-            # copy UI file to target
-            copyfile(ui_name, dest_ui_name1)
-            print("Copied '%s' to '%s'" % (ui_name, dest_ui_name1))
+        if outdir1:
+            if not (os.path.exists(dest_ui_name1) and os.stat(ui_name).st_mtime < os.stat(dest_ui_name1).st_mtime):
+                # copy UI file to target
+                copyfile(ui_name, dest_ui_name1)
+                print("Copied '%s' to '%s'" % (ui_name, dest_ui_name1))
 
-        if not (os.path.exists(dest_ui_name2) and os.stat(ui_name).st_mtime < os.stat(dest_ui_name2).st_mtime):
-            # copy UI file to target
-            copyfile(ui_name, dest_ui_name2)
-            print("Copied '%s' to '%s'" % (ui_name, dest_ui_name2))
+        if outdir2:
+            if not (os.path.exists(dest_ui_name2) and os.stat(ui_name).st_mtime < os.stat(dest_ui_name2).st_mtime):
+                # copy UI file to target
+                copyfile(ui_name, dest_ui_name2)
+                print("Copied '%s' to '%s'" % (ui_name, dest_ui_name2))
 
         done += 1
     # END-FOR
