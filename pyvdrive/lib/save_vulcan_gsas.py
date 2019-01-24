@@ -42,6 +42,9 @@ class SaveVulcanGSS(object):
         # higher resolution: high angle bank
         self._mantid_bin_param_dict['higher'] = high_res_tof_vec, self._create_binning_parameters(high_res_tof_vec)
 
+        # about vanadium
+        self._van_ws_names = dict()
+
         return
 
     @staticmethod
@@ -383,9 +386,26 @@ class SaveVulcanGSS(object):
 
         return bank_buffer
 
-    # TODO FIXME - NIGHT - vanadium gsas file shall be imported in other method for parallel calls to save()
+    def import_vanadium(self, vanadium_gsas_file):
+        """
+        Import vanadium GSAS file for normalization
+        :param vanadium_gsas_file:
+        :return:
+        """
+        # NOTE (algorithm) use hash to determine the workspace name from file location
+        base_name = os.path.basename(vanadium_gsas_file).split('.')[0]
+        van_gsas_ws_name = 'Van_{}_{}'.format(base_name, hash(vanadium_gsas_file))
+        if ADS.doesExist(van_gsas_ws_name):
+            van_ws = ADS.retrieve(van_gsas_ws_name)
+        else:
+            van_ws = load_vulcan_gsas(vanadium_gsas_file, van_gsas_ws_name)
+
+        self._van_ws_names[vanadium_gsas_file] = van_gsas_ws_name
+
+        return van_ws
+
     def save(self, diff_ws_name, run_date_time, gsas_file_name, ipts_number, gsas_param_file_name,
-             align_vdrive_bin, vanadium_gsas_file, write_to_file=True):
+             align_vdrive_bin, van_ws_name, write_to_file=True):
         """
         Save a workspace to a GSAS file or a string
         :param diff_ws_name: diffraction data workspace
@@ -394,7 +414,8 @@ class SaveVulcanGSS(object):
         :param ipts_number:
         :param gsas_param_file_name:
         :param align_vdrive_bin: Flag to align with VDRIVE bin edges/boundaries
-        :param vanadium_gsas_file:
+        :param van_ws_name: name of vanadium workspaces loaded from GSAS (replacing vanadium_gsas_file)
+        :param write_to_file: flag to write the text buffer to file
         :return: string as the file content
         """
         diff_ws = ADS.retrieve(diff_ws_name)
@@ -419,14 +440,12 @@ class SaveVulcanGSS(object):
             bin_params_set = [(range(1, diff_ws.getNumberHistograms()+1), None, None)]
 
         # check for vanadium GSAS file name
-        if vanadium_gsas_file is not None:
+        if van_ws_name is not None:
             # check whether a workspace exists
-            # NOTE (algorithm) use hash to determine the workspace name from file location
-            van_gsas_ws_name = 'van_{}'.format(hash(vanadium_gsas_file))
-            if ADS.doesExist(van_gsas_ws_name):
-                van_ws = ADS.retrieve(van_gsas_ws_name)
-            else:
-                van_ws = load_vulcan_gsas(vanadium_gsas_file, van_gsas_ws_name)
+            if not ADS.doesExist(van_ws_name):
+                raise RuntimeError('Vanadium workspace {} does not exist in Mantid ADS'.format(van_ws_name))
+            van_ws = ADS.retrieve(van_ws_name)
+
             # check number of histograms
             if van_ws.getNumberHistograms() != diff_ws.getNumberHistograms():
                 raise RuntimeError('Numbers of histograms between vanadium spectra and output GSAS are different')
@@ -455,7 +474,7 @@ class SaveVulcanGSS(object):
                     unmatched, reason = self._compare_workspaces_dimension(van_ws, bank_id, tof_vector)
                     if unmatched:
                         raise RuntimeError('Vanadium GSAS workspace {} does not match workspace {}: {}'
-                                           ''.format(vanadium_gsas_file, diff_ws_name, reason))
+                                           ''.format(van_ws_name, diff_ws_name, reason))
                 # END-IF
 
                 # write GSAS head considering vanadium
@@ -472,6 +491,7 @@ class SaveVulcanGSS(object):
         for bank_id in sorted(gsas_buffer_dict.keys()):
             gsas_buffer += gsas_buffer_dict[bank_id]
 
+        # write to HDD
         if write_to_file:
             datatypeutility.check_file_name(gsas_file_name, check_exist=False,
                                             check_writable=True, is_dir=False, note='Output GSAS file')
@@ -479,7 +499,6 @@ class SaveVulcanGSS(object):
             g_file.write(gsas_buffer)
             g_file.close()
         else:
-            print ('[DB...BAT] No file written for {}'.format(diff_ws_name))
             pass
 
         return gsas_buffer
@@ -501,9 +520,10 @@ class SaveVulcanGSS(object):
     @staticmethod
     def _compare_workspaces_dimension(van_ws, bank_id, diff_tof_vec):
         """
-        compare the workspace dimensions
+        compare the workspace dimensions between vanadium workspace and diffraction TOF vector
         :param van_ws:
-        :param diff_ws:
+        :param bank_id:
+        :param diff_tof_vec:
         :return: Being different (bool), Reason (str)
         """
         iws = bank_id - 1
@@ -549,8 +569,7 @@ def load_vulcan_gsas(gsas_name, gsas_ws_name):
     # for the rest of the spectra
     for iws in range(1, temp_gss_ws.getNumberHistograms()):
         # extract, convert to point data, conjoin and clean
-        # TODO FIXME - NIGHT - temp workspace shall be more unique!
-        temp_out_name_i = 'temp_i_x'
+        temp_out_name_i = '{}_{}'.format(temp_out_name, iws)
         api.ExtractSpectra(temp_out_name, WorkspaceIndexList=[iws], OutputWorkspace=temp_out_name_i)
         api.ConvertToPointData(InputWorkspace=temp_out_name_i, OutputWorkspace=temp_out_name_i)
         api.ConjoinWorkspaces(InputWorkspace1=gsas_ws_name,

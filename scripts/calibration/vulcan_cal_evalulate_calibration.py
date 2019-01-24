@@ -93,12 +93,12 @@ def main(argv):
     mantid_helper.mask_workspace(event_ws_name, mask_ws.name())
 
     message = mantid_reduction.align_and_focus_event_ws(event_ws_name=event_ws_name,
-                                                              output_ws_name=event_ws_name,
-                                                              binning_params='-0.001',
-                                                              diff_cal_ws_name=str(calib_ws),
-                                                              grouping_ws_name=str(grouping_ws),
-                                                              reduction_params_dict=dict(),
-                                                              convert_to_matrix=False)
+                                                        output_ws_name=event_ws_name,
+                                                        binning_params='-0.001',
+                                                        diff_cal_ws_name=str(calib_ws),
+                                                        grouping_ws_name=str(grouping_ws),
+                                                        reduction_params_dict=dict(),
+                                                        convert_to_matrix=False)
     focus_ws_name = event_ws_name
 
     if 'output' in input_arg_dict:
@@ -129,23 +129,10 @@ def main(argv):
     SaveNexusProcessed(InputWorkspace=out_ws_name, Filename=file_name + '_tof_high.nxs',
                        Title='{} calibrated by {}'.format(event_nexus_name, input_arg_dict['calib_file']))
 
+    GeneratePythonScript(InputWorkspace=event_ws_name, Filename=file_name + '_focus.py')
 
-    # GeneratePythonScript(InputWorkspace=event_ws_name, Filename='eval_temp.py')
-    # SaveNexusProcessed(InputWorkspace=focus_ws_name, Filename=file_name,
-    #                    Title='{} calibrated by {}'.format(str(event_ws), input_arg_dict['calib_file']))
+    return
 
-    # from matplotlib import pyplot as plt
-    #
-    # focus_ws = mtd[focus_ws_name]
-    #
-    # for bank_id in range(3):
-    #     vec_x = focus_ws.readX(bank_id)
-    #     vec_y = focus_ws.readY(bank_id)
-    #     plt.plot(vec_x[:len(vec_y)], vec_y, label='bank {}'.format(bank_id+1))
-    # plt.legend()
-    # plt.show()
-
-    print ('WARNING!!! Event file is loaded for 300 seconds for test purpose')
 
 if __name__ == '__main__':
     main(sys.argv)

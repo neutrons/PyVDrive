@@ -1358,16 +1358,16 @@ class ProjectManager(object):
                     if vanadium_run is not None:
                         van_gsas_name, iparam_file_name = \
                             self._parent.archive_manager.locate_process_vanadium(vanadium_run)
+                        van_ws_name = self._reductionManager.gsas_writer.import_vanadium(van_gsas_name)
                     else:
-                        van_gsas_name = None
+                        van_ws_name = None
                         iparam_file_name = 'vulcan.prm'
 
                     self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
                                                             gsas_file_name=gsas_file_name, ipts_number=ipts_number,
                                                             align_vdrive_bin=align_vdrive_bin,
                                                             gsas_param_file_name=iparam_file_name,
-                                                            vanadium_gsas_file=van_gsas_name)
-
+                                                            van_ws_name=van_ws_name)
             except RuntimeError as run_error:
                 error_messages.append('Failed to reduce run {0} due to {1}'.format(run_number, run_error))
             else:

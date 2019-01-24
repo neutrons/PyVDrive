@@ -198,7 +198,6 @@ class SliceFocusVulcan(object):
         """
         self._run_number = run_number
 
-    # TODO - 2019.01.10 - Clean
     def slice_focus_event_workspace(self, event_ws_name, geometry_calib_ws_name, group_ws_name,
                                     split_ws_name, info_ws_name,
                                     output_ws_base, binning_parameters, chop_overlap_mode,
@@ -215,8 +214,11 @@ class SliceFocusVulcan(object):
         :param split_ws_name:
         :param info_ws_name:
         :param output_ws_base:
+        :param chop_overlap_mode: whether the chopped workspace will have overlapped events (in time)
         :param binning_parameters: None for IDL binning; otherwise, use defined binning
         :param gsas_info_dict: required for writing GSAS files keys (IPTS, 'parm file' = 'vulcan.prm', 'vanadium')
+        :param gsas_writer: GSASWriter instance to export to VULCAN GSAS file
+        :param gsas_file_index_start: starting index of GSAS file (1.gda, 2.gda.. whether 0.gda?)
         :return: tuple: [1] slicing information, [2] output workspace names
         """
         # check inputs
@@ -238,7 +240,6 @@ class SliceFocusVulcan(object):
         # is relative or not?  TableWorkspace has to be relative!
         split_ws = mantid_helper.retrieve_workspace(split_ws_name, raise_if_not_exist=True)
         if split_ws.__class__.__name__.count('TableWorkspace'):
-            print ('[DB...BAT...Calling FilterEvents: RalativeTime')
             is_relative_time = True
         else:
             is_relative_time = False
@@ -326,7 +327,7 @@ class SliceFocusVulcan(object):
         # write all the processed workspaces to GSAS:  IPTS number and parm_file_name shall be passed
         run_date_time = vulcan_util.get_run_date(event_ws_name, '')
         self.write_to_gsas(output_names, ipts_number=gsas_info_dict['IPTS'], parm_file_name=gsas_info_dict['parm file'],
-                           vanadium_gsas_name=gsas_info_dict['vanadium'],
+                           vanadium_gda_name=gsas_info_dict['vanadium'],
                            ref_tof_sets=binning_parameters, gsas_writer=gsas_writer, run_start_date=run_date_time,
                            gsas_file_index_start=gsas_file_index_start)
 
@@ -359,7 +360,7 @@ class SliceFocusVulcan(object):
         :param output_file_name_base:
         :return:
         """
-        # TODO FIXME TODO - 20180807 - This is a test case for multiple threading! FIXME
+        # TODO - FUTURE - Implement! - This is a test case for multiple threading! FIXME
 
         # NOTE: this method shall create a thread but return without thread returns
 
@@ -374,43 +375,44 @@ class SliceFocusVulcan(object):
 
         return
 
-    # TODO - NIGHT - Clean!
-    def write_gsas_files(self, workspace_name_list, ipts_number, van_gsas_name, parm_file_name, ref_tof_sets, gsas_writer,
-                      run_start_date, gsas_file_name_list):
-        """
-
+    def write_gsas_files(self, workspace_name_list, ipts_number, van_ws_name, parm_file_name, gsas_writer,
+                         run_start_date, gsas_file_name_list):
+        """ Export a series of workspaces to text buffer, which later will be exported to GSAS files, but not
+        in this method
+        Note: this is a single thread method designed for multi-threading case
         :param workspace_name_list:
         :param ipts_number:
         :param parm_file_name:
+        :param gsas_writer:
+        :param gsas_file_name_list: list of GSAS file names corresponding to workspace names
+        :param van_ws_name: vanadium workspace name (string or None)
+        :param run_start_date:
+        :return:
+        """
+        for index_ws, ws_name in enumerate(workspace_name_list):
+            if ws_name == '':
+                continue
+            text_buffer = gsas_writer.save(diff_ws_name=ws_name, run_date_time=run_start_date,
+                                           gsas_file_name=gsas_file_name_list[index_ws],
+                                           ipts_number=ipts_number,
+                                           gsas_param_file_name=parm_file_name, align_vdrive_bin=True,
+                                           van_ws_name=van_ws_name, write_to_file=False)
+            print ('[DB...BAT] GSAS buffer written for {}'.format(ws_name))
+            self._gsas_buffer_dict[ws_name] = text_buffer
+
+        return
+
+    def write_to_gsas(self, workspace_name_list, ipts_number, parm_file_name, vanadium_gda_name,
+                      ref_tof_sets, gsas_writer, run_start_date, gsas_file_index_start=1):
+        """ Write a set of workspaces to GSAS file in parallel (mutliple threading)
+        :param workspace_name_list:
+        :param ipts_number:
+        :param parm_file_name:
+        :param vanadium_gda_name: name of reduced vanadium in GSAS file
         :param ref_tof_sets:
         :param gsas_writer:
         :param run_start_date:
         :param gsas_file_index_start:
-        :return:
-        """
-        # TODO - NIGHT - Shall accept vanadium GSAS file!
-        for index_ws, ws_name in enumerate(workspace_name_list):
-            if ws_name == '':
-                continue
-            text_bufer = gsas_writer.save(diff_ws_name=ws_name, run_date_time=run_start_date,
-                                          gsas_file_name=gsas_file_name_list[index_ws],
-                                          ipts_number=ipts_number,
-                                          gsas_param_file_name=parm_file_name, align_vdrive_bin=True,
-                                          vanadium_gsas_file=van_gsas_name, write_to_file=False)
-            print ('[DB...BAT] GSAS buffer written for {}'.format(ws_name))
-            self._gsas_buffer_dict[ws_name] = text_bufer
-
-        return
-
-    # TODO - NIGHT - Code quality
-    def write_to_gsas(self, workspace_name_list, ipts_number, parm_file_name, vanadium_gsas_name,
-                      ref_tof_sets, gsas_writer,
-                      run_start_date, gsas_file_index_start=1):
-        """
-        write to GSAS
-        :param workspace_name_list:
-        :param ipts_number:
-        :param parm_file_name:
         :return:
         """
         # define the holder of the text buffers
@@ -424,6 +426,12 @@ class SliceFocusVulcan(object):
         number_ws_per_thread = num_workspaces / self._number_threads
         extra = num_workspaces % self._number_threads
 
+        # import vanadium if needed
+        if vanadium_gda_name:
+            van_diff_ws_name = gsas_writer.import_vanadium(vanadium_gda_name)
+        else:
+            van_diff_ws_name = None
+
         end_sliced_ws_index = 0
         for thread_id in range(self._number_threads):
             start_sliced_ws_index = end_sliced_ws_index
@@ -436,10 +444,13 @@ class SliceFocusVulcan(object):
             for index_ws in range(start_sliced_ws_index, end_sliced_ws_index):
                 gsas_file_name = '{0}.gda'.format(index_ws + gsas_file_index_start)
                 gsas_file_name_list.append(gsas_file_name)
-            assert len(gsas_file_name_list) == len(workspace_names_i)
+            if len(gsas_file_name_list) != len(workspace_names_i):
+                raise RuntimeError('Number of GSAS file names ({}) does not equal to number of workspaces '
+                                   '({}) to export for thread {}'
+                                   ''.format(len(gsas_file_name_list), len(workspace_names_i), thread_id))
             
             thread_pool[thread_id] = threading.Thread(target=self.write_gsas_files,
-                                                      args=(workspace_names_i, ipts_number, vanadium_gsas_name,
+                                                      args=(workspace_names_i, ipts_number, van_diff_ws_name,
                                                             parm_file_name,
                                                             ref_tof_sets, gsas_writer, run_start_date,
                                                             gsas_file_name_list,))
@@ -470,6 +481,7 @@ class SliceFocusVulcan(object):
             gsas_file = open(gsas_file_name, 'w')
             gsas_file.write(gsas_content)
             gsas_file.close()
+        # END-FOR
 
         return
 
