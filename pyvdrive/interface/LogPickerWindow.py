@@ -460,7 +460,7 @@ class WindowLogPicker(QMainWindow):
                                                                  roi_list=list(),
                                                                  mask_list=list(),
                                                                  nexus_file_name=None,
-                                                                 gsas_iparm_file=None,
+                                                                 gsas_iparm_file='vulcan.prm',
                                                                  overlap_mode=False,
                                                                  gda_start=0)
         if status:

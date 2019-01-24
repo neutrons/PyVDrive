@@ -95,7 +95,7 @@ class SaveVulcanGSS(object):
         assert isinstance(gsas_file_name, str), 'GSAS file name {0} must be a string.'.format(gsas_file_name)
         assert isinstance(ipts, int) or isinstance(ipts, str), 'IPTS number {0} must be either string or integer.' \
                                                                ''.format(ipts)
-        assert isinstance(gsas_param_file_name, str), 'GSAS iparm file name {0} must be an integer.' \
+        assert isinstance(gsas_param_file_name, str), 'GSAS iparm file name {0} must be a string.' \
                                                       ''.format(gsas_param_file_name)
         if isinstance(ipts, str):
             assert ipts.isdigit(), 'IPTS {0} must be convertible to an integer.'.format(ipts)

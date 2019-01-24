@@ -432,7 +432,7 @@ class ProjectManager(object):
 
         # process outputs
         if status:
-            message = 'IPTS-{0} Run {1} is chopped, reduced? {2} and saved to {3}\nWarning: {4}' \
+            message = 'IPTS-{0} Run {1} is chopped, reduced (?={2}) and saved to {3}\nWarning: {4}' \
                       ''.format(ipts_number, run_number, reduce_flag, output_directory, error_message)
         else:
             message = error_message

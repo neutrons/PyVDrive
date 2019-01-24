@@ -783,7 +783,7 @@ class DataReductionTracker(object):
             ws_name = ws_name.strip()
             # skip
             if len(ws_name) == 0 or mantid_helper.workspace_does_exist(ws_name) is False:
-                err_msg += 'Workspace "{}" does not exist'
+                err_msg += 'Workspace "{}" does not exist\n'.format(ws_name)
                 continue
 
             # append
