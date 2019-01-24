@@ -451,9 +451,14 @@ class SliceFocusVulcan(object):
             
             thread_pool[thread_id] = threading.Thread(target=self.write_gsas_files,
                                                       args=(workspace_names_i, ipts_number, van_diff_ws_name,
-                                                            parm_file_name,
-                                                            ref_tof_sets, gsas_writer, run_start_date,
+                                                            parm_file_name, gsas_writer, run_start_date,
                                                             gsas_file_name_list,))
+
+            """
+            self, workspace_name_list, ipts_number, van_ws_name, parm_file_name, gsas_writer,
+                         run_start_date, gsas_file_name_list):
+            """
+
             thread_pool[thread_id].start()
             print ('[DB...Write GSAS] thread {0}: [{1}: {2}) ---> {3} workspaces'.
                    format(thread_id, start_sliced_ws_index,  end_sliced_ws_index,
