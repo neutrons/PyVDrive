@@ -184,6 +184,8 @@ class GSASPeakFileManager(object):
                     # END-IF
 
                     # write peak width
+                    # TODO - NIGHT - peak width shall be close to 0.03
+                    peak_width = 0.03
                     w_buf += '%.3f\n' % peak_width
                 # END-FOR (peak-tup)
             # END-FOR (group)

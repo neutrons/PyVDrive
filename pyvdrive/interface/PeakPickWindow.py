@@ -1300,9 +1300,11 @@ class PeakPickerWindow(QMainWindow):
             default_dir = self._myController.get_binned_data_directory()
             # TODO/NOW - consider self._myController.get_ipts_config()
 
-            gsas_file_name = str(QFileDialog.getOpenFileName(self, 'Load GSAS File',
-                                                                   default_dir, filters))
-            gsas_file_list.append(gsas_file_name)
+            gsas_file_name = QFileDialog.getOpenFileName(self, 'Load GSAS File', default_dir, filters)
+            if isinstance(gsas_file_name, tuple):
+                gsas_file_name = gsas_file_name[0]
+
+            gsas_file_list.append(str(gsas_file_name))
         # END-IF-ELSE
 
         # Load data from GSAS file
@@ -1478,8 +1480,12 @@ class PeakPickerWindow(QMainWindow):
 
         # Get the output file
         file_filter = 'Text (*.txt);;All files (*.*)'
-        out_file_name = str(QFileDialog.getSaveFileName(self, 'Save peaks to GSAS peak file',
-                                                              self._dataDirectory, file_filter))
+        out_file_name = QFileDialog.getSaveFileName(self, 'Save peaks to GSAS peak file', self._dataDirectory, file_filter)
+        if isinstance(out_file_name, tuple):
+            out_file_name = out_file_name[0]
+        out_file_name = str(out_file_name).strip()
+        if out_file_name == '':
+            return   # return for cancellation
 
         # Get the peaks from buffer
         print 'Get buffered peaks of bank %d' % self._currentBankNumber
