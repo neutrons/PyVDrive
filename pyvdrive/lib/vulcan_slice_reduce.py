@@ -261,6 +261,18 @@ class SliceFocusVulcan(object):
                 pass
             elif isinstance(r, list):
                 output_names = r
+                # process the output workspaces
+                num_outputs = len(output_names)
+                for i_ws in range(num_outputs-1, -1, -1):
+                    ws_name = output_names[i_ws].strip()
+                    if ws_name == '':
+                        output_names.pop(i_ws)
+                        # print ('Pop out {} for empty string'.format(i_ws))
+                    elif ws_name.lower().endswith('_unfiltered'):
+                        output_names.pop(i_ws)
+                        # print ('Pop out {} / {} for no needed'.format(i_ws, ws_name))
+                # END-FOR
+                # print (output_names)
             else:
                 continue
             # END-IF-ELSE

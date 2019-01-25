@@ -130,7 +130,7 @@ class VdriveMainWindow(QMainWindow):
         self.ui.pushButton_viewReducedData.clicked.connect(self.do_launch_reduced_data_viewer)
 
         # Tab-4: fig single peak
-        self.ui.pushButton_fitSinglePeak.clicked.connect(self.do_fit_single_peak)
+        self.ui.pushButton_fitSinglePeak.clicked.connect(self.do_launch_peak_process_window)
 
         # # Define event handling
         # self.connect(self.ui.pushButton_selectIPTS, QtCore.SIGNAL('clicked()'),
@@ -961,7 +961,7 @@ class VdriveMainWindow(QMainWindow):
 
         return
 
-    def do_fit_single_peak(self):
+    def do_launch_peak_process_window(self):
         """ Collect parameters and launch Peak-picker window
         :return:
         """
@@ -974,7 +974,7 @@ class VdriveMainWindow(QMainWindow):
         # show it!
         self._peakPickerWindow.show()
 
-        return
+        return self._peakPickerWindow
 
     def do_load_vanadium_calibration(self):
         """
