@@ -4,7 +4,7 @@ import pyvdrive.lib.VDriveAPI as VdriveAPI
 from pyvdrive.lib import datatypeutility
 try:
     from PyQt5.QtCore import QObject
-except ImportError as import_err:
+except (ImportError, RuntimeError) as import_err:
     print ('Process_VCommand: {}'.format(import_err))
     from PyQt4.QtCore import QObject
 

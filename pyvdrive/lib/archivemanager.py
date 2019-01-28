@@ -912,10 +912,18 @@ class DataArchiveManager(object):
         # convert to list of dictionary
         column_names = filtered.columns.tolist()
         output_list = list()
-        for row_index in range(num_outputs):
+        for row_index in range(min(num_outputs, len(filtered))):
             dict_i = dict()
             for j in range(len(column_names)):
-                dict_i[output_items[j]] = filtered.iloc[row_index, j]
+                try:
+                    dict_i[output_items[j]] = filtered.iloc[row_index, j]
+                except IndexError as index_err:
+                    print ('j = {}, row_index = {}'.format(j, row_index))
+                    print (column_names)
+                    print ('output items: {}'.format(output_items))
+                    print (output_items[j])
+                    print ('filtered: \n{}'.format(filtered))
+                    raise index_err
             # print dict_i
             output_list.append(dict_i)
 

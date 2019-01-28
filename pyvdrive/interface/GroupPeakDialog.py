@@ -1,3 +1,4 @@
+import os
 try:
     import qtconsole.inprocess
     from PyQt5.QtWidgets import QMainWindow
@@ -26,7 +27,7 @@ class GroupPeakDialog(QMainWindow):
         self._parentWindow = parent
 
         # set up UI
-        ui_path = os.path.join(os.path.dirname(__file__), "gui/import.ui")
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/GroupPeakDialog.ui")
         self.ui = load_ui(ui_path, baseinstance=self)
 
         # init set up of widgets

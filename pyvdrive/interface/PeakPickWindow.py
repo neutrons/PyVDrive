@@ -1141,6 +1141,10 @@ class PeakPickerWindow(QMainWindow):
         title = 'Run %s Bank %d' % (str(self._currentRunNumber), self._currentBankNumber)
         vec_x = self._currentDataSet[new_bank][0]
         vec_y = self._currentDataSet[new_bank][1]
+        # TODO - NIGHT - Plotting bank pattern shall be refactored to 1 method
+        if len(vec_x) == len(vec_y) + 1:
+            vec_x = vec_x[:-1]
+
         self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y, title=title)
 
         return
@@ -1245,6 +1249,7 @@ class PeakPickerWindow(QMainWindow):
 
         return
 
+    # TODO - NIGHT - Separate getting data file and reading data
     def do_load_data(self):
         """
         Purpose:
@@ -1295,9 +1300,11 @@ class PeakPickerWindow(QMainWindow):
             default_dir = self._myController.get_binned_data_directory()
             # TODO/NOW - consider self._myController.get_ipts_config()
 
-            gsas_file_name = str(QFileDialog.getOpenFileName(self, 'Load GSAS File',
-                                                                   default_dir, filters))
-            gsas_file_list.append(gsas_file_name)
+            gsas_file_name = QFileDialog.getOpenFileName(self, 'Load GSAS File', default_dir, filters)
+            if isinstance(gsas_file_name, tuple):
+                gsas_file_name = gsas_file_name[0]
+
+            gsas_file_list.append(str(gsas_file_name))
         # END-IF-ELSE
 
         # Load data from GSAS file
@@ -1376,20 +1383,27 @@ class PeakPickerWindow(QMainWindow):
             # self.ui.label_diffractionMessage.setText('Run %d Bank %d' % (run_number, 1))
 
         # Plot data: load bank 1 as default
-        if run_number is None:
-            status, ret_obj = self._myController.get_reduced_data(data_key, 'dSpacing', is_workspace=True)
-        else:
-            status, ret_obj = self._myController.get_reduced_data(run_number, 'dSpacing')
-        if status is False:
+        try:
+            if run_number is None:
+                data_set_dict = self._myController.get_reduced_data(data_key, 'dSpacing')
+            else:
+                data_set_dict = self._myController.get_reduced_data(run_number, 'dSpacing')
+        except RuntimeError as run_err:
+            # TODO - NIGHT - Need better error message
             GuiUtility.pop_dialog_error(self, ret_obj)
             return
         # get spectrum 0, i.e, bank 1
-        assert isinstance(ret_obj, dict)
-        self._currentDataSet = ret_obj
+        self._currentDataSet = data_set_dict
+        print ('[DB...BAT] data set keys: {}'.format(data_set_dict.keys()))
+
         data_bank_1 = self._currentDataSet[1]
         # FIXME - It might return vec_x, vec_y AND vec_e
         vec_x = data_bank_1[0]
         vec_y = data_bank_1[1]
+        # TODO - NIGHT - Shall resolve the GSAS reading issue here!
+        if len(vec_x) == len(vec_y) + 1:
+            vec_x = vec_x[:-1]
+
         self.ui.graphicsView_main.clear_all_lines()
         self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y, title=title_message)
 
@@ -1417,7 +1431,7 @@ class PeakPickerWindow(QMainWindow):
             self._peakPickerMode = PeakPickerMode.MultiPeakPick
             self.ui.graphicsView_main.set_peak_selection_mode(dv.PeakAdditionState.MultiMode)
             # change UI indications
-            self.ui.graphicsView_main.canvas().set_title_plot_run('Multi-Peaks Selection', color='red')
+            self.ui.graphicsView_main.canvas().set_title('Multi-Peaks Selection', color='red')
             # next will be multi-peak mode again
             self.ui.pushButton_peakPickerMode.setText('Enter Single-Peak Mode')
 
@@ -1426,7 +1440,7 @@ class PeakPickerWindow(QMainWindow):
             self._peakPickerMode = PeakPickerMode.SinglePeakPick
             self.ui.graphicsView_main.set_peak_selection_mode(dv.PeakAdditionState.NormalMode)
             # change UI indications
-            self.ui.graphicsView_main.canvas().set_title_plot_run('Single-Peak Selection', color='blue')
+            self.ui.graphicsView_main.canvas().set_title('Single-Peak Selection', color='blue')
             # next will be multi-peak mode again
             self.ui.pushButton_peakPickerMode.setText('Enter Multi-Peak Mode')
 
@@ -1466,8 +1480,12 @@ class PeakPickerWindow(QMainWindow):
 
         # Get the output file
         file_filter = 'Text (*.txt);;All files (*.*)'
-        out_file_name = str(QFileDialog.getSaveFileName(self, 'Save peaks to GSAS peak file',
-                                                              self._dataDirectory, file_filter))
+        out_file_name = QFileDialog.getSaveFileName(self, 'Save peaks to GSAS peak file', self._dataDirectory, file_filter)
+        if isinstance(out_file_name, tuple):
+            out_file_name = out_file_name[0]
+        out_file_name = str(out_file_name).strip()
+        if out_file_name == '':
+            return   # return for cancellation
 
         # Get the peaks from buffer
         print 'Get buffered peaks of bank %d' % self._currentBankNumber

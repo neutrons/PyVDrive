@@ -344,7 +344,8 @@ class VanadiumProcessingManager(object):
 
         gsas_writer = save_vulcan_gsas.SaveVulcanGSS(use_default_tof_ref=default_bank_number)
         gsas_writer.save(diff_ws_name=workspace_name, gsas_file_name=out_file_name,
-                         ipts_number=ipts_number, gsas_param_file_name=None)
+                         ipts_number=ipts_number, gsas_param_file_name=None,
+                         van_ws_name=None)
 
         return return_status, error_msg
 

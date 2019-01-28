@@ -1228,7 +1228,7 @@ class ReductionSetup(object):
         # Nexus files
         nexus_parent_dir = '/SNS/VULCAN/IPTS-{0}/shared/ChoppedData/'.format(self._iptsNumber)
         if os.path.exists(nexus_parent_dir) is False and create_parent_directories:
-            os.mkdir(nexus_parent_dir, mode=0o777)
+            os.mkdir(nexus_parent_dir, 0o777)
         self._choppedNeXusDir = os.path.join(nexus_parent_dir, '{0}'.format(self._runNumber))
 
         print '[INFO] Save chopping result to archive: {0} and {1}.'.format(self._mainGSASDir, self._choppedNeXusDir)

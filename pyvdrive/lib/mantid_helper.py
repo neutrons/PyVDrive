@@ -632,6 +632,30 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
     return True, ''
 
 
+def get_ads_memory(unit='MB'):
+    """ calculate the memory of all the workspace in ADS.
+    Note that it is an estimate of how much memory used by PyVDrive.  In some case, it is different from
+    what system monitor gives
+    :param unit: unit of memory.  By default it is MB
+    :return: memory size (float) in Bytes, KB or MB depending on unit
+    """
+    total_mem = 0
+    for ws_name in ADS.getObjectNames():
+        wksp = ADS[ws_name]
+        total_mem += wksp.getMemorySize()
+
+    datatypeutility.check_string_variable('Memory unit', unit, ['MB', 'KB', 'B'])
+
+    if unit == 'MB':
+        total_mem = total_mem / 1024.0**2
+    elif unit == 'KB':
+        total_mem = total_mem / 1024
+    else:
+        total_mem = float(total_mem)
+
+    return total_mem
+
+
 def get_run_start(workspace, time_unit):
     """ Get run start time from proton charge or sample log run_start
     :param workspace:
@@ -1387,35 +1411,81 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     return out_ws_name
 
 
-def load_calibration_file(calib_file_name, output_name, ref_ws_name):
+def load_grouping_file(grouping_file_name, grouping_ws_name):
+    """
+    Load a detector grouping file (saved by SaveDetectorsGroupingFile) to a GroupingWorkspace
+    :param grouping_file_name:
+    :param grouping_ws_name:
+    :return:
+    """
+    # check input
+    datatypeutility.check_file_name(grouping_file_name, check_exist=True,
+                                    check_writable=False, is_dir=False, note='Detector grouping file')
+    datatypeutility.check_string_variable('Nmae of GroupingWorkspace to load {} to'.format(grouping_file_name),
+                                          grouping_ws_name)
+
+    mantid.simpleapi.LoadDetectorsGroupingFile(InputFile=grouping_file_name,
+                                               OutputWorkspace=grouping_ws_name)
+
+    return
+
+
+def load_calibration_file(calib_file_name, output_name, ref_ws_name, load_cal=False):
     """
     load calibration file
     :param calib_file_name:
     :param output_name: this is NOT calibration workspace name but the root name for calib, mask and group
     :param ref_ws_name:
-    :return:
+    :return: (1) output workspaces (2) output offsets workspace (as LoadDiffCal_returns cannot have an arbitrary member)
     """
     # check
     datatypeutility.check_file_name(calib_file_name, check_exist=True, check_writable=False, is_dir=False,
                                     note='Calibration file')
     datatypeutility.check_string_variable('Calibration/grouping/masking workspace name', output_name)
 
+    # determine file names
+    diff_cal_file = None   # new .h5 file
+    offset_cal_file = None   # old .cal file
     if calib_file_name.endswith('.h5'):
-        # new diff calib file
-        outputs = mantidapi.LoadDiffCal(InputWorkspace=ref_ws_name,
-                                        Filename=calib_file_name,
-                                        WorkspaceName=output_name)
-
-    elif calib_file_name.endswith('.dat'):
-        # old style calibration file
-        outputs = mantidapi.LoadCalFile(Filename=calib_file_name,
-                                        Output=output_name)
-
+        diff_cal_file = calib_file_name
+        if load_cal:
+            offset_cal_file = diff_cal_file.replace('.h5', '.cal')
+            if not os.path.exists(offset_cal_file):
+                raise RuntimeError('User intends to load {1} alogn with {0}.  But {1} cannot be found.'
+                                   ''.format(diff_cal_file, offset_cal_file))
+        # END-IF
+    elif calib_file_name.endswith('.cal'):
+        offset_cal_file = calib_file_name
     else:
         raise RuntimeError('Calibration file {} does not end with .h5 or .dat.  Unable to support'
                            ''.format(calib_file_name))
 
-    return outputs
+    # Load files
+    if offset_cal_file:
+        # old style calibration file
+        outputs_cal = mantidapi.LoadCalFile(Filename=offset_cal_file,
+                                            Output=output_name)
+    else:
+        outputs_cal = None
+
+    if diff_cal_file:
+        # new diff calib file
+        outputs = mantidapi.LoadDiffCal(InputWorkspace=ref_ws_name,
+                                        Filename=diff_cal_file,
+                                        WorkspaceName=output_name)
+    else:
+        outputs = None
+
+    # set up output
+    if outputs is None:
+        outputs = outputs_cal
+        offset_ws = outputs_cal.OutputOffsetsWorkspace
+    elif outputs_cal is not None:
+        offset_ws = outputs_cal.OutputOffsetsWorkspace
+    else:
+        offset_ws = None
+
+    return outputs, offset_ws
 
 
 def load_mask_xml(data_ws_name, mask_file_name, mask_ws_name=None):
@@ -1443,17 +1513,24 @@ def load_mask_xml(data_ws_name, mask_file_name, mask_ws_name=None):
     return mask_ws_name
 
 
-def load_nexus(data_file_name, output_ws_name, meta_data_only):
+def load_nexus(data_file_name, output_ws_name, meta_data_only, max_time=None):
     """ Load NeXus file
     :param data_file_name:
     :param output_ws_name:
     :param meta_data_only:
+    :param max_time: relative max time (stop time) to load from Event Nexus file in unit of seconds
     :return: 2-tuple
     """
     try:
-        out_ws = mantidapi.Load(Filename=data_file_name,
-                                OutputWorkspace=output_ws_name,
-                                MetaDataOnly=meta_data_only)
+        if max_time is None:
+            out_ws = mantidapi.Load(Filename=data_file_name,
+                                    OutputWorkspace=output_ws_name,
+                                    MetaDataOnly=meta_data_only)
+        else:
+            out_ws = mantidapi.LoadEventNexus(Filename=data_file_name,
+                                              OutputWorkspace=output_ws_name,
+                                              FilterByTimeStop=max_time)
+
     except RuntimeError as e:
         return False, 'Unable to load Nexus file %s due to %s' % (data_file_name, str(e))
 
@@ -1697,8 +1774,7 @@ def mtd_convert_units(ws_name, target_unit):
     """
     # Check requirements
     assert isinstance(ws_name, str), 'Input workspace name is not a string but is a %s.' % str(type(ws_name))
-    workspace = retrieve_workspace(ws_name)
-    assert workspace
+    workspace = retrieve_workspace(ws_name, True)
     assert isinstance(target_unit, str), 'Input target unit should be a string,' \
                                          'but is %s.' % str(type(target_unit))
     
@@ -1821,7 +1897,7 @@ def parse_mask_roi_xml(xml_file_name):
     return is_roi, det_id_list
 
 
-def rebin(workspace_name, params, preserve):
+def rebin(workspace_name, params, preserve, output_ws_name=None):
     """
     rebin the workspace
     :param workspace_name:
@@ -1835,10 +1911,13 @@ def rebin(workspace_name, params, preserve):
         or isinstance(params, numpy.ndarray), 'Params {0} of type {1} is not supported.' \
                                                  ''.format(params, type(params))
 
-    mantidapi.Rebin(InputWorkspace=workspace_name, OutputWorkspace=workspace_name,
+    if output_ws_name is None:
+        output_ws_name = workspace_name
+
+    mantidapi.Rebin(InputWorkspace=workspace_name, OutputWorkspace=output_ws_name,
                     Params=params,
                     PreserveEvents=preserve)
-    return
+    return output_ws_name
 
 
 def retrieve_workspace(ws_name, raise_if_not_exist=False):

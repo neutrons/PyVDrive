@@ -710,11 +710,11 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         elif self._mouseButtonBeingPressed == 1:
             # left mouse button is pressed and move
             # so move the peak, boundaries or group
-            if self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.QuickMode:
+            if self._myPeakSelectionMode == PeakAdditionState.QuickMode:
                 # quick mode: move 2 boundaries or whole group
                 self._move_peak_and_boundaries(event.xdata)
 
-            elif self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.MultiMode:
+            elif self._myPeakSelectionMode == PeakAdditionState.MultiMode:
                 # multi-peak mode: move a boundary or a peak
                 self._move_peak_group_multi_mode(event.xdata)
 
@@ -1055,7 +1055,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             self._eventX = event.xdata
 
             # optionally add option to delete peak
-            if self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.MultiMode:
+            if self._myPeakSelectionMode == PeakAdditionState.MultiMode:
                 action2 = QAction('Delete Peak', self)
                 action2.triggered.connect(self.menu_delete_peak_in_pick)
                 self._menu.addAction(action2)

@@ -130,7 +130,7 @@ class VdriveMainWindow(QMainWindow):
         self.ui.pushButton_viewReducedData.clicked.connect(self.do_launch_reduced_data_viewer)
 
         # Tab-4: fig single peak
-        self.ui.pushButton_fitSinglePeak.clicked.connect(self.do_fit_single_peak)
+        self.ui.pushButton_fitSinglePeak.clicked.connect(self.do_launch_peak_process_window)
 
         # # Define event handling
         # self.connect(self.ui.pushButton_selectIPTS, QtCore.SIGNAL('clicked()'),
@@ -961,7 +961,7 @@ class VdriveMainWindow(QMainWindow):
 
         return
 
-    def do_fit_single_peak(self):
+    def do_launch_peak_process_window(self):
         """ Collect parameters and launch Peak-picker window
         :return:
         """
@@ -974,7 +974,7 @@ class VdriveMainWindow(QMainWindow):
         # show it!
         self._peakPickerWindow.show()
 
-        return
+        return self._peakPickerWindow
 
     def do_load_vanadium_calibration(self):
         """
@@ -1071,7 +1071,7 @@ class VdriveMainWindow(QMainWindow):
         # END-IF
 
         # Load log
-        log_name_list, run_info_str = self.load_sample_run(run_number, log_file_name, smart=True)
+        log_name_list, run_info_str = self.load_sample_run(ipts_number, run_number, log_file_name, smart=True)
         log_name_list = GuiUtility.sort_sample_logs(log_name_list, reverse=False, ignore_1_value=True)
 
         # Plot first 6 sample logs
@@ -1273,7 +1273,7 @@ class VdriveMainWindow(QMainWindow):
         """
         return self._myWorkflow
 
-    def load_sample_run(self, run, nxs_file_name, smart):
+    def load_sample_run(self, ipts_number, run, nxs_file_name, smart):
         """
         Load sample run
         :param run: string or integer as nxs file name or run number
@@ -1288,7 +1288,7 @@ class VdriveMainWindow(QMainWindow):
         # get files
         if nxs_file_name is None:
             # Load data without file name, IPTS number and etc.
-            self._myWorkflow.load_nexus_file(ipts_number=None, run_number=run, file_name='VULCAN_{0}'.format(run),
+            self._myWorkflow.load_nexus_file(ipts_number=ipts_number, run_number=run, file_name=None,
                                              meta_data_only=True)
         else:
             self._myWorkflow.load_nexus_file(ipts_number=None, run_number=run, file_name=nxs_file_name,
@@ -1461,9 +1461,7 @@ class VdriveMainWindow(QMainWindow):
             # create the log processing window
             self._logPickerWindow = LogPicker.WindowLogPicker(self, ipts_number, run_number)
             self._myChildWindows.append(self._logPickerWindow)
-
-        # Set up tree view for runs
-        self._logPickerWindow.setup()
+        # END-IF-ELSE
 
         # Show
         self._logPickerWindow.show()

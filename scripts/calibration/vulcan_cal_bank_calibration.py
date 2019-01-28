@@ -89,6 +89,9 @@ def main(argv):
     :param argv:
     :return:
     """
+    # TODO - NIGHT - Merge to vulcan_cal_instrument_calibration
+    raise NotImplementedError('This script is not supported anymore')
+
     if False:
         # TODO FIXME - This is a debugging solution
         dates = sorted(Diamond_Runs.keys())

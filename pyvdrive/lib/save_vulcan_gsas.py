@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 import os
 import os.path
 import h5py
@@ -10,8 +10,8 @@ from mantid.api import AnalysisDataService as ADS
 from pyvdrive.lib import datatypeutility
 
 
-PHASE_NED = datetime(2017, 6, 1)
-PHASE_X1 = datetime(2019, 7, 1)
+PHASE_NED = datetime.datetime(2017, 6, 1)
+PHASE_X1 = datetime.datetime(2019, 7, 1)
 
 
 class SaveVulcanGSS(object):
@@ -41,6 +41,9 @@ class SaveVulcanGSS(object):
         self._mantid_bin_param_dict['lower'] = lower_res_tof_vec, self._create_binning_parameters(lower_res_tof_vec)
         # higher resolution: high angle bank
         self._mantid_bin_param_dict['higher'] = high_res_tof_vec, self._create_binning_parameters(high_res_tof_vec)
+
+        # about vanadium
+        self._van_ws_names = dict()
 
         return
 
@@ -78,40 +81,39 @@ class SaveVulcanGSS(object):
         return bin_params
 
     @staticmethod
-    def _generate_vulcan_gda_header(gsas_workspace, gsas_file_name, ipts, gsas_param_file_name):
+    def _calculate_run_start_stop_time(gsas_workspace, from_sliced_ws):
         """
-        generate a VDRIVE compatible GSAS file's header
-        :param gsas_workspace:
-        :param gsas_file_name:
-        :param ipts:
-        :param gsas_param_file_name:
-        :return: string : multiple lines
-        """
-        # check
-        assert isinstance(gsas_workspace, str) is False, 'GSAS workspace must not be a string.'
-        assert isinstance(gsas_file_name, str), 'GSAS file name {0} must be a string.'.format(gsas_file_name)
-        assert isinstance(ipts, int) or isinstance(ipts, str), 'IPTS number {0} must be either string or integer.' \
-                                                               ''.format(ipts)
-        assert isinstance(gsas_param_file_name, str), 'GSAS iparm file name {0} must be an integer.' \
-                                                      ''.format(gsas_param_file_name)
-        if isinstance(ipts, str):
-            assert ipts.isdigit(), 'IPTS {0} must be convertible to an integer.'.format(ipts)
 
-        # Get necessary information
-        title = gsas_workspace.getTitle()
+        :param gsas_workspace:
+        :param from_sliced_ws:
+        :return:
+        """
         run = gsas_workspace.getRun()
 
-        # Get information on start/stop
+        # check
+        if not ((run.hasProperty("run_start") and run.hasProperty("duration")) or run.hasProperty('proton_charge')):
+            raise RuntimeError('Workspace {} must have either (run_start/duration) or proton_charge '
+                               'for calculating run start/stop in nanoseconds'.format(gsas_workspace.name()))
+
+        # zero time:
+        time0 = datetime.datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
+
         if run.hasProperty("run_start") and run.hasProperty("duration"):
+            # TODO - NIGHT - Need to adopt numpy.datetime64 to calculate aboslute time
             # export processing time information
             runstart = run.getProperty("run_start").value
             duration = float(run.getProperty("duration").value)
             # property run_start and duration exist
             runstart_sec = runstart.split(".")[0]
             runstart_ns = runstart.split(".")[1]
-
-            utctime = datetime.strptime(runstart_sec, '%Y-%m-%dT%H:%M:%S')
-            time0 = datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
+            try:
+                utctime = datetime.datetime.strptime(runstart_sec, '%Y-%m-%dT%H:%M:%S')
+                time0 = datetime.datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
+                print ('UTC time: {}, Time 0: {}'.format(str(utctime), str(time0)))
+            except AttributeError as attrib_error:
+                print ('[DB...BAT] run start sec = {}'.format(str(runstart_sec)))
+                raise RuntimeError('Unable to convert run start {} to UTC time due to {}'
+                                   ''.format(runstart_sec, attrib_error))
 
             delta = utctime - time0
             try:
@@ -120,10 +122,56 @@ class SaveVulcanGSS(object):
                 total_seconds = delta.days * 24 * 3600 + delta.seconds
                 total_nanosecond_start = total_seconds * int(1.0E9) + int(runstart_ns)
             total_nanosecond_stop = total_nanosecond_start + int(duration * 1.0E9)
-        else:
-            # not both property is found
-            total_nanosecond_start = 0
-            total_nanosecond_stop = 0
+            print ('[DB...BAT...CHECK...Method 1] Run start/stop = {}, {}'.format(total_nanosecond_start,
+                                                                                  total_nanosecond_stop))
+
+        if run.hasProperty('proton_charge'):
+            # use proton charge to calculate run start/stop
+            proton_charge_log = run.getProperty('proton_charge')
+            pc_start_time = proton_charge_log.times[0]
+            pc_stop_time = proton_charge_log.times[-1]
+
+            duration_ns = (pc_stop_time - pc_start_time).astype('int')
+            # convert proton charge first time to datetime.datetime
+            run_start_time = datetime.datetime.utcfromtimestamp(pc_start_time.astype('O') * 1.E-9)
+
+            delta_to_t0_ns = run_start_time - time0
+            total_nanosecond_start = int(delta_to_t0_ns.total_seconds() * int(1.0E9))
+            total_nanosecond_stop = total_nanosecond_start + duration_ns
+            print ('[DB...BAT...CHECK...Method 2] Run start/stop = {}, {}'.format(total_nanosecond_start,
+                                                                                  total_nanosecond_stop))
+
+        elif from_sliced_ws:
+            # from sliced workspace must use proton charge
+            raise RuntimeError('With flag "from sliced ws" on, proton_charge log is required!')
+
+        return total_nanosecond_start, total_nanosecond_stop
+
+    def _generate_vulcan_gda_header(self, gsas_workspace, gsas_file_name, ipts, gsas_param_file_name, from_sliced_ws):
+        """
+        generate a VDRIVE compatible GSAS file's header
+        :param gsas_workspace:
+        :param gsas_file_name:
+        :param ipts:
+        :param gsas_param_file_name:
+        :param from_sliced_ws: flag to indicate whether the GSAS workspace is from sliced
+        :return: string : multiple lines
+        """
+        # check
+        assert isinstance(gsas_workspace, str) is False, 'GSAS workspace must not be a string.'
+        datatypeutility.check_string_variable('(Output) GSAS file name', gsas_file_name)
+        datatypeutility.check_string_variable('GSAS IParam file name', gsas_param_file_name)
+        assert isinstance(ipts, int) or isinstance(ipts, str), 'IPTS number {0} must be either string or integer.' \
+                                                               ''.format(ipts)
+        if isinstance(ipts, str):
+            assert ipts.isdigit(), 'IPTS {0} must be convertible to an integer.'.format(ipts)
+
+        # Get necessary information
+        title = gsas_workspace.getTitle()
+
+        # Get information on start/stop
+        total_nanosecond_start, total_nanosecond_stop = self._calculate_run_start_stop_time(gsas_workspace,
+                                                                                            from_sliced_ws)
 
         # Construct new header
         new_header = ""
@@ -133,7 +181,7 @@ class SaveVulcanGSS(object):
         new_header += "%-80s\n" % title
         new_header += "%-80s\n" % ("Instrument parameter file: %s" % gsas_param_file_name)
         new_header += "%-80s\n" % ("#IPTS: %s" % str(ipts))
-        new_header += "%-80s\n" % "#binned by: Mantid"
+        new_header += "%-80s\n" % ("#binned by: Mantid (refrence workspace: {}".format(str(gsas_workspace)))
         new_header += "%-80s\n" % ("#GSAS file name: %s" % os.path.basename(gsas_file_name))
         new_header += "%-80s\n" % ("#GSAS IPARM file: %s" % gsas_param_file_name)
         new_header += "%-80s\n" % ("#Pulsestart:    %d" % total_nanosecond_start)
@@ -206,7 +254,7 @@ class SaveVulcanGSS(object):
         :param run_date_time: datetime instance
         :return:
         """
-        assert isinstance(run_date_time, datetime), 'Run date {} must be a datetime.datetime instance ' \
+        assert isinstance(run_date_time,datetime.datetime), 'Run date {} must be a datetime.datetime instance ' \
                                                     'but not of type {}'.format(run_date_time,
                                                                                 type(run_date_time))
 
@@ -383,8 +431,26 @@ class SaveVulcanGSS(object):
 
         return bank_buffer
 
+    def import_vanadium(self, vanadium_gsas_file):
+        """
+        Import vanadium GSAS file for normalization
+        :param vanadium_gsas_file:
+        :return:
+        """
+        # NOTE (algorithm) use hash to determine the workspace name from file location
+        base_name = os.path.basename(vanadium_gsas_file).split('.')[0]
+        van_gsas_ws_name = 'Van_{}_{}'.format(base_name, hash(vanadium_gsas_file))
+        if ADS.doesExist(van_gsas_ws_name):
+            van_ws = ADS.retrieve(van_gsas_ws_name)
+        else:
+            van_ws = load_vulcan_gsas(vanadium_gsas_file, van_gsas_ws_name)
+
+        self._van_ws_names[vanadium_gsas_file] = van_gsas_ws_name
+
+        return van_ws.name()
+
     def save(self, diff_ws_name, run_date_time, gsas_file_name, ipts_number, gsas_param_file_name,
-             align_vdrive_bin, vanadium_gsas_file):
+             align_vdrive_bin, van_ws_name, is_chopped_run, write_to_file=True):
         """
         Save a workspace to a GSAS file or a string
         :param diff_ws_name: diffraction data workspace
@@ -393,7 +459,9 @@ class SaveVulcanGSS(object):
         :param ipts_number:
         :param gsas_param_file_name:
         :param align_vdrive_bin: Flag to align with VDRIVE bin edges/boundaries
-        :param vanadium_gsas_file:
+        :param van_ws_name: name of vanadium workspaces loaded from GSAS (replacing vanadium_gsas_file)
+        :param is_chopped_run: Flag such that the input workspaces is from an event-sliced workspace
+        :param write_to_file: flag to write the text buffer to file
         :return: string as the file content
         """
         diff_ws = ADS.retrieve(diff_ws_name)
@@ -414,18 +482,15 @@ class SaveVulcanGSS(object):
                                                       diff_ws.getNumberHistograms())
         else:
             # a binning parameter set for doing nothing
-            print ('[DB...BAT] Using user specified binning parameters')
             bin_params_set = [(range(1, diff_ws.getNumberHistograms()+1), None, None)]
 
         # check for vanadium GSAS file name
-        if vanadium_gsas_file is not None:
+        if van_ws_name is not None:
             # check whether a workspace exists
-            # NOTE (algorithm) use hash to determine the workspace name from file location
-            van_gsas_ws_name = 'van_{}'.format(hash(vanadium_gsas_file))
-            if ADS.doesExist(van_gsas_ws_name):
-                van_ws = ADS.retrieve(van_gsas_ws_name)
-            else:
-                van_ws = load_vulcan_gsas(vanadium_gsas_file, van_gsas_ws_name)
+            if not ADS.doesExist(van_ws_name):
+                raise RuntimeError('Vanadium workspace {} does not exist in Mantid ADS'.format(van_ws_name))
+            van_ws = ADS.retrieve(van_ws_name)
+
             # check number of histograms
             if van_ws.getNumberHistograms() != diff_ws.getNumberHistograms():
                 raise RuntimeError('Numbers of histograms between vanadium spectra and output GSAS are different')
@@ -434,7 +499,7 @@ class SaveVulcanGSS(object):
         # END-IF
 
         # rebin and then write output
-        gsas_buffer_dict = dict()
+        gsas_bank_buffer_dict = dict()
         num_bank_sets = len(bin_params_set)
 
         for bank_set_index in range(num_bank_sets):
@@ -454,29 +519,33 @@ class SaveVulcanGSS(object):
                     unmatched, reason = self._compare_workspaces_dimension(van_ws, bank_id, tof_vector)
                     if unmatched:
                         raise RuntimeError('Vanadium GSAS workspace {} does not match workspace {}: {}'
-                                           ''.format(vanadium_gsas_file, diff_ws_name, reason))
+                                           ''.format(van_ws_name, diff_ws_name, reason))
                 # END-IF
 
                 # write GSAS head considering vanadium
                 gsas_section_i = self._write_slog_bank_gsas(diff_ws_name, bank_id, tof_vector, van_ws)
-                gsas_buffer_dict[bank_id] = gsas_section_i
+                gsas_bank_buffer_dict[bank_id] = gsas_section_i
         # END-FOR
 
         # header
         diff_ws = ADS.retrieve(diff_ws_name)
-        gsas_header = self._generate_vulcan_gda_header(diff_ws, gsas_file_name, ipts_number, gsas_param_file_name)
+        gsas_header = self._generate_vulcan_gda_header(diff_ws, gsas_file_name, ipts_number, gsas_param_file_name,
+                                                       is_chopped_run)
 
         # form to a big string
         gsas_buffer = gsas_header
-        for bank_id in sorted(gsas_buffer_dict.keys()):
-            gsas_buffer += gsas_buffer_dict[bank_id]
+        for bank_id in sorted(gsas_bank_buffer_dict.keys()):
+            gsas_buffer += gsas_bank_buffer_dict[bank_id]
 
-        if gsas_file_name:
+        # write to HDD
+        if write_to_file:
             datatypeutility.check_file_name(gsas_file_name, check_exist=False,
                                             check_writable=True, is_dir=False, note='Output GSAS file')
             g_file = open(gsas_file_name, 'w')
             g_file.write(gsas_buffer)
             g_file.close()
+        else:
+            pass
 
         return gsas_buffer
 
@@ -497,9 +566,10 @@ class SaveVulcanGSS(object):
     @staticmethod
     def _compare_workspaces_dimension(van_ws, bank_id, diff_tof_vec):
         """
-        compare the workspace dimensions
+        compare the workspace dimensions between vanadium workspace and diffraction TOF vector
         :param van_ws:
-        :param diff_ws:
+        :param bank_id:
+        :param diff_tof_vec:
         :return: Being different (bool), Reason (str)
         """
         iws = bank_id - 1
@@ -545,7 +615,7 @@ def load_vulcan_gsas(gsas_name, gsas_ws_name):
     # for the rest of the spectra
     for iws in range(1, temp_gss_ws.getNumberHistograms()):
         # extract, convert to point data, conjoin and clean
-        temp_out_name_i = 'temp_i_x'
+        temp_out_name_i = '{}_{}'.format(temp_out_name, iws)
         api.ExtractSpectra(temp_out_name, WorkspaceIndexList=[iws], OutputWorkspace=temp_out_name_i)
         api.ConvertToPointData(InputWorkspace=temp_out_name_i, OutputWorkspace=temp_out_name_i)
         api.ConjoinWorkspaces(InputWorkspace1=gsas_ws_name,

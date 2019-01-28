@@ -373,8 +373,6 @@ class ProjectManager(object):
         else:
             # if nexus file is given but not run number, then using a pseudo run number 0
             run_number = 0
-        if vanadium is not None:
-            datatypeutility.check_int_variable('Vanadium run number', vanadium, (1, None))
 
         # get chopping helper
         try:
@@ -401,6 +399,15 @@ class ProjectManager(object):
             data_file = nexus_file_name
             ipts_number = 0
 
+        # vanadium and iparam
+        if vanadium is not None:
+            datatypeutility.check_int_variable('Vanadium run number', vanadium, (1, None))
+            van_gsas_name, iparam_file_name = \
+                self._parent.archive_manager.locate_process_vanadium(vanadium)
+        else:
+            van_gsas_name = None
+            iparam_file_name = gsas_iparm_file
+
         # chop and (optionally) diffraction focus the binning data
         # TODO - NIGHT - Need to pass no_calibration_mask
         status, error_message = self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
@@ -414,18 +421,20 @@ class ProjectManager(object):
                                                                        save_chopped_nexus=save_chopped_nexus,
                                                                        number_banks=number_banks,
                                                                        tof_correction=tof_correction,
-                                                                       van_run_number=vanadium,
                                                                        user_binning_parameter=user_bin_parameter,
                                                                        roi_list=roi_list,
                                                                        mask_list=mask_list,
-                                                                       gsas_parm_name=gsas_iparm_file,
+                                                                       van_gda_name=van_gsas_name,
+                                                                       gsas_parm_name=iparam_file_name,
                                                                        no_cal_mask=False,
                                                                        bin_overlap_mode=overlap_mode,
                                                                        gda_file_start=gda_start)
 
         # process outputs
         if status:
-            message = 'IPTS-{0} Run {1} is chopped, reduced? {2} and saved to {3}\nWarning: {4}' \
+            if output_directory is None:
+                output_directory = '/SNS/VULCAN/IPTS-{}/shared/binned_data/{}'.format(ipts_number, run_number)
+            message = 'IPTS-{0} Run {1} is chopped, reduced (?={2}) and saved to {3}\nWarning: {4}' \
                       ''.format(ipts_number, run_number, reduce_flag, output_directory, error_message)
         else:
             message = error_message
@@ -1291,7 +1300,7 @@ class ProjectManager(object):
         :param mask_list:
         :return: 2-tuple: list (run number), list (error message for each run reduced)
         """
-        print ('[INFO] Reduction VULCAN Version 2 is Called')
+        print ('[INFO] Reduction (Single Run) VULCAN Version 2 is Called')
 
         # check inputs
         datatypeutility.check_list('Run numbers', run_number_list)
@@ -1351,16 +1360,18 @@ class ProjectManager(object):
                     if vanadium_run is not None:
                         van_gsas_name, iparam_file_name = \
                             self._parent.archive_manager.locate_process_vanadium(vanadium_run)
+                        van_ws_name = self._reductionManager.gsas_writer.import_vanadium(van_gsas_name)
                     else:
-                        van_gsas_name = None
+                        van_ws_name = None
                         iparam_file_name = 'vulcan.prm'
 
                     self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
                                                             gsas_file_name=gsas_file_name, ipts_number=ipts_number,
                                                             align_vdrive_bin=align_vdrive_bin,
                                                             gsas_param_file_name=iparam_file_name,
-                                                            vanadium_gsas_file=van_gsas_name)
-
+                                                            van_ws_name=van_ws_name,
+                                                            is_chopped_run=False,
+                                                            write_to_file=True)
             except RuntimeError as run_error:
                 error_messages.append('Failed to reduce run {0} due to {1}'.format(run_number, run_error))
             else:

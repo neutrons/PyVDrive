@@ -38,6 +38,77 @@ def test_vbin_chop_simple(tester):
     return
 
 
+def test_vbin_large_set(tester):
+    """
+    Test VBIN with a long run with large number of events
+    :return:
+    """
+    print ('[INFO] VBIN on run with large number of events')
+
+    # test directory
+    test_dir = '/tmp/vbin_large_data'
+    command_test_setup.set_test_dir(test_dir)
+
+    # run command
+    idl_command = "vbin,ipts=20280,runs=170461,binfolder=\'{}\'".format(test_dir)
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
+
+    return
+
+
+def test_vbin_chop_large_set(tester):
+    """
+    Test CHOP with a long run with large number of events
+    :param tester:
+    :return:
+    """
+    print ('[INFO] CHOP on run with large number of events')
+
+    # test directory
+    test_dir_1 = '/tmp/combo_large_data_1'
+    test_dir_2 = '/tmp/combo_large_data_2'
+    command_test_setup.set_test_dir(test_dir_1)
+    command_test_setup.set_test_dir(test_dir_2)
+
+    # run command vbin
+    idl_command = "vbin,ipts=19589,runs=167677,binfolder=\'{}\'".format(test_dir_1)
+    tester.run_command(idl_command)
+
+    # run command chop
+    idl_command = "chop,ipts=20280,runs=170461,dbin=300,binfolder=\'{}\'".format(test_dir_2)
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir_1)
+    tester.show_output_files(test_dir_2)
+
+    return
+
+
+def test_chop_large_set(tester):
+    """
+    Test VBIN and CHOP with a long run with large number of events
+    :param tester:
+    :return:
+    """
+    print ('[INFO] CHOP on run with large number of events')
+
+    # test directory
+    test_dir = '/tmp/chop_large_data'
+    command_test_setup.set_test_dir(test_dir)
+
+    # run command
+    idl_command = "chop,ipts=20280,runs=170461,dbin=300,binfolder=\'{}\'".format(test_dir)
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
+
+
+
 def test_main():
     """
     test main
@@ -46,7 +117,16 @@ def test_main():
 
     test_vbin_chop_simple(command_tester)
 
+    # large data set for chopping
+    # test_chop_large_set(command_tester)
+
+    # large data set combo
+    test_vbin_chop_large_set(command_tester)
+
     return command_tester.main_window
+
+
+# FIXME TODO - NIGHT - Consider (1) delete original event workspace (2) compress events (3) any other good idea?
 
 
 def main(argv):

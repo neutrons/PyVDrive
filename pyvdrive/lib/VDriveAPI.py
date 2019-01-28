@@ -1150,6 +1150,7 @@ class VDriveAPI(object):
                 ipts_number = self._myProject.get_ipts_number(run_number)
 
             file_name = self._myArchiveManager.get_event_file(ipts_number, run_number, check_file_exist=True)
+            print ('[DB...BAT] Found {} for IPTS-{} Run {}'.format(file_name, ipts_number, run_number))
         # END-IF
 
         # load file

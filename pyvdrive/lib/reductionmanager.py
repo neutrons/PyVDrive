@@ -85,8 +85,10 @@ class CalibrationManager(object):
         self._focus_instrument_dict['Azimuthal'][3] = [0., 0, 0.]
         self._focus_instrument_dict['SpectrumIDs'][3] = [1, 2, 3]
 
-        # TODO - ASAP - Find out the Polar and Azimuthal for 7 and 27 bank cases
         # 7 bank
+        # all the sub-banks in each bank will be focused to the center of east bank;
+        # all the sub-banks belonged to west bank will be focused to the center of west bank;
+        # unless the users have specific requirement.
         self._focus_instrument_dict['L2'][7] = [2.] * 7  # [2., 2., 2.]
         self._focus_instrument_dict['Polar'][7] = [-90.] * 3
         self._focus_instrument_dict['Polar'][7].extend([90.] * 3)
@@ -94,11 +96,19 @@ class CalibrationManager(object):
         self._focus_instrument_dict['Azimuthal'][7] = [0.] * 7
         self._focus_instrument_dict['SpectrumIDs'][7] = range(1, 8)
 
-        # 27 banks
+        # 27 banks: Note that
+        # all the sub-banks in each bank will be focused to the center of east bank;
+        # all the sub-banks belonged to west bank will be focused to the center of west bank;
+        # and all the sub-banks of high angle bank will be focused to the center of high angle bank
+        # unless the users have specific requirement.
         self._focus_instrument_dict['L2'][27] = [2.] * 27  # [2., 2., 2.]
         self._focus_instrument_dict['Polar'][27] = [None] * 27
-        self._focus_instrument_dict['Azimuthal'][27] = [None] * 27
+        self._focus_instrument_dict['Azimuthal'][27] = [0.] * 27
         self._focus_instrument_dict['SpectrumIDs'][27] = range(1, 28)
+        for ws_index in range(9):
+            self._focus_instrument_dict['Polar'][27][ws_index] = -90.
+            self._focus_instrument_dict['Polar'][27][ws_index + 9] = 90.
+            self._focus_instrument_dict['Polar'][27][ws_index + 18] = 155.
 
         return
 
@@ -120,10 +130,15 @@ class CalibrationManager(object):
                           7: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_7bank.h5'),
                           27: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_27bank.h5')}
 
+        ned_2019_setup = {3: os.path.join(base_calib_dir, '2019_1_20/VULCAN_calibrate_2019_01_21.h5'),
+                          7: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_7bank.h5'),
+                          27: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_27bank.h5')}
+
         self._calibration_dict = dict()
         self._calibration_dict[datetime.datetime(2010, 1, 1)] = pre_ned_setup
         self._calibration_dict[datetime.datetime(2017, 6, 1)] = ned_2017_setup
         self._calibration_dict[datetime.datetime(2018, 5, 30)] = ned_2018_setup
+        self._calibration_dict[datetime.datetime(2019, 1, 1)] = ned_2019_setup
 
         return
 
@@ -408,7 +423,7 @@ class CalibrationManager(object):
 
         # load calibration
         base_name = self.get_base_name(calibration_file_name, num_banks)
-        outputs = mantid_helper.load_calibration_file(calibration_file_name, base_name, ref_ws_name)
+        outputs, offset_ws = mantid_helper.load_calibration_file(calibration_file_name, base_name, ref_ws_name)
         # get output workspaces for their names
         calib_ws_collection = DetectorCalibrationWorkspaces()
         calib_ws_collection.calibration = outputs.OutputCalWorkspace.name()
@@ -768,7 +783,7 @@ class DataReductionTracker(object):
             ws_name = ws_name.strip()
             # skip
             if len(ws_name) == 0 or mantid_helper.workspace_does_exist(ws_name) is False:
-                err_msg += 'Workspace "{}" does not exist'
+                err_msg += 'Workspace "{}" does not exist\n'.format(ws_name)
                 continue
 
             # append
@@ -1033,11 +1048,12 @@ class ReductionManager(object):
         #         Multiply(LHSWorkspace=ws_name, RHSWorkspace=self._det_eff_ws_name, OutputWorkspace=ws_name)
         raise NotImplementedError('ASAP')
 
+    # TODO - NIGHT - Code quality
     def chop_vulcan_run(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
                         output_directory, reduce_data_flag, save_chopped_nexus, number_banks,
-                        tof_correction, van_run_number, user_binning_parameter,
-                        roi_list, mask_list, no_cal_mask, gsas_parm_name='vulcan.prm', bin_overlap_mode=False,
-                        gda_file_start=1):
+                        tof_correction, user_binning_parameter,
+                        roi_list, mask_list, no_cal_mask, van_gda_name, gsas_parm_name='vulcan.prm',
+                        bin_overlap_mode=False, gda_file_start=1):
         """
         Latest version: version 3
         :param ipts_number:
@@ -1051,7 +1067,7 @@ class ReductionManager(object):
         :param save_chopped_nexus:
         :param number_banks:
         :param tof_correction:
-        :param van_run_number: None (for no-correction) or an integer (vanadium run number)
+        :param van_gda_name: None (for no-correction) or an integer (vanadium run number)
         :param user_binning_parameter:
         :param roi_list:
         :param mask_list:
@@ -1145,7 +1161,7 @@ class ReductionManager(object):
             # END-IF-ELSE
             # virtual_geometry_dict = self._calibrationFileManager.get_focused_instrument_parameters(num_banks)
 
-            gsas_info = {'IPTS': ipts_number, 'parm file': gsas_parm_name}
+            gsas_info = {'IPTS': ipts_number, 'parm file': gsas_parm_name, 'vanadium': van_gda_name}
             status, message = chop_reducer.execute_chop_reduction_v2(event_ws_name=event_ws_name,
                                                                      calib_ws_name=calib_ws_name,
                                                                      group_ws_name=group_ws_name,

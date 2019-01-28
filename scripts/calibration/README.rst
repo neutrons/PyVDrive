@@ -1,6 +1,14 @@
 Cross-correlation calibration
 -----------------------------
 
+Used Diamond Runs
+=================
+
+Diamond_Runs = {'2017-06-01': '/SNS/users/wzz/Projects/VULCAN/nED_Calibration/Diamond_NeXus/'
+                              'VULCAN_150178_HighResolution_Diamond.nxs',
+                '2018-08-01': '/SNS/users/wzz/Projects/VULCAN/CalibrationInstrument/Calibration_20180910/'
+                              'raw_dspace_hitogram.nxs'}
+
 
 New Workflow
 ============
