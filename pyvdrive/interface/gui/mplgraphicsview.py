@@ -604,6 +604,8 @@ class MplGraphicsView(QWidget):
                                                        color=color, marker=self._myIndicatorsManager.get_marker(),
                                                        line_style=self._myIndicatorsManager.get_line_style(),
                                                        line_width=1)
+        # add to 1DPlotDict too
+        self._my1DPlotDict[canvas_line_index] = my_id
 
         self._myIndicatorsManager.set_canvas_line_index(my_id, canvas_line_index)
 

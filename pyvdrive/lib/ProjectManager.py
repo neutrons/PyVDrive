@@ -1300,7 +1300,7 @@ class ProjectManager(object):
         :param mask_list:
         :return: 2-tuple: list (run number), list (error message for each run reduced)
         """
-        print ('[INFO] Reduction VULCAN Version 2 is Called')
+        print ('[INFO] Reduction (Single Run) VULCAN Version 2 is Called')
 
         # check inputs
         datatypeutility.check_list('Run numbers', run_number_list)
@@ -1369,7 +1369,9 @@ class ProjectManager(object):
                                                             gsas_file_name=gsas_file_name, ipts_number=ipts_number,
                                                             align_vdrive_bin=align_vdrive_bin,
                                                             gsas_param_file_name=iparam_file_name,
-                                                            van_ws_name=van_ws_name)
+                                                            van_ws_name=van_ws_name,
+                                                            is_chopped_run=False,
+                                                            write_to_file=True)
             except RuntimeError as run_error:
                 error_messages.append('Failed to reduce run {0} due to {1}'.format(run_number, run_error))
             else:

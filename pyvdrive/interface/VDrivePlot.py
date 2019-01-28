@@ -1461,9 +1461,7 @@ class VdriveMainWindow(QMainWindow):
             # create the log processing window
             self._logPickerWindow = LogPicker.WindowLogPicker(self, ipts_number, run_number)
             self._myChildWindows.append(self._logPickerWindow)
-
-        # Set up tree view for runs
-        self._logPickerWindow.setup()
+        # END-IF-ELSE
 
         # Show
         self._logPickerWindow.show()

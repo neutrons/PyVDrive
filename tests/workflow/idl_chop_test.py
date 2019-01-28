@@ -234,10 +234,10 @@ def test_main():
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
     # basic chopping operation
-    # test_chop_simple(command_tester)
+    test_chop_simple(command_tester)
 
     # # # chop with vanadium runs
-    test_chop_van_normalized(command_tester)
+    # test_chop_van_normalized(command_tester)
 
     # # # chop with mask/ROI
     # test_chop_roi(command_tester)

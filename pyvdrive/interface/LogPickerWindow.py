@@ -91,23 +91,10 @@ class WindowLogPicker(QMainWindow):
         self.ui.checkBox_showSlicer.stateChanged.connect(self.evt_show_slicer)
 
         # manual slicer picker
-        # self.ui.pushButton_addPicker.clicked.connect()
-        # #              self.do_picker_add)
-        # self.ui.pushButton_abortPicker.clicked.connect()
-        # #              self.do_picker_abort)
-        # self.ui.pushButton_setPicker.clicked.connect()
-        # #              self.do_picker_set)
-        # self.ui.pushButton_selectPicker.clicked.connect()
-        # #              self.do_enter_select_picker_mode)
         self.ui.pushButton_showManualSlicerTable.clicked.connect(self.do_show_manual_slicer_table)
         self.ui.pushButton_loadSlicerFile.clicked.connect(self.do_import_slicer_file)
 
         # Slicer table
-        # self.ui.pushButton_selectAll.clicked.connect()
-        # #              self.do_select_time_segments)
-        # self.ui.pushButton_deselectAll.clicked.connect()
-        # #              self.do_deselect_time_segments)
-
         # Canvas
         self.ui.pushButton_doPlotSample.clicked.connect(self.evt_plot_sample_log)
         self.ui.pushButton_resizeCanvas.clicked.connect(self.do_resize_canvas)
@@ -123,88 +110,6 @@ class WindowLogPicker(QMainWindow):
         # menu actions
         self.ui.actionExit.triggered.connect(self.evt_quit_no_save)
 
-        # # self.connect(self.ui.pushButton_saveTimeSegs, QtCore.SIGNAL('clicked()'),
-        # #              self.do_save_time_segments)
-        # self.connect(self.ui.pushButton_loadRunSampleLog, QtCore.SIGNAL('clicked()'),
-        #              self.do_load_run)
-        # self.connect(self.ui.pushButton_prevLog, QtCore.SIGNAL('clicked()'),
-        #              self.do_load_prev_log)
-        # self.connect(self.ui.pushButton_nextLog, QtCore.SIGNAL('clicked()'),
-        #              self.do_load_next_log)
-        # self.connect(self.ui.pushButton_readLogFile, QtCore.SIGNAL('clicked()'),
-        #              self.do_scan_log_file)
-        # self.connect(self.ui.pushButton_loadMTSLog, QtCore.SIGNAL('clicked()'),
-        #              self.do_load_mts_log)
-        # self.connect(self.ui.comboBox_blockList, QtCore.SIGNAL('indexChanged(int)'),
-        #              self.do_load_mts_log)
-        # self.connect(self.ui.comboBox_logFrameUnit, QtCore.SIGNAL('indexChanged(int)'),
-        #              self.evt_re_plot_mts_log)
-        #
-        # self.connect(self.ui.checkBox_hideSingleValueLog, QtCore.SIGNAL('stateChanged(int)'),
-        #              self.load_log_names)
-        #
-        # # chopping setup
-        # self.connect(self.ui.radioButton_timeSlicer, QtCore.SIGNAL('toggled (bool)'),
-        #              self.evt_switch_slicer_method)
-        # self.connect(self.ui.radioButton_logValueSlicer, QtCore.SIGNAL('toggled (bool)'),
-        #              self.evt_switch_slicer_method)
-        # self.connect(self.ui.radioButton_manualSlicer, QtCore.SIGNAL('toggled (bool)'),
-        #              self.evt_switch_slicer_method)
-        # self.connect(self.ui.pushButton_slicer, QtCore.SIGNAL('clicked()'),
-        #              self.do_chop)
-        # self.connect(self.ui.pushButton_viewReduced, QtCore.SIGNAL('clicked()'),
-        #              self.do_view_reduced_data)
-        #
-        # # Further operation
-        # # self.connect(self.ui.pushButton_highlight, QtCore.SIGNAL('clicked()'),
-        # #              self.do_highlight_selected)
-        #
-        # # automatic slicer setup
-        # self.connect(self.ui.pushButton_setupAutoSlicer, QtCore.SIGNAL('clicked()'),
-        #              self.do_setup_uniform_slicer)
-        # self.connect(self.ui.checkBox_showSlicer, QtCore.SIGNAL('stateChanged(int)'),
-        #              self.evt_show_slicer)
-        #
-        # # manual slicer picker
-        # # self.connect(self.ui.pushButton_addPicker, QtCore.SIGNAL('clicked()'),
-        # #              self.do_picker_add)
-        # # self.connect(self.ui.pushButton_abortPicker, QtCore.SIGNAL('clicked()'),
-        # #              self.do_picker_abort)
-        # # self.connect(self.ui.pushButton_setPicker, QtCore.SIGNAL('clicked()'),
-        # #              self.do_picker_set)
-        # # self.connect(self.ui.pushButton_selectPicker, QtCore.SIGNAL('clicked()'),
-        # #              self.do_enter_select_picker_mode)
-        # self.connect(self.ui.pushButton_showManualSlicerTable, QtCore.SIGNAL('clicked()'),
-        #              self.do_show_manual_slicer_table)
-        # self.connect(self.ui.pushButton_loadSlicerFile, QtCore.SIGNAL('clicked()'),
-        #              self.do_import_slicer_file)
-        #
-        # # Slicer table
-        # # self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'),
-        # #              self.do_select_time_segments)
-        # # self.connect(self.ui.pushButton_deselectAll, QtCore.SIGNAL('clicked()'),
-        # #              self.do_deselect_time_segments)
-        #
-        # # Canvas
-        # self.connect(self.ui.pushButton_doPlotSample, QtCore.SIGNAL('clicked()'),
-        #              self.evt_plot_sample_log)
-        # self.connect(self.ui.pushButton_resizeCanvas, QtCore.SIGNAL('clicked()'),
-        #              self.do_resize_canvas)
-        # self.connect(self.ui.comboBox_logNames, QtCore.SIGNAL('currentIndexChanged(int)'),
-        #              self.evt_plot_sample_log)
-        #
-        # self.connect(self.ui.radioButton_useTimeResolution, QtCore.SIGNAL('toggled(bool)'),
-        #              self.evt_change_resolution_type)
-        #
-        # self.connect(self.ui.pushButton_prevPartialLog, QtCore.SIGNAL('clicked()'),
-        #              self.do_load_prev_log_frame)
-        # self.connect(self.ui.pushButton_nextPartialLog, QtCore.SIGNAL('clicked()'),
-        #              self.do_load_next_log_frame)
-        #
-        # # menu actions
-        # self.connect(self.ui.actionExit, QtCore.SIGNAL('triggered()'),
-        #              self.evt_quit_no_save)
-
         # # Event handling for pickers
         self._mtsFileLoaderWindow = None
 
@@ -213,7 +118,7 @@ class WindowLogPicker(QMainWindow):
 
         # Initial setup
         if init_run is not None:
-            assert isinstance(init_run, int)
+            datatypeutility.check_int_variable('Initial run number', init_run, (0, None))
             self.ui.lineEdit_runNumber.setText('%d' % init_run)
             self._iptsNumber = ipts_number
         else:
@@ -342,7 +247,6 @@ class WindowLogPicker(QMainWindow):
         # enable to disable
         if self.ui.radioButton_timeSlicer.isChecked():
             # time slicer
-            print '[DB...BAT] Turn on 1; Turn off 2 and 3'
             self.ui.groupBox_sliceSetupAuto.setEnabled(True)
             self.ui.groupBox_slicerSetupManual.setEnabled(False)
 
@@ -366,7 +270,6 @@ class WindowLogPicker(QMainWindow):
 
         elif self.ui.radioButton_logValueSlicer.isChecked():
             # log value slicer
-            print '[DB...BAT] Turn on 2; Turn off 1 and 3'
             self.ui.groupBox_sliceSetupAuto.setEnabled(True)
             self.ui.groupBox_slicerSetupManual.setEnabled(False)
 
@@ -395,7 +298,6 @@ class WindowLogPicker(QMainWindow):
 
         else:
             # manual slicer
-            print '[DB...BAT] Turn on 3; Turn off 1 and 2'
             self.ui.groupBox_sliceSetupAuto.setEnabled(False)
             self.ui.groupBox_slicerSetupManual.setEnabled(True)
 
@@ -425,7 +327,6 @@ class WindowLogPicker(QMainWindow):
         # pop up the dialog
         self._quickChopDialog = QuickChopDialog.QuickChopDialog(self, self._currRunNumber, raw_file_name)
         result = self._quickChopDialog.exec_()
-        print ('[DB...BAT] Quick Chop Dialog - result: {}'.format(result))
 
         # quit if user cancels the operation
         if result == 0:
@@ -462,7 +363,7 @@ class WindowLogPicker(QMainWindow):
                                                                  nexus_file_name=None,
                                                                  gsas_iparm_file='vulcan.prm',
                                                                  overlap_mode=False,
-                                                                 gda_start=0)
+                                                                 gda_start=1)
         if status:
             GuiUtility.pop_dialog_information(self, message)
         else:
@@ -470,6 +371,7 @@ class WindowLogPicker(QMainWindow):
 
         return
 
+    # TODO - TEST-NEXT - ASAP March Release
     def do_import_slicer_file(self):
         """ Import an ASCII file which contains the slicers.
         The format will be a 3 column file as run start (in second), run stop(in second) and target workspace
@@ -486,7 +388,7 @@ class WindowLogPicker(QMainWindow):
         # import slicers from a file: True, (ref_run, run_start, segment_list)
         status, ret_obj = self.get_controller().import_data_slicers(slicer_file_name)
         if status:
-            ref_run, run_start, slicer_list = reb_obj
+            ref_run, run_start, slicer_list = ret_obj
         else:
             err_msg = str(ret_obj)
             GuiUtility.pop_dialog_error(self, err_msg)
@@ -646,6 +548,7 @@ class WindowLogPicker(QMainWindow):
 
         return
 
+    # TODO - TEST - ASAP March Release
     def do_load_run(self):
         """
         Load a run and plot
@@ -1315,26 +1218,9 @@ class WindowLogPicker(QMainWindow):
         Set run
         :return:
         """
+        datatypeutility.check_int_variable('Run number set to Log Picker Window', run_number, (0, None))
         run_number = int(run_number)
         self.ui.lineEdit_runNumber.setText('%d' % run_number)
-
-        return
-
-    def setup(self):
-        """ Set up from parent main window: think of what to set up
-        :return:
-        """
-        # TODO/FIXME/NOW - How to make this work?
-        # 1. controller
-        # 2. IPTS number
-        # 3. Refer to command CHOP
-
-        # ipts_run_dict = self._myParent.get_archived_runs()
-        #
-        # # Set to tree
-        # for ipts in ipts_run_dict.keys():
-        #     run_list = ipts_run_dict[ipts]
-        #     self.ui.treeView_iptsRun.add_ipts_runs(ipts, run_list)
 
         return
 

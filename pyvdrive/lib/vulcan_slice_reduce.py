@@ -338,10 +338,10 @@ class SliceFocusVulcan(object):
         # END-IF
 
         # save ONE python script for future reference
-        if len(output_names) > 1:
+        if len(output_names) > 0:
             python_name = os.path.join(self._output_dir,
                                        '{}_{}.py'.format(self._run_number, split_ws_name))
-            GeneratePythonScript(InputWorkspace=output_names[1], Filename=python_name)
+            GeneratePythonScript(InputWorkspace=output_names[0], Filename=python_name)
         else:
             print ('[ERROR] No output workspace to export to GSAS!')
 
@@ -349,7 +349,7 @@ class SliceFocusVulcan(object):
         run_date_time = vulcan_util.get_run_date(event_ws_name, '')
         self.write_to_gsas(output_names, ipts_number=gsas_info_dict['IPTS'], parm_file_name=gsas_info_dict['parm file'],
                            vanadium_gda_name=gsas_info_dict['vanadium'],
-                           ref_tof_sets=binning_parameters, gsas_writer=gsas_writer, run_start_date=run_date_time,
+                           gsas_writer=gsas_writer, run_start_date=run_date_time,  # ref_tof_sets=binning_parameters,
                            gsas_file_index_start=gsas_file_index_start)
 
         # write to logs
@@ -418,20 +418,18 @@ class SliceFocusVulcan(object):
                                            gsas_file_name=gsas_file_name_list[index_ws],
                                            ipts_number=ipts_number,
                                            gsas_param_file_name=parm_file_name, align_vdrive_bin=True,
-                                           van_ws_name=van_ws_name, write_to_file=False)
-            print ('[DB...BAT] GSAS buffer written for {}'.format(ws_name))
+                                           van_ws_name=van_ws_name, is_chopped_run=True, write_to_file=False)
             self._gsas_buffer_dict[ws_name] = text_buffer
 
         return
 
     def write_to_gsas(self, workspace_name_list, ipts_number, parm_file_name, vanadium_gda_name,
-                      ref_tof_sets, gsas_writer, run_start_date, gsas_file_index_start=1):
+                      gsas_writer, run_start_date, gsas_file_index_start=1):
         """ Write a set of workspaces to GSAS file in parallel (mutliple threading)
         :param workspace_name_list:
         :param ipts_number:
         :param parm_file_name:
         :param vanadium_gda_name: name of reduced vanadium in GSAS file
-        :param ref_tof_sets:
         :param gsas_writer:
         :param run_start_date:
         :param gsas_file_index_start:
