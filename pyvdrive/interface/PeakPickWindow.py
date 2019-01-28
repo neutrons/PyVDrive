@@ -26,14 +26,15 @@ except AttributeError:
         return s
 
 import gui.GuiUtility as GuiUtility
-from pyvdrive.interface.gui.diffractionplotview import DiffractionPlotView
-from pyvdrive.interface.gui.vdrivetablewidgets import PeakParameterTable
-from pyvdrive.interface.gui.vdrivetreewidgets import SinglePeakFitManageTree
+# from pyvdrive.interface.gui.diffractionplotview import DiffractionPlotView
+# from pyvdrive.interface.gui.vdrivetablewidgets import PeakParameterTable
+# from pyvdrive.interface.gui.vdrivetreewidgets import SinglePeakFitManageTree
 import gui.diffractionplotview as dv
 import GroupPeakDialog
 from pyvdrive.interface.gui.diffractionplotview import DiffractionPlotView
 from pyvdrive.interface.gui.vdrivetablewidgets import PeakParameterTable
 from pyvdrive.interface.gui.vdrivetreewidgets import SinglePeakFitManageTree
+import vanadium_controller_dialog
 
 # Set up path to PyVDrive
 import socket
@@ -443,6 +444,9 @@ class PeakPickerWindow(QMainWindow):
 
         self.ui.pushButton_peakPickerMode.clicked.connect(self.do_set_pick_mode)
 
+        # vanadium
+        self.ui.pushButton_launchVanProcessDialog.clicked.connect(self.do_launch_vanadium_dialog)
+
         # load files
         self.ui.pushButton_loadCalibFile.clicked.connect(self.do_load_calibration_file)
         self.ui.pushButton_readData.clicked.connect(self.do_load_data)
@@ -453,6 +457,9 @@ class PeakPickerWindow(QMainWindow):
         self.ui.pushButton_save.clicked.connect(self.do_save_peaks)
 
         self.ui.tableWidget_peakParameter.itemSelectionChanged.connect(self.evt_table_selection_changed)
+
+        # TODO - NIGHT - Implement features
+        # pushButton_resetSelection : reset selected peaks
 
         # self.connect(self.ui.pushButton_setPhases, QtCore.SIGNAL('clicked()'),
         #              self.do_set_phases)
@@ -641,6 +648,34 @@ class PeakPickerWindow(QMainWindow):
         self.ui.pushButton_peakPickerMode.setText('Enter Multi-Peak')
         self._peakPickerMode = PeakPickerMode.NoPick
         self.ui.graphicsView_main.set_peak_selection_mode(dv.PeakAdditionState.NonEdit)
+
+        return
+
+    def do_launch_vanadium_dialog(self):
+        """
+        launch the vanadium run processing dialog
+        :return:
+        """
+        # launch vanadium dialog window
+        self._vanadiumProcessDialog = vanadium_controller_dialog.VanadiumProcessControlDialog(self)
+        self._vanadiumProcessDialog.show()
+
+        # get current workspace
+        current_run_str = str(self.ui.comboBox_runs.currentText())
+        if current_run_str.isdigit():
+            current_run = int(current_run_str)
+        else:
+            current_run = current_run_str
+
+        self._vanadiumProcessDialog.set_run_number(current_run)
+
+        # FWHM
+        if self._vanadiumFWHM is not None:
+            self._vanadiumProcessDialog.set_peak_fwhm(self._vanadiumFWHM)
+
+        # also set up the vanadium processors
+        workspace_name = self._myController.get_reduced_workspace_name(current_run_str)
+        self._myController.project.vanadium_processing_manager.init_session(workspace_name, BANK_GROUP_DICT)
 
         return
 

@@ -26,7 +26,6 @@ except AttributeError:
         return s
         
 from pyvdrive.interface.gui.generalrunview import GeneralRunView
-import vanadium_controller_dialog
 import pyvdrive.lib.datatypeutility
 from pyvdrive.lib import datatypeutility
 
@@ -153,9 +152,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # combo boxes
         self.ui.comboBox_spectraList.currentIndexChanged.connect(self.evt_bank_id_changed)
         self.ui.comboBox_unit.currentIndexChanged.connect(self.evt_unit_changed)
-
-        # vanadium
-        self.ui.pushButton_launchVanProcessDialog.clicked.connect(self.do_launch_vanadium_dialog)
 
         # menu
         # TODO - 20181102 - Add Back!
@@ -891,34 +887,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         over_plot = False
 
         self.plot_by_data_key(run_number_st, bank_id_list=[bank_id], over_plot=over_plot)
-
-        return
-
-    def do_launch_vanadium_dialog(self):
-        """
-        launch the vanadium run processing dialog
-        :return:
-        """
-        # launch vanadium dialog window
-        self._vanadiumProcessDialog = vanadium_controller_dialog.VanadiumProcessControlDialog(self)
-        self._vanadiumProcessDialog.show()
-
-        # get current workspace
-        current_run_str = str(self.ui.comboBox_runs.currentText())
-        if current_run_str.isdigit():
-            current_run = int(current_run_str)
-        else:
-            current_run = current_run_str
-
-        self._vanadiumProcessDialog.set_run_number(current_run)
-
-        # FWHM
-        if self._vanadiumFWHM is not None:
-            self._vanadiumProcessDialog.set_peak_fwhm(self._vanadiumFWHM)
-
-        # also set up the vanadium processors
-        workspace_name = self._myController.get_reduced_workspace_name(current_run_str)
-        self._myController.project.vanadium_processing_manager.init_session(workspace_name, BANK_GROUP_DICT)
 
         return
 

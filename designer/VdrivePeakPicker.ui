@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1494</width>
-    <height>810</height>
+    <width>1531</width>
+    <height>1054</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,7 +18,7 @@
     <item row="0" column="0">
      <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
-<widget class="QFrame" name="frame_treeView_iptsRun">
+       <widget class="QFrame" name="frame_treeView_iptsRun">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -490,12 +490,24 @@
             </property>
            </widget>
           </item>
+          <item row="1" column="6">
+           <widget class="QPushButton" name="pushButton_resetSelection">
+            <property name="font">
+             <font>
+              <pointsize>9</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Reset</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
        </layout>
       </item>
       <item>
-<widget class="QFrame" name="frame_graphicsView_main"/>
+       <widget class="QFrame" name="frame_graphicsView_main"/>
       </item>
       <item>
        <widget class="QGroupBox" name="groupBox">
@@ -952,7 +964,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1494</width>
+     <width>1531</width>
      <height>25</height>
     </rect>
    </property>
@@ -1246,7 +1258,7 @@
       </layout>
      </item>
      <item>
-<widget class="QFrame" name="frame_tableWidget_peakParameter">
+      <widget class="QFrame" name="frame_tableWidget_peakParameter">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
          <horstretch>0</horstretch>
@@ -1256,6 +1268,35 @@
        <property name="toolTip">
         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Peak width is the fitting range for 2 peaks.&lt;/p&gt;&lt;p&gt;It will be picked up by xmin and xmax of the graph&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;Nomenclature:&lt;/p&gt;&lt;p&gt;1. width (vdrive): peak fit range = 6 * FWHM&lt;/p&gt;&lt;p&gt;2. If there are more than 1 peak overlapped, then use 'number of peak to notify that the number of peak overlapped'&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="groupBox_4">
+       <property name="font">
+        <font>
+         <pointsize>10</pointsize>
+        </font>
+       </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Process vanadium data which is currently plot.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="title">
+        <string>Process Vanadium Run</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_9">
+        <item>
+         <widget class="QPushButton" name="pushButton_launchVanProcessDialog">
+          <property name="font">
+           <font>
+            <pointsize>10</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Launch Control  Window</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </widget>
      </item>
     </layout>
@@ -1293,23 +1334,6 @@
    </property>
   </action>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>DiffractionPlotView</class>
-   <extends>QGraphicsView</extends>
-   <header>diffractionplotview.h</header>
-  </customwidget>
-  <customwidget>
-   <class>PeakParameterTable</class>
-   <extends>QTableWidget</extends>
-   <header>vdrivetablewidgets.h</header>
-  </customwidget>
-  <customwidget>
-   <class>SinglePeakFitManageTree</class>
-   <extends>QTreeView</extends>
-   <header>vdrivetreewidgets.h</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>
