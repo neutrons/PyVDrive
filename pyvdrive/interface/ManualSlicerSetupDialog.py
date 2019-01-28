@@ -55,27 +55,6 @@ class ManualSlicerSetupTableDialog(QDialog):
 
         self.ui.pushButton_deselectAll.clicked.connect(self.do_set_target)
 
-        # self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'),
-        #              self.do_select_all_rows)
-        #
-        # self.connect(self.ui.pushButton_expand2ndLevelChop, QtCore.SIGNAL('clicked()'),
-        #              self.do_expand_slicers)
-        #
-        # self.connect(self.ui.pushButton_applyTimeSegs, QtCore.SIGNAL('clicked()'),
-        #              self.do_apply_slicers)
-        #
-        # self.connect(self.ui.pushButton_saveTimeSegs, QtCore.SIGNAL('clicked()'),
-        #              self.do_save_slicers_to_file)
-        #
-        # self.connect(self.ui.pushButton_loadSlicerFromFile, QtCore.SIGNAL('clicked()'),
-        #              self.do_load_slicers_from_file)
-        #
-        # self.connect(self.ui.pushButton_hide, QtCore.SIGNAL('clicked()'),
-        #              self.do_hide_window)
-        #
-        # self.connect(self.ui.pushButton_deselectAll, QtCore.SIGNAL('clicked()'),
-        #              self.do_set_target)
-
         # FIXME / FUTURE : it is not well defined to remove a slicer from table and reflected to pickers on plotting
         # self.connect(self.ui.pushButton_deleteSlicer, QtCore.SIGNAL('clicked()'),
         #              self.do_delete_slicer)
@@ -252,11 +231,16 @@ class ManualSlicerSetupTableDialog(QDialog):
 
         # pop a dialog for the name of the slicer
         file_filter = 'Data Files (*.dat);; All Files (*.*)'
-        file_name = str(QFileDialog.getSaveFileName(self, 'Time slicer file name',
+        file_name = QFileDialog.getSaveFileName(self, 'Time slicer file name',
                                                           self.controller.get_working_dir(),
-                                                          file_filter))
+                                                          file_filter)
+        if isinstance(file_name, tuple):
+            file_name = file_name[0]
         if len(file_name) == 0:
             return
+
+        if not (file_name.endswith('.dat') or file_name.endswith('.txt')):
+            file_name = '{}.dat'.format(file_name)
 
         # Call parent method
         if self._myParent is not None:
