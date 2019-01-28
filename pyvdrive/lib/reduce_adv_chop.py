@@ -889,7 +889,10 @@ class WriteSlicedLogs(object):
                     end_series_dict[mts_name].set_value(pd_index, 0.)
                     continue
 
-                if len(sample_log) > 0:
+                if log_name == 'proton_charge':
+                    # requiring total charge
+                    start_value = mean_value = end_value = sample_log.sum()
+                elif len(sample_log) > 0:
                     start_value = sample_log[0]
                     mean_value = sample_log.mean()
                     end_value = sample_log[-1]
