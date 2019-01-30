@@ -412,6 +412,9 @@
               <pointsize>9</pointsize>
              </font>
             </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove all selected peaks&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
              <string>Reset</string>
             </property>
@@ -1039,6 +1042,9 @@
        </item>
        <item row="2" column="4">
         <widget class="QPushButton" name="pushButton_deletePeaks">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="maximumSize">
           <size>
            <width>600</width>
@@ -1107,6 +1113,9 @@
        </item>
        <item row="1" column="4">
         <widget class="QPushButton" name="pushButton_setPeakWidth">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="maximumSize">
           <size>
            <width>600</width>
@@ -1197,6 +1206,9 @@
        </item>
        <item row="0" column="4">
         <widget class="QPushButton" name="pushButton_claimOverlappedPeaks">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="maximumSize">
           <size>
            <width>600</width>

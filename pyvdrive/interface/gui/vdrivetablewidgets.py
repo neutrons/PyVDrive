@@ -591,7 +591,7 @@ class PeakParameterTable(NdavTable.NTableWidget):
             A row is append
         :param centre:
         :param bank: bank number
-        :param name: peak name
+        :param name: peak name.  If empty, then an automatic name will be given according to its row number
         :param width: peak width
         :param group_id:
         :return:
@@ -647,6 +647,16 @@ class PeakParameterTable(NdavTable.NTableWidget):
             self._buffer[bank] = list()
 
         self._buffer[bank].append([bank, name, centre, width, '', -1])
+
+        return
+
+    def clear_selected_peaks(self):
+        """
+
+        :return:
+        """
+        # TODO FIXME - NIGHT - This is not correct with the name and purpose
+        self.remove_all_rows()
 
         return
 

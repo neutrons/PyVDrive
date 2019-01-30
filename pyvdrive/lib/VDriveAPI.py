@@ -333,8 +333,8 @@ class VDriveAPI(object):
             peak_info_list = self._myProject.find_diffraction_peaks(data_key, bank_number, x_range,
                                                                     peak_positions, hkl_list,
                                                                     profile)
-        except AssertionError as ass_err:
-            return False, 'Unable to find peaks due to {0}'.format(ass_err)
+        except RuntimeError as run_err:
+            return False, 'Failed to find peaks due to {0}'.format(run_err)
 
         return True, peak_info_list
 
@@ -1119,7 +1119,8 @@ class VDriveAPI(object):
 
         return chopped_key_dict, run_number
 
-    def load_diffraction_file(self, file_name, file_type, data_key):
+    # TODO - NIGHT - This method can be removed
+    def load_diffraction_file(self, file_name, file_type, data_key, unit=None):
         """ Load reduced diffraction file to analysis project
         Requirements: file name is a valid string, file type must be a string as 'gsas' or 'fullprof'
         a.k.a. load_gsas_data
@@ -1130,6 +1131,11 @@ class VDriveAPI(object):
         """
         data_key = self._myProject.data_loading_manager.load_binned_data(file_name, file_type, prefix=None,
                                                                          max_int=100, data_key=data_key)
+
+        # convert unit
+        if unit:
+            ws_name = self._myProject.get_workspace_name_by_data_key(data_key)
+            mantid_helper.mtd_convert_units(ws_name, unit)
 
         return data_key
 
