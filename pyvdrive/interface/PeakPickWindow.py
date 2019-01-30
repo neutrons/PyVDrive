@@ -68,7 +68,7 @@ class PeakWidthSetupDialog(QDialog):
         # Initialize
         QDialog.__init__(self, parent)
 
-        self.ui = load_ui("PeakWidthSetup.ui", baseinstance=self)
+        self.ui = load_ui("gui/PeakWidthSetup.ui", baseinstance=self)
         self = self._promote_widgets()
 
         # Define event handlers
@@ -444,6 +444,9 @@ class PeakPickerWindow(QMainWindow):
 
         self.ui.pushButton_peakPickerMode.clicked.connect(self.do_set_pick_mode)
 
+        # TODO - NIGHT - Implement
+        # self.ui.pushButton_clearGroup
+
         # vanadium
         self.ui.pushButton_launchVanProcessDialog.clicked.connect(self.do_launch_vanadium_dialog)
 
@@ -457,6 +460,9 @@ class PeakPickerWindow(QMainWindow):
         self.ui.pushButton_save.clicked.connect(self.do_save_peaks)
 
         self.ui.tableWidget_peakParameter.itemSelectionChanged.connect(self.evt_table_selection_changed)
+
+        # get terminal
+        self.ui.actionLaunch_Terminal.triggered.connect(self.menu_launch_terminal)
 
         # TODO - NIGHT - Implement features
         # pushButton_resetSelection : reset selected peaks
@@ -526,8 +532,8 @@ class PeakPickerWindow(QMainWindow):
         # self.connect(self.ui.pushButton_save, QtCore.SIGNAL('clicked()'),
         #              self.do_save_peaks)
         #
-        # self.connect(self.ui.tableWidget_peakParameter, QtCore.SIGNAL('itemSelectionChanged()'),
-        #              self.evt_table_selection_changed)
+        self.connect(self.ui.tableWidget_peakParameter, QtCore.SIGNAL('itemSelectionChanged()'),
+                     self.evt_table_selection_changed)
 
         # Define canvas event handlers
 
@@ -584,10 +590,10 @@ class PeakPickerWindow(QMainWindow):
         return
 
     def _promote_widgets(self):
-        treeView_iptsRun_layout = QVBoxLayout()
-        self.ui.frame_treeView_iptsRun.setLayout(treeView_iptsRun_layout)
-        self.ui.treeView_iptsRun = SinglePeakFitManageTree(self)
-        treeView_iptsRun_layout.addWidget(self.ui.treeView_iptsRun)
+        # treeView_iptsRun_layout = QVBoxLayout()
+        # self.ui.frame_treeView_iptsRun.setLayout(treeView_iptsRun_layout)
+        # self.ui.treeView_iptsRun = SinglePeakFitManageTree(self)
+        # treeView_iptsRun_layout.addWidget(self.ui.treeView_iptsRun)
 
         graphicsView_main_layout = QVBoxLayout()
         self.ui.frame_graphicsView_main.setLayout(graphicsView_main_layout)
@@ -606,7 +612,7 @@ class PeakPickerWindow(QMainWindow):
 
         :return:
         """
-        self.ui.treeView_iptsRun.set_main_window(self)
+        # self.ui.treeView_iptsRun.set_main_window(self)
 
         self.ui.tableWidget_peakParameter.setup()
 
@@ -1156,7 +1162,7 @@ class PeakPickerWindow(QMainWindow):
             return
 
         # Save the current peaks to memory and back up to disk
-        self.ui.tableWidget_peakParameter.save_to_buffer(self._currentBankNumber)
+        # self.ui.tableWidget_peakParameter.save_to_buffer(self._currentBankNumber)
 
         # set the current ones to new bank
         self._currentBankNumber = new_bank
@@ -1165,7 +1171,7 @@ class PeakPickerWindow(QMainWindow):
             self._currentRunNumber = str(self.ui.comboBox_runNumber.currentText())
 
         # Clear table and canvas
-        self.ui.tableWidget_peakParameter.remove_all_rows()
+        # self.ui.tableWidget_peakParameter.remove_all_rows()
         self.ui.graphicsView_main.reset()
         self.ui.graphicsView_main.clear_all_lines()
 
@@ -1284,7 +1290,8 @@ class PeakPickerWindow(QMainWindow):
 
         return
 
-    # TODO - NIGHT - Separate getting data file and reading data
+    # TODO - NIGHT - Read IPTS and run number list to find out the
+    # TODO - cont. - lineEdit_iptsNumber, lineEdit_runNumber
     def do_load_data(self):
         """
         Purpose:
@@ -1298,15 +1305,21 @@ class PeakPickerWindow(QMainWindow):
         :return:
         """
         # Check requirements
-        assert self._myController is not None
+        assert self._myController is not None, 'Controller cannot be None'
 
         # Get the run numbers
-        start_run_number = GuiUtility.parse_integer(self.ui.lineEdit_startRunNumber)
-        end_run_number = GuiUtility.parse_integer(self.ui.lineEdit_endRunNumber)
+        # FIXME - NIGHT - ...
+        if False:
+            start_run_number = GuiUtility.parse_integer(self.ui.lineEdit_startRunNumber)
+            end_run_number = GuiUtility.parse_integer(self.ui.lineEdit_endRunNumber)
+        else:
+            start_run_number = None
+            end_run_number = None
 
         # Get the GSAS file names
         gsas_file_list = list()
         if start_run_number is not None and end_run_number is not None:
+            # FIXME - NIGHT - Use IPTS and run number and get default dir
             # complete range
             assert start_run_number <= end_run_number, 'End run %d must be larger than ' \
                                                        'or equal to start run %d.' % (end_run_number,
@@ -1335,11 +1348,12 @@ class PeakPickerWindow(QMainWindow):
             default_dir = self._myController.get_binned_data_directory()
             # TODO/NOW - consider self._myController.get_ipts_config()
 
+            # TODO - NIGHT - refactor getFile
             gsas_file_name = QFileDialog.getOpenFileName(self, 'Load GSAS File', default_dir, filters)
             if isinstance(gsas_file_name, tuple):
-                gsas_file_name = gsas_file_name[0]
-
-            gsas_file_list.append(str(gsas_file_name))
+                gsas_file_name = str(gsas_file_name[0])
+            if gsas_file_name != '':
+                gsas_file_list.append(str(gsas_file_name))
         # END-IF-ELSE
 
         # Load data from GSAS file
@@ -1350,7 +1364,7 @@ class PeakPickerWindow(QMainWindow):
                 data_key = self._myController.load_diffraction_file(gsas_file_name, 'gsas', data_key)
                 self._dataKeyList.append(data_key)
                 # add to tree
-                self.ui.treeView_iptsRun.add_child_current_item(data_key)
+                # self.ui.treeView_iptsRun.add_child_current_item(data_key)
             except RuntimeError as re:
                 GuiUtility.pop_dialog_error(self, str(re))
                 return
@@ -1508,8 +1522,6 @@ class PeakPickerWindow(QMainWindow):
             Save the peak positions and other parameters to controller
         :return:
         """
-        # TODO/TEST/NOW
-
         # Check requirements
         assert self._myController is not None, 'My controller cannot be None'
 
@@ -1608,6 +1620,8 @@ class PeakPickerWindow(QMainWindow):
     def evt_table_selection_changed(self):
         """
         Event handling as the selection of the row changed
+        Used to be linked to self.ui.tableWidget_peakParameter.itemSelectionChanged.connect(self.evt_table_selection_changed)
+
         :return:
         """
         print '[Prototype] current row is ', self.ui.tableWidget_peakParameter.currentRow(), \
@@ -1710,7 +1724,7 @@ class PeakPickerWindow(QMainWindow):
         ipts = 1
 
         # Set
-        self.ui.treeView_iptsRun.add_ipts_runs(ipts_number=ipts, run_number_list=reduced_run_number_list)
+        # self.ui.treeView_iptsRun.add_ipts_runs(ipts_number=ipts, run_number_list=reduced_run_number_list)
 
         return
 
@@ -1786,6 +1800,17 @@ class PeakPickerWindow(QMainWindow):
         :return:
         """
         self.close()
+
+        return
+
+    def menu_launch_terminal(self):
+        """
+        Launch terminal window
+        :return:
+        """
+        print ('[DB...BAT] Parent window: {}'.format(self._myParent))
+
+        self._myParent.menu_workspaces_view()
 
         return
 
@@ -1956,6 +1981,134 @@ class PeakPickerWindow(QMainWindow):
         self._dataDirectory = data_dir
 
         return
+
+    def event_show_hide_v_peaks(self, show_v_peaks):
+        """
+        handling event that show or hide vanadium peaks on the figure
+        :return:
+        """
+        datatypeutility.check_bool_variable('Flag to indicate show or hide vanadium peaks', show_v_peaks)
+
+        # TODO - 20181110 - Implement!
+        if True:
+            GuiUtility.pop_dialog_error(self, 'Not Implemented Yet for Showing Vanadium Peaks')
+            return
+
+        if show_v_peaks:
+            self.ui.graphicsView_mainPlot.add_indicators(vanadium_peaks)
+        else:
+            self.ui.graphicsView_mainPlot.hide_indicators()
+
+        return
+
+    def signal_save_processed_vanadium(self, output_file_name, run_number):
+        """
+        save GSAS file from GUI
+        :param output_file_name:
+        :param ipts_number:
+        :param run_number:
+        :return:
+        """
+        # convert string
+        output_file_name = str(output_file_name)
+
+        self._myController.project.vanadium_processing_manager.save_to_gsas(run_number, output_file_name)
+
+        # status, error_message = self._myController.save_processed_vanadium(van_info_tuple=None,
+        #                                                                    output_file_name=output_file_name)
+        # if not status:
+        #     GuiUtility.pop_dialog_error(self, error_message)
+
+        return
+
+    def signal_strip_vanadium_peaks(self, bank_group_index, peak_fwhm, tolerance, background_type, is_high_background):
+        """ Process the signal to strip vanadium peaks
+        :param bank_group_index:
+        :param peak_fwhm: integer
+        :param tolerance:
+        :param background_type:
+        :param is_high_background:
+        :return:
+        """
+        # check inputs
+        datatypeutility.check_int_variable('FWHM', peak_fwhm, (1, None))
+
+        # from signal, the string is of type unicode.
+        background_type = str(background_type)
+
+        # note: as it is from a signal with defined parameters types, there is no need to check
+        #       the validity of parameters
+
+        # strip vanadium peaks
+        self._myController.project.vanadium_processing_manager.strip_peaks(bank_group_index, peak_fwhm,
+                                                                           tolerance, background_type,
+                                                                           is_high_background)
+
+        self.plot_1d_vanadium(run_id=self._vanadiumProcessDialog.get_run_id(),
+                              bank_id=BANK_GROUP_DICT[bank_group_index][0])
+
+        return
+
+    def signal_smooth_vanadium(self, bank_group_index, smoother_type, param_n, param_order):
+        """
+        process the signal to smooth vanadium spectra
+        :param smoother_type:
+        :param param_n:
+        :param param_order:
+        :return:
+        """
+        # convert smooth_type to string from unicode
+        smoother_type = str(smoother_type)
+
+        self._myController.project.vanadium_processing_manager.smooth_spectra(bank_group_index, smoother_type,
+                                                                              param_n, param_order,
+                                                                              smooth_original=False)
+
+        self.plot_1d_vanadium(run_id=self._vanadiumProcessDialog.get_run_id(),
+                              bank_id=BANK_GROUP_DICT[bank_group_index][0], is_smoothed_data=True)
+
+
+        return
+
+    def signal_undo_strip_van_peaks(self):
+        """
+        undo the strip vanadium peak action, i.e., delete the previous result and remove the plot
+        :return:
+        """
+        if self._vanStripPlotID is None:
+            print '[INFO] There is no vanadium-peak-removed spectrum to remove from canvas.'
+            return
+
+        # remove the plot
+        self.ui.graphicsView_mainPlot.remove_line(line_id=self._vanStripPlotID)
+        self._vanStripPlotID = None
+
+        # undo in the controller
+        self._myController.undo_vanadium_peak_strip()
+
+        return
+
+    def signal_undo_smooth_vanadium(self):
+        """
+        undo the smoothing operation on the spectrum including
+        1. delete the result
+        2. remove the smoothed plot
+        :return:
+        """
+        # return if there is no such action before
+        if self._smoothedPlotID is None:
+            print '[INFO] There is no smoothed spectrum to undo.'
+            return
+
+        # remove the plot
+        self.ui.graphicsView_mainPlot.remove_line(self._vanStripPlotID)
+        self._smoothedPlotID = None
+
+        # undo in the controller
+        self._myController.undo_vanadium_smoothing()
+
+        return
+
 
 
 def retrieve_peak_positions(peak_tup_list):
