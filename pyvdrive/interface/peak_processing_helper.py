@@ -46,6 +46,9 @@ class GroupPeakDialog(QMainWindow):
         self.ui.pushButton_addPeakReturn.clicked.connect(self.do_add_peak_return)
         self.ui.pushButton_cancel.clicked.connect(self.do_cancel_return)
 
+        # hide widgets that is unused but may be needed in future
+        self.ui.pushButton_clearGroup.hide()
+
         return
 
     def do_add_peak_return(self):

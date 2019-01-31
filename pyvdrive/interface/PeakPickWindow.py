@@ -258,7 +258,13 @@ class PeakPickerWindow(QMainWindow):
 
         :return:
         """
-        # self.ui.treeView_iptsRun.set_main_window(self)
+        # Hide and disable widgets that are not used
+        self.ui.pushButton_readPeakFile.hide()
+        self.ui.pushButton_claimOverlappedPeaks.hide()
+        self.ui.pushButton_showPeaksInTable.hide()
+        self.ui.pushButton_hidePeaks.hide()
+        self.ui.pushButton_setPeakWidth.hide()
+        self.ui.pushButton_sortPeaks.hide()
 
         self.ui.tableWidget_peakParameter.setup()
 
@@ -1047,9 +1053,15 @@ class PeakPickerWindow(QMainWindow):
         if gsas_file_name is None:
             if default_dir is None or not os.path.exists(default_dir):
                 default_dir = self._myController.get_binned_data_directory()
+            filters = 'GSAS(*.gda);;All Files(*.*)'
             gsas_file_name = QFileDialog.getOpenFileName(self, 'Load GSAS File', default_dir, filters)
             if isinstance(gsas_file_name, tuple):
-                gsas_file_name = str(gsas_file_name[0])
+                gsas_file_name = gsas_file_name[0]
+            gsas_file_name = str(gsas_file_name)
+
+            # operation cancelled
+            if gsas_file_name == '':
+                return
         # END-IF
 
         # Load data from GSAS file
