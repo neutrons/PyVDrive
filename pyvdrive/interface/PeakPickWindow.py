@@ -1,382 +1,34 @@
 ########################################################################
 #
-# Window for set up log slicing splitters
+# Window for processing peaks
 #
 ########################################################################
-import sys
 import os
 try:
     import qtconsole.inprocess
     from PyQt5 import QtCore as QtCore
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
-    from PyQt5.QtWidgets import QDialog, QMainWindow, QLineEdit, QComboBox, QCheckBox, QMainWindow, QButtonGroup
+    from PyQt5.QtWidgets import QMainWindow, QButtonGroup
     from PyQt5.QtWidgets import QFileDialog
 except ImportError:
     from PyQt4 import QtCore as QtCore
     from PyQt4.QtGui import QVBoxLayout
     from PyQt4.uic import loadUi as load_ui
-    from PyQt4.QtGui import QDialog, QMainWindow, QLineEdit, QComboBox, QCheckBox, QMainWindow, QButtonGroup
+    from PyQt4.QtGui import QMainWindow, QButtonGroup
     from PyQt4.QtGui import QFileDialog
-
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
     def _fromUtf8(s):
         return s
-
 import gui.GuiUtility as GuiUtility
-from pyvdrive.interface.gui.diffractionplotview import DiffractionPlotView
-from pyvdrive.interface.gui.vdrivetablewidgets import PeakParameterTable
-from pyvdrive.interface.gui.vdrivetreewidgets import SinglePeakFitManageTree
 import gui.diffractionplotview as dv
-import GroupPeakDialog
+from peak_processing_helper import GroupPeakDialog, PeakWidthSetupDialog, PhaseWidgets, UnitCellList
 from pyvdrive.interface.gui.diffractionplotview import DiffractionPlotView
 from pyvdrive.interface.gui.vdrivetablewidgets import PeakParameterTable
-from pyvdrive.interface.gui.vdrivetreewidgets import SinglePeakFitManageTree
-
-# Set up path to PyVDrive
-import socket
-# if it is on analysis computer...
-# if socket.gethostname().count('analysis-') > 0 or os.path.exists('/home/wzz') is False:
-#     sys.path.append('/SNS/users/wzz/local/lib/python/site-packages/')
-
-
+import vanadium_controller_dialog
 import pyvdrive.lib.peak_util as peak_util
-
-
-# List of supported unit cell
-UnitCellList = [('BCC', 'I m -3 m'),
-                ('FCC', 'F d -3 m'),
-                ('HCP', 'P 63/m m c'),
-                ('Body-Center', 'I m m m'),
-                ('Face-Center', 'F m m m'),
-                ('Primitive', 'P m m m')]
-
-
-class PeakWidthSetupDialog(QDialog):
-    """
-    Class for set up dialog
-    """
-    def __init__(self, parent):
-        """
-        Init ...
-        :return:
-        """
-
-        # Initialize
-        QDialog.__init__(self, parent)
-
-        self.ui = load_ui("PeakWidthSetup.ui", baseinstance=self)
-        self = self._promote_widgets()
-
-        # Define event handlers
-        self.ui.pushButton_cancel.clicked.connect(self.do_quit)
-        self.ui.pushButton_set.clicked.connect(self.do_set_width)
-
-        # self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
-        #              self.do_quit)
-        # self.connect(self.ui.pushButton_set, QtCore.SIGNAL('clicked()'),
-        #              self.do_set_width)
-
-        # Class variables
-        self._peakWidth = None
-
-        return
-
-    def _promote_widgets(self):
-        treeView_iptsRun_layout = QVBoxLayout()
-        self.ui.frame_treeView_iptsRun.setLayout(treeView_iptsRun_layout)
-        self.ui.treeView_iptsRun = SinglePeakFitManageTree(self)
-        treeView_iptsRun_layout.addWidget(self.ui.treeView_iptsRun)
-
-        graphicsView_main_layout = QVBoxLayout()
-        self.ui.frame_graphicsView_main.setLayout(graphicsView_main_layout)
-        self.ui.graphicsView_main = DiffractionPlotView(self)
-        graphicsView_main_layout.addWidget(self.ui.graphicsView_main)
-
-        tableWidget_peakParameter_layout = QVBoxLayout()
-        self.ui.frame_tableWidget_peakParameter.setLayout(tableWidget_peakParameter_layout)
-        self.ui.tableWidget_peakParameter = PeakParameterTable(self)
-        tableWidget_peakParameter_layout.addWidget(self.ui.tableWidget_peakParameter)
-
-        return
-
-    def do_quit(self):
-        """
-        Return without doing anything
-        :return:
-        """
-        self.close()
-
-    def do_set_width(self):
-        """
-        Set peak width
-        :return:
-        """
-        peak_width = GuiUtility.parse_float(self.ui.lineEdit_peakWidth)
-        if peak_width is None:
-            GuiUtility.pop_dialog_error(self, 'Peak width is not set up!')
-            return
-        if peak_width <= 0.:
-            GuiUtility.pop_dialog_error(self, 'Peak width %f cannot be 0 or negative!' % peak_width)
-            return
-
-        self._peakWidth = peak_width
-
-        # Close
-        self.close()
-
-        return
-
-    def get_peak_width(self):
-        """ Get peak width
-        Purpose: Get the stored peak width from the window object
-        Requirements: it must be set up
-        Guarantees: the peak width is given if it is set up
-        :return:
-        """
-        assert self._peakWidth
-
-        return self._peakWidth
-
-
-class PhaseWidgets(object):
-    """
-    A set of widgets to define a phase
-    """
-    def __init__(self, parent, edit_a, edit_b, edit_c, edit_name, combo_box_type, check_box_select):
-        """
-        Initialize the phase widgets group
-        Requirements: all the inputs should be the proper PyQt widgets
-        :return:
-        """
-        # Check requirements
-        assert isinstance(parent, QMainWindow)
-        assert isinstance(edit_a, QLineEdit)
-        assert isinstance(edit_b, QLineEdit)
-        assert isinstance(edit_c, QLineEdit)
-        assert isinstance(edit_name, QLineEdit)
-        assert isinstance(combo_box_type, QComboBox)
-        assert isinstance(check_box_select, QCheckBox)
-
-        # Lattice parameters
-        self._lineEdit_a = edit_a
-        self._lineEdit_b = edit_b
-        self._lineEdit_c = edit_c
-        # Phase' name
-        self._lineEdit_name = edit_name
-        # Phase' type
-        self._comboBox_type = combo_box_type
-        # Phase selected or not
-        self._checkBox_selected = check_box_select
-
-        # set up the unit cell dictionary
-        self._cellTypeList = list()
-        for type_tup in UnitCellList:
-            self._cellTypeList.append(type_tup[0])
-
-        combo_box_type.currentIndexChanged.connect(self.event_space_group_changed)
-        # parent.connect(combo_box_type, QtCore.SIGNAL('currentIndexChanged(int)'),
-        #                self.event_space_group_changed)
-
-        return
-
-    def enable_widgets(self, enabled):
-        """
-
-        :param enabled:
-        :return:
-        """
-        assert isinstance(enabled, bool)
-
-        self._lineEdit_a.setEnabled(enabled)
-        self._lineEdit_b.setEnabled(enabled)
-        self._lineEdit_c.setEnabled(enabled)
-        self._comboBox_type.setEnabled(enabled)
-        self._lineEdit_name.setEnabled(enabled)
-
-        return
-
-    def event_space_group_changed(self):
-        """
-        Purpose: handle the change of space group
-        Requirements:
-        :return:
-        """
-        curr_space_group = str(self._comboBox_type.currentText())
-
-        cell_type = curr_space_group.split()[0]
-
-        self.set_unit_cell_type(cell_type)
-
-        return
-
-    def get_phase_value(self, phase_value_list):
-        """
-        Purpose: set the phase values to the input list. It is used for save_to_buffer the values of phase temporarily.
-            if value is not set up, then it will ignored;
-        Requirements:  if the value is set, then it must be valid
-
-        :param phase_value_list:
-        :return:
-        """
-        # Check requirements:
-        assert isinstance(phase_value_list, list), 'Phase value list %s must be a list but not of type %s.' \
-                                                   '' % (str(phase_value_list), type(phase_value_list))
-        assert len(phase_value_list) == 5, 'Phase value list %s must be 5 elements.' % str(phase_value_list)
-
-        # Set name
-        phase_value_list[0] = str(self._lineEdit_name.text()).strip()
-        # Set phase
-        phase_value_list[1] = str(self._comboBox_type.currentText()).split()[0]
-        # Set a, b and c
-        a = GuiUtility.parse_float(self._lineEdit_a)
-        phase_value_list[2] = a
-        b = GuiUtility.parse_float(self._lineEdit_b)
-        phase_value_list[3] = b
-        c = GuiUtility.parse_float(self._lineEdit_c)
-        phase_value_list[4] = c
-
-        return
-
-    def get_phase(self):
-        """
-        Get the phase's parameters
-        Requirements:
-        1. a, b and c are positive floats
-        2. phase name must be given
-        :return: list as [name, type, a, b, c]
-        """
-        name = str(self._lineEdit_name.text()).strip()
-        assert len(name) > 0, 'Phase name must be given!'
-
-        cell_type = str(self._comboBox_type.currentText()).split()[0]
-        try:
-            a = float(self._lineEdit_a.text())
-            if self._lineEdit_b.isEnabled():
-                b = float(self._lineEdit_b.text())
-            else:
-                b = a
-            if self._lineEdit_c.isEnabled():
-                c = float(self._lineEdit_c.text())
-            else:
-                c = a
-        except TypeError as e:
-            raise RuntimeError('Lattice parameters a, b or c does not have correct value. Error: %s.' % str(e))
-
-        return [name, cell_type, a, b, c]
-
-    def is_selected(self):
-        """
-        Return the flag whether this phase is selected
-        :return:
-        """
-        return self._checkBox_selected.isChecked()
-
-    def reset(self):
-        """
-        Reset the widgets
-        :return:
-        """
-        # Clear name, a, b, c
-        self._lineEdit_a.setText('')
-        self._lineEdit_b.setText('')
-        self._lineEdit_c.clear()
-        self._lineEdit_name.setText('')
-
-        # Set the unit type to primitive
-        self.set_unit_cell_type('Primitive')
-
-        return
-
-    def set_lattice_widgets_values(self, cell_type):
-        """
-        Purpose:
-            enable or disabled some widgets according to unit cell type
-            set the values to disabled lattice parameters
-        :param cell_type:
-        :return:
-        """
-        assert cell_type in self._cellTypeList, 'Unit cell type %s is not supported.' % cell_type
-
-        if cell_type in ['BCC', 'FCC']:
-            # Disable inputs for b and c
-            self._lineEdit_b.setEnabled(False)
-            self._lineEdit_c.setEnabled(False)
-            self._lineEdit_b.setText('')
-            self._lineEdit_c.setText('')
-        elif cell_type in ['HCP']:
-            # Disable b and enable c
-            self._lineEdit_b.setEnabled(False)
-            self._lineEdit_c.setEnabled(True)
-            self._lineEdit_b.setText('')
-        else:
-            # enable all
-            self._lineEdit_b.setEnabled(True)
-            self._lineEdit_c.setEnabled(True)
-
-        return
-
-    def set_unit_cell_type(self, cell_type):
-        """
-        Set unit cell type and enable/disable the line edits for a, b and c
-        :param cell_type:
-        :return:
-        """
-        # Check
-        assert isinstance(cell_type, str)
-        assert cell_type in self._cellTypeList, 'Unit cell type %s is not supported.' % cell_type
-
-        # Set
-        list_index = self._cellTypeList.index(cell_type)
-        self._comboBox_type.setCurrentIndex(list_index)
-
-        # Disable some
-        self.set_lattice_widgets_values(cell_type)
-
-        return
-
-    def set_value(self, unit_cell_value):
-        """ Set value to unit cell (usually for undo)
-        Purpose: set the values of unit cell (stored in list) to widgets
-        Requirements: unit cell value should be stored in a list with 5 elements
-        Guarantees: unit cell values are set up
-        :param unit_cell_value: 5-element list
-        :return:
-        """
-        # Check requirements
-        assert isinstance(unit_cell_value, list), 'Unit cell value %s must be given in list but not %s.' \
-                                                  '' % (str(unit_cell_value), type(unit_cell_value))
-        assert len(unit_cell_value) == 5, 'Unit cell value %s must have 5 elements.' % str(unit_cell_value)
-
-        # Set phase name
-        self._lineEdit_name.setText(unit_cell_value[0])
-        # Set a, b and c
-        if unit_cell_value[2] is None:
-            self._lineEdit_a.clear()
-        else:
-            self._lineEdit_a.setText(str(unit_cell_value[2]))
-        if unit_cell_value[3] is None:
-            self._lineEdit_a.clear()
-        else:
-            self._lineEdit_a.setText(str(unit_cell_value[3]))
-        if unit_cell_value[4] is None:
-            self._lineEdit_a.clear()
-        else:
-            self._lineEdit_a.setText(str(unit_cell_value[4]))
-        # Set unit cell type
-        new_index = -1
-        for index in xrange(len(UnitCellList)):
-            if unit_cell_value[1] == UnitCellList[index][0]:
-                new_index = index
-                break
-        if new_index == -1:
-            raise RuntimeError('Impossible to find unit cell type %s not in the list.' % unit_cell_value[1])
-        else:
-            self._comboBox_type.setCurrentIndex(new_index)
-
-        return
 
 
 class PeakPickerMode(object):
@@ -412,9 +64,7 @@ class PeakPickerWindow(QMainWindow):
         # Define event handling methods
         # phase set up
         self.ui.pushButton_setPhases.clicked.connect(self.do_set_phases)
-
         self.ui.pushButton_clearPhase.clicked.connect(self.do_clear_phases)
-
         self.ui.pushButton_cancelPhaseChange.clicked.connect(self.do_undo_phase_changes)
 
         # peak processing
@@ -443,6 +93,12 @@ class PeakPickerWindow(QMainWindow):
 
         self.ui.pushButton_peakPickerMode.clicked.connect(self.do_set_pick_mode)
 
+        self.ui.pushButton_clearGroup.clicked.connect(self.do_clear_groups)
+        self.ui.pushButton_resetSelection.clicked.connect(self.do_clear_peak_selection)
+
+        # vanadium
+        self.ui.pushButton_launchVanProcessDialog.clicked.connect(self.do_launch_vanadium_dialog)
+
         # load files
         self.ui.pushButton_loadCalibFile.clicked.connect(self.do_load_calibration_file)
         self.ui.pushButton_readData.clicked.connect(self.do_load_data)
@@ -453,6 +109,9 @@ class PeakPickerWindow(QMainWindow):
         self.ui.pushButton_save.clicked.connect(self.do_save_peaks)
 
         self.ui.tableWidget_peakParameter.itemSelectionChanged.connect(self.evt_table_selection_changed)
+
+        # get terminal
+        self.ui.actionLaunch_Terminal.triggered.connect(self.menu_launch_terminal)
 
         # self.connect(self.ui.pushButton_setPhases, QtCore.SIGNAL('clicked()'),
         #              self.do_set_phases)
@@ -519,6 +178,7 @@ class PeakPickerWindow(QMainWindow):
         # self.connect(self.ui.pushButton_save, QtCore.SIGNAL('clicked()'),
         #              self.do_save_peaks)
         #
+        self.ui.tableWidget_peakParameter.itemSelectionChanged.connect(self.evt_table_selection_changed)
         # self.connect(self.ui.tableWidget_peakParameter, QtCore.SIGNAL('itemSelectionChanged()'),
         #              self.evt_table_selection_changed)
 
@@ -577,10 +237,10 @@ class PeakPickerWindow(QMainWindow):
         return
 
     def _promote_widgets(self):
-        treeView_iptsRun_layout = QVBoxLayout()
-        self.ui.frame_treeView_iptsRun.setLayout(treeView_iptsRun_layout)
-        self.ui.treeView_iptsRun = SinglePeakFitManageTree(self)
-        treeView_iptsRun_layout.addWidget(self.ui.treeView_iptsRun)
+        # treeView_iptsRun_layout = QVBoxLayout()
+        # self.ui.frame_treeView_iptsRun.setLayout(treeView_iptsRun_layout)
+        # self.ui.treeView_iptsRun = SinglePeakFitManageTree(self)
+        # treeView_iptsRun_layout.addWidget(self.ui.treeView_iptsRun)
 
         graphicsView_main_layout = QVBoxLayout()
         self.ui.frame_graphicsView_main.setLayout(graphicsView_main_layout)
@@ -599,7 +259,13 @@ class PeakPickerWindow(QMainWindow):
 
         :return:
         """
-        self.ui.treeView_iptsRun.set_main_window(self)
+        # Hide and disable widgets that are not used
+        self.ui.pushButton_readPeakFile.hide()
+        self.ui.pushButton_claimOverlappedPeaks.hide()
+        self.ui.pushButton_showPeaksInTable.hide()
+        self.ui.pushButton_hidePeaks.hide()
+        self.ui.pushButton_setPeakWidth.hide()
+        self.ui.pushButton_sortPeaks.hide()
 
         self.ui.tableWidget_peakParameter.setup()
 
@@ -644,13 +310,41 @@ class PeakPickerWindow(QMainWindow):
 
         return
 
+    def do_launch_vanadium_dialog(self):
+        """
+        launch the vanadium run processing dialog
+        :return:
+        """
+        # launch vanadium dialog window
+        self._vanadiumProcessDialog = vanadium_controller_dialog.VanadiumProcessControlDialog(self)
+        self._vanadiumProcessDialog.show()
+
+        # get current workspace
+        current_run_str = str(self.ui.comboBox_runs.currentText())
+        if current_run_str.isdigit():
+            current_run = int(current_run_str)
+        else:
+            current_run = current_run_str
+
+        self._vanadiumProcessDialog.set_run_number(current_run)
+
+        # FWHM
+        if self._vanadiumFWHM is not None:
+            self._vanadiumProcessDialog.set_peak_fwhm(self._vanadiumFWHM)
+
+        # also set up the vanadium processors
+        workspace_name = self._myController.get_reduced_workspace_name(current_run_str)
+        self._myController.project.vanadium_processing_manager.init_session(workspace_name, BANK_GROUP_DICT)
+
+        return
+
     def add_grouped_peaks(self):
         """
-
         :return:
         """
         # check
-        assert self._autoPeakGroup is not None
+        if self._autoPeakGroup is None:
+            raise RuntimeError('_autoPeakGroup shall be set up before this method is called')
 
         # get information
         # get bank
@@ -658,21 +352,22 @@ class PeakPickerWindow(QMainWindow):
 
         # get number of groups
         group_id_list = sorted(self._autoPeakGroup.get_group_ids())
-        num_groups = len(group_id_list)
+        # num_groups = len(group_id_list)
+
+        # clear table as there is NO PEAK ADDITION mode to the table and thus the nameing
+        self.ui.tableWidget_peakParameter.clear_selected_peaks()
 
         # add peak to table
-        for group_id in group_id_list:
-
+        for index, group_id in enumerate(group_id_list):
             peak_name = ''
-
             group_left_b, group_right_b = self._autoPeakGroup.get_fit_range(group_id)
             width = group_right_b - group_left_b
 
             peak_tup_list = self._autoPeakGroup.get_peaks(group_id)
+            print ('[DB...BAT] {}-group with ID {}: {}'.format(index, group_id, peak_tup_list))
 
             for peak_tup in peak_tup_list:
                 peak_centre = peak_tup[1]
-
                 self.ui.tableWidget_peakParameter.add_peak(bank=bank, name=peak_name,
                                                            centre=peak_centre,
                                                            width=width,
@@ -830,6 +525,31 @@ class PeakPickerWindow(QMainWindow):
 
         return
 
+    def do_clear_groups(self):
+        """ Clean grouped peaks
+        :return:
+        """
+        # clear table
+        self.ui.tableWidget_peakParameter.clear_selected_peaks()
+
+        # clear the indicators on the image
+        self.ui.graphicsView_main.clear_highlight_data()
+
+        return
+
+    def do_clear_peak_selection(self):
+        """
+        clear picked peaks
+        :return:
+        """
+        print ('[DB...BAT] Clear groups first')
+        self.do_clear_groups()
+
+        # remove all from Diffraction Plot View
+        self.ui.graphicsView_main.reset_selected_peaks()
+
+        return
+
     def do_clear_peaks_fm_canvas(self):
         """
         Purpose:
@@ -847,9 +567,7 @@ class PeakPickerWindow(QMainWindow):
         raise NotImplementedError('Add button to GUI')
 
     def do_delete_peaks(self):
-        """
-        Purpose:
-            Delete the selected peak from table and place holder and their indicators
+        """ Delete the selected peak from table and place holder and their indicators
         Requirements:
             At least one peak is selected in the table
         Guarantees:
@@ -858,7 +576,9 @@ class PeakPickerWindow(QMainWindow):
         """
         # Get the rows that contain the peaks to delete
         row_number_list = self.ui.tableWidget_peakParameter.get_selected_rows()
-        assert len(row_number_list) > 0, 'No peak is selected to delete.'
+        if len(row_number_list) > 0:
+            GuiUtility.pop_dialog_information(self, 'No peak is selected to delete')
+            return
 
         # Delete the selected rows
         self.ui.tableWidget_peakParameter.remove_rows(row_number_list)
@@ -1032,7 +752,8 @@ class PeakPickerWindow(QMainWindow):
         by its position
         :return:
         """
-        self._groupPeakDialog = GroupPeakDialog.GroupPeakDialog(self)
+        if self._groupPeakDialog is None:
+            self._groupPeakDialog = GroupPeakDialog(self)
         self._groupPeakDialog.show()
 
         return
@@ -1121,7 +842,7 @@ class PeakPickerWindow(QMainWindow):
             return
 
         # Save the current peaks to memory and back up to disk
-        self.ui.tableWidget_peakParameter.save_to_buffer(self._currentBankNumber)
+        # self.ui.tableWidget_peakParameter.save_to_buffer(self._currentBankNumber)
 
         # set the current ones to new bank
         self._currentBankNumber = new_bank
@@ -1130,7 +851,7 @@ class PeakPickerWindow(QMainWindow):
             self._currentRunNumber = str(self.ui.comboBox_runNumber.currentText())
 
         # Clear table and canvas
-        self.ui.tableWidget_peakParameter.remove_all_rows()
+        # self.ui.tableWidget_peakParameter.remove_all_rows()
         self.ui.graphicsView_main.reset()
         self.ui.graphicsView_main.clear_all_lines()
 
@@ -1249,29 +970,27 @@ class PeakPickerWindow(QMainWindow):
 
         return
 
-    # TODO - NIGHT - Separate getting data file and reading data
-    def do_load_data(self):
+    # TODO - FUTURE - This method does not have an event to be associated with yet and
+    # TODO - cont.  - to be fixed
+    def do_load_multiple_gsas(self):
         """
-        Purpose:
-            Load GSAS data or a list of GSAS data files
-        Requirements:
-            Controller has been set to this object
-        Guarantees:
-            Load data from start run to end run in line edits and plot the first run on canvas
-            1. if the range of run numbers is given, then only the directory for all the files shall be specified;
-            2. otherwise, a dialog will be popped for the file
+
         :return:
         """
-        # Check requirements
-        assert self._myController is not None
-
         # Get the run numbers
-        start_run_number = GuiUtility.parse_integer(self.ui.lineEdit_startRunNumber)
-        end_run_number = GuiUtility.parse_integer(self.ui.lineEdit_endRunNumber)
+        # FIXME - NIGHT - ...
+        if False:
+            start_run_number = GuiUtility.parse_integer(self.ui.lineEdit_startRunNumber)
+            end_run_number = GuiUtility.parse_integer(self.ui.lineEdit_endRunNumber)
+        else:
+            start_run_number = None
+            end_run_number = None
+
 
         # Get the GSAS file names
         gsas_file_list = list()
         if start_run_number is not None and end_run_number is not None:
+            # FIXME - NIGHT - Use IPTS and run number and get default dir
             # complete range
             assert start_run_number <= end_run_number, 'End run %d must be larger than ' \
                                                        'or equal to start run %d.' % (end_run_number,
@@ -1294,36 +1013,71 @@ class PeakPickerWindow(QMainWindow):
             if len(error_message) > 0:
                 GuiUtility.pop_dialog_error(self, 'GSAS file %s cannot be found.' % error_message)
 
-        else:
-            # get single GSAS file
-            filters = 'GSAS files (*.gda);; All files (*.*)'
-            default_dir = self._myController.get_binned_data_directory()
-            # TODO/NOW - consider self._myController.get_ipts_config()
+        return
 
+    # TODO - NIGHT - Read IPTS and run number list to find out the
+    # TODO - cont. - lineEdit_iptsNumber, lineEdit_runNumber
+    def do_load_data(self):
+        """
+        Purpose:
+            Load GSAS data or a list of GSAS data files
+        Requirements:
+            Controller has been set to this object
+        Guarantees:
+            Load data from start run to end run in line edits and plot the first run on canvas
+            1. if the range of run numbers is given, then only the directory for all the files shall be specified;
+            2. otherwise, a dialog will be popped for the file
+        :return:
+        """
+        # Check requirements
+        assert self._myController is not None, 'Controller cannot be None'
+
+        ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber)
+        run_number = GuiUtility.parse_integer(self.ui.lineEdit_runNumber)
+
+        gsas_file_name = None
+        default_dir = None
+        if ipts_number and run_number:
+            # both are there: load data directly
+            gsas_file_name = '/SNS/VULCAN/IPTS-{}/shared/binned_data/{}.gda'.format(ipts_number, run_number)
+            if not os.path.exists(gsas_file_name):
+                gsas_file_name = None
+        # END-IF
+
+        if gsas_file_name is None and ipts_number:
+            # IPTS number to determine binned data
+            default_dir = '/SNS/VULCAN/IPTS-{}/shared/binned_data/'.format(ipts_number)
+            if not os.path.exists(default_dir):
+                default_dir = '/SNS/VULCAN/IPTS-{}/shared'.format(ipts_number)
+        # END-IF
+
+        if gsas_file_name is None:
+            if default_dir is None or not os.path.exists(default_dir):
+                default_dir = self._myController.get_binned_data_directory()
+            filters = 'GSAS(*.gda);;All Files(*.*)'
             gsas_file_name = QFileDialog.getOpenFileName(self, 'Load GSAS File', default_dir, filters)
             if isinstance(gsas_file_name, tuple):
                 gsas_file_name = gsas_file_name[0]
+            gsas_file_name = str(gsas_file_name)
 
-            gsas_file_list.append(str(gsas_file_name))
-        # END-IF-ELSE
+            # operation cancelled
+            if gsas_file_name == '':
+                return
+        # END-IF
 
         # Load data from GSAS file
-        for gsas_file_name in gsas_file_list:
-            # Load data via parent
-            try:
-                data_key = os.path.basename(gsas_file_name).split('_')[0] + 'H'
-                data_key = self._myController.load_diffraction_file(gsas_file_name, 'gsas', data_key)
-                self._dataKeyList.append(data_key)
-                # add to tree
-                self.ui.treeView_iptsRun.add_child_current_item(data_key)
-            except RuntimeError as re:
-                GuiUtility.pop_dialog_error(self, str(re))
-                return
-        # END-FOR
+        try:
+            data_key = os.path.basename(gsas_file_name).split('_')[0] + 'H'
+            data_key = self._myController.load_diffraction_file(gsas_file_name, 'gsas', data_key, unit='dSpacing')
+            self._dataKeyList.append(data_key)
+            # add to tree
+            # self.ui.treeView_iptsRun.add_child_current_item(data_key)
+        except RuntimeError as re:
+            GuiUtility.pop_dialog_error(self, str(re))
+            return
 
-        # Plot data if there is only one GSAS file
-        if len(gsas_file_list) > 0:
-            self.load_plot_run(self._dataKeyList[-1])
+        # plot
+        self.load_plot_run(data_key)
 
         return
 
@@ -1473,8 +1227,6 @@ class PeakPickerWindow(QMainWindow):
             Save the peak positions and other parameters to controller
         :return:
         """
-        # TODO/TEST/NOW
-
         # Check requirements
         assert self._myController is not None, 'My controller cannot be None'
 
@@ -1537,8 +1289,12 @@ class PeakPickerWindow(QMainWindow):
         peak_width_dialog = PeakWidthSetupDialog(self)
         peak_width_dialog.exec_()
 
-        peak_width = peak_width_dialog.get_peak_width()
-        print 'Get log value = ', peak_width
+        try:
+            peak_width = peak_width_dialog.get_peak_width()
+            # TODO - WHAT TO DO WITH SET PEAKS WITH?
+            print ('Peaks width is set to {}'.format(peak_width))
+        except AssertionError:
+            pass
 
         return
 
@@ -1573,6 +1329,8 @@ class PeakPickerWindow(QMainWindow):
     def evt_table_selection_changed(self):
         """
         Event handling as the selection of the row changed
+        Used to be linked to self.ui.tableWidget_peakParameter.itemSelectionChanged.connect(self.evt_table_selection_changed)
+
         :return:
         """
         print '[Prototype] current row is ', self.ui.tableWidget_peakParameter.currentRow(), \
@@ -1600,6 +1358,7 @@ class PeakPickerWindow(QMainWindow):
 
         return
 
+    # TODO - NIGHT - Clean
     def group_peaks(self, resolution, num_fwhm):
         """
         Group a list of peaks for fitting
@@ -1618,6 +1377,7 @@ class PeakPickerWindow(QMainWindow):
         assert isinstance(peak_group, peak_util.PeakGroupCollection),\
             'Peak group {0} must be a PeakGroupCollection instance but not a {1}.'.format(peak_group, type(peak_group))
 
+        # clear previous grouped peaks' presentation on PLOT
         self.clear_group_highlight()
 
         # reflect the grouped peak to GUI
@@ -1675,7 +1435,7 @@ class PeakPickerWindow(QMainWindow):
         ipts = 1
 
         # Set
-        self.ui.treeView_iptsRun.add_ipts_runs(ipts_number=ipts, run_number_list=reduced_run_number_list)
+        # self.ui.treeView_iptsRun.add_ipts_runs(ipts_number=ipts, run_number_list=reduced_run_number_list)
 
         return
 
@@ -1751,6 +1511,17 @@ class PeakPickerWindow(QMainWindow):
         :return:
         """
         self.close()
+
+        return
+
+    def menu_launch_terminal(self):
+        """
+        Launch terminal window
+        :return:
+        """
+        print ('[DB...BAT] Parent window: {}'.format(self._myParent))
+
+        self._myParent.menu_workspaces_view()
 
         return
 
@@ -1922,27 +1693,129 @@ class PeakPickerWindow(QMainWindow):
 
         return
 
+    def event_show_hide_v_peaks(self, show_v_peaks):
+        """
+        handling event that show or hide vanadium peaks on the figure
+        :return:
+        """
+        datatypeutility.check_bool_variable('Flag to indicate show or hide vanadium peaks', show_v_peaks)
 
-def retrieve_peak_positions(peak_tup_list):
-    """
-    Purpose:
-        Retrieve peak positions from peaks in given list
-    Requirements:
-        Input is a list of 2-tuples as HKL and d-spacing
-    Guarantees:
-        Retrieve the peaks' positions out
-    :param peak_tup_list:
-    :return: a list of
-    """
-    assert isinstance(peak_tup_list, list), 'Peak tuple list should be a list but not of type ' \
-                                            '%s.' % str(type(list))
+        # TODO - 20181110 - Implement!
+        if True:
+            GuiUtility.pop_dialog_error(self, 'Not Implemented Yet for Showing Vanadium Peaks')
+            return
 
-    peak_pos_list = list()
-    for peak in peak_tup_list:
-        peak_info_tup = peak[0]
-        peak_pos = peak_info_tup[0]
-        peak_pos_list.append(peak_pos)
-    # END-FOR(peak)
+        if show_v_peaks:
+            self.ui.graphicsView_mainPlot.add_indicators(vanadium_peaks)
+        else:
+            self.ui.graphicsView_mainPlot.hide_indicators()
 
-    return peak_pos_list
+        return
 
+    def signal_save_processed_vanadium(self, output_file_name, run_number):
+        """
+        save GSAS file from GUI
+        :param output_file_name:
+        :param ipts_number:
+        :param run_number:
+        :return:
+        """
+        # convert string
+        output_file_name = str(output_file_name)
+
+        self._myController.project.vanadium_processing_manager.save_to_gsas(run_number, output_file_name)
+
+        # status, error_message = self._myController.save_processed_vanadium(van_info_tuple=None,
+        #                                                                    output_file_name=output_file_name)
+        # if not status:
+        #     GuiUtility.pop_dialog_error(self, error_message)
+
+        return
+
+    def signal_strip_vanadium_peaks(self, bank_group_index, peak_fwhm, tolerance, background_type, is_high_background):
+        """ Process the signal to strip vanadium peaks
+        :param bank_group_index:
+        :param peak_fwhm: integer
+        :param tolerance:
+        :param background_type:
+        :param is_high_background:
+        :return:
+        """
+        # check inputs
+        datatypeutility.check_int_variable('FWHM', peak_fwhm, (1, None))
+
+        # from signal, the string is of type unicode.
+        background_type = str(background_type)
+
+        # note: as it is from a signal with defined parameters types, there is no need to check
+        #       the validity of parameters
+
+        # strip vanadium peaks
+        self._myController.project.vanadium_processing_manager.strip_peaks(bank_group_index, peak_fwhm,
+                                                                           tolerance, background_type,
+                                                                           is_high_background)
+
+        self.plot_1d_vanadium(run_id=self._vanadiumProcessDialog.get_run_id(),
+                              bank_id=BANK_GROUP_DICT[bank_group_index][0])
+
+        return
+
+    def signal_smooth_vanadium(self, bank_group_index, smoother_type, param_n, param_order):
+        """
+        process the signal to smooth vanadium spectra
+        :param smoother_type:
+        :param param_n:
+        :param param_order:
+        :return:
+        """
+        # convert smooth_type to string from unicode
+        smoother_type = str(smoother_type)
+
+        self._myController.project.vanadium_processing_manager.smooth_spectra(bank_group_index, smoother_type,
+                                                                              param_n, param_order,
+                                                                              smooth_original=False)
+
+        self.plot_1d_vanadium(run_id=self._vanadiumProcessDialog.get_run_id(),
+                              bank_id=BANK_GROUP_DICT[bank_group_index][0], is_smoothed_data=True)
+
+
+        return
+
+    def signal_undo_strip_van_peaks(self):
+        """
+        undo the strip vanadium peak action, i.e., delete the previous result and remove the plot
+        :return:
+        """
+        if self._vanStripPlotID is None:
+            print '[INFO] There is no vanadium-peak-removed spectrum to remove from canvas.'
+            return
+
+        # remove the plot
+        self.ui.graphicsView_mainPlot.remove_line(line_id=self._vanStripPlotID)
+        self._vanStripPlotID = None
+
+        # undo in the controller
+        self._myController.undo_vanadium_peak_strip()
+
+        return
+
+    def signal_undo_smooth_vanadium(self):
+        """
+        undo the smoothing operation on the spectrum including
+        1. delete the result
+        2. remove the smoothed plot
+        :return:
+        """
+        # return if there is no such action before
+        if self._smoothedPlotID is None:
+            print '[INFO] There is no smoothed spectrum to undo.'
+            return
+
+        # remove the plot
+        self.ui.graphicsView_mainPlot.remove_line(self._vanStripPlotID)
+        self._smoothedPlotID = None
+
+        # undo in the controller
+        self._myController.undo_vanadium_smoothing()
+
+        return

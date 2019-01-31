@@ -1,6 +1,5 @@
 import bisect
 import operator
-
 try:
     import qtconsole.inprocess
     from PyQt5.QtWidgets import QApplication, QMenu, QAction, QMainWindow
@@ -12,6 +11,7 @@ except ImportError:
 
 import mplgraphicsview
 import peaksmanager
+from pyvdrive.lib import datatypeutility
 
 __author__ = 'wzz'
 
@@ -1361,6 +1361,23 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
+    def reset_selected_peaks(self):
+        """
+        reset selected peaks
+        :return:
+        """
+        # all grouped peaks
+        self._myPeakGroupManager.reset()
+
+        # all single peaks
+        peak_indicator_index_list = self._mySinglePeakDict.keys()
+        for peak_indicator_index in peak_indicator_index_list:
+            del self._mySinglePeakDict[peak_indicator_index]
+            self.remove_indicator(peak_indicator_index)
+        # END-FOR
+
+        return
+
     def set_parent_window(self, parent_window):
         """
         Set a parent window (QMainWindow)
@@ -1391,9 +1408,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # check requirements
         assert self._myPeakSelectionMode != PeakAdditionState.NonEdit, 'Peak selection mode cannot be ' \
                                                                        'in NonEdit mode.'
+        datatypeutility.check_list('Peaks information', peak_info_list)
 
-        assert isinstance(peak_info_list, list), 'Peak information list {0} must of type list but not ' \
-                                                 '{1}.'.format(peak_info_list, peak_info_list.__class__.__name__)
         if len(peak_info_list) == 0:
             # return for an empty peak list
             return
@@ -1408,12 +1424,12 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
             if self._myPeakSelectionMode == PeakAdditionState.AutoMode:
                 # auto mode. peak only
+                print ('[DB...BAT] Add single peak @ {}'.format(peak_center))
                 self.add_single_peak(peak_pos=peak_center)
-
             else:
                 # power mode: peak and boundary
                 peak_width = peak_info[2]
-
+                print ('[DB...BAT] Add grouped peaks @ {}'.format(peak_center))
                 # add peak group indicator
                 group_id = self.add_peak_group(peak_center - 2*peak_width, peak_center + 2*peak_width)
                 self.add_peak(peak_center, group_id=group_id)

@@ -409,6 +409,7 @@ def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_pr
     result_peak_ws_name = '{0}_FoundPeaks'.format(diff_data)
 
     # call Mantid's FindPeaks
+    print ('[DB...BAT] Input diffraction data: {}'.format(diff_data))
     arg_dict = {'InputWorkspace': diff_data,
                 'WorkspaceIndex': ws_index,
                 'HighBackground': is_high_background,
@@ -1396,7 +1397,7 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
                                                 PrimaryFlightPath=43.753999999999998,
                                                 SpectrumIDs='1,2,3',
                                                 L2='2.0,2.0,2.0',
-                                                Polar='90,270,135')
+                                                Polar='90,270,155')
     else:
         raise RuntimeError('It is not implemented for GSAS file having more than 3 spectra ({0} now).'
                            ''.format(num_spec))

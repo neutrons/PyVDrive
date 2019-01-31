@@ -137,7 +137,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab">
       <attribute name="title">
@@ -520,7 +520,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="pushButton_2">
+              <widget class="QPushButton" name="pushButton_nIncrease">
                <property name="maximumSize">
                 <size>
                  <width>30</width>
@@ -544,7 +544,7 @@
            <item row="5" column="1">
             <layout class="QHBoxLayout" name="horizontalLayout_5">
              <item>
-              <widget class="QPushButton" name="pushButton_4">
+              <widget class="QPushButton" name="pushButton_orderDecrease">
                <property name="maximumSize">
                 <size>
                  <width>30</width>
@@ -582,7 +582,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="pushButton_3">
+              <widget class="QPushButton" name="pushButton_orderIncrease">
                <property name="maximumSize">
                 <size>
                  <width>30</width>

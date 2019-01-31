@@ -619,7 +619,7 @@ class ProjectManager(object):
         assert isinstance(peak_positions, list) or peak_positions is None, 'Peak positions must be a list or None.'
 
         # locate the workspace
-        if self._reductionManager.has_run_reduced(data_key):
+        if isinstance(data_key, int) and self._reductionManager.has_run_reduced(data_key):
             data_ws_name = self._reductionManager.get_reduced_workspace(run_number=data_key, is_vdrive_bin=True)
         elif self._loadedDataManager.has_data(data_key):
             data_ws_name = self._loadedDataManager.get_workspace_name(data_key)
