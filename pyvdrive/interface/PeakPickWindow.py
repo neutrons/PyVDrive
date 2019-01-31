@@ -178,8 +178,9 @@ class PeakPickerWindow(QMainWindow):
         # self.connect(self.ui.pushButton_save, QtCore.SIGNAL('clicked()'),
         #              self.do_save_peaks)
         #
-        self.connect(self.ui.tableWidget_peakParameter, QtCore.SIGNAL('itemSelectionChanged()'),
-                     self.evt_table_selection_changed)
+        self.ui.tableWidget_peakParameter.itemSelectionChanged.connect(self.evt_table_selection_changed)
+        # self.connect(self.ui.tableWidget_peakParameter, QtCore.SIGNAL('itemSelectionChanged()'),
+        #              self.evt_table_selection_changed)
 
         # Define canvas event handlers
 
