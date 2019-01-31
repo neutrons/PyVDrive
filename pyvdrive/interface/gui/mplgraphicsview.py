@@ -855,7 +855,8 @@ class MplGraphicsView(QWidget):
         try:
             self._myCanvas.remove_plot_1d(plot_id)
         except RuntimeError as run_err:
-            raise RuntimeError('Failed to remove indicator ID = {0} with plot ID = {1} due to {2}'.format(indicator_id, plot_id, run_err))
+            raise RuntimeError('Failed to remove indicator ID = {0} with plot ID = {1} due to {2}'
+                               ''.format(indicator_key, plot_id, run_err))
         self._myIndicatorsManager.delete(indicator_key)
 
         return
@@ -1640,6 +1641,9 @@ class Qt4MplCanvas(FigureCanvas):
         :param label:
         :return:
         """
+        if ikey not in self._lineDict:
+            raise KeyError('Line ID {} does not existing MPL existing keys: {}'
+                           ''.format(ikey, self._lineDict.keys()))
         line = self._lineDict[ikey]
         if line is None:
             print '[ERROR] Line (key = %d) is None. Unable to update' % ikey
