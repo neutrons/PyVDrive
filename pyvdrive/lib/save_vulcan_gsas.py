@@ -4,7 +4,6 @@ import os.path
 import h5py
 import math
 import random
-import numpy
 import mantid.simpleapi as api
 from mantid.api import AnalysisDataService as ADS
 from pyvdrive.lib import datatypeutility
@@ -98,8 +97,28 @@ class SaveVulcanGSS(object):
         # zero time:
         time0 = datetime.datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
 
-        if run.hasProperty("run_start") and run.hasProperty("duration"):
-            # TODO - NIGHT - Need to adopt numpy.datetime64 to calculate aboslute time
+        if run.hasProperty('proton_charge'):
+            # use proton charge to calculate run start/stop
+            proton_charge_log = run.getProperty('proton_charge')
+            pc_start_time = proton_charge_log.times[0]
+            pc_stop_time = proton_charge_log.times[-1]
+
+            duration_ns = (pc_stop_time - pc_start_time).astype('int')
+            # convert proton charge first time to datetime.datetime
+            run_start_time = datetime.datetime.utcfromtimestamp(pc_start_time.astype('O') * 1.E-9)
+
+            delta_to_t0_ns = run_start_time - time0
+            total_nanosecond_start = int(delta_to_t0_ns.total_seconds() * int(1.0E9))
+            total_nanosecond_stop = total_nanosecond_start + duration_ns
+            # print ('[DB...BAT...CHECK...Method 2] Run start/stop = {}, {}'.format(total_nanosecond_start,
+            #                                                                       total_nanosecond_stop))
+
+        elif from_sliced_ws:
+            # if workspace is from sliced event, then proton_charge is required
+            raise RuntimeError('proton_charge log is required if the GSAS workspace is reduced from '
+                               'a sliced EventWorkspace.')
+
+        elif run.hasProperty("run_start") and run.hasProperty("duration"):
             # export processing time information
             runstart = run.getProperty("run_start").value
             duration = float(run.getProperty("duration").value)
@@ -124,26 +143,10 @@ class SaveVulcanGSS(object):
             total_nanosecond_stop = total_nanosecond_start + int(duration * 1.0E9)
             print ('[DB...BAT...CHECK...Method 1] Run start/stop = {}, {}'.format(total_nanosecond_start,
                                                                                   total_nanosecond_stop))
-
-        if run.hasProperty('proton_charge'):
-            # use proton charge to calculate run start/stop
-            proton_charge_log = run.getProperty('proton_charge')
-            pc_start_time = proton_charge_log.times[0]
-            pc_stop_time = proton_charge_log.times[-1]
-
-            duration_ns = (pc_stop_time - pc_start_time).astype('int')
-            # convert proton charge first time to datetime.datetime
-            run_start_time = datetime.datetime.utcfromtimestamp(pc_start_time.astype('O') * 1.E-9)
-
-            delta_to_t0_ns = run_start_time - time0
-            total_nanosecond_start = int(delta_to_t0_ns.total_seconds() * int(1.0E9))
-            total_nanosecond_stop = total_nanosecond_start + duration_ns
-            print ('[DB...BAT...CHECK...Method 2] Run start/stop = {}, {}'.format(total_nanosecond_start,
-                                                                                  total_nanosecond_stop))
-
-        elif from_sliced_ws:
-            # from sliced workspace must use proton charge
-            raise RuntimeError('With flag "from sliced ws" on, proton_charge log is required!')
+        else:
+            # no sample logs for start and stop
+            raise RuntimeError('There is no sample log (proton_charge, run_start/duration) existing '
+                               'to support calculating start and stop time.')
 
         return total_nanosecond_start, total_nanosecond_stop
 

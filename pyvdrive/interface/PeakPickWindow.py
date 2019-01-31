@@ -963,23 +963,13 @@ class PeakPickerWindow(QMainWindow):
 
         return
 
-    # TODO - NIGHT - Read IPTS and run number list to find out the
-    # TODO - cont. - lineEdit_iptsNumber, lineEdit_runNumber
-    def do_load_data(self):
+    # TODO - FUTURE - This method does not have an event to be associated with yet and
+    # TODO - cont.  - to be fixed
+    def do_load_multiple_gsas(self):
         """
-        Purpose:
-            Load GSAS data or a list of GSAS data files
-        Requirements:
-            Controller has been set to this object
-        Guarantees:
-            Load data from start run to end run in line edits and plot the first run on canvas
-            1. if the range of run numbers is given, then only the directory for all the files shall be specified;
-            2. otherwise, a dialog will be popped for the file
+
         :return:
         """
-        # Check requirements
-        assert self._myController is not None, 'Controller cannot be None'
-
         # Get the run numbers
         # FIXME - NIGHT - ...
         if False:
@@ -988,6 +978,7 @@ class PeakPickerWindow(QMainWindow):
         else:
             start_run_number = None
             end_run_number = None
+
 
         # Get the GSAS file names
         gsas_file_list = list()
@@ -1015,37 +1006,65 @@ class PeakPickerWindow(QMainWindow):
             if len(error_message) > 0:
                 GuiUtility.pop_dialog_error(self, 'GSAS file %s cannot be found.' % error_message)
 
-        else:
-            # get single GSAS file
-            filters = 'GSAS files (*.gda);; All files (*.*)'
-            default_dir = self._myController.get_binned_data_directory()
-            # TODO/NOW - consider self._myController.get_ipts_config()
+        return
 
-            # TODO - NIGHT - refactor getFile
+    # TODO - NIGHT - Read IPTS and run number list to find out the
+    # TODO - cont. - lineEdit_iptsNumber, lineEdit_runNumber
+    def do_load_data(self):
+        """
+        Purpose:
+            Load GSAS data or a list of GSAS data files
+        Requirements:
+            Controller has been set to this object
+        Guarantees:
+            Load data from start run to end run in line edits and plot the first run on canvas
+            1. if the range of run numbers is given, then only the directory for all the files shall be specified;
+            2. otherwise, a dialog will be popped for the file
+        :return:
+        """
+        # Check requirements
+        assert self._myController is not None, 'Controller cannot be None'
+
+        ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber)
+        run_number = GuiUtility.parse_integer(self.ui.lineEdit_runNumber)
+
+        gsas_file_name = None
+        default_dir = None
+        if ipts_number and run_number:
+            # both are there: load data directly
+            gsas_file_name = '/SNS/VULCAN/IPTS-{}/shared/binned_data/{}.gda'.format(ipts_number, run_number)
+            if not os.path.exists(gsas_file_name):
+                gsas_file_name = None
+        # END-IF
+
+        if gsas_file_name is None and ipts_number:
+            # IPTS number to determine binned data
+            default_dir = '/SNS/VULCAN/IPTS-{}/shared/binned_data/'.format(ipts_number)
+            if not os.path.exists(default_dir):
+                default_dir = '/SNS/VULCAN/IPTS-{}/shared'.format(ipts_number)
+        # END-IF
+
+        if gsas_file_name is None:
+            if default_dir is None or not os.path.exists(default_dir):
+                default_dir = self._myController.get_binned_data_directory()
             gsas_file_name = QFileDialog.getOpenFileName(self, 'Load GSAS File', default_dir, filters)
             if isinstance(gsas_file_name, tuple):
                 gsas_file_name = str(gsas_file_name[0])
-            if gsas_file_name != '':
-                gsas_file_list.append(str(gsas_file_name))
-        # END-IF-ELSE
+        # END-IF
 
         # Load data from GSAS file
-        for gsas_file_name in gsas_file_list:
-            # Load data via parent
-            try:
-                data_key = os.path.basename(gsas_file_name).split('_')[0] + 'H'
-                data_key = self._myController.load_diffraction_file(gsas_file_name, 'gsas', data_key, unit='dSpacing')
-                self._dataKeyList.append(data_key)
-                # add to tree
-                # self.ui.treeView_iptsRun.add_child_current_item(data_key)
-            except RuntimeError as re:
-                GuiUtility.pop_dialog_error(self, str(re))
-                return
-        # END-FOR
+        try:
+            data_key = os.path.basename(gsas_file_name).split('_')[0] + 'H'
+            data_key = self._myController.load_diffraction_file(gsas_file_name, 'gsas', data_key, unit='dSpacing')
+            self._dataKeyList.append(data_key)
+            # add to tree
+            # self.ui.treeView_iptsRun.add_child_current_item(data_key)
+        except RuntimeError as re:
+            GuiUtility.pop_dialog_error(self, str(re))
+            return
 
-        # Plot data if there is only one GSAS file
-        if len(gsas_file_list) > 0:
-            self.load_plot_run(self._dataKeyList[-1])
+        # plot
+        self.load_plot_run(data_key)
 
         return
 
