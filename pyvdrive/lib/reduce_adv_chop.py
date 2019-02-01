@@ -4,6 +4,7 @@ import os
 import math
 import pandas as pd
 import numpy
+import datetime
 import save_vulcan_gsas
 import mantid.simpleapi as mantidsimple
 from mantid.api import AnalysisDataService, ITableWorkspace, MatrixWorkspace
@@ -838,7 +839,7 @@ class WriteSlicedLogs(object):
         :param i_ws:
         :param property_name_list:
         :param header_list:
-        :param run_start_time:
+        :param run_start_time: original run start time
         :param workspace_i:
         :param start_series_dict:
         :param mean_series_dict:
@@ -849,15 +850,15 @@ class WriteSlicedLogs(object):
         assert isinstance(run_start_time, numpy.datetime64), 'Run start time {} must be numpy.datetime64 but not of' \
                                                              'type {}'.format(run_start_time, type(run_start_time))
 
-        # check: log "run_start" should be the same for workspaces split from the same EventWorkspace.
-        # run_start_i = DateAndTime(workspace_i.run().getProperty('run_start').value)
-
         # get difference in REAL starting time (proton_charge[0])
         real_start_time_i = workspace_i.run().getProperty('proton_charge').times[0]
-        # real_stop_time_i = workspace_i.run().getProperty('proton_charge').times[-1]
 
+        time0 = datetime.datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
         if isinstance(real_start_time_i, numpy.datetime64):
-            time_stamp = float(real_start_time_i)
+            # absolute time (ns) from 1990-01-01
+            temp_time = datetime.datetime.utcfromtimestamp(real_start_time_i.astype('O') * 1.E-9)
+            delta_to_t0_ns = temp_time - time0
+            time_stamp = delta_to_t0_ns.total_seconds()
         else:
             # time_stamp = real_start_time_i.total_nanoseconds()
             raise RuntimeError('proton charge log time shall be datetime64!')
