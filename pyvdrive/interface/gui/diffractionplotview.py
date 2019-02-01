@@ -1256,6 +1256,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         if key is not None:
             self._myPatternDict[key] = (vec_x, vec_y, pattern_key)
 
+        print ('[DB...BAT] Plot {} to have pattern key'.format(title, pattern_key))
         self._lastPlotID = pattern_key
 
         return
@@ -1346,12 +1347,13 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             self.remove_indicator(peak_indicator_index)
 
         # check line ID for indicator and single peak dict
-        line_ids_indicators = sorted(self.get_indicator_ids())
-        line_sp_indicators = sorted(self._mySinglePeakDict.keys())
-        if line_ids_indicators != line_sp_indicators:
-            raise NotImplementedError('[DEBUG OUTPUT] Found DiffractionPlotView has a different (peak) indicators '
-                                      'set from its parent:\nThis: {}\nParent: {}'
-                                      ''.format(line_ids_indicators, line_sp_indicators))
+        # TODO - FIXME - NIGHT - Implement get_indicator_ids() if bug cannot be found.
+        # line_ids_indicators = sorted(self.get_indicator_ids())
+        # line_sp_indicators = sorted(self._mySinglePeakDict.keys())
+        # if line_ids_indicators != line_sp_indicators:
+        #     raise NotImplementedError('[DEBUG OUTPUT] Found DiffractionPlotView has a different (peak) indicators '
+        #                               'set from its parent:\nThis: {}\nParent: {}'
+        #                               ''.format(line_ids_indicators, line_sp_indicators))
 
         return True
 
@@ -1374,16 +1376,20 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :return:
         """
         # reset peak indicator for selected peaks
+        self.clear_highlight_data()
         self.reset_selected_peaks()
 
         # remove the plotted diffraction pattern
-        self.remove_line(self._lastPlotID)
-        self._lastPlotID = None
+        if self._lastPlotID:
+            print ('[DB...BAT] reset() --> remove {}'.format(self._lastPlotID))
+            self.remove_line(self._lastPlotID)
+            self._lastPlotID = None
 
-        # self.clear_all_lines()
         self._myPeakGroupManager.reset()
         self._highlightsPlotIDList = list()
 
+        # FIXME TODO - ASAP - shall not use clear_all_lines.  but cannot find out the cause for the original diffraciton line not be removed
+        self.clear_all_lines()
         return
 
     def reset_selected_peaks(self):

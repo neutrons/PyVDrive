@@ -1157,7 +1157,9 @@ class PeakPickerWindow(QMainWindow):
         if len(vec_x) == len(vec_y) + 1:
             vec_x = vec_x[:-1]
 
-        self.ui.graphicsView_main.clear_all_lines()
+        # reset the current view including all the indicators
+        self.ui.graphicsView_main.reset()
+        # plot loaded diffraction data
         self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y, title=title_message)
 
         # Set up class variables

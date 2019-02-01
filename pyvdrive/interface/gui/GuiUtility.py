@@ -9,7 +9,7 @@ try:
     from PyQt5.QtGui import QStandardItemModel, QStandardItem
 except ImportError:
     from PyQt4 import QtCore
-    from PyQt4.QtGui import QStandardItemModel, QStandardItem, QLineEdit, QMessageBox, QFileDialog,
+    from PyQt4.QtGui import QStandardItemModel, QStandardItem, QLineEdit, QMessageBox, QFileDialog
     from PyQt4.QtGui import QTableWidgetItem, QCheckBox, QWidget, QHBoxLayout
 #include this try/except block to remap QString needed when using IPython
 try:
