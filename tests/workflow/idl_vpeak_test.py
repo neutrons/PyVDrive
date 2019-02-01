@@ -12,6 +12,16 @@ except ImportError:
 from command_test_setup import set_test_dir
 
 
+def test_ned_preX(tester):
+    """
+    Test for vanadium run collected by nED before Vulcan-X
+    :param tester:
+    :return:
+    """
+
+    return
+
+
 def test_pre_ned(tester):
     """
     """
@@ -31,7 +41,7 @@ def test_main():
     """
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
-    test_pre_ned(command_tester)
+    test_ned_preX(command_tester)
 
     return command_tester.main_window
 
