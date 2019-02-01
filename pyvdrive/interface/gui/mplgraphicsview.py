@@ -1601,7 +1601,7 @@ class Qt4MplCanvas(FigureCanvas):
             # remove the plot key from dictionary
             del self._lineDict[plot_key]
         else:
-            raise RuntimeError('Line with ID %s is not recorded.' % plot_key)
+            raise RuntimeError('Line with ID {} is not recorded.'.format(plot_key))
 
         self._setup_legend(location='best', font_size=self._legendFontSize)
 

@@ -929,6 +929,29 @@ class WriteSlicedLogs(object):
 
         return
 
+    @staticmethod
+    def sort_workspace_names(ws_name_list):
+        """
+        sort workspace by names (ends with _number)
+        :param ws_name_list:
+        :return:
+        """
+        # generate list of tuple
+        ws_index_name_list = list()
+        for ws_name in ws_name_list:
+            order_index = ws_name.split('_')[-1]
+            if order_index.isdigit():
+                order_index = int(order_index)
+                ws_index_name_list.append((order_index, ws_name))
+        # END-FOR
+
+        # order
+        ws_index_name_list.sort()
+
+        sorted_ws_names = [tup[1] for tup in ws_index_name_list]
+
+        return sorted_ws_names
+
     def generate_sliced_logs(self, ws_name_list, log_type, append=False):
         """
         generate sliced logs
@@ -947,7 +970,8 @@ class WriteSlicedLogs(object):
                                'It must be either furnace or loadframe'.format(log_type, type(log_type)))
 
         # get workspaces and properties
-        ws_name_list.sort()
+
+        ws_name_list = self.sort_workspace_names(ws_name_list)
 
         # get the properties' names list
         ws_name = ws_name_list[0]

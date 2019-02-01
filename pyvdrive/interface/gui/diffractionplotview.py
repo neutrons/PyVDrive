@@ -1243,7 +1243,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :return:
         """
         # check
-        assert len(vec_x) == len(vec_y), 'vector of x and y have different size!'
+        if len(vec_x) != len(vec_y):
+            raise RuntimeError('vector of x and y have different size!')
 
         # Plot
         if title is None:
@@ -1285,27 +1286,36 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
     def remove_all_in_pick_peaks(self):
         """ Remove all peaks' indicators
+        Note: this method is not used (as caller is disabled for further review')
         :return:
         """
         # Remove all indicators
         for peak_group in self._inEditGroupList:
-            assert isinstance(peak_group, DiffractionPlotView.GroupedPeaksInfo)
+            assert isinstance(peak_group, DiffractionPlotView.GroupedPeaksInfo), 'Peak group has a wrong type'
 
+            # remove left boundary
             left_id = peak_group.left_boundary_id
             self.remove_indicator(left_id)
+            # if left_id in self._mySinglePeakDict:
+            #     del self._mySinglePeakDict[left_id]
+
             right_id = peak_group.right_boundary_id
             self.remove_indicator(right_id)
+            # if right_id in self._mySinglePeakDict:
+            #     del self._mySinglePeakDict[right_id]
 
             for peak_tuple in peak_group.get_peaks():
                 peak_ind_id = peak_tuple[1]
                 self.remove_indicator(peak_ind_id)
+                # if peak_ind_id in self._mySinglePeakDict:
+                #     del self._mySinglePeakDict[peak_ind_id]
 
         # Clear the indicator position-key list
         self._inEditGroupList = list()
 
-        return
+        raise NotImplementedError('Enable: remove_all_in_pick_peaks')
 
-    def remove_peak_indicator(self, peak_groud_id, peak_indicator_index):
+    def remove_peak_indicator(self, peak_group_id, peak_indicator_index):
         """ Remove a peak indicator
         Purpose:
             Remove a peak indicator according to a given position value
@@ -1313,7 +1323,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             Peak index should be a valid value
         Guarantees:
             The indicator is removed from the canvas
-        :param peak_groud_id:
+        :param peak_group_id:
         :param peak_indicator_index:
         :return:
         """
@@ -1328,12 +1338,20 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             del self._mySinglePeakDict[peak_indicator_index]
         else:
             # remove peak by ID for PeakAdditionState
-            removable = self._myPeakGroupManager.delete_peak(group_id=peak_groud_id,
+            removable = self._myPeakGroupManager.delete_peak(group_id=peak_group_id,
                                                              peak_id=peak_indicator_index)
 
         # remove indicator on the canvas
         if removable:
             self.remove_indicator(peak_indicator_index)
+
+        # check line ID for indicator and single peak dict
+        line_ids_indicators = sorted(self.get_indicator_ids())
+        line_sp_indicators = sorted(self._mySinglePeakDict.keys())
+        if line_ids_indicators != line_sp_indicators:
+            raise NotImplementedError('[DEBUG OUTPUT] Found DiffractionPlotView has a different (peak) indicators '
+                                      'set from its parent:\nThis: {}\nParent: {}'
+                                      ''.format(line_ids_indicators, line_sp_indicators))
 
         return True
 
@@ -1352,10 +1370,17 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         return
 
     def reset(self):
-        """ Reset the canvas and peaks managers
+        """ Reset the canvas and peaks managers and single peak lines
         :return:
         """
-        self.clear_all_lines()
+        # reset peak indicator for selected peaks
+        self.reset_selected_peaks()
+
+        # remove the plotted diffraction pattern
+        self.remove_line(self._lastPlotID)
+        self._lastPlotID = None
+
+        # self.clear_all_lines()
         self._myPeakGroupManager.reset()
         self._highlightsPlotIDList = list()
 

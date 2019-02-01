@@ -29,6 +29,7 @@ from pyvdrive.interface.gui.diffractionplotview import DiffractionPlotView
 from pyvdrive.interface.gui.vdrivetablewidgets import PeakParameterTable
 import vanadium_controller_dialog
 import pyvdrive.lib.peak_util as peak_util
+from pyvdrive.lib import  datatypeutility
 
 
 class PeakPickerMode(object):
@@ -1015,8 +1016,6 @@ class PeakPickerWindow(QMainWindow):
 
         return
 
-    # TODO - NIGHT - Read IPTS and run number list to find out the
-    # TODO - cont. - lineEdit_iptsNumber, lineEdit_runNumber
     def do_load_data(self):
         """
         Purpose:
@@ -1093,7 +1092,7 @@ class PeakPickerWindow(QMainWindow):
         if isinstance(data_key, int):
             run_number = data_key
         else:
-            assert isinstance(data_key, str), 'data key must be a string but not %s.' % str(type(data_key))
+            datatypeutility.check_string_variable('Data key/Workspace', data_key)
             if data_key.isdigit():
                 run_number = int(data_key)
             else:
@@ -1143,12 +1142,12 @@ class PeakPickerWindow(QMainWindow):
             else:
                 data_set_dict = self._myController.get_reduced_data(run_number, 'dSpacing')
         except RuntimeError as run_err:
-            # TODO - NIGHT - Need better error message
-            GuiUtility.pop_dialog_error(self, ret_obj)
+            err_msg = 'Unable to retrieve reduced data in dSpacing from {}/{} due to {}' \
+                      ''.format(run_number, data_key, run_err)
+            GuiUtility.pop_dialog_error(self, err_msg)
             return
         # get spectrum 0, i.e, bank 1
         self._currentDataSet = data_set_dict
-        print ('[DB...BAT] data set keys: {}'.format(data_set_dict.keys()))
 
         data_bank_1 = self._currentDataSet[1]
         # FIXME - It might return vec_x, vec_y AND vec_e
@@ -1232,10 +1231,16 @@ class PeakPickerWindow(QMainWindow):
 
         # Get the output file
         file_filter = 'Text (*.txt);;All files (*.*)'
-        out_file_name = QFileDialog.getSaveFileName(self, 'Save peaks to GSAS peak file', self._dataDirectory, file_filter)
-        if isinstance(out_file_name, tuple):
-            out_file_name = out_file_name[0]
-        out_file_name = str(out_file_name).strip()
+        default_dir = self._dataDirectory
+        out_file_name = GuiUtility.get_save_file_by_dialog(parent=self,
+                                                           title='Save peaks to GSAS peak file',
+                                                           default_dir=default_dir,
+                                                           file_filter=file_filter)
+
+        # out_file_name = QFileDialog.getSaveFileName(self, 'Save peaks to GSAS peak file', self._dataDirectory, file_filter)
+        # if isinstance(out_file_name, tuple):
+        #     out_file_name = out_file_name[0]
+        # out_file_name = str(out_file_name).strip()
         if out_file_name == '':
             return   # return for cancellation
 

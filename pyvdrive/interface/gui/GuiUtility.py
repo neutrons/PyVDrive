@@ -9,7 +9,7 @@ try:
     from PyQt5.QtGui import QStandardItemModel, QStandardItem
 except ImportError:
     from PyQt4 import QtCore
-    from PyQt4.QtGui import QStandardItemModel, QStandardItem, QLineEdit, QMessageBox, QFileDialog
+    from PyQt4.QtGui import QStandardItemModel, QStandardItem, QLineEdit, QMessageBox, QFileDialog,
     from PyQt4.QtGui import QTableWidgetItem, QCheckBox, QWidget, QHBoxLayout
 #include this try/except block to remap QString needed when using IPython
 try:
@@ -195,6 +195,26 @@ def convert_to_qdate_epoch(epoch_time):
     m_date = QtCore.QDate(year, month, day)
 
     return m_date
+
+
+def get_save_file_by_dialog(parent, title, default_dir, file_filter):
+    """ Get file name to save via QFileDialog
+    :param parent:
+    :param title:
+    :param default_dir:
+    :param file_filter:
+    :return:
+    """
+    out_file_name = QFileDialog.getSaveFileName(parent, title, default_dir, file_filter)
+
+    # PyQt5 returns a tuple
+    if isinstance(out_file_name, tuple):
+        out_file_name = out_file_name[0]
+
+    # convert to string
+    out_file_name = str(out_file_name).strip()
+
+    return  out_file_name
 
 
 def parse_integer(line_edit, allow_blank=True):
