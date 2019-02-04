@@ -40,6 +40,41 @@ def check_file_creation_date(file_name):
     return file_create_time_str
 
 
+def convert_to_list(list_str, sep, element_type):
+    """
+    list in format of string. with separation as &
+    :param list_str:
+    :param sep: char or string to separate the list
+    :return:
+    """
+    datatypeutility.check_string_variable('List in string format to convert from', list_str)
+    datatypeutility.check_string_variable('Separation string/font to split the list', sep)
+    assert isinstance(element_type, type), 'Input element type {} must be a type but not {}' \
+                                           ''.format(element_type, type(element_type))
+
+    # remove all the space
+    if sep != '':
+        # separation cannot be SPACE in this case
+        list_str = list_str.replace(' ', '')
+
+    # split
+    terms = list_str.split(sep)
+    if len(terms) < 2:
+        raise RuntimeError('There must be at least 2 run numbers given.')
+
+    run_number_list = list()
+    for term in terms:
+        try:
+            run = element_type(term)
+        except ValueError as value_err:
+            raise RuntimeError('In given run numbers, {} cannot be converted to {} due to {}.'
+                               ''.format(term, element_type, value_err))
+        run_number_list.append(run)
+    # END-FOR
+
+    return run_number_list
+
+
 def import_detector_efficiency(h5_name):
     """
     import detector efficiency file
@@ -77,6 +112,49 @@ def load_processed_nexus(nexus_file_name, output_ws_name):
     LoadNexusProcessed(Filename=nexus_file_name, OutputWorkspace=output_ws_name)
 
     return
+
+
+def read_merge_run_file(run_file_name):
+    """ Read a standard VDRIVE run file
+    Data are combined from the runs of rest columns to the runs of the first column in the runfile.txt.
+    """
+    # check input
+    datatypeutility.check_file_name(run_file_name, True, False, False,
+                                    note='Run number file')
+
+    # import run-merge file
+    run_file = open(run_file_name, 'r')
+    lines = run_file.readlines()
+    run_file.close()
+
+    # parse run-merge file
+    merge_run_dict = dict()
+    for line in lines:
+        line = line.strip()
+
+        # skip if empty line or command line
+        if len(line) == 0:
+            return
+        elif line[0] == '#':
+            return
+
+        # set up
+        run_str_list = line.split()
+
+        target_run_number = None
+        for index, run_str in enumerate(run_str_list):
+            run_number = int(run_str)
+            if index == 0:
+                # create a new item (i.e., node) in the return dictionary
+                target_run_number = run_number
+                merge_run_dict[target_run_number] = list()
+
+            assert target_run_number is not None
+            merge_run_dict[target_run_number].append(run_number)
+        # END-FOR (term)
+    # END-FOR (line)
+
+    return merge_run_dict
 
 
 def save_workspace(ws_name, file_name, file_type='nxs', title=''):

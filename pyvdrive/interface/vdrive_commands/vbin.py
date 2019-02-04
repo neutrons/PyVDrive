@@ -129,8 +129,6 @@ class VBin(procss_vcommand.VDriveCommand):
         Execute command: override
         :return: status (bool), error message (str)
         """
-        """
-        """
         # check and set IPTS
         try:
             self.set_ipts()

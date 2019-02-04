@@ -4,16 +4,19 @@ from procss_vcommand import VDriveCommand
 class VanadiumPeak(VDriveCommand):
     """ process vanadium peaks
     """
-    SupportedArgs = ['IPTS', 'RUNV', 'VIEWER', 'NSMOOTH', 'ONEBANK', 'SHIFT', 'OUTPUT']
+    SupportedArgs = ['IPTS', 'RUNV', 'REDUCEDVANADIUM', 'VIEWER', 'NSMOOTH', 'ONEBANK', 'SHIFT', 'OUTPUT',
+                     'BINFOLDER']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
         'RUNV': 'Run number for vanadium file (file in instrument directory)',
+        'REDUCEDVANADIUM': 'Path to a reduced vanadium file (GSAS or ProcessedNeXus or HDF5)',
         'ONEBANK': 'Add 2 bank data together (=1).',
         'SHIFT': 'the chopper center is shift to large lambda aggressively.',
         'NSMOOTH': 'the number of points to be used in the boxcar smoothing algorithm, the bigger the smoother.',
         'OUTPUT': 'the directory where the smooth vanadium gsas file will be saved other than default.',
-        'VIEWER': 'Launch General Plot Viewer'
+        'BINFOLDER': 'an alias of vanadium ouput',
+        'GUI': 'Launch Peak processing UI to process vanadium with visualization'
     }
 
     def __init__(self, controller, command_args):
@@ -49,19 +52,26 @@ class VanadiumPeak(VDriveCommand):
         """
         Execute command: override
         """
-        # check
-        if 'RUNV' not in self._commandArgsDict:
-            return False, 'RUNV must be specified!'
+        if 'REDUCEDVANADIUM' in self._commandArgsDict:
+            # user-specified vanadium file
+            van_file_name = self._commandArgsDict['REDUCEDVANADIUM']
+        else:
+            # parse IPTS
+            try:
+                self.set_ipts()
+            except RuntimeError as run_err:
+                return False, 'Without option'.format(run_err)
 
-        # parse IPTS
-        try:
-            self.set_ipts()
-        except RuntimeError as run_err:
-            return False, 'Caused by {0}'.format(run_err)
+            # get run v
+            if 'RUNV' not in self._commandArgsDict:
+                return False, 'RUNV must be specified!'
+            # parse the parameters
+            self._vanRunNumber = int(self._commandArgsDict['RUNV'])
+            assert self._vanRunNumber > 0, 'Vanadium run number {0} cannot be non-positive.'.format(self._vanRunNumber)
 
-        # parse the parameters
-        self._vanRunNumber = int(self._commandArgsDict['RUNV'])
-        assert self._vanRunNumber > 0, 'Vanadium run number {0} cannot be non-positive.'.format(self._vanRunNumber)
+
+
+
 
         if 'ONEBANK' in self._commandArgsDict:
             self._mergeToOneBank = bool(int(self._commandArgsDict['ONEBANK']))
@@ -69,8 +79,8 @@ class VanadiumPeak(VDriveCommand):
         if 'SHIFT' in self._commandArgsDict:
             self._doShift = bool(int(self._commandArgsDict['SHIFT']))
 
-        if 'VIEWER' in self._commandArgsDict:
-            do_launch_gui = bool(int(self._commandArgsDict['VIEWER']))
+        if 'GUI' in self._commandArgsDict:
+            do_launch_gui = bool(int(self._commandArgsDict['GUI']))
         else:
             do_launch_gui = False
 
@@ -78,6 +88,10 @@ class VanadiumPeak(VDriveCommand):
             local_output_dir = str(self._commandArgsDict['OUTPUT'])
         else:
             local_output_dir = None
+
+        # check vanadium run: if not reduced, then
+        if not self._controller.archive_manager.has_reduced_run(self._iptsNumber, self._vanRunNumber):
+            return False, 'IPTS-{} Vanadium Run-{} has not been reduced.'
 
         # return to pop
         if do_launch_gui:

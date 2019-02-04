@@ -24,6 +24,26 @@ def create_run_file(file_name):
     return
 
 
+def test_ned_vanadium(tester):
+    """
+    Test PreX/nED data with optiona as vanadium
+    :param tester:
+    :return:
+    """
+    # test directory
+    test_dir = '/tmp/merge/runv/'
+    command_test_setup.set_test_dir(test_dir)
+
+    # run command
+    idl_command = "MERGE,IPTS=21356,RUNLIST=1234 & 1235 & 2242,RUNV=21123,output=\'{}\'".format(test_dir)
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
+
+    return
+
+
 def test_ned_simple(tester):
     """
 

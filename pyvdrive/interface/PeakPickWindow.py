@@ -299,6 +299,8 @@ class PeakPickerWindow(QMainWindow):
                                       self.ui.checkBox_usePhase3)
         self._phaseWidgetsGroupDict[3] = phase_widgets3
 
+        # mode of various type of
+
         # Peak pick mode
         self.ui.peak_picker_mode_group = QButtonGroup(self)
         self.ui.peak_picker_mode_group.addButton(self.ui.radioButton_pickModePower)
