@@ -31,12 +31,16 @@ class PeakProcessingGUITestEnvironment(object):
         """
         return self._peak_process_window
 
-    def load_gsas(self):
+    def load_gsas(self, ipts_number=None, run_number=None):
         """
 
         :return:
         """
-        # select time slicing
+        if ipts_number is not None:
+            self._peak_process_window.ui.lineEdit_iptsNumber.setText('{}'.format(ipts_number))
+        if run_number is not None:
+            self._peak_process_window.ui.lineEdit_runNumber.setText('{}'.format(run_number))
+
         self._peak_process_window.do_load_data()
 
         return
@@ -58,14 +62,27 @@ class PeakProcessingGUITestEnvironment(object):
 
         return
 
+    def vanadium_test(self):
+        """
+
+        :return:
+        """
+        # /SNS/VULCAN/IPTS-22752/nexus/VULCAN_171966.nxs.h5
+        self.load_gsas(22752, 171966)
+
 
 def test_main():
     """
     test main
     """
     peak_process_ui_test = PeakProcessingGUITestEnvironment()
-    # slice_ui_tester.set_ipts_run(None, None)
-    peak_process_ui_test.load_gsas()
+
+    if False:  # simple use case test: disabled now
+        # simple test:
+        peak_process_ui_test.load_gsas()
+
+    # Vanadium processing test
+    peak_process_ui_test.vanadium_test()
 
     return peak_process_ui_test.main_window
 

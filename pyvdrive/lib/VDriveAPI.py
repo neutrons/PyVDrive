@@ -1404,6 +1404,9 @@ class VDriveAPI(object):
                                                                               roi_list=roi_list,
                                                                               mask_list=mask_list,
                                                                               no_cal_mask=no_cal_mask)
+
+            # TODO - TONIGHT - 1. refactor to methods
+            # TODO - TONIGHT - 2. merge_runs = True: merge runs: make the total proton charge accumulated!
             if standard_sample_tuple:
                 if len(run_number_list) != 1:
                     return False, 'Standard tag {} can only work with 1 run'.format(standard_sample_tuple)
@@ -1430,7 +1433,7 @@ class VDriveAPI(object):
                                                        sample_operation_list=sample_operation_list,
                                                        patch_list=patch_list)
                 # copy GSAS file
-                # TODO - NIGHT - Better code quality
+                # TODO - TONIGHT - Better code quality
                 import shutil
                 src_gda = '/SNS/VULCAN/IPTS-{}/shared/binned_data/{}.gda'.format(ipts_number, run_number)
                 assert os.path.exists(src_gda), '{} does not exists'.format(src_gda)
@@ -1447,31 +1450,9 @@ class VDriveAPI(object):
                 error_message += msg + '\n'
 
         else:
-            # manual reduction: Reduce runs
-            raise 'Why this still exists?  I dont see any reason!'
-            # print '[INFO] Reduce Runs: {0}. Merge banks = {1}'.format(runs_to_reduce, merge_banks)
-            # TODO - 20181010 - Implement roi list and mask list
-            if len(roi_list) + len(mask_list) > 0:
-                raise RuntimeError('ROI/MASK is not supported! ROI: {}, MASK: {}'.format(roi_list, mask_list))
-            try:
-                status, error_message = self._myProject.reduce_runs(run_number_list=runs_to_reduce,
-                                                              output_directory=output_directory,
-                                                              background=background,
-                                                              vanadium=vanadium,
-                                                              gsas=gsas,
-                                                              fullprof=output_to_fullprof,
-                                                              record_file=record,
-                                                              sample_log_file=logs,
-                                                              standard_sample_tuple=standard_sample_tuple,
-                                                              merge_banks=merge_banks,
-                                                              merge_runs=merge_runs,
-                                                              binning_parameters=binning_parameters,
-                                                              num_banks=num_banks)
-
-            except AssertionError as re:
-                status = False
-                error_message = '[ASSERTION ERROR] from reduce_runs due to %s' % str(re)
-            # END-TRY-EXCEPT
+            # Not auto reduction and Not reduction with version=2
+            # TODO - TONIGHT - Better error message
+            raise RuntimeError('blabla')
         # END-IF-ELSE
 
         # mark the runs be reduced so that they will not be reduced again next time.
@@ -1770,6 +1751,7 @@ class VDriveAPI(object):
         """
         try:
             # get reduced vanadium file
+            # TODO - TONIGHT - Always use reduced vanadium run (gda or NeXus)
             status, ret_str = self.load_vanadium_run(ipts_number=ipts_number, run_number=run_number,
                                                      use_reduced_file=use_reduced_file)
             if status:

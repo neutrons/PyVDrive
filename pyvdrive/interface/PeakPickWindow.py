@@ -30,6 +30,7 @@ from pyvdrive.interface.gui.vdrivetablewidgets import PeakParameterTable
 import vanadium_controller_dialog
 import pyvdrive.lib.peak_util as peak_util
 from pyvdrive.lib import  datatypeutility
+import PeakPickWindowVanadium
 
 
 class PeakPickerMode(object):
@@ -61,6 +62,9 @@ class PeakPickerWindow(QMainWindow):
         ui_path = os.path.join(os.path.dirname(__file__), "gui/VdrivePeakPicker.ui")
         self.ui = load_ui(ui_path, baseinstance=self)
         self._promote_widgets()
+
+        # child window controller
+        self._subControllerVanadium = PeakPickWindowVanadium.PeakPickerWindowChildVanadium(self, self.ui)
 
         # Define event handling methods
         # phase set up
@@ -99,6 +103,26 @@ class PeakPickerWindow(QMainWindow):
 
         # vanadium
         self.ui.pushButton_launchVanProcessDialog.clicked.connect(self.do_launch_vanadium_dialog)
+
+        # TODO - NIGHT - Implement!
+        """
+        comboBox_mode: tab_peakSelection, tab_singlePeakFit, tab_vanadium
+
+        label_loadedDataInfo
+
+        radioButton_vpeakCurrentBank, radioButton_vpeakAllBanks
+
+        pushButton_stripVPeaks
+        pushButton_smoothVPeaks
+        pushButton_resetVPeakProcessing
+
+        checkBox_vpeakShowRaw
+        checkBox_vpeakShowStripped
+        checkBox_vpeakShowSmoothed
+        checkBox_vpeakShowPeakPos
+
+        pushButton_saveResult
+        """
 
         # load files
         self.ui.pushButton_loadCalibFile.clicked.connect(self.do_load_calibration_file)
@@ -194,6 +218,10 @@ class PeakPickerWindow(QMainWindow):
         # self.connect(self.ui.actionExit, QtCore.SIGNAL('triggered()'),
         #              self.menu_exit)
 
+        # Reaction to select different mode
+        self.ui.comboBox_mode.currentIndexChanged.connect(self.event_change_mode)
+
+
         # Set up widgets
         self._phaseWidgetsGroupDict = dict()
         self._init_widgets_setup()
@@ -256,8 +284,7 @@ class PeakPickerWindow(QMainWindow):
         return
 
     def _init_widgets_setup(self):
-        """
-
+        """ Set up initial widget setup
         :return:
         """
         # Hide and disable widgets that are not used
@@ -269,6 +296,9 @@ class PeakPickerWindow(QMainWindow):
         self.ui.pushButton_sortPeaks.hide()
 
         self.ui.tableWidget_peakParameter.setup()
+
+        # Mode
+        GuiUtility.set_combobox_items(self.ui.comboBox_mode, ['Single Peak Selection', 'Vanadium Processing'])
 
         # set up unit cell string list
         unit_cell_str_list = []
@@ -1702,24 +1732,41 @@ class PeakPickerWindow(QMainWindow):
 
         return
 
-    def event_show_hide_v_peaks(self, show_v_peaks):
+    def event_change_mode(self):
         """
-        handling event that show or hide vanadium peaks on the figure
+        Change function mode among: peak picking, vanadium processing and future options
         :return:
         """
-        datatypeutility.check_bool_variable('Flag to indicate show or hide vanadium peaks', show_v_peaks)
+        new_mode_index = self.ui.comboBox_mode.currentIndex()
 
-        # TODO - 20181110 - Implement!
-        if True:
-            GuiUtility.pop_dialog_error(self, 'Not Implemented Yet for Showing Vanadium Peaks')
-            return
+        for tab_index in range(3):
+            self.ui.tabWidget_functionControl.setTabEnabled(tab_index, tab_index == new_mode_index)
 
-        if show_v_peaks:
-            self.ui.graphicsView_mainPlot.add_indicators(vanadium_peaks)
-        else:
-            self.ui.graphicsView_mainPlot.hide_indicators()
+        # plots shall be reset and re-load data
+        self.ui.graphicsView_main.reset()
+
+        self.do_load_data()
 
         return
+
+    # def event_show_hide_v_peaks(self, show_v_peaks):
+    #     """
+    #     handling event that show or hide vanadium peaks on the figure
+    #     :return:
+    #     """
+    #     datatypeutility.check_bool_variable('Flag to indicate show or hide vanadium peaks', show_v_peaks)
+    #
+    #     # TODO - 20181110 - Implement!
+    #     if True:
+    #         GuiUtility.pop_dialog_error(self, 'Not Implemented Yet for Showing Vanadium Peaks')
+    #         return
+    #
+    #     if show_v_peaks:
+    #         self.ui.graphicsView_mainPlot.add_indicators(vanadium_peaks)
+    #     else:
+    #         self.ui.graphicsView_mainPlot.hide_indicators()
+    #
+    #     return
 
     def signal_save_processed_vanadium(self, output_file_name, run_number):
         """

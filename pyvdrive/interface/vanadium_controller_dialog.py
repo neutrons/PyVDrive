@@ -101,7 +101,7 @@ class VanadiumProcessControlDialog(QDialog):
         self.mySmoothVanadiumSignal.connect(self._myParent.signal_smooth_vanadium)
         self.myUndoSmoothVanadium.connect(self._myParent.signal_smooth_vanadium)
         self.myApplyResultSignal.connect(self._myParent.signal_save_processed_vanadium)
-        self.myShowVPeaksSignal.connect(self._myParent.event_show_hide_v_peaks)
+        self.myShowVPeaksSignal.connect(self._myParent._subControllerVanadium.event_show_hide_v_peaks)
 
         return
 

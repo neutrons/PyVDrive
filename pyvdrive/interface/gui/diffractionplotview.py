@@ -19,6 +19,22 @@ __author__ = 'wzz'
 RESOLUTION = 0.005
 
 
+class FunctionMode(object):
+    """ Function mode of the diffraction view
+    """
+    PeakSelectionMode = 0
+    VanadiumProcessingMode = 1
+
+    @staticmethod
+    def is_valid_mode(mode):
+        """
+        Check whether a mode is value
+        :param mode:
+        :return:
+        """
+        return 0 <= mode <= 1
+
+
 class PeakAdditionState(object):
     """ Enumerate for peak adding mode
     """
@@ -54,6 +70,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         # parent
         self._parentWindow = None
+
+        # Mode: default to peak selection
+        self._functionMode = FunctionMode.PeakSelectionMode
 
         # Bragg diffraction pattern
         self._lastPlotID = None  # plot ID for the diffraction pattern plotted last
@@ -1388,8 +1407,10 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         self._myPeakGroupManager.reset()
         self._highlightsPlotIDList = list()
 
-        # FIXME TODO - ASAP - shall not use clear_all_lines.  but cannot find out the cause for the original diffraciton line not be removed
+        # FIXME TODO - ASAP - shall not use clear_all_lines.
+        # FIXME ...  cont.    but cannot find out the cause for the original diffraciton line not be removed
         self.clear_all_lines()
+
         return
 
     def reset_selected_peaks(self):
@@ -1465,5 +1486,16 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                 group_id = self.add_peak_group(peak_center - 2*peak_width, peak_center + 2*peak_width)
                 self.add_peak(peak_center, group_id=group_id)
             # END-IF-ELSE
+
+        return
+
+    def switch_mode(self, target_mode):
+        """
+        switch function mode
+        :param target_mode:
+        :return:
+        """
+        # reset current canvas
+        self.reset()
 
         return

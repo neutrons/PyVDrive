@@ -88,7 +88,7 @@ class VBin(procss_vcommand.VDriveCommand):
     SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BANKS', 'BINW',
                      'RUNV', 'IPARM', 'ONEBANK', 'NOMASK', 'TAG', 'TAGDIR',
                      'BINFOLDER', 'MYTOFMIN', 'MYTOFMAX', 'OUTPUT', 'GROUP', 'VERSION',
-                     'ROI', 'MASK']
+                     'ROI', 'MASK', 'RUNFILE', 'RUNLIST', 'MERGE']
     # NOTE: Here is the list of arguments that will not be supported in March-2019 release
     #       'SKIPXML', 'FOCUS_EW', 'FullProf', 'NoGSAS', 'PlotFlag', 'VDRIVEBIN'
 
@@ -110,7 +110,6 @@ class VBin(procss_vcommand.VDriveCommand):
         'BINFOLDER': 'User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin',
         'OUTPUT': 'User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin',
         'VERSION': 'User specified version of reduction algorithm.  Mantid conventional = 1, PyVDrive simplified = 2',
-        # 'VDRIVEBIN': 'Bin boundaries will be adapted to (IDL) VDRIVE.  By default, it is 1 as True'
     }
 
     def __init__(self, controller, command_args):
@@ -233,6 +232,7 @@ class VBin(procss_vcommand.VDriveCommand):
             reduction_alg_ver = 2
 
         # scan the runs with data archive manager and add the runs to project
+        # TODO - NIGHT - use_chop_data can be from a class instance for MERGE
         if use_chop_data:
             # reducing chopped data
             # set vanadium runs
@@ -282,7 +282,7 @@ class VBin(procss_vcommand.VDriveCommand):
                                                                vanadium=van_run,
                                                                standard_sample_tuple=standard_tuple,
                                                                binning_parameters=binning_parameters,
-                                                               merge_runs=False,
+                                                               merge_runs=False,  # TODO - NIGHT - Enable this by option
                                                                num_banks=bank_group,
                                                                version=reduction_alg_ver,
                                                                roi_list=roi_file_names,
@@ -290,6 +290,7 @@ class VBin(procss_vcommand.VDriveCommand):
                                                                no_cal_mask=no_mask)
         # END-IF-ELSE
 
+        # NIGHT - TODO - NEED a new class instance and method
         # process special tag for vanadium: create intensity file for each detector pixel
         if use_chop_data is False and standard_tuple is not None and standard_tuple[0] == 'Vanadium':
             for run_number in run_number_list:

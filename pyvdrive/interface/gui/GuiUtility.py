@@ -365,6 +365,14 @@ def pop_dialog_information(parent, message):
     return
 
 
+def set_combobox_items(combo_box, items):
+    # TODO - TONIGHT - QA + Doc
+    combo_box.clear()
+    for item in items:
+        combo_box.addItem(item)
+    combo_box.setCurrentIndex(0)
+
+
 def skip_time(vec_times, vec_value, num_sec_skip, time_unit):
     """
     For a time series' times and value, pick up time and value pair by

@@ -189,9 +189,14 @@ class VDriveCommand(QObject):
 
     def parse_run_number(self):
         """
-        parse run numbers from RUNS and RUNE
+        parse run numbers from RUNS and RUNE, or RUNLIST or RUNFILE
         :return:
         """
+        # TODO - NIGHT - Accept 'RUNFILE', 'RUNLIST', RUNS, RUNE
+        # find out whether RUNS, RUNE and etc using this feature
+        #
+
+
         run_numbers_str = 'NO DEFINED'
         try:
             run_numbers_str = self._commandArgsDict['RUNS']

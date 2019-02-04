@@ -173,6 +173,8 @@ class VanadiumProcessingManager(object):
 
         return status, message
 
+    # TODO - TONIGHT - It is broken here!
+    # TODO - ...     - Clean the codes and doc!
     def process_vanadium(self, peak_fwhm=None, peak_pos_tol=0.01, background_type='Quadratic',
                          is_high_background=True, smoother_filter_type='Butterworth',
                          param_n=20, param_order=2, save=True, output_dir=None, write_to_gsas=True):
@@ -228,6 +230,7 @@ class VanadiumProcessingManager(object):
 
         return status, message
 
+    # TODO - TONIGHT - Shall be replaced by vulcan_gsas.save()?
     def save_to_gsas(self, run_number, gsas_file_name):
         """
 
@@ -284,6 +287,8 @@ class VanadiumProcessingManager(object):
             # write to archive's instrument specific calibration directory's instrument specific calibration directory
             base_name = '{0}-s.gda'.format(self._runNumber)
             van_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
+
+            # TODO - TONIGHT - Clean: The below can be organized to a method in file_util
             if os.path.exists(van_dir) is False:
                 return False, 'Vanadium directory {0} does not exist.'.format(van_dir)
             elif os.access(van_dir, os.W_OK) is False:
