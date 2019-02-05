@@ -594,6 +594,7 @@ class SaveVulcanGSS(object):
 # END-DEF-CLASS
 
 
+# TODO - TONIGHT - 3. shall be merged with mantid_helper.load_gsas
 def load_vulcan_gsas(gsas_name, gsas_ws_name):
     """
     Load VULCAN GSAS and create a Ragged workspace

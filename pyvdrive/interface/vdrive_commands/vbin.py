@@ -1,5 +1,5 @@
 import os
-import procss_vcommand
+import process_vcommand
 import pyvdrive.lib.vulcan_util as vulcan_util
 
 # VDRIVEBIN, i.e., VBIN
@@ -9,7 +9,7 @@ import pyvdrive.lib.vulcan_util as vulcan_util
 # cmd.run()
 
 
-class AutoReduce(procss_vcommand.VDriveCommand):
+class AutoReduce(process_vcommand.VDriveCommand):
     """
     Command processor to call auto reduce script
     """
@@ -21,7 +21,7 @@ class AutoReduce(procss_vcommand.VDriveCommand):
         :param controller:
         :param command_args:
         """
-        procss_vcommand.VDriveCommand.__init__(self, controller, command_args)
+        process_vcommand.VDriveCommand.__init__(self, controller, command_args)
 
         self._commandName = 'AUTO/AUTOREDUCE'
 
@@ -82,7 +82,7 @@ class AutoReduce(procss_vcommand.VDriveCommand):
         return help_str
 
 
-class VBin(procss_vcommand.VDriveCommand):
+class VBin(process_vcommand.VDriveCommand):
     """
     """
     SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BANKS', 'BINW',
@@ -115,7 +115,7 @@ class VBin(procss_vcommand.VDriveCommand):
     def __init__(self, controller, command_args):
         """ Initialization
         """
-        procss_vcommand.VDriveCommand.__init__(self, controller, command_args)
+        process_vcommand.VDriveCommand.__init__(self, controller, command_args)
 
         self._commandName = 'VBIN/VDRIVEBIN'
 

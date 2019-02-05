@@ -62,6 +62,9 @@ class PeakPickerWindow(QMainWindow):
         ui_path = os.path.join(os.path.dirname(__file__), "gui/VdrivePeakPicker.ui")
         self.ui = load_ui(ui_path, baseinstance=self)
         self._promote_widgets()
+        # Set up widgets
+        self._phaseWidgetsGroupDict = dict()
+        self._init_widgets_setup()
 
         # child window controller
         self._subControllerVanadium = PeakPickWindowVanadium.PeakPickerWindowChildVanadium(self, self.ui)
@@ -104,7 +107,7 @@ class PeakPickerWindow(QMainWindow):
         # vanadium
         self.ui.pushButton_launchVanProcessDialog.clicked.connect(self.do_launch_vanadium_dialog)
 
-        # TODO - NIGHT - Implement!
+        # TODO - TONIGHT - 1. Implement!
         """
         comboBox_mode: tab_peakSelection, tab_singlePeakFit, tab_vanadium
 
@@ -220,11 +223,6 @@ class PeakPickerWindow(QMainWindow):
 
         # Reaction to select different mode
         self.ui.comboBox_mode.currentIndexChanged.connect(self.event_change_mode)
-
-
-        # Set up widgets
-        self._phaseWidgetsGroupDict = dict()
-        self._init_widgets_setup()
 
         # Define state variables
         self._isDataLoaded = False     # state flag that data is loaded
@@ -1061,7 +1059,8 @@ class PeakPickerWindow(QMainWindow):
         :return:
         """
         # Check requirements
-        assert self._myController is not None, 'Controller cannot be None'
+        if self._myController is None:
+            raise RuntimeError('Controller/VDriveAPI cannot be None. Initialize first')
 
         ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber)
         run_number = GuiUtility.parse_integer(self.ui.lineEdit_runNumber)
@@ -1070,7 +1069,7 @@ class PeakPickerWindow(QMainWindow):
         default_dir = None
         if ipts_number and run_number:
             # both are there: load data directly
-            gsas_file_name = '/SNS/VULCAN/IPTS-{}/shared/binned_data/{}.gda'.format(ipts_number, run_number)
+            gsas_file_name = self._myController.archive_manager.locate_gsas(ipts_number, run_number)
             if not os.path.exists(gsas_file_name):
                 gsas_file_name = None
         # END-IF
@@ -1098,11 +1097,12 @@ class PeakPickerWindow(QMainWindow):
 
         # Load data from GSAS file
         try:
-            data_key = os.path.basename(gsas_file_name).split('_')[0] + 'H'
-            data_key = self._myController.load_diffraction_file(gsas_file_name, 'gsas', data_key, unit='dSpacing')
-            self._dataKeyList.append(data_key)
-            # add to tree
-            # self.ui.treeView_iptsRun.add_child_current_item(data_key)
+            # TODO - TONIGHT - 2. Continue from here! load_binned_data() is broken!
+            data_key = self._myController.project.data_loading_manager.load_binned_data(gsas_file_name, 'gsas',
+                                                                                      prefix=None,
+                                                                                      max_int=100, data_key=None,
+                                                                                      target_unit='dSpacing')
+            # add to tree: self.ui.treeView_iptsRun.add_child_current_item(data_key)
         except RuntimeError as re:
             GuiUtility.pop_dialog_error(self, str(re))
             return

@@ -3,8 +3,8 @@ Implement VDRIVE command VCHOP
 """
 import os
 import time
-from procss_vcommand import VDriveCommand
-from procss_vcommand import convert_string_to
+from process_vcommand import VDriveCommand
+from process_vcommand import convert_string_to
 from pyvdrive.lib import datatypeutility
 try:
     from PyQt5 import QtCore

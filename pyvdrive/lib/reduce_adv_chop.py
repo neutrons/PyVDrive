@@ -50,7 +50,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         :return:
         """
         # get data file names, splitters workspace and output directory from reduction setup object
-        raw_file_name = self._reductionSetup.get_event_file()
+        raw_file_name = self._reductionSetup.locate_event_nexus()
         if split_ws_name is None:
             split_ws_name, info_ws_name = self._reductionSetup.get_splitters(throw_not_set=True)
         elif info_ws_name is None:

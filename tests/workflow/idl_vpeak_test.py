@@ -18,6 +18,12 @@ def test_ned_preX(tester):
     :param tester:
     :return:
     """
+    # create chop
+    test_dir = '/tmp/vpeak/'
+    set_test_dir(test_dir)
+
+    command = "VPEAK,ITPS=22752,RUNV=171966,SHIFT=1, output='{}'".format(test_dir)
+    tester.run_command(command)
 
     return
 

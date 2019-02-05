@@ -465,43 +465,6 @@ class VDriveAPI(object):
 
         return self._myProject.reduction_manager.get_sliced_focused_workspaces(run_number, slice_id)
 
-    # TODO - 20180822 - Find out how this method can be integrated into the ReducedDataView and other UI
-    def get_sliced_gsas_data(self, ipts, run_number, chop_sq):
-
-        # try to get from archive first
-        data_set_dict = None
-        data_found = False
-
-        # search from archive
-        if search_archive:
-            try:
-                data_set_dict = self._myArchiveManager.get_data_archive_chopped_gsas(ipts_number, run_number, chop_seq)
-            except RuntimeError:
-                pass
-            else:
-                data_found = True
-        # END-IF
-
-        # search from user-specified directories
-        if not data_found and search_dirs is not None:
-            try:
-                data_set_dict = self._myArchiveManager.get_data_chopped_gsas(search_dirs, run_number, chop_seq)
-            except RuntimeError:
-                pass
-            else:
-                data_found = True
-        # END-IF
-
-        # check
-        if not data_found:
-            error_message = 'Unable to find chopped and reduced run %d chopped seq %d' % (run_number, chop_seq)
-            ret_obj = error_message
-        else:
-            assert data_set_dict is not None, 'Data set dictionary cannot be None (i.e., data not found)'
-            ret_obj = data_set_dict
-
-        return data_found, ret_obj
-
     def get_reduced_data(self, run_id, target_unit, bank_id=None):
         """ Get reduced data from workspace
         Purpose: Get all data from a reduced run, either from run number or data key
@@ -1088,6 +1051,7 @@ class VDriveAPI(object):
         :param data_key: user given data key
         :return:
         """
+        raise NotImplementedError('Shall be removed!')
         # check
         assert isinstance(is_chopped_data, bool), 'Flag {0} to indicate the run is a chopped data must be a boolean ' \
                                                   'but not a {1}'.format(is_chopped_data, type(is_chopped_data))
@@ -1119,26 +1083,6 @@ class VDriveAPI(object):
 
         return chopped_key_dict, run_number
 
-    # TODO - NIGHT - This method can be removed
-    def load_diffraction_file(self, file_name, file_type, data_key, unit=None):
-        """ Load reduced diffraction file to analysis project
-        Requirements: file name is a valid string, file type must be a string as 'gsas' or 'fullprof'
-        a.k.a. load_gsas_data
-        :param file_name
-        :param file_type:
-        :param data_key:
-        :return:
-        """
-        data_key = self._myProject.data_loading_manager.load_binned_data(file_name, file_type, prefix=None,
-                                                                         max_int=100, data_key=data_key)
-
-        # convert unit
-        if unit:
-            ws_name = self._myProject.get_workspace_name_by_data_key(data_key)
-            mantid_helper.mtd_convert_units(ws_name, unit)
-
-        return data_key
-
     def load_nexus_file(self, ipts_number, run_number, file_name, meta_data_only):
         """
         Load NeXus file to ADS
@@ -1155,7 +1099,7 @@ class VDriveAPI(object):
                 # get IPTS number if it is not given
                 ipts_number = self._myProject.get_ipts_number(run_number)
 
-            file_name = self._myArchiveManager.get_event_file(ipts_number, run_number, check_file_exist=True)
+            file_name = self._myArchiveManager.locate_event_nexus(ipts_number, run_number, check_file_exist=True)
             print ('[DB...BAT] Found {} for IPTS-{} Run {}'.format(file_name, ipts_number, run_number))
         # END-IF
 
@@ -1265,7 +1209,7 @@ class VDriveAPI(object):
         if raw_data_directory is None:
             # raw data is not given, then search the data in archive
             try:
-                raw_file_list = self._myArchiveManager.get_data_chopped_nexus(ipts_number, run_number, chop_child_list)
+                raw_file_list = self._myArchiveManager.locate_chopped_nexus(ipts_number, run_number, chop_child_list)
             except AssertionError as assert_err:
                 raise AssertionError('Error in calling ArchiveManager.get_data_chopped_nexus(): {0}'.format(assert_err))
             except RuntimeError as run_err:
@@ -1545,7 +1489,7 @@ class VDriveAPI(object):
         """
         run_info_dict_list = list()
         for run_number in range(start_run, stop_run+1):
-            event_file_name = self._myArchiveManager.get_event_file(ipts_number, run_number, check_file_exist=False)
+            event_file_name = self._myArchiveManager.locate_event_nexus(ipts_number, run_number, check_file_exist=False)
             if os.path.exists(event_file_name):
                 run_info = dict()
                 run_info['run'] = run_number
@@ -1674,7 +1618,7 @@ class VDriveAPI(object):
 
         return self._mtsLogDict[log_file_name].keys()
 
-    # TODO/TEST/NOWNOW/#71 - New feature on binning_parameters
+    # TODO - NOW - - New feature on binning_parameters
     def load_vanadium_run(self, ipts_number, run_number, use_reduced_file, unit='dSpacing',
                           binning_parameters=None, smoothed=False):
         """
@@ -1704,7 +1648,7 @@ class VDriveAPI(object):
 
         if van_file_name is None:
             # if vanadium gsas file is not found, reduce it
-            nxs_file = self._myArchiveManager.get_event_file(ipts_number, run_number, check_file_exist=True)
+            nxs_file = self._myArchiveManager.locate_event_nexus(ipts_number, run_number, check_file_exist=True)
             self._myProject.add_run(run_number, nxs_file, ipts_number)
             reduced, message = self._myProject.reduce_runs(run_number_list=[run_number],
                                                            output_directory=self._myWorkDir,
@@ -1737,7 +1681,7 @@ class VDriveAPI(object):
 
         return True, van_ws_key
 
-    def process_vanadium_run(self, ipts_number, run_number, use_reduced_file,
+    def process_vanadium_run(self, ipts_number, run_number, reduced_file,
                              one_bank=False, do_shift=False, local_output=None):
         """
         process vanadium runs

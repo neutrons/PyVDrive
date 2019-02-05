@@ -1,6 +1,5 @@
 import os
 from pyvdrive.lib import datatypeutility
-from procss_vcommand import VDriveCommand
 from vbin import VBin
 
 

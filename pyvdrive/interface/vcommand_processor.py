@@ -15,7 +15,7 @@ import vdrive_commands.vbin
 import vdrive_commands.vmerge
 import vdrive_commands.view
 import vdrive_commands.vpeak
-import vdrive_commands.procss_vcommand
+import vdrive_commands.process_vcommand
 import pyvdrive.lib.datatypeutility
 from pyvdrive.lib import datatypeutility
 import time
@@ -218,7 +218,7 @@ class VdriveCommandProcessor(object):
         """
         try:
             processor = vdrive_commands.vbin.AutoReduce(self._myController, arg_dict)
-        except vdrive_commands.procss_vcommand.CommandKeyError as com_err:
+        except vdrive_commands.process_vcommand.CommandKeyError as com_err:
             return False, 'Command argument error: %s.' % str(com_err)
 
         if len(arg_dict) == 0:
@@ -239,7 +239,7 @@ class VdriveCommandProcessor(object):
         # create a new VdriveChop instance
         try:
             processor = vdrive_commands.chop.VdriveChop(self._myController, arg_dict, self._mainWindow)
-        except vdrive_commands.procss_vcommand.CommandKeyError as comm_err:
+        except vdrive_commands.process_vcommand.CommandKeyError as comm_err:
             return False, str(comm_err)
 
         # execute
@@ -267,7 +267,7 @@ class VdriveCommandProcessor(object):
         # create a new Info query instance
         try:
             processor = vdrive_commands.show_info.RunsInfoQuery(self._myController, arg_dict)
-        except vdrive_commands.procss_vcommand.CommandKeyError as comm_err:
+        except vdrive_commands.process_vcommand.CommandKeyError as comm_err:
             return False, str(comm_err)
 
         # call and execute
@@ -284,7 +284,7 @@ class VdriveCommandProcessor(object):
         # create a new VdriveMerge instance
         try:
             processor = vdrive_commands.vmerge.VdriveMerge(self._myController, arg_dict)
-        except vdrive_commands.procss_vcommand.CommandKeyError as comm_err:
+        except vdrive_commands.process_vcommand.CommandKeyError as comm_err:
             return False, str(comm_err)
 
         # execute
@@ -301,7 +301,7 @@ class VdriveCommandProcessor(object):
         # create a new VdriveView instance
         try:
             processor = vdrive_commands.view.VdriveView(self._myController, arg_dict)
-        except vdrive_commands.procss_vcommand.CommandKeyError as comm_err:
+        except vdrive_commands.process_vcommand.CommandKeyError as comm_err:
             return False, str(comm_err)
 
         # execute
@@ -467,7 +467,7 @@ class VdriveCommandProcessor(object):
          """
         try:
             processor = vdrive_commands.vbin.VBin(self._myController, arg_dict)
-        except vdrive_commands.procss_vcommand.CommandKeyError as comm_err:
+        except vdrive_commands.process_vcommand.CommandKeyError as comm_err:
             return False, str(comm_err)
 
         status, message = self._process_command(processor, arg_dict)
@@ -481,9 +481,9 @@ class VdriveCommandProcessor(object):
         :param arg_dict:
         :return:
         """
-        assert isinstance(command_processor, vdrive_commands.procss_vcommand.VDriveCommand), \
+        assert isinstance(command_processor, vdrive_commands.process_vcommand.VDriveCommand), \
             'VDrive IDL-compatible command processor {} must be an instance of ' \
-            'vdrive_commands.procss_vcommand.VDriveCommandbut but not of type {}' \
+            'vdrive_commands.process_vcommand.VDriveCommandbut but not of type {}' \
             ''.format(command_processor, type(command_processor))
 
         pyvdrive.lib.datatypeutility.check_dict('VDrive IDL-compatible command arguments', arg_dict)

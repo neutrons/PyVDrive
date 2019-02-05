@@ -225,7 +225,7 @@ class VDriveCommand(QObject):
                 except (ValueError, TypeError) as convert_err:
                     raise RuntimeError('RUNE {} cannot be converted to integer: {}'
                                        '.'.format(self._commandArgsDict['RUNE'], convert_err))
-                if end_run_number > start_run_number:
+                if end_run_number < start_run_number:
                     raise RuntimeError('RUNE {0} is less than RUNS {1}'.format(end_run_number, start_run_number))
 
             else:

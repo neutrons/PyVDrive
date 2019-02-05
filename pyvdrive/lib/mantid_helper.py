@@ -895,30 +895,6 @@ def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, 
     return vec_times, vec_value
 
 
-def get_data_from_gsas(gsas_file_name, binning_template_ws=None):
-    """
-    Load and get data from a GSAS file
-    :param gsas_file_name:
-    :param binning_template_ws: name of MatrixWorkspace for binning template
-    :return: a dictionary of 3-array-tuples (x, y, e). KEY = workspace index (from 0 ...)
-    """
-    # check input
-    assert isinstance(gsas_file_name, str), 'Input GSAS file name {0} must be an integer but not a {1}.' \
-                                            ''.format(gsas_file_name, type(gsas_file_name))
-
-    # get output workspace name
-    out_ws_name = os.path.basename(gsas_file_name).split('.')[0] + '_gss'
-
-    # load GSAS file
-    load_gsas_file(gss_file_name=gsas_file_name, out_ws_name=out_ws_name,
-                   standard_bin_workspace=binning_template_ws)
-
-    data_set_dict, unit = get_data_from_workspace(out_ws_name, target_unit='dSpacing', point_data=True,
-                                                  start_bank_id=True)
-
-    return data_set_dict
-
-
 def get_data_banks(workspace_name, start_bank_id=1):
     """
     get bank number

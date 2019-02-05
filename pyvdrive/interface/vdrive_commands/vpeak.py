@@ -1,4 +1,5 @@
-from procss_vcommand import VDriveCommand
+from process_vcommand import VDriveCommand
+import os
 
 
 class VanadiumPeak(VDriveCommand):
@@ -55,6 +56,8 @@ class VanadiumPeak(VDriveCommand):
         if 'REDUCEDVANADIUM' in self._commandArgsDict:
             # user-specified vanadium file
             van_file_name = self._commandArgsDict['REDUCEDVANADIUM']
+            if not os.path.exists(van_file_name):
+                return False, 'blabla'
         else:
             # parse IPTS
             try:
@@ -74,8 +77,11 @@ class VanadiumPeak(VDriveCommand):
                                    ''.format(self._commandArgsDict['RUNV'], val_err))
 
             # get the vanadium file
-            van_file_name = self._controller.archive_manager.locate_reduced_data(ipts_nubmer=self._iptsNumber,
-                                                                                 run_number=self._vanRunNumber)
+            # TODO - NIGHT - shall find the fine binned ProcessedNexus first!
+            van_file_name = self._controller.archive_manager.locate_gsas(ipts_number=self._iptsNumber,
+                                                                         run_number=self._vanRunNumber)
+            if van_file_name is None:
+                return False, 'blabla'
         # END-IF-ELSE
 
         if 'ONEBANK' in self._commandArgsDict:
@@ -94,9 +100,13 @@ class VanadiumPeak(VDriveCommand):
         else:
             local_output_dir = None
 
-        # check vanadium run: if not reduced, then
-        if not self._controller.archive_manager.has_reduced_run(self._iptsNumber, self._vanRunNumber):
-            return False, 'IPTS-{} Vanadium Run-{} has not been reduced.'
+        # load GSAS file or ProcessedNeXus file
+        van_ws_key = self._controller.project.data_loading_manager.load_binned_data(van_file_name, 'gsas',
+                                                                                    )
+
+        # Processing vanadium starts
+        self._controller.project.vanadium_processing_manager.init_session(van_ws_key, ipts_number, run_number)
+
 
         # return to pop
         if do_launch_gui:

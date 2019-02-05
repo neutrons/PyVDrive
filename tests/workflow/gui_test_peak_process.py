@@ -20,6 +20,7 @@ class PeakProcessingGUITestEnvironment(object):
         """
         self._main_window = VdriveMainWindow(None)
         self._peak_process_window = self._main_window.do_launch_peak_process_window()
+        self._peak_process_window.set_controller(self._main_window.get_controller())
 
         return
 

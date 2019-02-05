@@ -26,12 +26,12 @@ echo "User option: $1"
 
 if [ "$1" = "1" ] || [ "$1" = "all" ] || [ "$1" = "vbin" ]; then
 	echo "Test VBIN (1)"
-        PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH ./build/scripts-2.7/idl_vbin_test.py
+    PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH ./build/scripts-2.7/idl_vbin_test.py
 fi
 
 if [ "$1" = "2" ] || [ "$1" = "all" ]  ; then
 	echo "Test CHOP (2): Coming soon"
-        PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH build/scripts-2.7/idl_chop_test.py
+    PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH build/scripts-2.7/idl_chop_test.py
 fi
 
 if [ "$1" = "3" ] || [ "$1" = "all" ] ; then
@@ -41,7 +41,7 @@ fi
 
 if [ "$1" = "4" ]; then
 	echo "Test VPEAK"
-        # PYTHONPATH=build/lib:$PYTHONPATH build/scripts-2.7/idl_vpeak_test.py
+    PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH build/scripts-2.7/idl_vpeak_test.py
 fi
 
 if [ "$1" = "5" ]; then

@@ -423,7 +423,7 @@ class LiveDataDriver(QtCore.QThread):
 
         # TODO/ASAP/ - In-Implementation
 
-        gsas_file_name = self._archiveManager.get_data_archive_gsas(ipts_number, run_number)
+        gsas_file_name = self._archiveManager.locate_gsas(ipts_number, run_number)
 
         mantidsimple.LoadGSS(Filename=gsas_file_name, OutputWorkspace=output_ws_name)
 
