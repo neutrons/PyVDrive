@@ -1,7 +1,6 @@
 import os
 from pyvdrive.lib import datatypeutility
 from procss_vcommand import VDriveCommand
-from pyvdrive.lib import file_utilities
 from vbin import VBin
 
 
@@ -108,15 +107,15 @@ class VdriveMerge(VBin):
         #
         # return status, message
 
-    def generate_data_save_dir(self, chop_run):
+    def _generate_chop_run_dir(self, chop_run):
         """
         Generate the directory to save file
         :param chop_run:
         :return:
         """
-        assert isinstance(chop_run, str), 'Parameter chop_run (%s) must be a string but not a %s.' \
-                                          '' % (str(chop_run), chop_run.__class__.__name__)
-        chop_run_dir = '/SNS/VULCAN/IPTS-%d/shared/chopped_data/%s/' % (self._iptsNumber, chop_run)
+        datatypeutility.check_string_variable('CHOP RUN', chop_run)
+        # create the directory in archive
+        chop_run_dir = '/SNS/VULCAN/IPTS-{}/shared/binned_data/{}/'.format(self._iptsNumber, chop_run)
 
         return chop_run_dir
 
@@ -141,54 +140,41 @@ class VdriveMerge(VBin):
 
         return help_str
 
-    def parse_output_directory(self):
-        """
-
+    def process_merge_output_dir(self):
+        """ Process different options for output directory.
+        Options are 'output', 'choprun' and 'binfolder'
         :return:
         """
-        if 'OUTPUT' in self._commandArgsDict and 'CHOPRUN' in self._commandArgsDict:
-            # specify too many
-            raise RuntimeError('It is not permitted to specify both OUTPUT and CHOPRUN')
+        num_outputs = 0
+        output_directory = None
 
-        elif 'OUTPUT' in self._commandArgsDict:
+        if 'OUTPUT' in self._commandArgsDict:
             output_directory = self._commandArgsDict['OUTPUT']
+            num_outputs += 1
 
-        elif 'BNINDIR' in self._commandArgsDict:
-            # TODO - TONIGHT - Fill
-            pass
+        if 'BINFOLDER' in self._commandArgsDict:
+            output_directory = self._commandArgsDict['BINFOLDER']
+            num_outputs += 1
 
-        elif 'CHOPRUN' in self._commandArgsDict:
+        if 'CHOPRUN' in self._commandArgsDict:
             chop_run = str(self._commandArgsDict['CHOPRUN'])
-            # parse run file
-            output_directory = self.generate_data_save_dir(chop_run)
+            output_directory = self._generate_chop_run_dir(chop_run)
+            num_outputs += 1
 
-        else:
-            raise RuntimeError('MERGE command requires input of argument {0}.'
-                               ''.format('RUNFILE and CHOPRUN'))
+        # check output
+        if num_outputs == 0:
+            raise RuntimeError('User must specify one and only one in OUTPUT, BINFOLDER and CHOPRUN.'
+                               'Now there is nothing given.')
+        elif num_outputs > 1:
+            raise RuntimeError('User must specify one and only one in OUTPUT, BINFOLDER and CHOPRUN.'
+                               'Now there are too much: OUTPUT: {}, BINFOLDER: {}, CHOPRUN: {}.'
+                               ''.format('OUTPUT' in self._commandArgsDict,
+                                         'BINFOLDER' in self._commandArgsDict,
+                                         'CHOPRUN' in self._commandArgsDict))
+
+        # check write permission
+        datatypeutility.check_file_name(output_directory, False, True, True, 'MERGE outpout directory')
 
         return output_directory
 
-    # TODO - TONIGHT - Merge to VDriveCommand.parse_runs(): Line 195
-    def parse_run_numbers(self):
-        """
-        parse run numbers from command's input
-        :return:
-        """
-        if 'RUNFILE' in self._commandArgsDict and 'RUNLIST' in self._commandArgsDict:
-            raise RuntimeError('RUNFILE and RUNLIST  cannot be specified simultaneously.')
-        elif 'RUNFILE' not in self._commandArgsDict and 'RUNLIST' not in self._commandArgsDict:
-            raise RuntimeError('Either RUNFILE or RUNLIST must be specified.')
-
-        if 'RUNFILE' in self._commandArgsDict:
-            run_file = self._commandArgsDict['RUNFILE']
-            to_merge_runs = file_utilities.read_merge_run_file(run_file)
-        else:
-            to_merge_runs = file_utilities.convert_to_list(self._commandArgsDict['RUNLIST'], sep='&',
-                                                           element_type=int)
-
-        for run_i in to_merge_runs:
-            if run_i <= 0:
-                raise RuntimeError('User input run {} is not valid'.format(run_i))
-
-        return to_merge_runs
 

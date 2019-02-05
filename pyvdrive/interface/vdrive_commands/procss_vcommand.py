@@ -2,6 +2,8 @@
 import os
 import pyvdrive.lib.VDriveAPI as VdriveAPI
 from pyvdrive.lib import datatypeutility
+from pyvdrive.lib import file_utilities
+from pyvdrive.interface.gui import GuiUtility
 try:
     from PyQt5.QtCore import QObject
 except (ImportError, RuntimeError) as import_err:
@@ -187,30 +189,61 @@ class VDriveCommand(QObject):
 
         return use_default_binning, binning_parameters
 
-    def parse_run_number(self):
+    def parse_run_numbers(self):
         """
         parse run numbers from RUNS and RUNE, or RUNLIST or RUNFILE
         :return:
         """
-        # TODO - NIGHT - Accept 'RUNFILE', 'RUNLIST', RUNS, RUNE
-        # find out whether RUNS, RUNE and etc using this feature
-        #
+        # initialize variables
+        num_setup = 0
+        run_number_list = None
 
+        # RUNFILE
+        if 'RUNFILE' in self._commandArgsDict:
+            run_file = self._commandArgsDict['RUNFILE']
+            run_number_list = file_utilities.read_merge_run_file(run_file)
+            num_setup += 1
 
-        run_numbers_str = 'NO DEFINED'
-        try:
-            run_numbers_str = self._commandArgsDict['RUNS']
-            run_number_list = self.split_run_numbers(run_numbers_str)
-            if len(run_number_list) == 1 and 'RUNE' in self._commandArgsDict:
-                # allow RUNE if RUNS is just 1 value
-                run_end = int(self._commandArgsDict['RUNE'])
-                if run_end < run_number_list[0]:
-                    raise RuntimeError('RUNE {0} is less than RUNS {1}'.format(run_end, run_number_list[0]))
-                run_number_list = range(run_number_list[0], run_end+1)
-        except KeyError:
-            raise RuntimeError('RUNS is not found.')
-        except (ValueError, TypeError):
-            raise RuntimeError('RUNS {0} is not an integer.'.format(run_numbers_str))
+        # RUNLIST
+        if 'RUNLIST' in self._commandArgsDict:
+            run_number_list = file_utilities.convert_to_list(self._commandArgsDict['RUNLIST'], sep='&',
+                                                             element_type=int)
+            num_setup += 1
+
+        # RUNS and RUNE
+        if 'RUNS' in self._commandArgsDict:
+            try:
+                start_run_number = int(self._commandArgsDict['RUNS'])
+            except (ValueError, TypeError) as convert_err:
+                raise RuntimeError('RUNS {} cannot be converted to integer: {}'
+                                   '.'.format(self._commandArgsDict['RUNS'], convert_err))
+
+            if 'RUNE' in self._commandArgsDict:
+                # parse RUNE
+                try:
+                    end_run_number = int(self._commandArgsDict['RUNE'])
+                except (ValueError, TypeError) as convert_err:
+                    raise RuntimeError('RUNE {} cannot be converted to integer: {}'
+                                       '.'.format(self._commandArgsDict['RUNE'], convert_err))
+                if end_run_number > start_run_number:
+                    raise RuntimeError('RUNE {0} is less than RUNS {1}'.format(end_run_number, start_run_number))
+
+            else:
+                # default RUNE
+                end_run_number = start_run_number
+            # END-IF-ELSE
+
+            run_number_list = range(start_run_number, end_run_number + 1)
+            num_setup += 1
+        # END-IF
+
+        # check
+        if num_setup == 0:
+            raise RuntimeError('Use must specify one and only in RUNFILE, RUNLIST and RUNS/RUNE.'
+                               'Now none of them is specified.')
+        elif num_setup > 1:
+            raise RuntimeError('Use must specify one and only in RUNFILE, RUNLIST and RUNS/RUNE.'
+                               'Now {} of them is specified'.format(num_setup))
 
         return run_number_list
 

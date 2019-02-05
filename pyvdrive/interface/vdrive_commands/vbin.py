@@ -42,7 +42,7 @@ class AutoReduce(procss_vcommand.VDriveCommand):
             print '[DB...BAT] IPTS = ', ipts
 
         try:
-            run_number_list = self.parse_run_number()
+            run_number_list = self.parse_run_numbers()
         except RuntimeError as error:
             return False, 'Unable to parse run numbers due to {0}'.format(error)
 
@@ -136,7 +136,7 @@ class VBin(procss_vcommand.VDriveCommand):
 
         # RUNS or CHOPRUN
         try:
-            run_number_list = self.parse_run_number()
+            run_number_list = self.parse_run_numbers()
         except RuntimeError as run_err:
             return False, 'Unable to parse run numbers due to {0}'.format(run_err)
 

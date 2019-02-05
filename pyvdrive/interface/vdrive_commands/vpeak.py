@@ -65,11 +65,17 @@ class VanadiumPeak(VDriveCommand):
             # get run v
             if 'RUNV' not in self._commandArgsDict:
                 return False, 'RUNV must be specified!'
-            # parse the parameters
-            self._vanRunNumber = int(self._commandArgsDict['RUNV'])
-            assert self._vanRunNumber > 0, 'Vanadium run number {0} cannot be non-positive.'.format(self._vanRunNumber)
 
-            # TODO - TONIGHT - Continue VPEAK from here
+            # parse the parameters
+            try:
+                self._vanRunNumber = int(self._commandArgsDict['RUNV'])
+            except ValueError as val_err:
+                raise RuntimeError('Unable to convert RUNV={} to integer due to {}'
+                                   ''.format(self._commandArgsDict['RUNV'], val_err))
+
+            # get the vanadium file
+            van_file_name = self._controller.archive_manager.locate_reduced_data(ipts_nubmer=self._iptsNumber,
+                                                                                 run_number=self._vanRunNumber)
         # END-IF-ELSE
 
         if 'ONEBANK' in self._commandArgsDict:
@@ -95,22 +101,18 @@ class VanadiumPeak(VDriveCommand):
         # return to pop
         if do_launch_gui:
             # launch GUI.  load vanadium data now!
-            status, ret_obj = self._controller.load_vanadium_run(ipts_number=self._iptsNumber,
-                                                                 run_number=self._vanRunNumber,
-                                                                 use_reduced_file=True)
-            if status:
-                self._myVanDataKey = ret_obj
-                return True, 'pop'
+            self._myVanDataKey = self._controller.archive_manager.load_reduced_data(reduced_file=van_file_name)
+            status = True
+            ret_obj = 'pop'
 
-            return status, str(ret_obj)
-
-        # execute vanadium strip command
-        status, ret_obj = self._controller.process_vanadium_run(ipts_number=self._iptsNumber,
-                                                                run_number=self._vanRunNumber,
-                                                                use_reduced_file=True,
-                                                                one_bank=self._mergeToOneBank,
-                                                                do_shift=self._doShift,
-                                                                local_output=local_output_dir)
+        else:
+            # execute vanadium strip command
+            status, ret_obj = self._controller.process_vanadium_run(ipts_number=self._iptsNumber,
+                                                                    run_number=self._vanRunNumber,
+                                                                    reduced_file=van_file_name,
+                                                                    one_bank=self._mergeToOneBank,
+                                                                    do_shift=self._doShift,
+                                                                    local_output=local_output_dir)
 
         return status, ret_obj
 
