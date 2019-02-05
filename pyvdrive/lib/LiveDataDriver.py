@@ -1,8 +1,8 @@
 import os
 import sys
 
-# path will be ... TODO TODO TODO
-sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
+# # path will be ... TODO TODO TODO
+# sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
 
 
 import numpy
@@ -610,6 +610,7 @@ class LiveDataDriver(QtCore.QThread):
         """ main method to start live data
         :return:
         """
+        print ('[DB...BAT] reduction script: {}'.format(self._live_reduction_script))
         # Test for script: whatever has all the log information...
         # and output_1, output_2 will do good still
         mantidsimple.StartLiveData(UpdateEvery=10,

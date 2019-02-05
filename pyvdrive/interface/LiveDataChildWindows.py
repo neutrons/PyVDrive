@@ -1,3 +1,4 @@
+import os
 try:
     import qtconsole.inprocess
     from PyQt5 import QtCore

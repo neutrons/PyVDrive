@@ -975,8 +975,14 @@ class ReductionManager(object):
         self._loaded_masks = dict()  # [mask/roi xml] = mask_ws_name, is_roi
 
         # gsas output
-        self._gsas_writer = save_vulcan_gsas.SaveVulcanGSS(None)
-
+        # TODO - FIXME - TONIGHT - In setup.py: if _vdrive_tof_bin.h5 does not exist in /SNS/...
+        # TODO - cont. - TONIGHT - then, copy this file from /data/ to .pyvdrive/...
+        try:
+            self._gsas_writer = save_vulcan_gsas.SaveVulcanGSS(None)
+        except RuntimeError as run_err:
+            print ('[ERROR] Unable to initialize GSAS writer due to {}'.format(run_err))
+            self._gsas_writer = None
+           
         # vanadium: key = vanadium run number, value = vanadium GSAS file
         self._vanadium_run_dict = dict()
 
