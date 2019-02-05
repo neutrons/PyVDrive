@@ -36,6 +36,8 @@ class LiveDataDriver(QtCore.QThread):
 
     if os.path.exists('/SNS/VULCAN/'):
         LIVE_PROCESS_SCRIPTS = '/SNS/VULCAN/shared/livereduce/vulcan_live_data_v0_9.py'
+    elif os.path.exists('/home/bl-user/.pyvdrive/vulcan_live_data_v0_9.py'):
+        LIVE_PROCESS_SCRIPTS = '/home/bl-user/.pyvdrive/vulcan_live_data_v0_9.py'
     else:
         LIVE_PROCESS_SCRIPTS = '/SNS/users/wzz/VULCAN/shared/livereduce/vulcan_live_data_v0_9.py'
 
