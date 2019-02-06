@@ -1,5 +1,5 @@
 from pyvdrive.lib import datatypeutility
-import gui.GuiUtility
+from gui import GuiUtility
 
 
 class PeakPickerWindowChildVanadium(object):
@@ -32,3 +32,34 @@ class PeakPickerWindowChildVanadium(object):
             self.ui.graphicsView_mainPlot.hide_indicators()
 
         return
+
+    def get_bank_id(self):
+        if self.ui.radioButton_vpeakCurrentBank.isChecked():
+            bank_id = GuiUtility.parse_integer(self.ui.comboBox_bankNumbers.currentText, False)
+        else:
+            bank_id = None   # all banks
+
+        return bank_id
+
+    def reset_processing(self):
+
+        return
+
+    def save_processing_result(self):
+
+        return
+
+    def smooth_vanadium_peaks(self):
+
+        bank_id = self.get_bank_id()
+
+
+
+    def strip_vanadium_peaks(self):
+        """
+
+        :return:
+        """
+
+        bank_id = self.get_bank_id()
+

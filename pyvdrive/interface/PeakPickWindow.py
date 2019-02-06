@@ -106,26 +106,15 @@ class PeakPickerWindow(QMainWindow):
 
         # vanadium
         self.ui.pushButton_launchVanProcessDialog.clicked.connect(self.do_launch_vanadium_dialog)
+        self.ui.pushButton_stripVPeaks.clicked.connect(self.do_strip_vanadium_peaks)
+        self.ui.pushButton_smoothVPeaks.clicked.connect(self.do_smooth_vanadium_spectra)
+        self.ui.pushButton_resetVPeakProcessing.clicked.connect(self.do_reset_vanadium_processing)
+        self.ui.pushButton_saveResult.clicked.connect(self.do_save_vanadium_gsas)
 
-        # TODO - TONIGHT - 1. Implement!
-        """
-        comboBox_mode: tab_peakSelection, tab_singlePeakFit, tab_vanadium
-
-        label_loadedDataInfo
-
-        radioButton_vpeakCurrentBank, radioButton_vpeakAllBanks
-
-        pushButton_stripVPeaks
-        pushButton_smoothVPeaks
-        pushButton_resetVPeakProcessing
-
-        checkBox_vpeakShowRaw
-        checkBox_vpeakShowStripped
-        checkBox_vpeakShowSmoothed
-        checkBox_vpeakShowPeakPos
-
-        pushButton_saveResult
-        """
+        self.ui.checkBox_vpeakShowRaw.toggled.connect(self.event_plot_raw)
+        self.ui.checkBox_vpeakShowStripped.toggled.connect(self.event_show_peaks_striped_van)
+        self.ui.checkBox_vpeakShowSmoothed.toggled.connect(self.event_show_smoothed_van)
+        self.ui.checkBox_vpeakShowPeakPos.toggled.connect(self.event_show_vpeaks)
 
         # load files
         self.ui.pushButton_loadCalibFile.clicked.connect(self.do_load_calibration_file)
@@ -141,70 +130,6 @@ class PeakPickerWindow(QMainWindow):
         # get terminal
         self.ui.actionLaunch_Terminal.triggered.connect(self.menu_launch_terminal)
 
-        # self.connect(self.ui.pushButton_setPhases, QtCore.SIGNAL('clicked()'),
-        #              self.do_set_phases)
-        #
-        # self.connect(self.ui.pushButton_clearPhase, QtCore.SIGNAL('clicked()'),
-        #              self.do_clear_phases)
-        #
-        # self.connect(self.ui.pushButton_cancelPhaseChange, QtCore.SIGNAL('clicked()'),
-        #              self.do_undo_phase_changes)
-        #
-        # # peak processing
-        # self.connect(self.ui.radioButton_pickModeQuick, QtCore.SIGNAL('toggled(bool)'),
-        #              self.evt_switch_peak_pick_mode)
-        # self.connect(self.ui.checkBox_pickPeak, QtCore.SIGNAL('stateChanged(int)'),
-        #              self.evt_switch_peak_pick_mode)
-        #
-        # # self.connect(self.ui.pushButton_addPeaks, QtCore.SIGNAL('clicked()'),
-        # #              self.do_add_picked_peaks)
-        # self.connect(self.ui.pushButton_findPeaks, QtCore.SIGNAL('clicked()'),
-        #              self.do_find_peaks)
-        # self.connect(self.ui.pushButton_groupAutoPickPeaks, QtCore.SIGNAL('clicked()'),
-        #              self.do_group_auto_peaks)
-        # self.connect(self.ui.pushButton_readPeakFile, QtCore.SIGNAL('clicked()'),
-        #              self.do_import_peaks_from_file)
-        #
-        # self.connect(self.ui.pushButton_claimOverlappedPeaks, QtCore.SIGNAL('clicked()'),
-        #              self.do_claim_overlapped_peaks)
-        #
-        # self.connect(self.ui.pushButton_showPeaksInTable, QtCore.SIGNAL('clicked()'),
-        #              self.do_show_peaks)
-        #
-        # self.connect(self.ui.pushButton_hidePeaks, QtCore.SIGNAL('clicked()'),
-        #              self.do_hide_peaks)
-        #
-        # self.connect(self.ui.pushButton_setPeakWidth, QtCore.SIGNAL('clicked()'),
-        #              self.do_set_peaks_width)
-        #
-        # self.connect(self.ui.pushButton_sortPeaks, QtCore.SIGNAL('clicked()'),
-        #              self.do_sort_peaks)
-        #
-        # self.connect(self.ui.checkBox_selectPeaks, QtCore.SIGNAL('stateChanged(int)'),
-        #              self.do_select_all_peaks)
-        #
-        # self.connect(self.ui.pushButton_editTableContents, QtCore.SIGNAL('clicked()'),
-        #              self.do_switch_table_editable)
-        #
-        # self.connect(self.ui.pushButton_deletePeaks, QtCore.SIGNAL('clicked()'),
-        #              self.do_delete_peaks)
-        #
-        # self.connect(self.ui.pushButton_peakPickerMode, QtCore.SIGNAL('clicked()'),
-        #              self.do_set_pick_mode)
-        #
-        # # load files
-        # self.connect(self.ui.pushButton_loadCalibFile, QtCore.SIGNAL('clicked()'),
-        #              self.do_load_calibration_file)
-        # self.connect(self.ui.pushButton_readData, QtCore.SIGNAL('clicked()'),
-        #              self.do_load_data)
-        # self.connect(self.ui.comboBox_bankNumbers, QtCore.SIGNAL('currentIndexChanged(int)'),
-        #              self.evt_switch_bank)
-        # self.connect(self.ui.comboBox_runNumber, QtCore.SIGNAL('currentIndexChanged(int)'),
-        #              self.evt_switch_run)
-        #
-        # # save_to_buffer
-        # self.connect(self.ui.pushButton_save, QtCore.SIGNAL('clicked()'),
-        #              self.do_save_peaks)
         #
         self.ui.tableWidget_peakParameter.itemSelectionChanged.connect(self.evt_table_selection_changed)
         # self.connect(self.ui.tableWidget_peakParameter, QtCore.SIGNAL('itemSelectionChanged()'),
@@ -990,7 +915,8 @@ class PeakPickerWindow(QMainWindow):
         :return:
         """
         # Check requirements
-        assert self._myController is not None
+        if self._myController is None:
+            raise RuntimeError('Controller has not been set up yet.')
 
         # Launch dialog box for calibration file name
         file_filter = 'Calibration (*.cal);;Text (*.txt);;All files (*.*)'
@@ -1097,11 +1023,10 @@ class PeakPickerWindow(QMainWindow):
 
         # Load data from GSAS file
         try:
-            # TODO - TONIGHT - 2. Continue from here! load_binned_data() is broken!
             data_key = self._myController.project.data_loading_manager.load_binned_data(gsas_file_name, 'gsas',
-                                                                                      prefix=None,
-                                                                                      max_int=100, data_key=None,
-                                                                                      target_unit='dSpacing')
+                                                                                        prefix=None,
+                                                                                        max_int=100, data_key=None,
+                                                                                        target_unit='dSpacing')
             # add to tree: self.ui.treeView_iptsRun.add_child_current_item(data_key)
         except RuntimeError as re:
             GuiUtility.pop_dialog_error(self, str(re))
@@ -1109,6 +1034,9 @@ class PeakPickerWindow(QMainWindow):
 
         # plot
         self.load_plot_run(data_key)
+
+        # set label
+        self.ui.label_loadedDataInfo.setText('Loaded {}'.format(gsas_file_name))
 
         return
 
@@ -1749,24 +1677,32 @@ class PeakPickerWindow(QMainWindow):
 
         return
 
-    # def event_show_hide_v_peaks(self, show_v_peaks):
-    #     """
-    #     handling event that show or hide vanadium peaks on the figure
-    #     :return:
-    #     """
-    #     datatypeutility.check_bool_variable('Flag to indicate show or hide vanadium peaks', show_v_peaks)
-    #
-    #     # TODO - 20181110 - Implement!
-    #     if True:
-    #         GuiUtility.pop_dialog_error(self, 'Not Implemented Yet for Showing Vanadium Peaks')
-    #         return
-    #
-    #     if show_v_peaks:
-    #         self.ui.graphicsView_mainPlot.add_indicators(vanadium_peaks)
-    #     else:
-    #         self.ui.graphicsView_mainPlot.hide_indicators()
-    #
-    #     return
+    def do_strip_vanadium_peaks(self):
+        """ Strip vanadium peaks
+        :return:
+        """
+        self._subControllerVanadium.strip_vanadium_peaks()
+
+        return
+
+    def do_smooth_vanadium_spectra(self):
+        """ Smooth vanadium spectra
+        :return:
+        """
+        self._subControllerVanadium.smooth_vanadium_peaks()
+
+    def do_reset_vanadium_processing(self):
+        """ Reset vanadium processing to beginning
+        :return:
+        """
+        self._subControllerVanadium.reset_processing()
+
+    def do_save_vanadium_gsas(self):
+        """
+        save current processed vanadium to GSAS and also saved the configuration
+        :return:
+        """
+        self._subControllerVanadium.save_processing_result()
 
     def signal_save_processed_vanadium(self, output_file_name, run_number):
         """

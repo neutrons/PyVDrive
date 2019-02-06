@@ -107,14 +107,40 @@ def clone_workspace(srs_ws_name, target_ws_name):
     return output_ws
 
 
-def convert_to_point_data(ws_name):
-    """
-
+def convert_to_point_data(ws_name, common_bins=True):
+    """ Convert to point data from histogram
     :param ws_name:
+    :param common_bins: Flag that the input workspace has common bins among spectra
     :return:
     """
-    mantidapi.ConvertToPointData(InputWorkspace=ws_name,
-                                 OutputWorkspace=ws_name)
+    if common_bins:
+        mantidapi.ConvertToPointData(InputWorkspace=ws_name,
+                                     OutputWorkspace=ws_name)
+
+    else:
+        # load GSAS to a ragged workspace
+        temp_out_name = 'temp_{}'.format(random.randint(1, 10000))
+        temp_gss_ws = mantidapi.RenameWorkspace(InputWorkspace=ws_name, OutputWorkspace=temp_out_name)
+
+        # extract, convert to point data workspace for first spectrum
+        mantidapi.ExtractSpectra(temp_out_name, WorkspaceIndexList=[0], OutputWorkspace=ws_name)
+        mantidapi.ConvertToPointData(InputWorkspace=ws_name, OutputWorkspace=ws_name)
+
+        # for the rest of the spectra
+        for iws in range(1, temp_gss_ws.getNumberHistograms()):
+            # extract, convert to point data, conjoin and clean
+            temp_out_name_i = '{}_{}'.format(temp_out_name, iws)
+            mantidapi.ExtractSpectra(temp_out_name, WorkspaceIndexList=[iws], OutputWorkspace=temp_out_name_i)
+            mantidapi.ConvertToPointData(InputWorkspace=temp_out_name_i, OutputWorkspace=temp_out_name_i)
+            mantidapi.ConjoinWorkspaces(InputWorkspace1=ws_name,
+                                        InputWorkspace2=temp_out_name_i)
+            if workspace_does_exist(temp_out_name_i):
+                mantidapi.DeleteWorkspace(temp_out_name_i)
+        # END-FOR
+
+        # clean temp GSAS
+        mantidapi.DeleteWorkspace(temp_out_name)
+    # END-IF
 
     return
 
@@ -1332,22 +1358,26 @@ def is_matrix_workspace(workspace_name):
     return False
 
 
-def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
-    """ Load GSAS file and set instrument information as 2-bank VULCAN and convert units to d-spacing
+def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace, point_data=True):
+    """ Load GSAS file and set instrument information.
+    Output workspace will be set to PointData
+    Optionally:
+    (1) as 2-bank VULCAN and convert units to d-spacing
     Requirements: GSAS file name is a full path; output workspace name is a string;
     Guarantees:
     :param gss_file_name:
     :param out_ws_name:
+    :param point_data: flag to require whether the output workspace shall be a PointData
     :param standard_bin_workspace: binning template workspace. It can be None for not aligning
     :return: output workspace name
     """
     # TEST/ISSUE/NOW - Implement feature with standard_bin_workspace...
     # Check
-    assert isinstance(gss_file_name, str), 'GSAS file name should be string but not %s.' % str(type(gss_file_name))
-    assert isinstance(out_ws_name, str), 'Output workspace name should be a string but not %s.' % str(type(out_ws_name))
-    assert isinstance(standard_bin_workspace, str) or standard_bin_workspace is None, \
-        'Standard binning workspace {0} must be either a string or None but not a {1}.' \
-        ''.format(standard_bin_workspace, type(standard_bin_workspace))
+
+    datatypeutility.check_file_name(gss_file_name, True, False, False, 'GSAS file')
+    datatypeutility.check_string_variable('Output workspace name', out_ws_name)
+    if len(out_ws_name) == 0:
+        raise RuntimeError('Caller-specified output workspace name for GSAS file cannot be empty')
 
     # Load GSAS
     try:
@@ -1355,7 +1385,12 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     except IndexError as index_error:
         raise RuntimeError('GSAS {0} is corrupted. FYI: {1}'.format(gss_file_name, index_error))
     gss_ws = retrieve_workspace(out_ws_name)
-    assert gss_ws is not None, 'Output workspace cannot be found.'
+    if gss_ws is None:
+        raise RuntimeError('Output workspace {} of {} cannot be found in ADS'.format(out_ws_name, gss_file_name))
+
+    # convert to point data
+    if point_data:
+        convert_to_point_data(out_ws_name, common_bins=False)
 
     # set instrument geometry: this is for VULCAN-only
     num_spec = gss_ws.getNumberHistograms()
@@ -1380,10 +1415,23 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
 
     # convert unit and to point data
     if standard_bin_workspace is not None and num_spec == 2:
+        assert isinstance(standard_bin_workspace, str) or standard_bin_workspace is None, \
+            'Standard binning workspace {0} must be either a string or None but not a {1}.' \
+            ''.format(standard_bin_workspace, type(standard_bin_workspace))
         align_bins(out_ws_name, standard_bin_workspace)
         mantidapi.ConvertUnits(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name,
                                Target='dSpacing')
     # END-IF
+
+    """
+    """
+
+
+
+
+    gsas_ws = ADS.retrieve(gsas_ws_name)
+
+    return gsas_ws
 
     return out_ws_name
 
