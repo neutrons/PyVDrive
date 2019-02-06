@@ -107,40 +107,14 @@ def clone_workspace(srs_ws_name, target_ws_name):
     return output_ws
 
 
-def convert_to_point_data(ws_name, common_bins=True):
+def convert_to_point_data(ws_name):
     """ Convert to point data from histogram
     :param ws_name:
     :param common_bins: Flag that the input workspace has common bins among spectra
     :return:
     """
-    if common_bins:
-        mantidapi.ConvertToPointData(InputWorkspace=ws_name,
-                                     OutputWorkspace=ws_name)
-
-    else:
-        # load GSAS to a ragged workspace
-        temp_out_name = 'temp_{}'.format(random.randint(1, 10000))
-        temp_gss_ws = mantidapi.RenameWorkspace(InputWorkspace=ws_name, OutputWorkspace=temp_out_name)
-
-        # extract, convert to point data workspace for first spectrum
-        mantidapi.ExtractSpectra(temp_out_name, WorkspaceIndexList=[0], OutputWorkspace=ws_name)
-        mantidapi.ConvertToPointData(InputWorkspace=ws_name, OutputWorkspace=ws_name)
-
-        # for the rest of the spectra
-        for iws in range(1, temp_gss_ws.getNumberHistograms()):
-            # extract, convert to point data, conjoin and clean
-            temp_out_name_i = '{}_{}'.format(temp_out_name, iws)
-            mantidapi.ExtractSpectra(temp_out_name, WorkspaceIndexList=[iws], OutputWorkspace=temp_out_name_i)
-            mantidapi.ConvertToPointData(InputWorkspace=temp_out_name_i, OutputWorkspace=temp_out_name_i)
-            mantidapi.ConjoinWorkspaces(InputWorkspace1=ws_name,
-                                        InputWorkspace2=temp_out_name_i)
-            if workspace_does_exist(temp_out_name_i):
-                mantidapi.DeleteWorkspace(temp_out_name_i)
-        # END-FOR
-
-        # clean temp GSAS
-        mantidapi.DeleteWorkspace(temp_out_name)
-    # END-IF
+    mantidapi.ConvertToPointData(InputWorkspace=ws_name,
+                                 OutputWorkspace=ws_name)
 
     return
 
@@ -263,6 +237,7 @@ def create_table_splitters(split_ws_name):
     column_definitions.append(('str', 'target'))
 
     return create_table_workspace(split_ws_name, column_definitions)
+
 
 def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
     """
@@ -393,7 +368,7 @@ def delete_workspace(workspace):
 
 def extract_spectrum(input_workspace, output_workspace, workspace_index):
     """
-    exctract a spectrum from a workspace
+    extract a spectrum from a workspace
     :param input_workspace: str
     :param output_workspace: str
     :param workspace_index: str
@@ -403,8 +378,12 @@ def extract_spectrum(input_workspace, output_workspace, workspace_index):
     datatypeutility.check_string_variable('Output workspace name', output_workspace)
 
     source_ws = retrieve_workspace(input_workspace, True)
+    if source_ws.id() == 'WorkspaceGroup':
+        raise
+
     datatypeutility.check_int_variable('Workspace index', workspace_index, (0, source_ws.getNumberHistograms()))
 
+    print ('[DB...BAt 386] Extract {} To {}'.format(input_workspace, output_workspace))
     mantidapi.ExtractSpectra(input_workspace, WorkspaceIndexList=[workspace_index],
                              OutputWorkspace=output_workspace)
 
@@ -934,15 +913,18 @@ def get_data_banks(workspace_name, start_bank_id=1):
     assert workspace_does_exist(workspace_name), 'Workspace %s does not exist.' % workspace_name
 
     workspace = retrieve_workspace(workspace_name)
-    num_hist = workspace.getNumberHistograms()
+    if workspace.id() == 'WorkspaceGroup':
+        num_hist = len(workspace)
+    else:
+        num_hist = workspace.getNumberHistograms()
 
     bank_list = range(start_bank_id, start_bank_id + num_hist)
 
     return bank_list
 
 
-# TODO - 20180822 - Refactor!
-def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, point_data=True, start_bank_id=1):
+def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, point_data=True, start_bank_id=1,
+                            keep_untouched=True):
     """
     Purpose: get data from a workspace
     Requirements: a valid matrix workspace is given.
@@ -953,6 +935,7 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
     :param target_unit: TOF or dSpacing or None (i.e., using current one)
     :param point_data: If point data is true, then the output arrays must have equal sizes of x and y arrays
     :param start_bank_id:
+    :param keep_untouched: Flag for not changing the original workspace
     :return: a 2-tuple:
              (1) a dictionary of 3-array-tuples (x, y, e). KEY = bank ID
              (2) unit of the returned data
@@ -968,21 +951,18 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         raise RuntimeError('Workspace %s does not exist.' % workspace_name)
 
     # check bank ID not being None
-    workspace = ADS.retrieve(workspace_name)
+    workspace = retrieve_workspace(workspace_name)
     if bank_id is not None:
-        assert isinstance(bank_id, int), 'Bank ID {0} must be None or integer but not {1}.' \
-                                         ''.format(bank_id, type(bank_id))
+        # single bank
+        datatypeutility.check_int_variable('Bank ID', bank_id, (1, None))
         required_workspace_index = bank_id - start_bank_id
         if not 0 <= required_workspace_index < workspace.getNumberHistograms():
             raise RuntimeError('Bank ID {0}, aka workspace index {1} is out of spectra of workspace {2}.'
                                ''.format(bank_id, required_workspace_index, workspace_name))
     else:
+        # all banks
         required_workspace_index = None
     # END-IF-ELSE
-
-    # define a temporary workspace name
-    use_temp = False
-    temp_ws_name = workspace_name + '__{0}'.format(random.randint(1, 100000))
 
     # process target unit
     if target_unit is not None:
@@ -994,9 +974,16 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
             target_unit = 'MomentumTransfer'
     # END-IF
 
+    # define a temporary workspace name
+    if keep_untouched:
+        temp_ws_name = workspace_name + '__{0}'.format(random.randint(1, 100000))
+    else:
+        temp_ws_name = workspace_name
+    orig_ws_name = workspace_name
+
     # get unit
     current_unit = get_workspace_unit(workspace_name)
-    if current_unit != target_unit and target_unit is not None:
+    if target_unit is not None and target_unit != current_unit:
         # convert unit if the specified target unit is different
         try:
             mantidapi.ConvertUnits(InputWorkspace=workspace_name, OutputWorkspace=temp_ws_name,
@@ -1005,45 +992,60 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
             raise RuntimeError('Convert units of workspace {} to {} failed due to {}'
                                ''.format(workspace_name, target_unit, run_err))
         current_unit = target_unit
-        use_temp = True
+        workspace_name = temp_ws_name
     # END-IF
 
     # Convert to point data by checking
-    workspace = ADS.retrieve(workspace_name)
-    num_bins_set = set()
-    for iws in range(workspace.getNumberHistograms()):
-        num_bins_set.add(len(workspace.readY(iws)))
-    # END-FOR
-
-    # FIXME/TODO/FUTURE - After Mantid support ConvertToPointData for workspace with various bin sizes...
-    if point_data and workspace.isHistogramData() and len(num_bins_set) == 1:
-        # requiring point data and input is histogram data and number of bins are same for all spectra
-        if use_temp:
-            input_ws_name = temp_ws_name
+    workspace = retrieve_workspace(workspace_name)
+    if workspace.id() == 'WorkspaceGroup':
+        if workspace[0].isHistogramData():
+            mantidapi.ConvertToPointData(InputWorkspace=workspace_name,
+                                         OutputWorkspace=temp_ws_name)
         else:
-            input_ws_name = workspace_name
-            use_temp = True
-        mantidapi.ConvertToPointData(InputWorkspace=input_ws_name,
-                                     OutputWorkspace=temp_ws_name)
-    # END-IF
-
-    # Set up variables
-    data_set_dict = dict()
-    if use_temp:
-        workspace = retrieve_workspace(temp_ws_name)
+            temp_ws_name = workspace_name
+        # END-IF
     else:
-        workspace = retrieve_workspace(workspace_name)
-    
+        num_bins_set = set()
+        for iws in range(get_number_spectra(workspace)):
+            num_bins_set.add(len(workspace.readY(iws)))
+        # END-FOR
+
+        if point_data and workspace.isHistogramData() and len(num_bins_set) == 1:
+            # requiring point data and input is histogram data and number of bins are same for all spectra
+            mantidapi.ConvertToPointData(InputWorkspace=workspace_name,
+                                         OutputWorkspace=temp_ws_name)
+        elif point_data and workspace.isHistogramData() and len(num_bins_set) > 1:
+            raise NotImplementedError('Mantid does not support convert workspace with non-common-bins to point '
+                                      'data.')
+        else:
+            temp_ws_name = workspace_name
+        # END-IF
+    # END-IF
+    # set to workspace: workspace_name
+    workspace_name = temp_ws_name
+
     # Get data: 2 cases as 1 bank or all banks
-    if bank_id is None:
-        # all banks
-        num_spec = workspace.getNumberHistograms()
-        for i_ws in xrange(num_spec):
-            vec_x = workspace.readX(i_ws)
+    workspace = retrieve_workspace(workspace_name)
+    is_group = workspace.id() == 'WorkspaceGroup'
+    num_spec = get_number_spectra(workspace)
+    data_set_dict = dict()
+    for ws_index in range(num_spec):
+        if bank_id is None or ws_index == required_workspace_index:
+            if is_group:
+                curr_ws = workspace[ws_index]
+                vec_x = curr_ws.readX(0)
+                vec_y = curr_ws.readY(0)
+                vec_e = curr_ws.readE(0)
+            else:
+                curr_ws = workspace
+                vec_x = curr_ws.readX(ws_index)
+                vec_y = curr_ws.readY(ws_index)
+                vec_e = curr_ws.readE(ws_index)
+            # END-IF
+
+            # convert to numpy array
             size_x = len(vec_x)
-            vec_y = workspace.readY(i_ws)
             size_y = len(vec_y)
-            vec_e = workspace.readE(i_ws)
 
             data_x = numpy.ndarray((size_x,), 'float')
             data_y = numpy.ndarray((size_y,), 'float')
@@ -1053,31 +1055,30 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
             data_y[:] = vec_y[:]
             data_e[:] = vec_e[:]
 
-            data_set_dict[i_ws + start_bank_id] = (data_x, data_y, data_e)
-        # END-FOR
-    else:
-        # specific bank
-        vec_x = workspace.readX(required_workspace_index)
-        size_x = len(vec_x)
-        vec_y = workspace.readY(required_workspace_index)
-        size_y = len(vec_y)
-        vec_e = workspace.readE(required_workspace_index)
-
-        data_x = numpy.ndarray((size_x,), 'float')
-        data_y = numpy.ndarray((size_y,), 'float')
-        data_e = numpy.ndarray((size_y,), 'float')
-
-        data_x[:] = vec_x[:]
-        data_y[:] = vec_y[:]
-        data_e[:] = vec_e[:]
-
-        data_set_dict[bank_id] = (data_x, data_y, data_e)
+            data_set_dict[ws_index + start_bank_id] = data_x, data_y, data_e
+        # END-IF
+    # END-FOR
 
     # clean the temporary workspace
-    if use_temp:
-        delete_workspace(temp_ws_name)
+    if workspace_name != orig_ws_name:
+        delete_workspace(workspace_name)
     
     return data_set_dict, current_unit
+
+
+def get_number_spectra(workspace):
+    """
+
+    :param workspace:
+    :return:
+    """
+    # TODO - TONIGHT 1 - Better QA
+    if workspace.id() == 'WorkspaceGroup':
+        num_spec = len(workspace)
+    else:
+        num_spec = workspace.getNumberHistograms()
+
+    return num_spec
 
 
 def get_detectors_in_roi(mask_ws_name):
@@ -1229,6 +1230,8 @@ def get_workspace_unit(workspace_name):
     assert ADS.doesExist(workspace_name), 'Workspace {0} cannot be found in ADS.'.format(workspace_name)
 
     workspace = ADS.retrieve(workspace_name)
+    if workspace.id() == 'WorkspaceGroup':
+        workspace = workspace[0]
 
     return workspace.getAxis(0).getUnit().unitID()
 
@@ -1358,8 +1361,35 @@ def is_matrix_workspace(workspace_name):
     return False
 
 
-def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace, point_data=True):
-    """ Load GSAS file and set instrument information.
+def convert_gsas_ws_to_group(ws_name):
+    """
+
+    :param ws_name:
+    :return:
+    """
+    single_ws_name_list = list()
+
+    # for the rest of the spectra
+    orig_ws = retrieve_workspace(ws_name)
+    for iws in range(orig_ws.getNumberHistograms()):
+        # extract, convert to point data, conjoin and clean
+        temp_out_name_i = '{}_B{:04}'.format(ws_name, iws+1)
+        print ('[DB...BAt 1377] Extract {} To {}'.format(ws_name, temp_out_name_i))
+        mantidapi.ExtractSpectra(ws_name, WorkspaceIndexList=[iws], OutputWorkspace=temp_out_name_i)
+        single_ws_name_list.append(temp_out_name_i)
+    # END-IF
+
+    # remove original workspace
+    mantidapi.DeleteWorkspace(ws_name)
+
+    # group
+    mantidapi.GroupWorkspaces(InputWorkspaces=single_ws_name_list, OutputWorkspace=ws_name)
+
+    return retrieve_workspace(ws_name)
+
+
+def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
+    """ Load VULCAN GSAS file and set instrument information.
     Output workspace will be set to PointData
     Optionally:
     (1) as 2-bank VULCAN and convert units to d-spacing
@@ -1388,15 +1418,11 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace, point_dat
     if gss_ws is None:
         raise RuntimeError('Output workspace {} of {} cannot be found in ADS'.format(out_ws_name, gss_file_name))
 
-    # convert to point data
-    if point_data:
-        convert_to_point_data(out_ws_name, common_bins=False)
-
     # set instrument geometry: this is for VULCAN-only
     num_spec = gss_ws.getNumberHistograms()
     if num_spec == 2:
         # before nED, no high angle detector
-        mantid.simpleapi.EditInstrumentGeometry(Workspace=out_ws_name,
+        mantidapi.EditInstrumentGeometry(Workspace=out_ws_name,
                                                 PrimaryFlightPath=43.753999999999998,
                                                 SpectrumIDs='1,2',
                                                 L2='2.00944,2.00944',
@@ -1404,7 +1430,7 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace, point_dat
     elif num_spec == 3:
         # after nED, with high angle detector
         print ('[SpecialDebug] Edit Instrument: {0}'.format(out_ws_name))
-        mantid.simpleapi.EditInstrumentGeometry(Workspace=out_ws_name,
+        mantidapi.EditInstrumentGeometry(Workspace=out_ws_name,
                                                 PrimaryFlightPath=43.753999999999998,
                                                 SpectrumIDs='1,2,3',
                                                 L2='2.0,2.0,2.0',
@@ -1412,6 +1438,16 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace, point_dat
     else:
         raise RuntimeError('It is not implemented for GSAS file having more than 3 spectra ({0} now).'
                            ''.format(num_spec))
+
+    # convert to workspace group
+    convert_gsas_ws_to_group(out_ws_name)
+
+    print ('[DB....BAT...Break Line 1: {}'.format(ADS.getObjectNames()))
+
+    # # convert to point data
+    # if point_data:
+    #     convert_to_point_data(out_ws_name, common_bins=False)
+    #     gss_ws = retrieve_workspace(out_ws_name)
 
     # convert unit and to point data
     if standard_bin_workspace is not None and num_spec == 2:
@@ -1422,16 +1458,6 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace, point_dat
         mantidapi.ConvertUnits(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name,
                                Target='dSpacing')
     # END-IF
-
-    """
-    """
-
-
-
-
-    gsas_ws = ADS.retrieve(gsas_ws_name)
-
-    return gsas_ws
 
     return out_ws_name
 
@@ -1804,7 +1830,10 @@ def mtd_convert_units(ws_name, target_unit):
                                          'but is %s.' % str(type(target_unit))
     
     # Record whether the input workspace is histogram
-    is_histogram = workspace.isHistogramData()
+    if workspace.id() == 'WorkspaceGroup':
+        is_histogram = workspace[0]
+    else:
+        is_histogram = workspace.isHistogramData()
     
     # Correct target unit
     if target_unit.lower() == 'd' or target_unit.lower().count('spac') == 1:

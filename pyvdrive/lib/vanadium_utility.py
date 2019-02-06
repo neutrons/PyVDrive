@@ -85,6 +85,20 @@ class VanadiumProcessingManager(object):
         """
         return self._smoothed_ws_dict
 
+    def init_session2(self, workspace_name):
+
+        workspace = mantid_helper.retrieve_workspace(workspace_name)
+        if workspace.id() == 'WorkspaceGroup':
+            pass
+        else:
+            # create dictionary and etc
+            pass
+
+        self._workspace = workspace
+        self._workspace_name = workspace_name
+
+        return
+
     def init_session(self, workspace_name, bank_group_dict):
         """
         initialize a new session to process vanadium
@@ -406,6 +420,41 @@ class VanadiumProcessingManager(object):
 
         return
 
+    def strip_v_peaks(self, bank_id, peak_fwhm, pos_tolerance, background_type, is_high_background):
+        """
+        strip vanadium peaks
+        Note: result is stored in _striped_peaks_ws_dict
+        :param peak_fwhm:
+        :param pos_tolerance:
+        :param background_type:
+        :param is_high_background:
+        :return:
+        """
+        print (self._workspace)
+        print (self._workspace_name)
+
+        if self._workspace.id() == 'WorkspaceGroup':
+            input_ws_name = self._workspace[bank_id-1].name()
+            bank_list = 0
+        else:
+            input_ws_name = self._workspace_name
+            bank_list = bank_id - 1
+
+        print ('[DB...BAT] Strip Peaks: workspace name: {}'.format(input_ws_name))
+
+        output_ws_name = input_ws_name + '_NoPeak'
+        mantid_helper.strip_vanadium_peaks(input_ws_name=input_ws_name,
+                                               output_ws_name=output_ws_name,
+                                               bank_list=None,
+                                               binning_parameter=None,
+                                               fwhm=peak_fwhm,
+                                               peak_pos_tol=pos_tolerance,
+                                               background_type=background_type,
+                                               is_high_background=is_high_background)
+        self._striped_peaks_ws_dict[bank_id] = output_ws_name
+
+        return
+
     def strip_peaks(self, bank_group_index, peak_fwhm, pos_tolerance, background_type, is_high_background):
         """
         strip vanadium peaks
@@ -417,6 +466,8 @@ class VanadiumProcessingManager(object):
         :param is_high_background:
         :return:
         """
+        print ('[DB...BAT] Strip Peaks: workspace name: {}'.format(input_ws_name))
+
         # check input
         datatypeutility.check_int_variable('Banks group index (90 degree or 150 degree)', bank_group_index, (-180, 180))
 

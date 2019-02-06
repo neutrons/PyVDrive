@@ -3,9 +3,8 @@ import os
 import os.path
 import h5py
 import math
-import random
 from pyvdrive.lib import datatypeutility
-from pyvdrive.lib import mantid_helper
+import mantid_helper
 
 
 PHASE_NED = datetime.datetime(2017, 6, 1)

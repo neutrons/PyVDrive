@@ -14,6 +14,8 @@ class PeakPickerWindowChildVanadium(object):
         self._parent = parent
         self.ui = ui_class
 
+        self._myController = parent._myController
+
     def event_show_hide_v_peaks(self, show_v_peaks):
         """
         handling event that show or hide vanadium peaks on the figure
@@ -35,7 +37,7 @@ class PeakPickerWindowChildVanadium(object):
 
     def get_bank_id(self):
         if self.ui.radioButton_vpeakCurrentBank.isChecked():
-            bank_id = GuiUtility.parse_integer(self.ui.comboBox_bankNumbers.currentText, False)
+            bank_id = GuiUtility.parse_integer(self.ui.comboBox_bankNumbers, False)
         else:
             bank_id = None   # all banks
 
@@ -54,12 +56,25 @@ class PeakPickerWindowChildVanadium(object):
         bank_id = self.get_bank_id()
 
 
-
-    def strip_vanadium_peaks(self):
+    def strip_vanadium_peaks(self, data_key, bank_id):
         """
 
         :return:
         """
-
         bank_id = self.get_bank_id()
+
+        print ('Current: data key/workspace = {}, Bank ID = {}'.format(data_key, bank_id))
+
+        self._myController.project.vanadium_processing_manager.init_session2(workspace_name=data_key)
+
+        peak_fwhm = 4
+        tolerance = 0.1
+        background_type = 'Quadratic'
+        is_high_background = True
+
+        self._myController.project.vanadium_processing_manager.strip_v_peaks(bank_id, peak_fwhm,
+                                                                           tolerance, background_type,
+                                                                           is_high_background)
+
+        return
 

@@ -29,7 +29,7 @@ from pyvdrive.interface.gui.diffractionplotview import DiffractionPlotView
 from pyvdrive.interface.gui.vdrivetablewidgets import PeakParameterTable
 import vanadium_controller_dialog
 import pyvdrive.lib.peak_util as peak_util
-from pyvdrive.lib import  datatypeutility
+from pyvdrive.lib import datatypeutility
 import PeakPickWindowVanadium
 
 
@@ -46,11 +46,17 @@ class PeakPickerWindow(QMainWindow):
     """ Class for general-purposed plot window
     """
     # class
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, controller=None):
         """ Init
         """
         # call base
         QMainWindow.__init__(self)
+
+        assert controller.__class__.__name__.count('VDriveAPI') == 1, \
+            'Controller is not a valid VDriveAPI instance , but not %s.' % controller.__class__.__name__
+
+        self._myController = controller
+        self.set_data_dir(self._myController.get_working_dir())
 
         # parent
         self._myParent = parent
@@ -111,7 +117,7 @@ class PeakPickerWindow(QMainWindow):
         self.ui.pushButton_resetVPeakProcessing.clicked.connect(self.do_reset_vanadium_processing)
         self.ui.pushButton_saveResult.clicked.connect(self.do_save_vanadium_gsas)
 
-        self.ui.checkBox_vpeakShowRaw.toggled.connect(self.event_plot_raw)
+        self.ui.checkBox_vpeakShowRaw.toggled.connect(self.event_show_raw_van)
         self.ui.checkBox_vpeakShowStripped.toggled.connect(self.event_show_peaks_striped_van)
         self.ui.checkBox_vpeakShowSmoothed.toggled.connect(self.event_show_smoothed_van)
         self.ui.checkBox_vpeakShowPeakPos.toggled.connect(self.event_show_vpeaks)
@@ -155,7 +161,6 @@ class PeakPickerWindow(QMainWindow):
         self._currentRunNumber = None  # current run number
         self._currentBankNumber = -1   # current bank number
         self._currentDataSet = dict()  # current data as {bank1: (vecX, vecY, vecE); bank2: (vecX, vecY, vecE) ...}
-        self._myController = None      # Reference to controller class
         # disabled. leave to controller self._dataDirectory = None     # default directory to load data
         self._currGraphDataKey = None   # Data key of the current data plot on canvas
         self._dataKeyList = list()
@@ -1024,7 +1029,7 @@ class PeakPickerWindow(QMainWindow):
         # Load data from GSAS file
         try:
             data_key = self._myController.project.data_loading_manager.load_binned_data(gsas_file_name, 'gsas',
-                                                                                        prefix=None,
+                                                                                        prefix='',
                                                                                         max_int=100, data_key=None,
                                                                                         target_unit='dSpacing')
             # add to tree: self.ui.treeView_iptsRun.add_child_current_item(data_key)
@@ -1063,30 +1068,34 @@ class PeakPickerWindow(QMainWindow):
         # Get reduced run information
         if run_number is None:
             # in case of a loaded data file (gsas, fullprof..)
-            status, bank_id_list = self._myController.get_reduced_run_info(run_number=None, data_key=data_key)
+            status, ret_obj = self._myController.get_reduced_run_info(run_number=None, data_key=data_key)
         else:
             # in case of a previously reduced run
             status, ret_obj = self._myController.get_reduced_run_info(run_number)
-            assert status, str(ret_obj)
+        # END-IF-ELSE
+        if status:
             bank_id_list = ret_obj
+        else:
+            GuiUtility.pop_dialog_error(self, str(ret_obj))
+            return
 
         # Set the mutex flag
         self._isDataLoaded = False
 
         # Update widgets, including run number, bank IDs (bank ID starts from 1)
         self._evtLockComboBankNumber = True
-
         self.ui.comboBox_bankNumbers.clear()
         for i_bank in bank_id_list:
             assert isinstance(i_bank, int), 'Bank index %s should be integer but not %s.' \
                                             '' % (str(i_bank), str(type(i_bank)))
             self.ui.comboBox_bankNumbers.addItem(str(i_bank))
         self.ui.comboBox_bankNumbers.setCurrentIndex(0)
-
         self._evtLockComboBankNumber = False
 
         # self.ui.comboBox_runNumber.clear()
         if run_number is None:
+            # TODO - TONIGHT 4 - Add a list for the content in the combo box ... In fact, load and plot shall be
+            # TODO - ....      - separated!
             self.ui.comboBox_runNumber.addItem(str(data_key))
             title_message = 'File %s Bank %d' % (data_key, 1)
             # self.ui.label_diffractionMessage.setText('File %s Bank %d' % (data_key, 1))
@@ -1110,10 +1119,8 @@ class PeakPickerWindow(QMainWindow):
         self._currentDataSet = data_set_dict
 
         data_bank_1 = self._currentDataSet[1]
-        # FIXME - It might return vec_x, vec_y AND vec_e
         vec_x = data_bank_1[0]
         vec_y = data_bank_1[1]
-        # TODO - NIGHT - Shall resolve the GSAS reading issue here!
         if len(vec_x) == len(vec_y) + 1:
             vec_x = vec_x[:-1]
 
@@ -1383,28 +1390,28 @@ class PeakPickerWindow(QMainWindow):
 
         return
 
-    def set_controller(self, controller):
-        """ Set up workflow controller to this window object
-        Purpose: Set the workflow controller to this window object
-        Requirement: controller must be VDriveAPI or Mock
-        Guarantees: controller is set up. Reduced runs are get from controller and set to
-        :param controller:
-        :return:
-        """
-        assert controller.__class__.__name__.count('VDriveAPI') == 1, \
-            'Controller is not a valid VDriveAPI instance , but not %s.' % controller.__class__.__name__
-
-        self._myController = controller
-        self.set_data_dir(self._myController.get_working_dir())
-
-        # Get reduced data
-        reduced_run_number_list = self._myController.get_loaded_runs(chopped=False)
-        ipts = 1
-
-        # Set
-        # self.ui.treeView_iptsRun.add_ipts_runs(ipts_number=ipts, run_number_list=reduced_run_number_list)
-
-        return
+    # def set_controller(self, controller):
+    #     """ Set up workflow controller to this window object
+    #     Purpose: Set the workflow controller to this window object
+    #     Requirement: controller must be VDriveAPI or Mock
+    #     Guarantees: controller is set up. Reduced runs are get from controller and set to
+    #     :param controller:
+    #     :return:
+    #     """
+    #     assert controller.__class__.__name__.count('VDriveAPI') == 1, \
+    #         'Controller is not a valid VDriveAPI instance , but not %s.' % controller.__class__.__name__
+    #
+    #     self._myController = controller
+    #     self.set_data_dir(self._myController.get_working_dir())
+    #
+    #     # Get reduced data
+    #     reduced_run_number_list = self._myController.get_loaded_runs(chopped=False)
+    #     ipts = 1
+    #
+    #     # Set
+    #     # self.ui.treeView_iptsRun.add_ipts_runs(ipts_number=ipts, run_number_list=reduced_run_number_list)
+    #
+    #     return
 
     def menu_add_peak(self):
         """ Add a peak to table
@@ -1681,7 +1688,13 @@ class PeakPickerWindow(QMainWindow):
         """ Strip vanadium peaks
         :return:
         """
-        self._subControllerVanadium.strip_vanadium_peaks()
+        """
+                # Set up class variables
+        self._currentRunNumber = run_number
+        self._currentBankNumber = 1
+        self._currGraphDataKey = data_key
+        """
+        self._subControllerVanadium.strip_vanadium_peaks(self._currGraphDataKey, self._currentBankNumber)
 
         return
 
@@ -1811,3 +1824,16 @@ class PeakPickerWindow(QMainWindow):
         self._myController.undo_vanadium_smoothing()
 
         return
+
+    def event_show_raw_van(self):
+        return
+
+    def event_show_peaks_striped_van(self):
+        return
+
+    def event_show_smoothed_van(self):
+        return
+
+    def event_show_vpeaks(self):
+        return
+

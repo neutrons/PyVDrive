@@ -226,9 +226,15 @@ def parse_integer(line_edit, allow_blank=True):
     :return: integer or None
     """
     # Check input
-    assert(isinstance(line_edit, QLineEdit))
+    if isinstance(line_edit, QLineEdit):
+        str_value = line_edit.text()
+    elif isinstance(line_edit, QComboBox):
+        str_value = line_edit.currentText()
+    else:
+        raise AssertionError('Widget {} is not supported'.format(line_edit))
 
-    str_value = str(line_edit.text()).strip()
+    # process
+    str_value = str(str_value).strip()
     if len(str_value) == 0:
         if allow_blank:
             return None

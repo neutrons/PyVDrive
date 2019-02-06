@@ -2,17 +2,13 @@
 import time
 from mantid.simpleapi import Load, LoadEventNexus, GenerateEventsFilter, FilterEvents, LoadDiffCal, AlignAndFocusPowder
 from mantid.simpleapi import AlignDetectors, ConvertUnits, RenameWorkspace, ExtractSpectra, CloneWorkspace, Rebin
-from mantid.simpleapi import ConvertToPointData, ConjoinWorkspaces, SaveGSS, Multiply, CreateWorkspace
 from mantid.simpleapi import DiffractionFocussing, CreateEmptyTableWorkspace, CreateWorkspace
 from mantid.simpleapi import EditInstrumentGeometry, GeneratePythonScript
-from mantid.api import AnalysisDataService
 import threading
-import numpy
 import os
 import time
 import file_utilities
 import datatypeutility
-import mantid_reduction
 import mantid_helper
 import reduce_adv_chop
 import vulcan_util
