@@ -450,6 +450,14 @@ class SaveVulcanGSS(object):
 
         return van_ws.name()
 
+    def save_vanadium(self, van_ws_name):
+        """
+        Save a WorkspaceGroup which comes from original GSAS workspace
+        :param van_ws_name:
+        :return:
+        """
+        raise
+
     def save(self, diff_ws_name, run_date_time, gsas_file_name, ipts_number, gsas_param_file_name,
              align_vdrive_bin, van_ws_name, is_chopped_run, write_to_file=True):
         """

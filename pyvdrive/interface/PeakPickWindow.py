@@ -50,13 +50,15 @@ class PeakPickerWindow(QMainWindow):
         """ Init
         """
         # call base
-        QMainWindow.__init__(self)
+        QMainWindow.__init__(self, parent)
 
         assert controller.__class__.__name__.count('VDriveAPI') == 1, \
             'Controller is not a valid VDriveAPI instance , but not %s.' % controller.__class__.__name__
 
         self._myController = controller
         self.set_data_dir(self._myController.get_working_dir())
+
+        self._loaded_runs = list()
 
         # parent
         self._myParent = parent
@@ -1093,16 +1095,20 @@ class PeakPickerWindow(QMainWindow):
         self._evtLockComboBankNumber = False
 
         # self.ui.comboBox_runNumber.clear()
+
         if run_number is None:
-            # TODO - TONIGHT 4 - Add a list for the content in the combo box ... In fact, load and plot shall be
-            # TODO - ....      - separated!
-            self.ui.comboBox_runNumber.addItem(str(data_key))
+            combo_item_name = str(data_key)
             title_message = 'File %s Bank %d' % (data_key, 1)
             # self.ui.label_diffractionMessage.setText('File %s Bank %d' % (data_key, 1))
         else:
-            self.ui.comboBox_runNumber.addItem(str(run_number))
+            combo_item_name = str(run_number)
             title_message = 'Run %d Bank %d' % (run_number, 1)
             # self.ui.label_diffractionMessage.setText('Run %d Bank %d' % (run_number, 1))
+
+        # register this run to the record to avoid adding same item twice
+        if combo_item_name not in self._loaded_runs:
+            self.ui.comboBox_runNumber.addItem(combo_item_name)
+            self._loaded_runs.append(combo_item_name)
 
         # Plot data: load bank 1 as default
         try:

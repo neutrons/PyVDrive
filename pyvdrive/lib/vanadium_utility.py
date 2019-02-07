@@ -4,8 +4,8 @@ import shutil
 import mantid_helper
 import datatypeutility
 from reduce_VULCAN import align_bins
-import mantid_reduction
 import save_vulcan_gsas
+import mantid_reduction
 
 
 class VanadiumProcessingManager(object):
@@ -187,12 +187,12 @@ class VanadiumProcessingManager(object):
 
         return status, message
 
-    # TODO - TONIGHT - It is broken here!
-    # TODO - ...     - Clean the codes and doc!
+    # TODO - TEST - Recently refactored
     def process_vanadium(self, peak_fwhm=None, peak_pos_tol=0.01, background_type='Quadratic',
                          is_high_background=True, smoother_filter_type='Butterworth',
                          param_n=20, param_order=2, save=True, output_dir=None, write_to_gsas=True):
         """ Process vanadium run including strip vanadium peaks and smooth
+        This is a high-level call to do all the work with good setup in one action
         :param peak_fwhm:
         :param peak_pos_tol:
         :param background_type:
@@ -205,26 +205,37 @@ class VanadiumProcessingManager(object):
         :param write_to_gsas:
         :return:
         """
-        import mantid_reduction
-        # strip vanadium peaks
-        if peak_fwhm is None:
-            peak_fwhm = self._default_fwhm
+        if peak_fwhm:
+            datatypeutility.check_int_variable('FWHM (number of bins)', peak_fwhm, (1, 100))
 
-        # strip peaks
-        for bank_group_name in bank_group_dict.keys():
-            self.strip_peaks(bank_group_index=bank_group_name,
-                             peak_fwhm=peak_fwhm, pos_tolerance=peak_pos_tol,
-                             background_type=background_type,
-                             is_high_background=is_high_background)
+        # strip peaks from workspace group
+        van_ws = mantid_helper.retrieve_workspace(self._workspace_name, True)
+        for ws_index in range(mantid_helper.get_number_spectra(van_ws)):
+            # bank ID
+            bank_id_i = ws_index + 1
+            # set default peak FWHM
+            if peak_fwhm is None:
+                peak_fwhm = self._default_fwhm_dict[bank_id_i]
+            self.strip_v_peaks(bank_id=bank_id_i,
+                               peak_fwhm=peak_fwhm,
+                               pos_tolerance=peak_pos_tol,
+                               background_type=background_type,
+                               is_high_background=is_high_background)
+        # END-FOR
 
-        if write_to_gsas:
-            mantid_reduction.VulcanBinningHelper.rebin_workspace()
+        # smooth peak
+        for ws_index in range(mantid_helper.get_number_spectra(van_ws)):
+            # bank ID
+            bank_id_i = ws_index + 1
+            # set default peak FWHM
+            if peak_fwhm is None:
+                peak_fwhm = self._default_fwhm_dict[bank_id_i]
+            self.smooth_v_spectrum(bank_id_i, smoother_filter_type, param_n, param_order)
+        # END-FOR
 
-        # smooth vanadium spectra
-        for bank_group_name in bank_group_dict.keys():
-            self.smooth_spectra(bank_group_index=None, smoother_type=smoother_filter_type,
-                            param_n=param_n, param_order=param_order)
-        assert isinstance(out_ws_2, str), 'Output must be a string'
+        # write to file
+        gsas_writer = save_vulcan_gsas.SaveVulcanGSS()
+        gsas_writer.save(self._workspace_name)
 
         # save
         message = 'Vanadium {0} has peaks removed and is smoothed. '
@@ -336,33 +347,8 @@ class VanadiumProcessingManager(object):
         bank_id_list = mantid_helper.get_workspace_information(workspace_name)
 
         default_bank_number = len(bank_id_list)
-
-        # if to_archive and len(bank_id_list) <= 2:
-        #     # regular
-        #     # base_name = '{0}-s.gda'.format(self._runNumber)
-        #     # van_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
-        #     # archive_file_name = os.path.join(van_dir, base_name)
-        #     # if os.access(van_dir, os.W_OK):
-        #     default_bank_number = 2
-        #
-        #     # mantid_helper.save_vulcan_gsas(workspace_name, out_file_name, ipts_number,
-        #     #                                binning_reference_file='', gss_parm_file='')
-        # elif
-        #     # nED data: 3 banks
-        #     default_bank_number = 3
-        #     #
-        #     #
-        #     # gsas_writer = save_vulcan_gsas.SaveVulcanGSS(use_default_tof_ref=3)
-        #     # gsas_writer =
-        #     #
-        #     #
-        #     #
-        #     # bin_dict = None  # use default
-        #     # save_vulcan_gsas.save_vanadium_gss(self._smoothed_ws_dict, out_file_name, ipts_number, 'Vulcan.prm')
-        # # END-IF-ELSE
-
-        gsas_writer = save_vulcan_gsas.SaveVulcanGSS(use_default_tof_ref=default_bank_number)
-        gsas_writer.save(diff_ws_name=workspace_name, gsas_file_name=out_file_name,
+        gsas_writer = save_vulcan_gsas.SaveVulcanGSS()
+        gsas_writer.save_vanadium(diff_ws_name=workspace_name, gsas_file_name=out_file_name,
                          ipts_number=ipts_number, gsas_param_file_name=None,
                          van_ws_name=None)
 

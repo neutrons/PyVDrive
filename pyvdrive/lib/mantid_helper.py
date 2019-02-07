@@ -379,11 +379,10 @@ def extract_spectrum(input_workspace, output_workspace, workspace_index):
 
     source_ws = retrieve_workspace(input_workspace, True)
     if source_ws.id() == 'WorkspaceGroup':
-        raise
+        raise RuntimeError('Input {} is a WorkspaceGroup, which cannot be extracted'.format(input_workspace))
 
     datatypeutility.check_int_variable('Workspace index', workspace_index, (0, source_ws.getNumberHistograms()))
 
-    print ('[DB...BAt 386] Extract {} To {}'.format(input_workspace, output_workspace))
     mantidapi.ExtractSpectra(input_workspace, WorkspaceIndexList=[workspace_index],
                              OutputWorkspace=output_workspace)
 
@@ -404,11 +403,10 @@ def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_pr
     :return:
     """
     # check input workspace
-    assert ADS.doesExist(diff_data), 'Input workspace {0} does not exist in Mantid AnalysisDataService.' \
-                                     ''.format(diff_data)
+    if not workspace_does_exist(diff_data):
+        raise RuntimeError('Input workspace {0} does not exist in Mantid AnalysisDataService.'.format(diff_data))
     matrix_workspace = ADS.retrieve(diff_data)
-    assert isinstance(ws_index, int) and 0 <= ws_index < matrix_workspace.getNumberHistograms(), \
-        'Workspace index {0} must be an integer in [0, {1}).'.format(ws_index, matrix_workspace.getNumberHistograms())
+    datatypeutility.check_int_variable('Workspace index', ws_index, (0, matrix_workspace.getNumberHistograms()))
 
     #  get workspace define output workspace name
     result_peak_ws_name = '{0}_FoundPeaks'.format(diff_data)
@@ -581,7 +579,15 @@ def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
 
 
 def generate_processing_history(workspace_name, output_python_name):
-    # TODO
+    """
+    Create a python file for the history of workspace
+    :param workspace_name:
+    :param output_python_name:
+    :return:
+    """
+    datatypeutility.check_string_variable('Workspace name', workspace_name)
+    datatypeutility.check_file_name(output_python_name, False, True, False, 'Output Python file')
+
     mantidapi.GeneratePythonScript(InputWorkspace=workspace_name,
                                    Filename=output_python_name,
                                    UnrollAll=True)
@@ -1067,12 +1073,11 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
 
 
 def get_number_spectra(workspace):
-    """
-
+    """ Get number of histograms/spectra from a single-multi-spectra workspace or a WorkspaceGroup containing a
+    set of single spectrum workspaces
     :param workspace:
     :return:
     """
-    # TODO - TONIGHT 1 - Better QA
     if workspace.id() == 'WorkspaceGroup':
         num_spec = len(workspace)
     else:
