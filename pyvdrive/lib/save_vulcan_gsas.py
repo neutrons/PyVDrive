@@ -5,7 +5,7 @@ import h5py
 import math
 from pyvdrive.lib import datatypeutility
 import mantid_helper
-
+from mantid.simpleapi import ConvertToHistogram, ConvertUnits, Rebin, Divide
 
 PHASE_NED = datetime.datetime(2017, 6, 1)
 PHASE_X1 = datetime.datetime(2019, 7, 1)
@@ -361,8 +361,12 @@ class SaveVulcanGSS(object):
         """
         # check vanadium: if not None, assume that number of bins and bin edges are correct
         if van_ws is not None:
-            van_vec_y = van_ws.readY(bank_id - 1)
-            van_vec_e = van_ws.readE(bank_id - 1)
+            if van_ws.id() == 'WorkspaceGroup':
+                van_vec_y = van_ws[bank_id-1].readY(0)
+                van_vec_e = van_ws[bank_id-1].readE(0)
+            else:
+                van_vec_y = van_ws.readY(bank_id - 1)
+                van_vec_e = van_ws.readE(bank_id - 1)
         else:
             van_vec_y = None
             van_vec_e = None
@@ -442,13 +446,13 @@ class SaveVulcanGSS(object):
         base_name = os.path.basename(vanadium_gsas_file).split('.')[0]
         van_gsas_ws_name = 'Van_{}_{}'.format(base_name, hash(vanadium_gsas_file))
         if mantid_helper.workspace_does_exist(van_gsas_ws_name):
-            van_ws = mantid_helper.retrieve_workspace(van_gsas_ws_name)
+            pass
         else:
-            van_ws = mantid_helper.load_gsas_file(vanadium_gsas_file, van_gsas_ws_name, None)
-
+            mantid_helper.load_gsas_file(vanadium_gsas_file, van_gsas_ws_name, None)
+            mantid_helper.convert_to_point_data(van_gsas_ws_name)
         self._van_ws_names[vanadium_gsas_file] = van_gsas_ws_name
 
-        return van_ws.name()
+        return van_gsas_ws_name
 
     def save_vanadium(self, van_ws_name):
         """
@@ -477,13 +481,13 @@ class SaveVulcanGSS(object):
 
         # set the unit to TOF
         if diff_ws.getAxis(0).getUnit() != 'TOF':
-            api.ConvertUnits(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name, Target='TOF',
+            ConvertUnits(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name, Target='TOF',
                              EMode='Elastic')
             diff_ws = mantid_helper.retrieve_workspace(diff_ws_name)
 
         # convert to Histogram Data
         if not diff_ws.isHistogramData():
-            api.ConvertToHistogram(diff_ws_name, diff_ws_name)
+            ConvertToHistogram(diff_ws_name, diff_ws_name)
 
         # get the binning parameters
         if align_vdrive_bin:
@@ -501,7 +505,7 @@ class SaveVulcanGSS(object):
             van_ws = mantid_helper.retrieve_workspace(van_ws_name)
 
             # check number of histograms
-            if van_ws.getNumberHistograms() != diff_ws.getNumberHistograms():
+            if mantid_helper.get_number_spectra(van_ws) != mantid_helper.get_number_spectra(diff_ws):
                 raise RuntimeError('Numbers of histograms between vanadium spectra and output GSAS are different')
         else:
             van_ws = None
@@ -517,7 +521,7 @@ class SaveVulcanGSS(object):
 
             # Rebin to these banks' parameters (output = Histogram)
             if bin_params is not None:
-                api.Rebin(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name,
+                Rebin(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name,
                           Params=bin_params, PreserveEvents=True)
 
             # Create output
@@ -565,7 +569,7 @@ class SaveVulcanGSS(object):
         :param diff_ws_name:
         :return:
         """
-        api.Divide(LHSWorkspace=diff_ws,
+        Divide(LHSWorkspace=diff_ws,
                    RHSWorkspace=van_ws,
                    OutputWorkspace=diff_ws_name)
         diff_ws = mantid_helper.retrieve_workspace(diff_ws_name)
@@ -582,10 +586,14 @@ class SaveVulcanGSS(object):
         :return: Being different (bool), Reason (str)
         """
         iws = bank_id - 1
-        van_vec_x = van_ws.readX(iws)
+        if van_ws.id() == 'WorkspaceGroup':
+            van_vec_x = van_ws[iws].readX(0)
+        else:
+            van_vec_x = van_ws.readX(iws)
         diff_vec_x = diff_tof_vec
         if len(van_vec_x) != len(diff_vec_x):
-            return True, 'Numbers of bins are different of workspace index {}'.format(iws)
+            return True, 'Numbers of bins are different between vanadium workspace {} ws-index {}' \
+                         ' and diffraction pattern: {}  != {}'.format(van_ws, iws, len(van_vec_x), len(diff_tof_vec))
 
         if abs(van_vec_x[0] - diff_vec_x[0]) / (van_vec_x[0]) > 1.E-5:
             # return True, 'X[0] are different for spectrum {}: {} != {}'.format(iws, van_vec_x[0], diff_vec_x[0])

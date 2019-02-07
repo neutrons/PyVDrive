@@ -1079,7 +1079,7 @@ class ReductionManager(object):
         :param mask_list:
         :param no_cal_mask:
         :param gsas_parm_name:
-        :return:
+        :return: 2-tuple (string: regular message, string: error message)
         """
         # Load data
         event_ws_name = self.get_event_workspace_name(run_number=run_number)
@@ -1162,7 +1162,6 @@ class ReductionManager(object):
                 binning_param_dict = None
             else:
                 binning_param_dict = user_binning_parameter
-            print ('[DB...BAT] Binning parameters: {}'.format(binning_param_dict))
 
             # END-IF-ELSE
             # virtual_geometry_dict = self._calibrationFileManager.get_focused_instrument_parameters(num_banks)
@@ -1183,6 +1182,8 @@ class ReductionManager(object):
             tracker.set_reduction_status(status, message, True)
 
             reduced, workspace_name_list = chop_reducer.get_reduced_workspaces(chopped=True)
+            chop_message = 'Output GSAS: 1.gda - {}.gda'.format(len(workspace_name_list))
+
             error_message = self.set_chopped_reduced_workspaces(run_number, slice_key, workspace_name_list, append=True)
             self.set_chopped_reduced_files(run_number, slice_key, chop_reducer.get_reduced_files(), append=True)
 
@@ -1193,7 +1194,7 @@ class ReductionManager(object):
             status, ret_obj = chop_reducer.chop_data()
 
             if not status:
-                return False, 'Unable to chop run {0} due to {1}.'.format(run_number, ret_obj)
+                return False, ('', 'Unable to chop run {0} due to {1}.'.format(run_number, ret_obj))
 
             # get chopped workspaces' names, saved NeXus file name; check them and store to lists
             chopped_ws_name_list = list()
@@ -1204,6 +1205,7 @@ class ReductionManager(object):
                 if isinstance(ws_name, str) and mantid_helper.workspace_does_exist(ws_name):
                     chopped_ws_name_list.append(ws_name)
             # END-FOR
+            chop_message = '{}'.format(chopped_file_list)
 
             # initialize tracker
             tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=slice_key)
@@ -1215,7 +1217,7 @@ class ReductionManager(object):
                 tracker.set_chopped_nexus_files(chopped_file_list, append=True)
         # END-IF
 
-        return True, error_message
+        return True, (chop_message, error_message)
 
     def get_event_workspace_name(self, run_number):
         """

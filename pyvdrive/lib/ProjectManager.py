@@ -410,7 +410,7 @@ class ProjectManager(object):
 
         # chop and (optionally) diffraction focus the binning data
         # TODO - NIGHT - Need to pass no_calibration_mask
-        status, error_message = self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
+        status, chop_message = self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
                                                                        run_number=run_number,
                                                                        raw_file_name=data_file,
                                                                        split_ws_name=split_ws_name,
@@ -430,12 +430,16 @@ class ProjectManager(object):
                                                                        bin_overlap_mode=overlap_mode,
                                                                        gda_file_start=gda_start)
 
+        regular_info, error_message = chop_message
+
         # process outputs
         if status:
             if output_directory is None:
                 output_directory = '/SNS/VULCAN/IPTS-{}/shared/binned_data/{}'.format(ipts_number, run_number)
-            message = 'IPTS-{0} Run {1} is chopped, reduced (?={2}) and saved to {3}\nWarning: {4}' \
-                      ''.format(ipts_number, run_number, reduce_flag, output_directory, error_message)
+            message = 'IPTS-{0} Run {1} is chopped, reduced (?={2}) and saved to {3}\n' \
+                      '\n{4}\nWarning: {5}' \
+                      ''.format(ipts_number, run_number, reduce_flag, output_directory, regular_info,
+                                error_message)
         else:
             message = error_message
         # END-IF-ELSE
