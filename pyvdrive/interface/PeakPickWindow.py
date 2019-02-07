@@ -271,6 +271,9 @@ class PeakPickerWindow(QMainWindow):
         self._peakPickerMode = PeakPickerMode.NoPick
         self.ui.graphicsView_main.set_peak_selection_mode(dv.PeakAdditionState.NonEdit)
 
+        # vanadium
+        self.ui.radioButton_vpeakCurrentBank.setChecked(True)
+
         return
 
     def do_launch_vanadium_dialog(self):
@@ -1752,22 +1755,24 @@ class PeakPickerWindow(QMainWindow):
         :param is_high_background:
         :return:
         """
-        # check inputs
-        datatypeutility.check_int_variable('FWHM', peak_fwhm, (1, None))
+        self._subControllerVanadium.strip_vanadium_peaks(self._currGraphDataKey, self._currentBankNumber,
+                                                         peak_fwhm, tolerance, str(background_type),
+                                                         is_high_background)
 
-        # from signal, the string is of type unicode.
-        background_type = str(background_type)
 
-        # note: as it is from a signal with defined parameters types, there is no need to check
-        #       the validity of parameters
-
-        # strip vanadium peaks
-        self._myController.project.vanadium_processing_manager.strip_peaks(bank_group_index, peak_fwhm,
-                                                                           tolerance, background_type,
-                                                                           is_high_background)
-
-        self.plot_1d_vanadium(run_id=self._vanadiumProcessDialog.get_run_id(),
-                              bank_id=BANK_GROUP_DICT[bank_group_index][0])
+        # # check inputs
+        # datatypeutility.check_int_variable('FWHM', peak_fwhm, (1, None))
+        #
+        # # from signal, the string is of type unicode.
+        # background_type = str(background_type)
+        #
+        # # note: as it is from a signal with defined parameters types, there is no need to check
+        # #       the validity of parameters
+        #
+        # # strip vanadium peaks
+        # self._myController.project.vanadium_processing_manager.strip_peaks(bank_group_index, peak_fwhm,
+        #                                                                    tolerance, background_type,
+        #                                                                    is_high_background)
 
         return
 

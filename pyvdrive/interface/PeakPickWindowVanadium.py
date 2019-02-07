@@ -56,7 +56,8 @@ class PeakPickerWindowChildVanadium(object):
         bank_id = self.get_bank_id()
 
 
-    def strip_vanadium_peaks(self, data_key, bank_id):
+    def strip_vanadium_peaks(self, data_key, bank_id, peak_fwhm=4.,
+                             tolerance=0.1, background_type = 'Quadratic', is_high_background = True):
         """
 
         :return:
@@ -65,16 +66,20 @@ class PeakPickerWindowChildVanadium(object):
 
         print ('Current: data key/workspace = {}, Bank ID = {}'.format(data_key, bank_id))
 
-        self._myController.project.vanadium_processing_manager.init_session2(workspace_name=data_key)
+        self._myController.project.vanadium_processing_manager.init_session(workspace_name=data_key)
 
-        peak_fwhm = 4
-        tolerance = 0.1
-        background_type = 'Quadratic'
-        is_high_background = True
+        # peak_fwhm = 4
+        # tolerance = 0.1
+        # background_type = 'Quadratic'
+        # is_high_background = True
 
         self._myController.project.vanadium_processing_manager.strip_v_peaks(bank_id, peak_fwhm,
                                                                            tolerance, background_type,
                                                                            is_high_background)
+
+        if False:
+            self.plot_1d_vanadium(run_id=self._vanadiumProcessDialog.get_run_id(),
+                                  bank_id=BANK_GROUP_DICT[bank_group_index][0])
 
         return
 

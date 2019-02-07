@@ -68,7 +68,7 @@ class VanadiumProcessControlDialog(QDialog):
         self.ui.pushButton_setPeakStripParamToDefaults.clicked.connect(self.do_restore_peak_strip_parameters)
         self.ui.pushButton_savePeakStripParamAsDefaults.clicked.connect(self.do_save_peak_strip_parameters)
 
-        self.ui.pushButton_showVPeaks.clicked.connect(self.do_show_vanadium_peaks)
+        # self.ui.pushButton_showVPeaks.clicked.connect(self.do_show_vanadium_peaks)
         self.ui.pushButton_nDecrease.clicked.connect(self.do_decrease_smooth_n)
         self.ui.pushButton_nIncrease.clicked.connect(self.do_increase_smooth_n)
         self.ui.pushButton_orderDecrease.clicked.connect(self.do_decrease_smooth_order)
@@ -570,12 +570,15 @@ def load_setting_integer(qsettings, param_name, default_value):
     assert isinstance(qsettings, QtCore.QSettings), 'Input settings must be a QSetting instance but not {0}.' \
                                                     ''.format(type(qsettings))
 
-    value_str = qsettings.value(param_name, default_value)
+    int_value = qsettings.value(param_name, default_value).toInt()
 
-    try:
-        int_value = int(str(value_str))
-    except TypeError:
-        raise RuntimeError('QSetting cannot cast {0} with value {1} to integer.'.format(param_name, value_str))
+    print ('DB...BAT] From QVariant: {}'.format(int_value))
+
+    # try:
+    #     int_value = int(str(value_str))
+    # except (TypeError, ValueError):
+    #     print ('[ERROR] QSetting cannot cast {0} with value {1} to integer.'.format(param_name, value_str))
+    #     int_value = default_value
 
     return int_value
 
@@ -592,12 +595,12 @@ def load_setting_float(qsettings, param_name, default_value):
     assert isinstance(qsettings, QtCore.QSettings), 'Input settings must be a QSetting instance but not {0}.' \
                                                     ''.format(type(qsettings))
 
-    value_str = qsettings.value(param_name, default_value)
+    float_value = qsettings.value(param_name, default_value).toFloat()
 
-    try:
-        float_value = float(str(value_str))
-    except TypeError:
-        raise RuntimeError('QSetting cannot cast {0} with value {1} to a float.'.format(param_name, value_str))
+    # try:
+    #     float_value = float(str(value_str))
+    # except (TypeError, ValueError):
+    #     raise RuntimeError('QSetting cannot cast {0} with value {1} to a float.'.format(param_name, value_str))
 
     return float_value
 

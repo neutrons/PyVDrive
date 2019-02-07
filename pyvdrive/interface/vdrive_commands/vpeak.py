@@ -102,10 +102,12 @@ class VanadiumPeak(VDriveCommand):
 
         # load GSAS file or ProcessedNeXus file
         van_ws_key = self._controller.project.data_loading_manager.load_binned_data(van_file_name, 'gsas',
-                                                                                    )
+                                                                                    max_int=10, prefix='van',
+                                                                                    data_key=None,
+                                                                                    target_unit='dSpacing')
 
         # Processing vanadium starts
-        self._controller.project.vanadium_processing_manager.init_session(van_ws_key, ipts_number, run_number)
+        self._controller.project.vanadium_processing_manager.init_session(van_ws_key)  #, ipts_number, run_number)
 
 
         # return to pop

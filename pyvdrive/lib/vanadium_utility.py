@@ -35,6 +35,7 @@ class VanadiumProcessingManager(object):
         self._smoothed_ws_dict = dict()  # [bank id (1, 2, 3)] = ws names
 
         self._default_fwhm = 7
+        self._default_fwhm_dict = {1: 7, 2:7, 3:7}
 
         # final output binning
         self._calibration_manager = calibration_manager
@@ -85,21 +86,22 @@ class VanadiumProcessingManager(object):
         """
         return self._smoothed_ws_dict
 
-    def init_session2(self, workspace_name):
+    def init_session(self, workspace_name):
 
         workspace = mantid_helper.retrieve_workspace(workspace_name)
         if workspace.id() == 'WorkspaceGroup':
             pass
         else:
             # create dictionary and etc
-            pass
+            raise NotImplementedError('Need to implement single workspace case to extract spectra')
 
         self._workspace = workspace
+        self._source_workspace_name = workspace_name
         self._workspace_name = workspace_name
 
         return
 
-    def init_session(self, workspace_name, bank_group_dict):
+    def init_session_old(self, workspace_name, bank_group_dict):
         """
         initialize a new session to process vanadium
         :param workspace_name:
@@ -233,6 +235,8 @@ class VanadiumProcessingManager(object):
             self.smooth_v_spectrum(bank_id_i, smoother_filter_type, param_n, param_order)
         # END-FOR
 
+        return True, 'Debug Stop'
+
         # write to file
         gsas_writer = save_vulcan_gsas.SaveVulcanGSS()
         gsas_writer.save(self._workspace_name)
@@ -353,6 +357,28 @@ class VanadiumProcessingManager(object):
                          van_ws_name=None)
 
         return return_status, error_msg
+
+    def smooth_v_spectrum(self, bank_id, smoother_filter_type, param_n, param_order):
+
+        ws_index = bank_id - 1
+
+        input_ws_name = self._workspace[ws_index].name()
+
+        # output workspace name
+        out_ws_name = input_ws_name + '_Smoothed'
+
+        # smooth vanadium spectra
+        mantid_helper.smooth_vanadium(input_workspace=input_ws_name,
+                                      output_workspace=out_ws_name,
+                                      smooth_filter=smoother_filter_type,
+                                      workspace_index=None,
+                                      param_n=param_n,
+                                      param_order=param_order,
+                                      push_to_positive=True)
+
+        self._smoothed_ws_dict[bank_id] = out_ws_name
+
+        return
 
     def smooth_spectra(self, bank_group_index, smoother_type, param_n, param_order, smooth_original=False):
         """ Smooth focused diffraction spectra
