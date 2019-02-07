@@ -113,8 +113,8 @@ class LauncherManager(QDialog):
         :return:
         """
 
-        self._myPeakPickerWindow = PeakPickWindow.PeakPickerWindow(self._mainReducerWindow)
-        self._myPeakPickerWindow.set_controller(self._mainReducerWindow.get_controller())
+        self._myPeakPickerWindow = PeakPickWindow.PeakPickerWindow(self._mainReducerWindow, self._mainReducerWindow.get_controller())
+        # self._myPeakPickerWindow.set_controller(self._mainReducerWindow.get_controller())
         self._myPeakPickerWindow.show()
 
         if not self.ui.checkBox_keepOpen.isChecked():
