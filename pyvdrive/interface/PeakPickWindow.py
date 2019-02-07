@@ -1726,6 +1726,9 @@ class PeakPickerWindow(QMainWindow):
         """
         self._subControllerVanadium.save_processing_result()
 
+
+    # TODO - TONIGHT 3 - Complete rewrite the signal handling methods including plotting data!
+
     def signal_save_processed_vanadium(self, output_file_name, run_number):
         """
         save GSAS file from GUI
@@ -1836,6 +1839,7 @@ class PeakPickerWindow(QMainWindow):
 
         return
 
+    # TODO - TONIGHT 4 - Implement these methods!
     def event_show_raw_van(self):
         return
 
