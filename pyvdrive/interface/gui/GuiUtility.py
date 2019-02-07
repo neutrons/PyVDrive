@@ -6,7 +6,8 @@ try:
     import qtconsole.inprocess
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QLineEdit, QMessageBox, QTableWidgetItem, QCheckBox, QWidget, QHBoxLayout, QFileDialog
-    from PyQt5.QtGui import QStandardItemModel, QStandardItem, QComboBox
+    from PyQt5.QtWidgets import QComboBox
+    from PyQt5.QtGui import QStandardItemModel, QStandardItem
 except ImportError:
     from PyQt4 import QtCore
     from PyQt4.QtGui import QStandardItemModel, QStandardItem, QLineEdit, QMessageBox, QFileDialog
