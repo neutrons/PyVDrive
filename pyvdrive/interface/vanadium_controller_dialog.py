@@ -570,7 +570,9 @@ def load_setting_integer(qsettings, param_name, default_value):
     assert isinstance(qsettings, QtCore.QSettings), 'Input settings must be a QSetting instance but not {0}.' \
                                                     ''.format(type(qsettings))
 
-    int_value = qsettings.value(param_name, default_value).toInt()
+    # TODO FIXME - TONIGHT 1 - qsettings.value can be (1) QVariant or (2) Unicode
+    # int_value = qsettings.value(param_name, default_value).toInt()
+    int_value = default_value
 
     print ('DB...BAT] From QVariant: {}'.format(int_value))
 
@@ -595,7 +597,9 @@ def load_setting_float(qsettings, param_name, default_value):
     assert isinstance(qsettings, QtCore.QSettings), 'Input settings must be a QSetting instance but not {0}.' \
                                                     ''.format(type(qsettings))
 
-    float_value = qsettings.value(param_name, default_value).toFloat()
+    # TODO FIXME - TONIGHT 2 - qsettings.value can be (1) QVariant or (2) Unicode
+    # float_value = qsettings.value(param_name, default_value).toFloat()
+    float_value = default_value
 
     # try:
     #     float_value = float(str(value_str))
