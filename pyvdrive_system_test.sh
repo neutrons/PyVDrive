@@ -30,8 +30,8 @@ if [ "$1" = "1" ] || [ "$1" = "all" ] || [ "$1" = "vbin" ]; then
 fi
 
 if [ "$1" = "2" ] || [ "$1" = "all" ]  ; then
-	echo "Test CHOP (2): Coming soon"
-    PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH build/scripts-2.7/idl_chop_test.py
+        echo "Test CHOP (2)"
+        PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH build/scripts-2.7/idl_chop_test.py
 fi
 
 if [ "$1" = "3" ] || [ "$1" = "all" ] ; then
@@ -40,13 +40,13 @@ if [ "$1" = "3" ] || [ "$1" = "all" ] ; then
 fi
 
 if [ "$1" = "4" ]; then
-	echo "Test VPEAK"
-    PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH build/scripts-2.7/idl_vpeak_test.py
+        echo "Test VPEAK"
+        PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH build/scripts-2.7/idl_vpeak_test.py
 fi
 
 if [ "$1" = "5" ]; then
-	echo "Test MERGE"
-        # PYTHONPATH=build/lib:$PYTHONPATH build/scripts-2.7/idl_merge_test.py
+	echo "Test MERGE (3)"
+        PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH build/scripts-2.7/idl_merge_test.py
 fi
 
 if [ "$1" = "6" ]; then

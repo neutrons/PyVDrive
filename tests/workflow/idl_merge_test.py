@@ -15,7 +15,7 @@ def create_run_file(file_name):
     :param file_name:
     :return:
     """
-    file_str = '12345, 12356\n13456\t12343\n12345'
+    file_str = '171834,171836\n171837,171838\n171840,171839'
 
     run_file = open(file_name, 'w')
     run_file.write(file_str)
@@ -51,13 +51,13 @@ def test_ned_simple(tester):
     :return:
     """
     # test directory
-    test_dir = '/tmp/merge/simple'
+    test_dir = '/tmp/merge_simple'
     command_test_setup.set_test_dir(test_dir)
 
     run_file_name = os.path.join(test_dir, 'pyvdrive_merge_test.txt')
 
     # run command
-    idl_command = "MERGE,IPTS=21356,RUNFILE='{}',output=\'{}\'".format(run_file_name, test_dir)
+    idl_command = "MERGE,IPTS=22752,RUNFILE='{}',output=\'{}\'".format(run_file_name, test_dir)
     tester.run_command(idl_command)
 
     # output summary
@@ -73,3 +73,27 @@ def test_main():
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
     test_ned_simple(command_tester)
+
+
+def main(argv): 
+    """ 
+    """ 
+    if QApplication.instance(): 
+        _app = QApplication.instance() 
+    else: 
+        _app = QApplication(sys.argv) 
+    return _app 
+ 
+ 
+if __name__ == '__main__': 
+    # Main application 
+    print ('Test PyVDrive-Commands') 
+    app = main(sys.argv) 
+ 
+    # this must be here! 
+    test_window = test_main() 
+    test_window.show() 
+    # I cannot close it!  test_window.close() 
+ 
+    app.exec_() 
+ 
