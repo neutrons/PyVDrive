@@ -569,8 +569,7 @@ class DataArchiveManager(object):
         """
         # check
         assert isinstance(ipts_number, int), 'IPTS number must be an integer.'
-        assert isinstance(run_number_list, list), 'Run number list cannot be of type {0}' \
-                                                  ''.format(type(run_number_list))
+        datatypeutility.check_list('Run numbers', run_number_list)
         assert len(run_number_list) > 0, 'Run number list cannot be empty.'
 
         # form IPTS

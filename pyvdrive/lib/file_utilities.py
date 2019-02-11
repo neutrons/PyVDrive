@@ -128,33 +128,45 @@ def read_merge_run_file(run_file_name):
     run_file.close()
 
     # parse run-merge file
-    merge_run_dict = dict()
+    # merge_run_dict = dict()
+
+    run_number_list = list()
     for line in lines:
         line = line.strip()
 
         # skip if empty line or command line
         if len(line) == 0:
-            return
+            continue
         elif line[0] == '#':
-            return
+            continue
 
-        # set up
+        # set up: replace any supported separator (',', '&', ..) by space
+        line = line.replace(',', ' ').replace('&', ' ')
         run_str_list = line.split()
 
-        target_run_number = None
-        for index, run_str in enumerate(run_str_list):
-            run_number = int(run_str)
-            if index == 0:
-                # create a new item (i.e., node) in the return dictionary
-                target_run_number = run_number
-                merge_run_dict[target_run_number] = list()
+        for run_str in run_str_list:
+            try:
+                run_number = int(run_str)
+            except ValueError as val_err:
+                raise RuntimeError('{} cannot be converted to integer as run number: {}'.format(run_str, val_err))
+            run_number_list.append(run_number)
 
-            assert target_run_number is not None
-            merge_run_dict[target_run_number].append(run_number)
-        # END-FOR (term)
+        # TODO - FIXME - FUTURE-AFTER-RELEAE - I don't know why parse with this format
+        # target_run_number = None
+        # for index, run_str in enumerate(run_str_list):
+        #
+        #     run_number = int(run_str)
+        #     if index == 0:
+        #         # create a new item (i.e., node) in the return dictionary
+        #         target_run_number = run_number
+        #         merge_run_dict[target_run_number] = list()
+        #
+        #     assert target_run_number is not None
+        #     merge_run_dict[target_run_number].append(run_number)
+        # # END-FOR (term)
     # END-FOR (line)
 
-    return merge_run_dict
+    return run_number_list  # merge_run_dict
 
 
 def save_workspace(ws_name, file_name, file_type='nxs', title=''):

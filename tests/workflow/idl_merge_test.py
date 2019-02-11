@@ -54,7 +54,9 @@ def test_ned_simple(tester):
     test_dir = '/tmp/merge_simple'
     command_test_setup.set_test_dir(test_dir)
 
+    # create run number file
     run_file_name = os.path.join(test_dir, 'pyvdrive_merge_test.txt')
+    create_run_file(run_file_name)
 
     # run command
     idl_command = "MERGE,IPTS=22752,RUNFILE='{}',output=\'{}\'".format(run_file_name, test_dir)
@@ -73,6 +75,8 @@ def test_main():
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
     test_ned_simple(command_tester)
+
+    return command_tester.main_window
 
 
 def main(argv): 

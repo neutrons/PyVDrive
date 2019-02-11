@@ -27,7 +27,7 @@ class VdriveMerge(VBin):
         """ Execute input command
         """
         self.set_merge_flag(True)
-        return self.exec_cmd()
+        return VBin.exec_cmd(self)
 
         # # check and set IPTS
         # try:

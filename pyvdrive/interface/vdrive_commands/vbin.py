@@ -121,6 +121,9 @@ class VBin(process_vcommand.VDriveCommand):
 
         self.check_command_arguments(self.SupportedArgs)
 
+        # flag to merge
+        self._merge_flag = False
+
         return
 
     def exec_cmd(self):
@@ -282,7 +285,7 @@ class VBin(process_vcommand.VDriveCommand):
                                                                vanadium=van_run,
                                                                standard_sample_tuple=standard_tuple,
                                                                binning_parameters=binning_parameters,
-                                                               merge_runs=False,  # TODO - NIGHT - Enable this by option
+                                                               merge_runs=self._merge_flag,
                                                                num_banks=bank_group,
                                                                version=reduction_alg_ver,
                                                                roi_list=roi_file_names,
@@ -358,4 +361,8 @@ class VBin(process_vcommand.VDriveCommand):
         help_str += '> VBIN,IPTS=19577, RUNS=152782, RUNE=153144, BANKS=7\n'
 
         return help_str
+
+    # TODO - TONIGHT - Code quality
+    def set_merge_flag(self, flag):
+        self._merge_flag = flag
 

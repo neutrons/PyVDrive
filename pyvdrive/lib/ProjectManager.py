@@ -1299,7 +1299,7 @@ class ProjectManager(object):
         :param number_banks: number of banks to focus to
         :param gsas: flag to reduce to GSAS file
         :param vanadium_run: van run (integer or None)
-        :param merge_runs:
+        :param merge_runs: Flag to merge runs and
         :param roi_list:
         :param mask_list:
         :return: 2-tuple: list (run number), list (error message for each run reduced)
@@ -1352,37 +1352,55 @@ class ProjectManager(object):
                                                                              no_cal_mask=no_cal_mask)
 
                 reduced_run_numbers.append((run_number, out_ws_name))
-                # save to GSAS
-                if gsas:
-                    run_date_time = vulcan_util.get_run_date(out_ws_name, raw_file_name)
-                    gsas_file_name = os.path.join(output_directory, '{}.gda'.format(run_number))
-                    if binning_parameters is None:
-                        align_vdrive_bin = True
-                    else:
-                        align_vdrive_bin = False
-
-                    if vanadium_run is not None:
-                        van_gsas_name, iparam_file_name = \
-                            self._parent.archive_manager.locate_process_vanadium(vanadium_run)
-                        van_ws_name = self._reductionManager.gsas_writer.import_vanadium(van_gsas_name)
-                    else:
-                        van_ws_name = None
-                        iparam_file_name = 'vulcan.prm'
-
-                    self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
-                                                            gsas_file_name=gsas_file_name, ipts_number=ipts_number,
-                                                            align_vdrive_bin=align_vdrive_bin,
-                                                            gsas_param_file_name=iparam_file_name,
-                                                            van_ws_name=van_ws_name,
-                                                            is_chopped_run=False,
-                                                            write_to_file=True)
             except RuntimeError as run_error:
                 error_messages.append('Failed to reduce run {0} due to {1}'.format(run_number, run_error))
             else:
                 error_messages.append('[INFO] For {}: {}'.format(run_number, msg))
-            # manage
-
         # END-FOR
+
+        # process reduced data
+        if gsas and vanadium_run is not None:
+            # load vanadium to workspace workspace and get calculation prm file
+            van_gsas_name, iparam_file_name = \
+                        self._parent.archive_manager.locate_process_vanadium(vanadium_run)
+            van_ws_name = self._reductionManager.gsas_writer.import_vanadium(van_gsas_name)
+        else:
+            # default
+            van_ws_name = None
+            iparam_file_name = 'vulcan.prm'
+
+        if gsas and not merge_runs:
+            # save to GSAS without merging
+            for run_number, out_ws_name in reduced_run_numbers:
+                # get IPTS and raw file name
+                raw_file_name, ipts_number = self._dataFileDict[run_number]
+                run_date_time = vulcan_util.get_run_date(out_ws_name, raw_file_name)
+                gsas_file_name = os.path.join(output_directory, '{}.gda'.format(run_number))
+                if binning_parameters is None:
+                    align_vdrive_bin = True
+                else:
+                    align_vdrive_bin = False
+
+                self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
+                                                        gsas_file_name=gsas_file_name, ipts_number=ipts_number,
+                                                        align_vdrive_bin=align_vdrive_bin,
+                                                        gsas_param_file_name=iparam_file_name,
+                                                        van_ws_name=van_ws_name,
+                                                        is_chopped_run=False,
+                                                        write_to_file=True)
+            # END-FOR
+        elif gsas and merge_runs:
+            # merge and then save to GSAS file
+            ws_name_list = [item[1] for item in reduced_run_numbers] 
+            run_number, out_ws_name = reduced_run_numbers[0]
+            mantid_helper.merge_runs(ws_name_list, out_ws_name)
+
+            raw_file_name, ipts_number = self._dataFileDict[run_number]
+
+            for i_order in range(1, len(reduced_run_numbers)):
+                run_number_i, out_ws_name_i = reduced_run_numbers[i]
+                InputWorkspaces
+
 
         return reduced_run_numbers, error_messages
 
