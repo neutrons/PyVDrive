@@ -1681,14 +1681,6 @@ class VDriveAPI(object):
 
         return True, van_ws_key
 
-    def process_vanadium_run(self, ipts_number, run_number, reduced_file,
-                             one_bank=False, do_shift=False, local_output=None):
-
-        status, message = self._myProject.vanadium_processing_manager.process_vanadium(save=not one_bank,
-                                                                                       output_dir=local_output)
-
-        return status, message
-
     def process_vanadium_run_old(self, ipts_number, run_number, reduced_file,
                              one_bank=False, do_shift=False, local_output=None):
         """

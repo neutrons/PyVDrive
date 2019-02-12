@@ -478,6 +478,38 @@ class DataArchiveManager(object):
         return smoothed_van_file
 
     @staticmethod
+    def get_archived_vanadium_gsas_name(ipts_number, run_number, check_write_permission):
+        """
+        Get/generate the vanadium name save to /SNS/VULCAN/shared
+        :param ipts_number:
+        :param run_number:
+        :param check_write_permission: flag to check whether the user can have write permission to the
+                                       file or directory
+        :return: tuple (boolean: state, string: error message)
+        """
+        # check inputs
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, 999999))
+        datatypeutility.check_int_variable('Run number', run_number, (1, 99999999))
+
+        # write to archive's instrument specific calibration directory's instrument specific calibration directory
+        base_name = '{0}-s.gda'.format(run_number)
+        van_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
+
+        # check directory existence and access
+        if os.path.exists(van_dir) is False:
+            return False, 'Vanadium directory {0} does not exist.'.format(van_dir)
+        elif os.access(van_dir, os.W_OK) is False:
+            return False, 'User has no privilege to write to directory {0}'.format(van_dir)
+
+        gsas_file_name = os.path.join(van_dir, base_name)
+        if os.path.exists(gsas_file_name) and os.access(gsas_file_name, os.W_OK) is False:
+            return False, 'Smoothed vanadium GSAS file {0} exists and user does not have privilege to over write.' \
+                          ''.format(gsas_file_name)
+
+        return True, None
+
+
+    @staticmethod
     def get_vulcan_chopped_gsas_dir(ipts_number, run_number):
         """ get the directory where the chopped GSAS files are
         :param ipts_number:
