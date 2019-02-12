@@ -97,8 +97,14 @@ class VanadiumPeak(VDriveCommand):
 
         # init and load gsas file
         if self._iptsNumber and self._vanRunNumber:
+            # the output file name
             out_file_name = self._process_output_file()
-            self._myVanDataKey = self._controller.archive_manager.load_reduced_data(reduced_file=van_file_name)
+            # load GSAS file or ProcessedNeXus file
+            van_file_name = self._controller.archive_manager.locate_gsas(self._iptsNumber, self._vanRunNumber)
+            self._myVanDataKey = self._controller.project.data_loading_manager.load_binned_data(van_file_name, 'gsas',
+                                                                                        max_int=10, prefix='van',
+                                                                                        data_key=None,
+                                                                                        target_unit='dSpacing')
             self._controller.project.vanadium_processing_manager.init_session(self._myVanDataKey,
                                                                               self._iptsNumber,
                                                                               self._vanRunNumber,
@@ -109,14 +115,6 @@ class VanadiumPeak(VDriveCommand):
             # only option HELP/launching GUI given: nothing to init
             self._myVanDataKey = None
 
-        """
-        # load GSAS file or ProcessedNeXus file
-        van_ws_key = self._controller.project.data_loading_manager.load_binned_data(van_file_name, 'gsas',
-                                                                            max_int=10, prefix='van',
-                                                                            data_key=None,
-                                                                            target_unit='dSpacing')
-        """
-
         if do_launch_gui:
             # launch GUI.  load vanadium data now!
             status = True
@@ -124,8 +122,7 @@ class VanadiumPeak(VDriveCommand):
         else:
             # execute vanadium strip command
             van_processor = self._controller.project.vanadium_processing_manager
-            status, ret_obj = van_processor.process_vanadium_run(one_bank=self._mergeToOneBank,
-                                                                 do_shift=self._doShift)
+            status, ret_obj = van_processor.process_vanadium()   # do_shift=self._doShift)
         # END-IF-ELSE
 
         return status, ret_obj

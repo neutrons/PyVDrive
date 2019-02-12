@@ -34,8 +34,7 @@ class VanadiumProcessingManager(object):
         self._striped_peaks_ws_dict = dict()  # [bank id (1, 2, 3)] = ws name
         self._smoothed_ws_dict = dict()  # [bank id (1, 2, 3)] = ws names
 
-        self._default_fwhm = 7
-        self._default_fwhm_dict = {1: 7, 2:7, 3:7}
+        self._default_fwhm_dict = {1: 7, 2: 7, 3: 12}
 
         # final output binning
         self._calibration_manager = calibration_manager
@@ -86,7 +85,8 @@ class VanadiumProcessingManager(object):
         """
         return self._smoothed_ws_dict
 
-    def init_session(self, workspace_name):
+    # TODO - TONIGHT 1 - Code Quality
+    def init_session(self, workspace_name, ipts_number, van_run_number, out_gsas_name):
 
         workspace = mantid_helper.retrieve_workspace(workspace_name)
         if workspace.id() == 'WorkspaceGroup':
@@ -98,6 +98,13 @@ class VanadiumProcessingManager(object):
         self._workspace = workspace
         self._source_workspace_name = workspace_name
         self._workspace_name = workspace_name
+
+        self._ipts_number = ipts_number
+        self._van_run_number = van_run_number
+        self._output_gsas_name = out_gsas_name
+
+        # convert to point data as a request
+        mantid_helper.convert_to_point_data(self._workspace_name)
 
         return
 
@@ -189,8 +196,27 @@ class VanadiumProcessingManager(object):
 
         return status, message
 
+    def process_vanadium(self, peak_pos_tol=0.01, background_type='Quadratic',
+                         is_high_background=True, smoother_filter_type='Butterworth',
+                         param_n=20, param_order=2, save=True, output_dir=None, write_to_gsas=True):
+
+        self._workspace = mantid_helper.retrieve_workspace(self._workspace_name)
+        for ws_index in range(mantid_helper.get_number_spectra(self._workspace)):
+            # strip vanadium peaks
+            bank_id = ws_index + 1
+            self.strip_v_peaks(bank_id=ws_index+1, peak_fwhm=self._default_fwhm_dict[bank_id],
+                               pos_tolerance=peak_pos_tol,
+                               background_type=background_type,
+                               is_high_background=is_high_background)
+
+            self.smooth_v_spectrum(bank_id=bank_id, smoother_filter_type=smoother_filter_type,
+                                   param_n=20, param_order=2)
+
+
+        return True, None
+
     # TODO - TEST - Recently refactored
-    def process_vanadium(self, peak_fwhm=None, peak_pos_tol=0.01, background_type='Quadratic',
+    def process_vanadium_old(self, peak_fwhm=None, peak_pos_tol=0.1, background_type='Quadratic',
                          is_high_background=True, smoother_filter_type='Butterworth',
                          param_n=20, param_order=2, save=True, output_dir=None, write_to_gsas=True):
         """ Process vanadium run including strip vanadium peaks and smooth
@@ -218,11 +244,20 @@ class VanadiumProcessingManager(object):
             # set default peak FWHM
             if peak_fwhm is None:
                 peak_fwhm = self._default_fwhm_dict[bank_id_i]
+
+
             self.strip_v_peaks(bank_id=bank_id_i,
                                peak_fwhm=peak_fwhm,
                                pos_tolerance=peak_pos_tol,
                                background_type=background_type,
                                is_high_background=is_high_background)
+            ConvertUnits(InputWorkspace='No_Peak_van_171966.gda_g255147112058185024_B0001', OutputWorkspace='smoothed_B01',
+                     Target='TOF')
+            FFTSmooth(InputWorkspace='smoothed_B01', OutputWorkspace='smoothed_B01', Filter='Butterworth', Params='20,2',
+                  IgnoreXBins=True)
+
+            # NOTE: The bins of the output workspace from FFTSmooth is exactly correct go VDRIVE gsas bins
+
         # END-FOR
 
         # smooth peak
@@ -358,17 +393,18 @@ class VanadiumProcessingManager(object):
 
         return return_status, error_msg
 
-    def smooth_v_spectrum(self, bank_id, smoother_filter_type, param_n, param_order):
+    def smooth_v_spectrum(self, bank_id, smoother_filter_type, param_n, param_order, ws_name=None):
 
         ws_index = bank_id - 1
 
-        input_ws_name = self._workspace[ws_index].name()
+        if ws_name is None:
+           ws_name = self._striped_peaks_ws_dict[bank_id]
 
         # output workspace name
-        out_ws_name = input_ws_name + '_Smoothed'
+        out_ws_name = ws_name + '_Smoothed'
 
         # smooth vanadium spectra
-        mantid_helper.smooth_vanadium(input_workspace=input_ws_name,
+        mantid_helper.smooth_vanadium(input_workspace=ws_name,
                                       output_workspace=out_ws_name,
                                       smooth_filter=smoother_filter_type,
                                       workspace_index=None,
@@ -465,7 +501,7 @@ class VanadiumProcessingManager(object):
                                                is_high_background=is_high_background)
         self._striped_peaks_ws_dict[bank_id] = output_ws_name
 
-        return
+        return output_ws_name
 
     def strip_peaks(self, bank_group_index, peak_fwhm, pos_tolerance, background_type, is_high_background):
         """

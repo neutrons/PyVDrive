@@ -508,7 +508,6 @@ class DataArchiveManager(object):
 
         return True, None
 
-
     @staticmethod
     def get_vulcan_chopped_gsas_dir(ipts_number, run_number):
         """ get the directory where the chopped GSAS files are
