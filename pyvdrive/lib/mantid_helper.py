@@ -1798,6 +1798,27 @@ def edit_compressed_chopped_workspace_geometry(ws_name):
     return
 
 
+def merge_runs(ws_name_list, out_ws_name):
+    """
+    Merge runs
+    :param ws_name_list:
+    :param out_ws_name:
+    :return:
+    """
+    datatypeutility.check_list('Workspace names', ws_name_list)
+    datatypeutility.check_string_variable('Output workspace name for merged runs', out_ws_name)
+
+    # construct the workspaces
+    input_ws_names = ''
+    for ws_name in ws_name_list:
+        input_ws_names += ws_name + ','
+    input_ws_names = input_ws_names[:-1]
+
+    mantidapi.MergeRuns(InputWorkspaces=input_ws_names, OutputWorkspace=out_ws_name)
+
+    return
+
+
 def mtd_compress_events(event_ws_name, tolerance=0.01):
     """ Call Mantid's CompressEvents algorithm
     :param event_ws_name:

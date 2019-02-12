@@ -1261,7 +1261,7 @@ class VDriveAPI(object):
                         background=False, vanadium=None,
                         record=False, logs=False, gsas=True, output_to_fullprof=False,
                         standard_sample_tuple=None, binning_parameters=None,
-                        merge_runs=False, dspace=False, num_banks=3, roi_list=None,
+                        merge_runs=False, merged_run=None,  dspace=False, num_banks=3, roi_list=None,
                         mask_list=None, no_cal_mask=False,
                         version=2):
         """ Reduce a set of VULCAN runs
@@ -1286,6 +1286,7 @@ class VDriveAPI(object):
         :param binning_parameters: binning parameter. [1] None for default; [2] a size 1 container as bin size
                                            [3] a size-3 container as [TOF_min, Bin Size, TOF_max]
         :param merge_runs: If true, then merge the run together by calling SNSPowderReduction
+        :param merged_run: Paired with flag merge_runs.  It is the run number to be merged to
         :param dspace: If true, then data will reduced to workspace in dSpacing and exported with unit dSpacing
         :param num_banks: number of banks focused to.  Now only 3, 7 and 27 are allowed; Also a special grouping file
         :param roi_list:
@@ -1337,6 +1338,16 @@ class VDriveAPI(object):
 
         elif dspace or version == 2:
             # user version 2 reduction algorithm
+            if merge_runs and merged_run is not None:
+                if merged_run not in runs_to_reduce:
+                    raise RuntimeError('Run number {} to merge to is not the list of run numbers to reduce {}'
+                                       ''.format(merged_run, runs_to_reduce))
+                else:
+                    # put the run number to merge to at the first element in the list
+                    run_index = runs_to_reduce.index(merged_run)
+                    runs_to_reduce.pop(run_index)
+                    runs_to_reduce.insert(0, merged_run)
+
             run_number_list, msg_list = self._myProject.reduce_vulcan_runs_v2(run_number_list=runs_to_reduce,
                                                                               output_directory=output_directory,
                                                                               d_spacing=True,

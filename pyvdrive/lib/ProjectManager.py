@@ -1292,7 +1292,9 @@ class ProjectManager(object):
                               roi_list, mask_list, no_cal_mask):
         """ reduce runs in a simplied way! (it can be thought be the version 2.0!)
         Note: this method is used by VBIN
-        :param run_number_list:
+        Note 2: For merging, all the workspaces are merged to run_number_list[0].  So if the user has prference
+                to the run number to be merged and saved to, put it as the first one!
+        :param run_number_list: For merging, refer to Note(2)
         :param output_directory:
         :param d_spacing:
         :param binning_parameters: None for default IDL binning
@@ -1369,6 +1371,12 @@ class ProjectManager(object):
             van_ws_name = None
             iparam_file_name = 'vulcan.prm'
 
+        # binning
+        if binning_parameters is None:
+            align_vdrive_bin = True
+        else:
+            align_vdrive_bin = False
+
         if gsas and not merge_runs:
             # save to GSAS without merging
             for run_number, out_ws_name in reduced_run_numbers:
@@ -1376,10 +1384,6 @@ class ProjectManager(object):
                 raw_file_name, ipts_number = self._dataFileDict[run_number]
                 run_date_time = vulcan_util.get_run_date(out_ws_name, raw_file_name)
                 gsas_file_name = os.path.join(output_directory, '{}.gda'.format(run_number))
-                if binning_parameters is None:
-                    align_vdrive_bin = True
-                else:
-                    align_vdrive_bin = False
 
                 self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
                                                         gsas_file_name=gsas_file_name, ipts_number=ipts_number,
@@ -1391,16 +1395,28 @@ class ProjectManager(object):
             # END-FOR
         elif gsas and merge_runs:
             # merge and then save to GSAS file
-            ws_name_list = [item[1] for item in reduced_run_numbers] 
+            ws_name_list = [item[1] for item in reduced_run_numbers]
+            # always merged to run_number_list[0]/ws_name_list[0]
             run_number, out_ws_name = reduced_run_numbers[0]
+            print ('[DB...BAT] Input run numbers: {}'.format(run_number_list))
+            print ('[DB...BAT] Redued runs: {}'.format(reduced_run_numbers))
+            # merge runs
             mantid_helper.merge_runs(ws_name_list, out_ws_name)
 
             raw_file_name, ipts_number = self._dataFileDict[run_number]
+            run_date_time = vulcan_util.get_run_date(out_ws_name, raw_file_name)
+            gsas_file_name = os.path.join(output_directory, '{}.gda'.format(run_number))
 
-            for i_order in range(1, len(reduced_run_numbers)):
-                run_number_i, out_ws_name_i = reduced_run_numbers[i]
-                InputWorkspaces
-
+            self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
+                                                    gsas_file_name=gsas_file_name, ipts_number=ipts_number,
+                                                    align_vdrive_bin=align_vdrive_bin,
+                                                    gsas_param_file_name=iparam_file_name,
+                                                    van_ws_name=van_ws_name,
+                                                    is_chopped_run=False,
+                                                    write_to_file=True)
+        else:
+            # do nothing
+            pass
 
         return reduced_run_numbers, error_messages
 

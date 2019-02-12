@@ -145,7 +145,12 @@ class VBin(process_vcommand.VDriveCommand):
 
         # Use result from CHOP?
         if 'CHOPRUN' in self._commandArgsDict:
-            use_chop_data = True
+            if self._merge_flag:
+                # In VMERGE mode
+                use_chop_data = False
+            else:
+                # in Chop Run mode
+                use_chop_data = True
             chop_run_number = int(self._commandArgsDict['CHOPRUN'])
         else:
             use_chop_data = False
@@ -178,7 +183,10 @@ class VBin(process_vcommand.VDriveCommand):
             output_dir = self._commandArgsDict['OUTPUT']
         else:
             # neither specified: use default
-            output_dir = vulcan_util.get_default_binned_directory(self._iptsNumber)
+            if chop_run_number is None:
+                chop_run_number = run_number_list[0]
+            output_dir = vulcan_util.get_default_binned_directory(self._iptsNumber, True, self._merge_flag,
+                                                                  chop_run_number)
 
         if 'ONEBANK' in self._commandArgsDict:
             merge_to_one_bank = bool(int(self._commandArgsDict['ONEBANK']))
@@ -286,6 +294,7 @@ class VBin(process_vcommand.VDriveCommand):
                                                                standard_sample_tuple=standard_tuple,
                                                                binning_parameters=binning_parameters,
                                                                merge_runs=self._merge_flag,
+                                                               merged_run=chop_run_number,
                                                                num_banks=bank_group,
                                                                version=reduction_alg_ver,
                                                                roi_list=roi_file_names,

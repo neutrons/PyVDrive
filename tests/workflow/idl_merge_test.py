@@ -59,7 +59,7 @@ def test_ned_simple(tester):
     create_run_file(run_file_name)
 
     # run command
-    idl_command = "MERGE,IPTS=22752,RUNFILE='{}',output=\'{}\'".format(run_file_name, test_dir)
+    idl_command = "MERGE,IPTS=22752,RUNFILE='{}',CHOPRUN=171836,output=\'{}\'".format(run_file_name, test_dir)
     tester.run_command(idl_command)
 
     # output summary

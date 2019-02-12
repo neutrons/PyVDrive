@@ -109,6 +109,14 @@ class VanadiumPeak(VDriveCommand):
             # only option HELP/launching GUI given: nothing to init
             self._myVanDataKey = None
 
+        """
+        # load GSAS file or ProcessedNeXus file
+        van_ws_key = self._controller.project.data_loading_manager.load_binned_data(van_file_name, 'gsas',
+                                                                            max_int=10, prefix='van',
+                                                                            data_key=None,
+                                                                            target_unit='dSpacing')
+        """
+
         if do_launch_gui:
             # launch GUI.  load vanadium data now!
             status = True
@@ -139,14 +147,6 @@ class VanadiumPeak(VDriveCommand):
             output_gsas_file = self._controller.archive_manager.get_archived_vanadium_gsas_name()
 
         return output_gsas_file
-
-# load GSAS file or ProcessedNeXus file
-van_ws_key = self._controller.project.data_loading_manager.load_binned_data(van_file_name, 'gsas',
-                                                                            max_int=10, prefix='van',
-                                                                            data_key=None,
-                                                                            target_unit='dSpacing')
-
-
 
     def get_help(self):
         """

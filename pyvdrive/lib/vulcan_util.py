@@ -131,7 +131,7 @@ def format_float_number(value, significant_digits):
     return format_str
 
 
-def get_default_binned_directory(ipts_number, check_write_and_throw=False):
+def get_default_binned_directory(ipts_number, check_write_and_throw=False, merge_flag=False, run_number=None):
     """
     get VDRIVE default directory for binned data
     :param ipts_number: IPTS number in integer
@@ -144,6 +144,12 @@ def get_default_binned_directory(ipts_number, check_write_and_throw=False):
 
     # get directory
     binned_dir = '/SNS/VULCAN/IPTS-{0}/shared/binned_data/'.format(ipts_number)
+
+    # create merged run directory
+    if merge_flag:
+        datatypeutility.check_int_variable('Run number', run_number, (1, 9999999))
+        binned_dir = os.path.join(binned_dir, '{}'.format(run_number))
+        os.mkdir(binned_dir)  # default mode is 777
 
     # check write permission
     if check_write_and_throw:
