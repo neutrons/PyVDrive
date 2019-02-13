@@ -32,9 +32,10 @@ class LiveViewSetupDialog(QDialog):
         # my parent
         self._myParent = parent
 
-        # UI
-        self.ui = load_ui("LiveDataViewSetup.ui", baseinstance=self)
-        self = self._promote_widgets()
+        # set up UI
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/LiveDataViewSetup.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
+        self._promote_widgets()
 
         # initialize some widget
         self.ui.radioButton_plotAcc.setChecked(True)
@@ -57,15 +58,15 @@ class LiveViewSetupDialog(QDialog):
         return
 
     def _promote_widgets(self):
-        tableWidget_sampleLogs_layout = QVBoxLayout()
-        self.ui.frame_tableWidget_sampleLogs.setLayout(tableWidget_sampleLogs_layout)
-        self.ui.tableWidget_sampleLogs = LogSelectorTable(self)
-        tableWidget_sampleLogs_layout.addWidget(self.ui.tableWidget_sampleLogs)
-
-        tableWidget_plotYAxis_layout = QVBoxLayout()
-        self.ui.frame_tableWidget_plotYAxis.setLayout(tableWidget_plotYAxis_layout)
-        self.ui.tableWidget_plotYAxis = LivePlotYAxisTable(self)
-        tableWidget_plotYAxis_layout.addWidget(self.ui.tableWidget_plotYAxis)
+        # tableWidget_sampleLogs_layout = QVBoxLayout()
+        # self.ui.frame_tableWidget_sampleLogs.setLayout(tableWidget_sampleLogs_layout)
+        # self.ui.tableWidget_sampleLogs = LogSelectorTable(self)
+        # tableWidget_sampleLogs_layout.addWidget(self.ui.tableWidget_sampleLogs)
+        #
+        # tableWidget_plotYAxis_layout = QVBoxLayout()
+        # self.ui.frame_tableWidget_plotYAxis.setLayout(tableWidget_plotYAxis_layout)
+        # self.ui.tableWidget_plotYAxis = LivePlotYAxisTable(self)
+        # tableWidget_plotYAxis_layout.addWidget(self.ui.tableWidget_plotYAxis)
 
         return
 

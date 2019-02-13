@@ -852,12 +852,15 @@ class WriteSlicedLogs(object):
 
         # get difference in REAL starting time (proton_charge[0])
         real_start_time_i = workspace_i.run().getProperty('proton_charge').times[0]
+        real_stop_time_i = workspace_i.run().getProperty('proton_charge').times[-1]
 
         time0 = datetime.datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
         if isinstance(real_start_time_i, numpy.datetime64):
             # absolute time (ns) from 1990-01-01
             temp_time = datetime.datetime.utcfromtimestamp(real_start_time_i.astype('O') * 1.E-9)
             delta_to_t0_ns = temp_time - time0
+            temp_stop_time = datetime.datetime.utcfromtimestamp(real_start_time_i.astype('O') * 1.E-9)
+            delta_to_tf_ns = temp_stop_time - time0
             time_stamp = delta_to_t0_ns.total_seconds()
         else:
             # time_stamp = real_start_time_i.total_nanoseconds()
@@ -866,12 +869,14 @@ class WriteSlicedLogs(object):
         # time (step) in seconds
         try:
             rel_time_to_start = real_start_time_i - run_start_time
+            rel_time_to_stop = real_stop_time_i - run_start_time
         except TypeError as type_err:
             print (type(real_start_time_i))
             print (type(run_start_time))
             raise TypeError('{}, {}: {}'.format(type(real_start_time_i), type(run_start_time), type_err))
         if isinstance(real_start_time_i, numpy.datetime64):
             rel_time_to_start = float(rel_time_to_start) * 1.E-9
+            rel_time_to_stop = float(rel_time_to_stop) * 1.E-9
         else:
             # diff_time = diff_time.total_nanoseconds() * 1.E-9
             raise RuntimeError('proton charge log time shall be datetime64!')
@@ -912,7 +917,10 @@ class WriteSlicedLogs(object):
                 start_value = mean_value = end_value = float(time_stamp)
             elif mts_name == 'Time [sec]':  # relative time to original-run's start time
                 # time step
-                start_value = mean_value = end_value = rel_time_to_start
+                start_value = rel_time_to_start
+                mean_value = (rel_time_to_start + rel_time_to_stop) * 0.5
+                end_value = rel_time_to_stop
+
             elif len(log_name) > 0:
                 # sample log does not exist in NeXus file. warned before. ignore!
                 start_value = mean_value = end_value = 0.
