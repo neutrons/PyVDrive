@@ -1086,6 +1086,7 @@ class VDriveAPI(object):
     def load_nexus_file(self, ipts_number, run_number, file_name, meta_data_only):
         """
         Load NeXus file to ADS
+        IPTS/run number OR file name
         :param ipts_number:
         :param run_number:
         :param file_name:
@@ -1104,10 +1105,14 @@ class VDriveAPI(object):
         # END-IF
 
         # load file
-        info_dict = self._myProject.load_event_file(ipts_number=ipts_number, run_number=run_number,
-                                                    nxs_file_name=file_name, meta_data_only=meta_data_only)
+        # TODO - TONIGHT 7 - Need a better naming routine for Non-IPTS/RUN NUMBER case
+        if meta_data_only:
+            output_ws_name = '{}_Meta'.format(run_number)
+        else:
+            output_ws_name = '{}_events'.format(run_number)
+        mantid_helper.load_nexus(file_name, output_ws_name, meta_data_only)
 
-        return info_dict
+        return output_ws_name
 
     def load_session(self, in_file_name=None):
         """ Load session from saved file

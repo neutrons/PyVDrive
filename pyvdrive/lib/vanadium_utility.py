@@ -21,7 +21,6 @@ class VanadiumProcessingManager(object):
 
         # state flag
         self._is_setup = False   # flag such that a parent workspace (to smooth from) has been set up
-        self._source_workspace_name = None  # shall be a Workspace2D workspace
         self._bank_group_dict = None
         self._output_ws_name = None  # workspace from merged smoothed/vanadium-peaks-striped workspace
         # NOTE: output workspace shall be of the same range, number of spectra and instrument geometry as input
@@ -40,6 +39,13 @@ class VanadiumProcessingManager(object):
         self._calibration_manager = calibration_manager
         self._tof_bin_dict = dict()
 
+        # these are updated class variables
+        self._workspace = None
+        self._van_workspace_name = None   # input vanadium workspace (focused)
+        self._ipts_number = None
+        self._van_run_number = None
+        self._output_gsas_name = None
+
         return
 
     def __str__(self):
@@ -48,9 +54,9 @@ class VanadiumProcessingManager(object):
         :return:
         """
         if self._is_setup:
-            source_ws = mantid_helper.retrieve_workspace(self._source_workspace_name, raise_if_not_exist=True)
+            source_ws = mantid_helper.retrieve_workspace(self._van_workspace_name, raise_if_not_exist=True)
             output_str = 'Process (reduced) vanadium (workspace) {} with {} banks\n' \
-                         ''.format(self._source_workspace_name, source_ws.getNumberHistograms())
+                         ''.format(self._van_workspace_name, source_ws.getNumberHistograms())
             output_str += 'Internal workspaces with vanadium peaks striped: {}\n'.format(self._striped_peaks_ws_dict)
             output_str += 'Internal workspaces smoothed: {}\n'.format(self._smoothed_ws_dict)
         else:
@@ -63,6 +69,8 @@ class VanadiumProcessingManager(object):
         apply shift-of-wavelength to the vanadium to process
         :return:
         """
+        # TODO FIXME - TONIGHT 3 - Experiment
+        raise RuntimeError('Shift FWHM shall be experimented')
         self._default_fwhm = 2
 
         return
@@ -86,7 +94,8 @@ class VanadiumProcessingManager(object):
         return self._smoothed_ws_dict
 
     # TODO - TONIGHT 1 - Code Quality
-    def init_session(self, workspace_name, ipts_number, van_run_number, out_gsas_name):
+    def init_session(self, workspace_name, ipts_number, van_run_number, out_gsas_name,
+                     sample_log_ws_name):
 
         workspace = mantid_helper.retrieve_workspace(workspace_name)
         if workspace.id() == 'WorkspaceGroup':
@@ -96,111 +105,28 @@ class VanadiumProcessingManager(object):
             raise NotImplementedError('Need to implement single workspace case to extract spectra')
 
         self._workspace = workspace
-        self._source_workspace_name = workspace_name
-        self._workspace_name = workspace_name
+        self._van_workspace_name = workspace_name
+        self._van_workspace_name = workspace_name
 
         self._ipts_number = ipts_number
         self._van_run_number = van_run_number
         self._output_gsas_name = out_gsas_name
 
         # convert to point data as a request
-        mantid_helper.convert_to_point_data(self._workspace_name)
+        mantid_helper.convert_to_point_data(self._van_workspace_name)
+
+        self._sample_log_ws_name = sample_log_ws_name
 
         return
 
-    def init_session_old(self, workspace_name, bank_group_dict):
-        """
-        initialize a new session to process vanadium
-        :param workspace_name:
-        :param bank_group_dict:
-        :return:
-        """
-        # TODO - 20181030 - Need to add this to configuration
-        bin_param_dict = {1: (0.5, -0.001, 3.0),
-                          2: (0.5, -0.001, 3.0),
-                          3: (0.3, -0.0003, 3.0)}
-
-        # check inputs
-        if not mantid_helper.workspace_does_exist(workspace_name):
-            raise RuntimeError('Raw matrix workspace {0} does not exist.'.format(workspace_name))
-        datatypeutility.check_dict('Banks group assignment', bank_group_dict)
-
-        # set
-        self._source_workspace_name = workspace_name
-        self._bank_group_dict = bank_group_dict
-
-        # reset processed workspaces
-        self._source_single_bank_ws_dict = dict()
-        self._striped_peaks_ws_dict = dict()
-        self._smoothed_ws_dict = dict()
-        self._output_ws_name = dict()
-
-        # prepare source single bank
-        source_ws = mantid_helper.retrieve_workspace(workspace_name, True)
-        for bank_id in range(1, source_ws.getNumberHistograms()+1):
-            single_spec_ws_name = self._source_workspace_name + '_VBank{}'.format(bank_id)
-            # extract spectrum
-            mantid_helper.extract_spectrum(input_workspace=self._source_workspace_name,
-                                           output_workspace=single_spec_ws_name,
-                                           workspace_index=bank_id-1)
-
-            # check
-            temp_ws = mantid_helper.retrieve_workspace(single_spec_ws_name)
-            assert temp_ws.getAxis(0).getUnit().unitID() == 'dSpacing', 'Input shall be in unit dSpacing'
-            mantid_helper.rebin(single_spec_ws_name, bin_param_dict[bank_id], preserve=False)
-
-            self._source_single_bank_ws_dict[bank_id] = single_spec_ws_name
-        # END-FOR
-
-        # output bins
-        tof_binning_dict = self._calibration_manager.get_last_gsas_bin_ref()
-        for bank_id in [1, 2, 3]:
-            self._tof_bin_dict[bank_id] = {1: tof_binning_dict[bank_id]}
-            print (self._tof_bin_dict[bank_id])
-
-        # default FWHM
-        self._default_fwhm = 7  # non-shift case
-
-        self._is_setup = True
-
-        return
-
-    def merge_processed_vanadium(self, save, to_archive=None, local_file_name=None):
-        """
-        merge process vanadium to single bank data and optionally saved
-        :except: RuntimeError() for being called too early
-        :param save:
-        :param to_archive:
-        :param local_file_name:
-        :return:
-        """
-        # check whether the data that has been smoothed
-        if self._smoothed_ws_dict is None:
-            raise RuntimeError('Vanadium run {0} has not been processed yet.'.format(self._runNumber))
-
-        # merge
-        one_bank_name = self._source_workspace_name + '_1bank'
-        mantid_helper.sum_spectra(input_workspace=self._smoothed_ws_dict, output_workspace=one_bank_name)
-        self._output_ws_name = one_bank_name
-
-        # export
-        if save:
-            buffer_name = self._smoothed_ws_dict
-            self._smoothed_ws_dict = self._output_ws_name
-            status, message = self.save_vanadium_to_file(to_archive, local_file_name)
-            self._smoothed_ws_dict = buffer_name
-        else:
-            status = True
-            message = ''
-        # END-IF
-
-        return status, message
-
-    def process_vanadium(self, peak_pos_tol=0.01, background_type='Quadratic',
+    def process_vanadium(self, peak_pos_tol=0.1, background_type='Quadratic',
                          is_high_background=True, smoother_filter_type='Butterworth',
-                         param_n=20, param_order=2, save=True, output_dir=None, write_to_gsas=True):
+                         param_n=20, param_order=2):
+        #  Process vanadium run including strip vanadium peaks and smooth
+        # This is a high-level call to do all the work with good setup in one action
 
-        self._workspace = mantid_helper.retrieve_workspace(self._workspace_name)
+        self._workspace = mantid_helper.retrieve_workspace(self._van_workspace_name)
+
         for ws_index in range(mantid_helper.get_number_spectra(self._workspace)):
             # strip vanadium peaks
             bank_id = ws_index + 1
@@ -208,106 +134,30 @@ class VanadiumProcessingManager(object):
                                pos_tolerance=peak_pos_tol,
                                background_type=background_type,
                                is_high_background=is_high_background)
-
+            # smoooth
             self.smooth_v_spectrum(bank_id=bank_id, smoother_filter_type=smoother_filter_type,
                                    param_n=20, param_order=2)
-
-
-        return True, None
-
-    # TODO - TEST - Recently refactored
-    def process_vanadium_old(self, peak_fwhm=None, peak_pos_tol=0.1, background_type='Quadratic',
-                         is_high_background=True, smoother_filter_type='Butterworth',
-                         param_n=20, param_order=2, save=True, output_dir=None, write_to_gsas=True):
-        """ Process vanadium run including strip vanadium peaks and smooth
-        This is a high-level call to do all the work with good setup in one action
-        :param peak_fwhm:
-        :param peak_pos_tol:
-        :param background_type:
-        :param is_high_background:
-        :param smoother_filter_type:
-        :param param_n:
-        :param param_order:
-        :param save:  flag to save the processed vanadium
-        :param output_dir:
-        :param write_to_gsas:
-        :return:
-        """
-        if peak_fwhm:
-            datatypeutility.check_int_variable('FWHM (number of bins)', peak_fwhm, (1, 100))
-
-        # strip peaks from workspace group
-        van_ws = mantid_helper.retrieve_workspace(self._workspace_name, True)
-        for ws_index in range(mantid_helper.get_number_spectra(van_ws)):
-            # bank ID
-            bank_id_i = ws_index + 1
-            # set default peak FWHM
-            if peak_fwhm is None:
-                peak_fwhm = self._default_fwhm_dict[bank_id_i]
-
-
-            self.strip_v_peaks(bank_id=bank_id_i,
-                               peak_fwhm=peak_fwhm,
-                               pos_tolerance=peak_pos_tol,
-                               background_type=background_type,
-                               is_high_background=is_high_background)
-            ConvertUnits(InputWorkspace='No_Peak_van_171966.gda_g255147112058185024_B0001', OutputWorkspace='smoothed_B01',
-                     Target='TOF')
-            FFTSmooth(InputWorkspace='smoothed_B01', OutputWorkspace='smoothed_B01', Filter='Butterworth', Params='20,2',
-                  IgnoreXBins=True)
-
-            # NOTE: The bins of the output workspace from FFTSmooth is exactly correct go VDRIVE gsas bins
-
         # END-FOR
-
-        # smooth peak
-        for ws_index in range(mantid_helper.get_number_spectra(van_ws)):
-            # bank ID
-            bank_id_i = ws_index + 1
-            # set default peak FWHM
-            if peak_fwhm is None:
-                peak_fwhm = self._default_fwhm_dict[bank_id_i]
-            self.smooth_v_spectrum(bank_id_i, smoother_filter_type, param_n, param_order)
-        # END-FOR
-
-        return True, 'Debug Stop'
-
-        # write to file
-        gsas_writer = save_vulcan_gsas.SaveVulcanGSS()
-        gsas_writer.save(self._workspace_name)
 
         # save
-        message = 'Vanadium {0} has peaks removed and is smoothed. '
-        if output_dir is None:
-            save_to_archive = True
-        else:
-            save_to_archive = False
-        if save:
-            status, sub_message = self.save_vanadium_to_file(to_archive=save_to_archive, out_file_name=output_dir)
-            if status:
-                message += 'Processed vanadium is saved to {0} or archive. '.format(output_dir)
-            else:
+        message = 'Vanadium {0} has peaks removed and is smoothed.'
+        status = True
+        if self._output_gsas_name:
+            #  save GSAS file
+            try:
+                self.save_vanadium_to_file()
+                message += 'Processed vanadium is saved to {}'.format(self._output_gsas_name)
+            except RuntimeError as run_err:
                 message += 'Processed vanadium failed to be written to {0} due to {1}.' \
-                           ''.format(self._output_dir, sub_message)
+                           ''.format(self._output_gsas_name, run_err)
+                status = False
         else:
-            status = True
+            raise NotImplementedError('Is there any case that on one wants GSAS?')
 
         return status, message
 
-    # TODO - TONIGHT - Shall be replaced by vulcan_gsas.save()?
-    def save_to_gsas(self, run_number, gsas_file_name):
-        """
-
-        :param run_number:
-        :param gsas_file_name:
-        :return:
-        """
-        # use run number to check against current one
-        # TODO - 20181103 - Implement this method!
-        # check out the 3 workspaces and merge them to save GSAS!
-
-    def save_vanadium_to_file(self, vanadium_tuple=None,
-                              to_archive=True, out_file_name=None):
+    # TODO - TONIGHT 3 - Better QA
+    def save_vanadium_to_file(self):
         """
         save a processed vanadium (in workspace) to GSAS file
         Note: IPTS number must be specified for being written into GSAS file;
@@ -317,94 +167,105 @@ class VanadiumProcessingManager(object):
         :param out_file_name: if not None, then output locally
         :return: tuple (boolean, str): status, error message
         """
-
-
-        # check inputs
-        if vanadium_tuple is None:
-            # use the class variables of this instance
-            assert self._iptsNumber is not None, 'IPTS number must be specified.'
-            assert self._runNumber is not None, 'Run number must be specified.'
-            assert self._smoothed_ws_dict is not None, 'Vanadium run {0} must have been processed.' \
-                                                        ''.format(self._runNumber)
-
-            workspace_name = self._smoothed_ws_dict
-            ipts_number = self._iptsNumber
-            run_number = self._runNumber
-
-        else:
-            raise RuntimeError('It is not supported to save vanadium with given workspace name.')
-            # assert len(vanadium_tuple) == 3, 'A not-None vanadium tuple must have 3 elements but not {0}' \
-            #                                  ''.format(len(vanadium_tuple))
-            # workspace_name, ipts_number, run_number = vanadium_tuple
-            # assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not a {1}.' \
-            #                                      ''.format(ipts_number, type(ipts_number))
-            # assert isinstance(run_number, int), 'Run number must be an integer but not a {1}.' \
-            #                                     ''.format(run_number, type(run_number))
-        # END-IF-ELSE
-
-        # archive file name
-        return_status = True
-        error_msg = ''
-
-        # determine the output file name with full path
-        if to_archive:
-            # write to archive's instrument specific calibration directory's instrument specific calibration directory
-            base_name = '{0}-s.gda'.format(self._runNumber)
-            van_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
-
-            # TODO - TONIGHT - Clean: The below can be organized to a method in file_util
-            if os.path.exists(van_dir) is False:
-                return False, 'Vanadium directory {0} does not exist.'.format(van_dir)
-            elif os.access(van_dir, os.W_OK) is False:
-                return False, 'User has no privilege to write to directory {0}'.format(van_dir)
-
-            archive_file_name = os.path.join(van_dir, base_name)
-            if os.path.exists(archive_file_name) and os.access(archive_file_name, os.W_OK) is False:
-                return False, 'Smoothed vanadium GSAS file {0} exists and user does not have privilege to over write.' \
-                              ''.format(archive_file_name)
-            out_file_name = archive_file_name
-
-        elif out_file_name is not None:
-            # file name re-define & get directory of the output file
-            if os.path.isdir(out_file_name):
-                # get the file name
-                local_dir = out_file_name
-                out_file_name = os.path.join(local_dir, '{0}-s.gda'.format(run_number))
-            else:
-                local_dir = os.path.dirname(out_file_name)
-            # END0F
-            if os.access(local_dir, os.W_OK):
-                return False, 'User cannot write to directory {0}'.format(local_dir)
-            elif os.path.exists(out_file_name) and os.access(out_file_name, os.W_OK):
-                return False, 'Smoothed vanadium file {0} exists but user cannot over write.'.format(out_file_name)
-
-        else:
-            # neither to archive nor to local directory
-            return False, 'User does not specify either to-archive nor a local directory'
+        #
+        #
+        # # check inputs
+        # if vanadium_tuple is None:
+        #     # use the class variables of this instance
+        #     assert self._iptsNumber is not None, 'IPTS number must be specified.'
+        #     assert self._runNumber is not None, 'Run number must be specified.'
+        #     assert self._smoothed_ws_dict is not None, 'Vanadium run {0} must have been processed.' \
+        #                                                 ''.format(self._runNumber)
+        #
+        #     workspace_name = self._smoothed_ws_dict
+        #     ipts_number = self._iptsNumber
+        #     run_number = self._runNumber
+        #
+        # else:
+        #     raise RuntimeError('It is not supported to save vanadium with given workspace name.')
+        #     # assert len(vanadium_tuple) == 3, 'A not-None vanadium tuple must have 3 elements but not {0}' \
+        #     #                                  ''.format(len(vanadium_tuple))
+        #     # workspace_name, ipts_number, run_number = vanadium_tuple
+        #     # assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not a {1}.' \
+        #     #                                      ''.format(ipts_number, type(ipts_number))
+        #     # assert isinstance(run_number, int), 'Run number must be an integer but not a {1}.' \
+        #     #                                     ''.format(run_number, type(run_number))
+        # # END-IF-ELSE
+        #
+        # # archive file name
+        # return_status = True
+        # error_msg = ''
+        #
+        # # determine the output file name with full path
+        # if to_archive:
+        #     # write to archive's instrument specific calibration directory's instrument specific calibration directory
+        #     base_name = '{0}-s.gda'.format(self._runNumber)
+        #     van_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
+        #
+        #     # TODO - TONIGHT - Clean: The below can be organized to a method in file_util
+        #     if os.path.exists(van_dir) is False:
+        #         return False, 'Vanadium directory {0} does not exist.'.format(van_dir)
+        #     elif os.access(van_dir, os.W_OK) is False:
+        #         return False, 'User has no privilege to write to directory {0}'.format(van_dir)
+        #
+        #     archive_file_name = os.path.join(van_dir, base_name)
+        #     if os.path.exists(archive_file_name) and os.access(archive_file_name, os.W_OK) is False:
+        #         return False, 'Smoothed vanadium GSAS file {0} exists and user does not have privilege to over write.' \
+        #                       ''.format(archive_file_name)
+        #     out_file_name = archive_file_name
+        #
+        # elif out_file_name is not None:
+        #     # file name re-define & get directory of the output file
+        #     if os.path.isdir(out_file_name):
+        #         # get the file name
+        #         local_dir = out_file_name
+        #         out_file_name = os.path.join(local_dir, '{0}-s.gda'.format(run_number))
+        #     else:
+        #         local_dir = os.path.dirname(out_file_name)
+        #     # END0F
+        #     if os.access(local_dir, os.W_OK):
+        #         return False, 'User cannot write to directory {0}'.format(local_dir)
+        #     elif os.path.exists(out_file_name) and os.access(out_file_name, os.W_OK):
+        #         return False, 'Smoothed vanadium file {0} exists but user cannot over write.'.format(out_file_name)
+        #
+        # else:
+        #     # neither to archive nor to local directory
+        #     return False, 'User does not specify either to-archive nor a local directory'
 
         # write to GSAS file for VDRIVE
-        bank_id_list = mantid_helper.get_workspace_information(workspace_name)
+        bank_id_list = sorted(self._smoothed_ws_dict.keys())
+        # group workspaces
+        input_ws_names = ''
+        for bank_id in bank_id_list:
+            input_ws_names += '{},'.format(self._smoothed_ws_dict[bank_id])
+        input_ws_names = input_ws_names[:-1]
+        processed_vanadium_name = '{}_processed'.format(self._van_workspace_name)
+        mantid_helper.group_workspaces(input_ws_names, processed_vanadium_name)
+        print (mantid_helper.workspace_does_exist(processed_vanadium_name))
 
-        default_bank_number = len(bank_id_list)
         gsas_writer = save_vulcan_gsas.SaveVulcanGSS()
-        gsas_writer.save_vanadium(diff_ws_name=workspace_name, gsas_file_name=out_file_name,
-                         ipts_number=ipts_number, gsas_param_file_name=None,
-                         van_ws_name=None)
+        # TODO - TONIGHT 11 - convert_to_vdrive_bins shall be considered if source file is from a high resolution
+        # TODO - cont.      - ProcessedNeXus file: It shall call save() instead
+        gsas_writer.save_vanadium(diff_ws_name=processed_vanadium_name, gsas_file_name=self._output_gsas_name,
+                                  ipts_number=self._ipts_number, van_run_number=self._van_run_number,
+                                  sample_log_ws_name=self._sample_log_ws_name)
 
-        return return_status, error_msg
+        return
 
+    # TODO - TONIGHT - Code Quality
     def smooth_v_spectrum(self, bank_id, smoother_filter_type, param_n, param_order, ws_name=None):
 
-        ws_index = bank_id - 1
-
         if ws_name is None:
-           ws_name = self._striped_peaks_ws_dict[bank_id]
+            ws_name = self._striped_peaks_ws_dict[bank_id]
 
         # output workspace name
         out_ws_name = ws_name + '_Smoothed'
 
+        # convert unit
+        mantid_helper.mtd_convert_units(ws_name, 'TOF', out_ws_name)
+
         # smooth vanadium spectra
-        mantid_helper.smooth_vanadium(input_workspace=ws_name,
+        mantid_helper.smooth_vanadium(input_workspace=out_ws_name,
                                       output_workspace=out_ws_name,
                                       smooth_filter=smoother_filter_type,
                                       workspace_index=None,
@@ -479,13 +340,13 @@ class VanadiumProcessingManager(object):
         :return:
         """
         print (self._workspace)
-        print (self._workspace_name)
+        print (self._van_workspace_name)
 
         if self._workspace.id() == 'WorkspaceGroup':
             input_ws_name = self._workspace[bank_id-1].name()
             bank_list = 0
         else:
-            input_ws_name = self._workspace_name
+            input_ws_name = self._van_workspace_name
             bank_list = bank_id - 1
 
         print ('[DB...BAT] Strip Peaks: workspace name: {}'.format(input_ws_name))

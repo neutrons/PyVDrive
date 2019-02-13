@@ -355,7 +355,7 @@ class SaveVulcanGSS(object):
         3. Z: error bar
         :param ws_name:
         :param bank_id:
-        :param ...
+        :param vulcan_tof_vector: If None, then use vector X of workspace
         :param ...
         :return:
         """
@@ -454,13 +454,49 @@ class SaveVulcanGSS(object):
 
         return van_gsas_ws_name
 
-    def save_vanadium(self, van_ws_name):
+    # TODO - TONIGHT 13 - QA
+    def save_vanadium(self, diff_ws_name, gsas_file_name,
+                      ipts_number, van_run_number, sample_log_ws_name):
         """
         Save a WorkspaceGroup which comes from original GSAS workspace
         :param van_ws_name:
         :return:
         """
-        raise
+        # rebin and then write output
+        gsas_bank_buffer_dict = dict()
+        print ('[DB...BAT]  check 2: {}'.format(mantid_helper.workspace_does_exist(diff_ws_name)))
+        van_ws = mantid_helper.retrieve_workspace(diff_ws_name)
+        num_banks = mantid_helper.get_number_spectra(van_ws)
+        datatypeutility.check_file_name(gsas_file_name, check_exist=False,
+                                        check_writable=True, is_dir=False, note='Output GSAS file')
+
+        # TODO - TONIGHT 5 - This will break if input is a Workspace but not GroupingWorkspace!!!
+        for ws_index in range(num_banks):
+            # get value
+            bank_id = ws_index + 1
+            # write GSAS head considering vanadium
+            tof_vector = None
+            ws_name_i = van_ws[ws_index].name()
+            gsas_section_i = self._write_slog_bank_gsas(ws_name_i, 1, tof_vector, None)
+            gsas_bank_buffer_dict[bank_id] = gsas_section_i
+        # END-FOR
+
+        # header
+        log_ws = mantid_helper.retrieve_workspace(sample_log_ws_name)
+        gsas_header = self._generate_vulcan_gda_header(log_ws, gsas_file_name, ipts_number, gsas_file_name,
+                                                       False)
+
+        # form to a big string
+        gsas_buffer = gsas_header
+        for bank_id in sorted(gsas_bank_buffer_dict.keys()):
+            gsas_buffer += gsas_bank_buffer_dict[bank_id]
+
+        # write to HDD
+        g_file = open(gsas_file_name, 'w')
+        g_file.write(gsas_buffer)
+        g_file.close()
+
+        return
 
     def save(self, diff_ws_name, run_date_time, gsas_file_name, ipts_number, gsas_param_file_name,
              align_vdrive_bin, van_ws_name, is_chopped_run, write_to_file=True):

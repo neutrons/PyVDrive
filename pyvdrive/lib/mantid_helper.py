@@ -110,7 +110,6 @@ def clone_workspace(srs_ws_name, target_ws_name):
 def convert_to_point_data(ws_name):
     """ Convert to point data from histogram
     :param ws_name:
-    :param common_bins: Flag that the input workspace has common bins among spectra
     :return:
     """
     mantidapi.ConvertToPointData(InputWorkspace=ws_name,
@@ -1797,6 +1796,11 @@ def edit_compressed_chopped_workspace_geometry(ws_name):
 
     return
 
+# TODO - TONIGHT 5 - Better QA
+def group_workspaces(input_ws_names, group_name):
+    print ('Grouping {} to {}'.format(input_ws_names, group_name))
+    mantidapi.GroupWorkspaces(InputWorkspaces=input_ws_names, OutputWorkspace=group_name)
+
 
 def merge_runs(ws_name_list, out_ws_name):
     """
@@ -1841,7 +1845,8 @@ def mtd_compress_events(event_ws_name, tolerance=0.01):
     return
 
 
-def mtd_convert_units(ws_name, target_unit):
+# TODO - TONIGHT 8 - Modernize
+def mtd_convert_units(ws_name, target_unit, out_ws_name=None):
     """
     Convert the unit of a workspace.
     Guarantees: if the original workspace is point data, then the output must be point data
@@ -1854,13 +1859,16 @@ def mtd_convert_units(ws_name, target_unit):
     workspace = retrieve_workspace(ws_name, True)
     assert isinstance(target_unit, str), 'Input target unit should be a string,' \
                                          'but is %s.' % str(type(target_unit))
+
+    if out_ws_name is None:
+        out_ws_name = ws_name
     
     # Record whether the input workspace is histogram
-    if workspace.id() == 'WorkspaceGroup':
-        is_histogram = workspace[0]
-    else:
-        is_histogram = workspace.isHistogramData()
-    
+    # if workspace.id() == 'WorkspaceGroup':
+    #     is_histogram = workspace[0]
+    # else:
+    #     is_histogram = workspace.isHistogramData()
+    #
     # Correct target unit
     if target_unit.lower() == 'd' or target_unit.lower().count('spac') == 1:
         target_unit = 'dSpacing'
@@ -1870,17 +1878,18 @@ def mtd_convert_units(ws_name, target_unit):
         target_unit = 'MomentumTransfer'
     
     # Convert to Histogram, convert unit (must work on histogram) and convert back to point data
-    if is_histogram is False:
-        mantidapi.ConvertToHistogram(InputWorkspace=ws_name, OutputWorkspace=ws_name)
+    # if is_histogram is False:
+    #     mantidapi.ConvertToHistogram(InputWorkspace=ws_name, OutputWorkspace=ws_name)
     mantidapi.ConvertUnits(InputWorkspace=ws_name,
-                           OutputWorkspace=ws_name,
+                           OutputWorkspace=out_ws_name,
                            Target=target_unit,
-                           EMode='Elastic')
-    if is_histogram is False:
-        mantidapi.ConvertToPointData(InputWorkspace=ws_name, OutputWorkspace=ws_name)
+                           EMode='Elastic',
+                           ConvertFromPointData=True)
+    # if is_histogram is False:
+    #     mantidapi.ConvertToPointData(InputWorkspace=ws_name, OutputWorkspace=ws_name)
     
     # Check output
-    out_ws = retrieve_workspace(ws_name)
+    out_ws = retrieve_workspace(out_ws_name)
     assert out_ws, 'Output workspace {0} cannot be retrieved!'.format(ws_name)
     
     return

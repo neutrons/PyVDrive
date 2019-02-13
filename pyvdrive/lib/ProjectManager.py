@@ -984,31 +984,6 @@ class ProjectManager(object):
 
         return do_have
 
-    def load_event_file(self, ipts_number, run_number, nxs_file_name, meta_data_only):
-        """
-
-        :param ipts_number:
-        :param run_number:
-        :param nxs_file_name:
-        :return:
-        """
-        if meta_data_only:
-            # for log and chopping
-            chopper = self.get_chopper(run_number, nxs_file_name)
-            meta_ws_name = chopper.load_data_file()
-
-            if ipts_number is None:
-                ipts_number = mantid_helper.get_ipts_number(meta_ws_name)
-            if nxs_file_name.endswith('.nxs') is False and nxs_file_name.endswith('.h5') is False:
-                nxs_file_name = mantid_helper.get_workspace_property(meta_ws_name, 'Filename', True)
-
-            self.add_run(run_number, nxs_file_name, ipts_number)
-
-        else:
-            raise NotImplementedError('blabla NOWNOW')
-
-        return dict()
-
     def load_session_from_dict(self, save_dict):
         """ Load session from a dictionary
         :param save_dict:

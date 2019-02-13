@@ -105,10 +105,18 @@ class VanadiumPeak(VDriveCommand):
                                                                                         max_int=10, prefix='van',
                                                                                         data_key=None,
                                                                                         target_unit='dSpacing')
+
+            # load logs for future
+            if True:
+                # only support vanadium now
+                sample_log_ws_name = self._controller.load_nexus_file(self._iptsNumber, self._vanRunNumber, None, True)
+            else:
+                sample_log_ws_name = None
             self._controller.project.vanadium_processing_manager.init_session(self._myVanDataKey,
                                                                               self._iptsNumber,
                                                                               self._vanRunNumber,
-                                                                              out_file_name)
+                                                                              out_file_name,
+                                                                              sample_log_ws_name)
         elif not do_launch_gui:
             return False, 'IPTS number and run number is not given!'
         else:

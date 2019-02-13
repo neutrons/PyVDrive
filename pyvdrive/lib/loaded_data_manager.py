@@ -134,7 +134,7 @@ class LoadedDataManager(object):
         datatypeutility.check_string_variable('Workspace prefix', prefix)
         datatypeutility.check_int_variable('Maximum integer for file sequence number', max_int, (10, None))
 
-        base_ws_name = os.path.basename(file_name)
+        base_ws_name = os.path.basename(file_name).split('.')[0]
         hash_part = hash(os.path.basename(file_name))
 
         # add zeros for better sorting
