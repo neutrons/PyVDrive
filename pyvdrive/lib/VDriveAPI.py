@@ -1107,11 +1107,13 @@ class VDriveAPI(object):
 
         # load file
         # TODO - TONIGHT 7 - Need a better naming routine for Non-IPTS/RUN NUMBER case
-        if meta_data_only:
-            output_ws_name = '{}_Meta'.format(run_number)
-        else:
-            output_ws_name = '{}_events'.format(run_number)
-        mantid_helper.load_nexus(file_name, output_ws_name, meta_data_only)
+        output_ws_name = self._myProject.load_event_file(ipts_number=ipts_number, run_number=run_number,
+                                                         nxs_file_name=file_name, meta_data_only=meta_data_only)
+        # if meta_data_only:
+        #     output_ws_name = '{}_Meta'.format(run_number)
+        # else:
+        #     output_ws_name = '{}_events'.format(run_number)
+        # mantid_helper.load_nexus(file_name, output_ws_name, meta_data_only)
 
         return output_ws_name
 
