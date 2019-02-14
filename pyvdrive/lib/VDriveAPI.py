@@ -607,6 +607,7 @@ class VDriveAPI(object):
     def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, starting_bank_id=1):
         """
         get data from a workspace
+        Note: this method is to HIDE mantid from callers from INTERFACE
         :param workspace_name:
         :param bank_id:
         :param target_unit: None for using current unit

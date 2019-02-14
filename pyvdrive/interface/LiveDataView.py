@@ -35,7 +35,6 @@ except AttributeError:
 
 # TODO/ISSUE/FUTURE - Consider https://www.tutorialspoint.com/pyqt/pyqt_qsplitter_widget.htm
 #
-# TODO - NEW TO TEST
 # 2. 2D contour plot for reduced runs and in-accumulation run
 
 # Note: Atomic workspace: output_xxxx
@@ -375,6 +374,9 @@ class VulcanLiveDataView(QMainWindow):
         get the reference to the controller instance of this window
         :return:
         """
+        return self._controller
+
+    def get_controller(self):
         return self._controller
 
     def do_clear_log(self):
