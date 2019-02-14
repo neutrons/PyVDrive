@@ -305,38 +305,38 @@ class VDriveAPI(object):
 
         return
 
-    def find_peaks(self, data_key, bank_number, x_range,
-                   auto_find, profile='Gaussian',
-                   peak_positions=None, hkl_list=None):
-        """
-        Find peaks in a given diffraction pattern
-        Requirements:
-         - by run number, a workspace containing the reduced run must be found
-         - either auto (mode) is on or peak positions are given;
-         - peak profile is default as Gaussian and is limited to the peak profile supported by Mantid
-        :param data_key: a data key (for loaded previously reduced data) or run number
-        :param bank_number:
-        :param x_range:
-        :param peak_positions:
-        :param hkl_list:
-        :param profile:
-        :param auto_find:
-        :return: list of tuples for peak information as (peak center, height, width)
-        """
-        try:
-            # raise exceptions if the input parameters are not allowed.
-            if isinstance(peak_positions, list) and auto_find:
-                raise RuntimeError('It is not allowed to specify both peak positions and turn on auto mode.')
-            if peak_positions is None and auto_find is False:
-                raise RuntimeError('Either peak positions is given. Or auto mode is turned on.')
-
-            peak_info_list = self._myProject.find_diffraction_peaks(data_key, bank_number, x_range,
-                                                                    peak_positions, hkl_list,
-                                                                    profile)
-        except RuntimeError as run_err:
-            return False, 'Failed to find peaks due to {0}'.format(run_err)
-
-        return True, peak_info_list
+    # def find_peaks(self, data_key, bank_number, x_range,
+    #                auto_find, profile='Gaussian',
+    #                peak_positions=None, hkl_list=None):
+    #     """
+    #     Find peaks in a given diffraction pattern
+    #     Requirements:
+    #      - by run number, a workspace containing the reduced run must be found
+    #      - either auto (mode) is on or peak positions are given;
+    #      - peak profile is default as Gaussian and is limited to the peak profile supported by Mantid
+    #     :param data_key: a data key (for loaded previously reduced data) or run number
+    #     :param bank_number:
+    #     :param x_range:
+    #     :param peak_positions:
+    #     :param hkl_list:
+    #     :param profile:
+    #     :param auto_find:
+    #     :return: list of tuples for peak information as (peak center, height, width)
+    #     """
+    #     try:
+    #         # raise exceptions if the input parameters are not allowed.
+    #         if isinstance(peak_positions, list) and auto_find:
+    #             raise RuntimeError('It is not allowed to specify both peak positions and turn on auto mode.')
+    #         if peak_positions is None and auto_find is False:
+    #             raise RuntimeError('Either peak positions is given. Or auto mode is turned on.')
+    #
+    #         peak_info_list = self._myProject.find_diffraction_peaks(data_key, bank_number, x_range,
+    #                                                                 peak_positions, hkl_list,
+    #                                                                 profile)
+    #     except RuntimeError as run_err:
+    #         return False, 'Failed to find peaks due to {0}'.format(run_err)
+    #
+    #     return True, peak_info_list
 
     def gen_data_slice_manual(self, run_number, relative_time, time_segment_list, slice_tag):
         """ generate event slicer for data manually

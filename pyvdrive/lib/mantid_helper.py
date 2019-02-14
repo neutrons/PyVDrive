@@ -1338,6 +1338,12 @@ def is_grouping_workspace(workspace_name):
     return False
 
 
+def is_workspace_group(group_name):
+    ws_group = retrieve_workspace(group_name)
+
+    return ws_group.id() == 'WorkspaceGroup'
+
+
 def is_masking_workspace(workspace_name):
     """
     check whether a workspace is a mask workspace

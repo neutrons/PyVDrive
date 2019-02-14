@@ -564,7 +564,9 @@ class PeakPickerWindow(QMainWindow):
         """
         # Check requirements
         assert self._myController is not None, 'Controller must be set up.'
-        assert self._peakPickerMode == PeakPickerMode.AutoMode, 'Peak pick mode must be in auto-mode.'
+        if self._peakPickerMode != PeakPickerMode.AutoMode:
+            GuiUtility.pop_dialog_error(self, 'Peak pick mode must be in auto-mode.')
+            return
 
         # Get minimum and maximum d-spacing to calculate by the range in the graph
         min_d = GuiUtility.parse_float(self.ui.lineEdit_xMin)
@@ -613,45 +615,57 @@ class PeakPickerWindow(QMainWindow):
 
         # Try to find reflections in auto mode
         if num_phases_used == 0:
-            # Use algorithm to find peak automatically
+            peak_position_list = None
+            hkl_list = None
             GuiUtility.pop_dialog_information(self, 'No phase is selected. Find peak automatically!')
-            try:
-                status, ret_obj = self._myController.find_peaks(data_key=curr_data,
-                                                                bank_number=self._currentBankNumber,
-                                                                x_range=(min_d, max_d),
-                                                                profile='Gaussian',
-                                                                auto_find=True)
-
-                if status is False:
-                    GuiUtility.pop_dialog_error(self, str(ret_obj))
-                    return
-                else:
-                    peak_info_list = ret_obj
-
-                # Return if no reflection can be found
-                if len(peak_info_list) == 0:
-                    # No reflection can be found
-                    GuiUtility.pop_dialog_error(self,
-                                                'Unable to find any reflection between %f and %f.' % (min_d, max_d))
-                    return
-
-            except RuntimeError as re:
-                GuiUtility.pop_dialog_error(self, str(re))
-                return
         else:
-            # Use algorithm find peak with given peak positions to eliminate the non-existing peaks
-            try:
-                peak_info_list = self._myController.find_peaks(run_number=self._currentRunNumber,
-                                                               x_range=(min_d, max_d),
-                                                               peak_positions=reflection_list[0],
-                                                               hkl_list=reflection_list[1],
-                                                               profile='Gaussian')
-            except RuntimeError as e:
-                GuiUtility.pop_dialog_error(self, str(e))
-                return
+            peak_position_list = reflection_list[0]
+            hkl_list = reflection_list[1]
+        # END-IF
+
+        # Use algorithm to find peak automatically
+        try:
+            found_peaks_list = self._myController.project.find_diffraction_peaks(data_key=curr_data,
+                                                                                 bank_number=self._currentBankNumber,
+                                                                                 x_range=(min_d, max_d),
+                                                                                 profile='Gaussian',
+                                                                                 peak_positions=peak_position_list,
+                                                                                 hkl_list=hkl_list)
+        except RuntimeError as run_err:
+            GuiUtility.pop_dialog_error(self, str(run_err))
+            return
+
+        #
+        #         if status is False:
+        #
+        #             return
+        #         else:
+        #             peak_info_list = ret_obj
+        #
+        #         # Return if no reflection can be found
+        #         if len(peak_info_list) == 0:
+        #             # No reflection can be found
+        #             GuiUtility.pop_dialog_error(self,
+        #                                         'Unable to find any reflection between %f and %f.' % (min_d, max_d))
+        #             return
+        #
+        #     except RuntimeError as re:
+        #         GuiUtility.pop_dialog_error(self, str(re))
+        #         return
+        # else:
+        #     # Use algorithm find peak with given peak positions to eliminate the non-existing peaks
+        #     try:
+        #         peak_info_list = self._myController.find_peaks(run_number=self._currentRunNumber,
+        #                                                        x_range=(min_d, max_d),
+        #                                                        peak_positions=reflection_list[0],
+        #                                                        hkl_list=reflection_list[1],
+        #                                                        profile='Gaussian')
+        #     except RuntimeError as e:
+        #         GuiUtility.pop_dialog_error(self, str(e))
+        #         return
 
         # Set the peaks to canvas
-        self.ui.graphicsView_main.sort_n_add_peaks(peak_info_list)
+        self.ui.graphicsView_main.sort_n_add_peaks(found_peaks_list)
 
         return
 

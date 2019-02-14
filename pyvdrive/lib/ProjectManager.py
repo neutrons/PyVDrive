@@ -604,13 +604,12 @@ class ProjectManager(object):
                                peak_positions, hkl_list, profile):
         """
         Find diffraction peaks
-        :param data_key:
+        :param data_key: a data key (for loaded previously reduced data) or run number. For workspace or WorksapceGroup
         :param bank_number:
         :param x_range:
         :param peak_positions: If not specified (None) then it is in auto mode
         :param hkl_list:
         :param profile:
-        :param auto_find:
         :return:
         """
         # Check input
@@ -620,7 +619,8 @@ class ProjectManager(object):
         assert isinstance(bank_number, int), 'Bank number must be an integer.'
         assert isinstance(x_range, tuple) and len(x_range) == 2, 'X-range must be a 2-tuple.'
         assert isinstance(profile, str), 'Peak profile must be a string.'
-        assert isinstance(peak_positions, list) or peak_positions is None, 'Peak positions must be a list or None.'
+        if peak_positions is not None:
+            datatypeutility.check_list('Peak positions', peak_positions)
 
         # locate the workspace
         if isinstance(data_key, int) and self._reductionManager.has_run_reduced(data_key):
@@ -630,11 +630,18 @@ class ProjectManager(object):
         else:
             raise RuntimeError('Workspace cannot be found with data key/run number {0}'.format(data_key))
 
+        # check WorkspaceGroup
+        ws_index = bank_number - 1
+        if mantid_helper.is_workspace_group(data_ws_name):
+            ws_group = mantid_helper.retrieve_workspace(data_ws_name)
+            data_ws_name = ws_group[ws_index].name()
+            ws_index = 0
+
         #
         if peak_positions is None:
             # find peaks in an automatic way
             peak_info_list = mantid_helper.find_peaks(diff_data=data_ws_name,
-                                                      ws_index=bank_number-1,
+                                                      ws_index=ws_index,
                                                       peak_profile=profile,
                                                       is_high_background=True,
                                                       background_type='Linear')
