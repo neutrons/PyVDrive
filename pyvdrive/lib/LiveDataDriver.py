@@ -202,6 +202,7 @@ class LiveDataDriver(QtCore.QThread):
 
         return new_ws, is_new_ws
 
+    # TODO - TONIGHT 3 - Consider to remove since mantid_helper is used
     @staticmethod
     def delete_workspace(workspace_name, no_throw=False):
         """

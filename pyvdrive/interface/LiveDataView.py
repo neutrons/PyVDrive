@@ -884,14 +884,18 @@ class VulcanLiveDataView(QMainWindow):
         for bank_id in range(1, 4):
             # get data
             try:
-                vec_y_i = in_sum_ws.readY(bank_id-1)
+                vec_y_i = in_sum_ws.readY(bank_id-1)[:]
+
+                # Normalize by vanadium: only acted on the vector to plot
                 if norm_by_van:
                     vec_y_van = self._controller.get_vanadium(bank_id)
                     vec_y_i = vec_y_i / vec_y_van
 
                 vec_x_i = in_sum_ws.readX(bank_id-1)[:len(vec_y_i)]
                 color_i = self._bankColorDict[bank_id]
-                label_i = 'in accumulation bank {0}'.format(bank_id)
+                label_i = 'in-accumulation bank {0}'.format(bank_id)
+                if norm_by_van:
+                    label_i += ': normalized by vanadium'
                 self._mainGraphicDict[bank_id].plot_current_plot(vec_x_i, vec_y_i, color_i, label_i, target_unit,
                                                                  auto_scale_y=False)
             except RuntimeError as run_err:
