@@ -286,21 +286,18 @@ class PeakPickerWindow(QMainWindow):
         self._vanadiumProcessDialog.show()
 
         # get current workspace
-        current_run_str = str(self.ui.comboBox_runs.currentText())
-        if current_run_str.isdigit():
-            current_run = int(current_run_str)
-        else:
-            current_run = current_run_str
-
-        self._vanadiumProcessDialog.set_run_number(current_run)
-
-        # FWHM
-        if self._vanadiumFWHM is not None:
-            self._vanadiumProcessDialog.set_peak_fwhm(self._vanadiumFWHM)
+        # current_run_str = str(self.ui.comboBox_runs.currentText())
+        # if current_run_str.isdigit():
+        #     current_run = int(current_run_str)
+        # else:
+        #     current_run = current_run_str
+        # # FWHM
+        # if self._vanadiumFWHM is not None:
+        #     self._vanadiumProcessDialog.set_peak_fwhm(self._vanadiumFWHM)
 
         # also set up the vanadium processors
-        workspace_name = self._myController.get_reduced_workspace_name(current_run_str)
-        self._myController.project.vanadium_processing_manager.init_session(workspace_name, BANK_GROUP_DICT)
+        # workspace_name = self._myController.get_reduced_workspace_name(current_run_str)
+        # self._myController.project.vanadium_processing_manager.init_session(workspace_name, BANK_GROUP_DICT)
 
         return
 
@@ -848,6 +845,8 @@ class PeakPickerWindow(QMainWindow):
 
         self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y, title=title)
 
+        # TODO - FIXME - TONIGHT 5 - Reset the range of the canvas according last vector X
+
         return
 
     def evt_switch_peak_pick_mode(self):
@@ -1014,6 +1013,10 @@ class PeakPickerWindow(QMainWindow):
 
         ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber)
         run_number = GuiUtility.parse_integer(self.ui.lineEdit_runNumber)
+
+        # TODO - TONIGHT 1 - Need a better way to manage: ipts/run/data key
+        self._ipts_number = ipts_number
+        self._run_number = run_number
 
         gsas_file_name = None
         default_dir = None
@@ -1703,7 +1706,13 @@ class PeakPickerWindow(QMainWindow):
         # plots shall be reset and re-load data
         self.ui.graphicsView_main.reset()
 
+        # TODO - TONIGHT 43 - This is not a good approach to re-load data
         self.do_load_data()
+
+        if new_mode_index == 1:
+            # process vanadium peaks
+            self._subControllerVanadium.set_vanadium_info(self._ipts_number, self._run_number)
+            self._subControllerVanadium.init_session(self._currGraphDataKey)
 
         return
 
@@ -1717,7 +1726,7 @@ class PeakPickerWindow(QMainWindow):
         self._currentBankNumber = 1
         self._currGraphDataKey = data_key
         """
-        self._subControllerVanadium.strip_vanadium_peaks(self._currGraphDataKey, self._currentBankNumber)
+        self._subControllerVanadium.strip_vanadium_peaks(self._currentBankNumber)
 
         return
 
@@ -1772,7 +1781,7 @@ class PeakPickerWindow(QMainWindow):
         :param is_high_background:
         :return:
         """
-        self._subControllerVanadium.strip_vanadium_peaks(self._currGraphDataKey, self._currentBankNumber,
+        self._subControllerVanadium.strip_vanadium_peaks(self._currentBankNumber,
                                                          peak_fwhm, tolerance, str(background_type),
                                                          is_high_background)
 
@@ -1793,7 +1802,7 @@ class PeakPickerWindow(QMainWindow):
 
         return
 
-    def signal_smooth_vanadium(self, bank_group_index, smoother_type, param_n, param_order):
+    def signal_smooth_vanadium(self, flag, smoother_type, param_n, param_order):
         """
         process the signal to smooth vanadium spectra
         :param smoother_type:
@@ -1804,13 +1813,8 @@ class PeakPickerWindow(QMainWindow):
         # convert smooth_type to string from unicode
         smoother_type = str(smoother_type)
 
-        self._myController.project.vanadium_processing_manager.smooth_spectra(bank_group_index, smoother_type,
-                                                                              param_n, param_order,
-                                                                              smooth_original=False)
-
-        self.plot_1d_vanadium(run_id=self._vanadiumProcessDialog.get_run_id(),
-                              bank_id=BANK_GROUP_DICT[bank_group_index][0], is_smoothed_data=True)
-
+        self._subControllerVanadium.smooth_vanadium_peaks(self._currentBankNumber, smoother_type, param_n,
+                                                          param_order)
 
         return
 

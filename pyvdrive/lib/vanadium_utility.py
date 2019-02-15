@@ -40,7 +40,6 @@ class VanadiumProcessingManager(object):
         self._tof_bin_dict = dict()
 
         # these are updated class variables
-        self._workspace = None
         self._van_workspace_name = None   # input vanadium workspace (focused)
         self._ipts_number = None
         self._van_run_number = None
@@ -82,6 +81,19 @@ class VanadiumProcessingManager(object):
         """
         return self._striped_peaks_ws_dict
 
+    def get_peak_striped_data(self, bank_id):
+
+        ws_name = self._striped_peaks_ws_dict[bank_id]
+        workspace = mantid_helper.retrieve_workspace(ws_name)
+
+        return workspace.readX(0), workspace.readY(0)
+
+    def get_peak_smoothed_data(self, bank_id):
+        ws_name = self._smoothed_ws_dict[bank_id]
+        workspace = mantid_helper.retrieve_workspace(ws_name)
+
+        return workspace.readX(0), workspace.readY(0)
+
     def get_raw_vanadium(self):
         # TODO
         return self._source_single_bank_ws_dict
@@ -104,7 +116,6 @@ class VanadiumProcessingManager(object):
             # create dictionary and etc
             raise NotImplementedError('Need to implement single workspace case to extract spectra')
 
-        self._workspace = workspace
         self._van_workspace_name = workspace_name
         self._van_workspace_name = workspace_name
 
@@ -125,16 +136,15 @@ class VanadiumProcessingManager(object):
         #  Process vanadium run including strip vanadium peaks and smooth
         # This is a high-level call to do all the work with good setup in one action
 
-        self._workspace = mantid_helper.retrieve_workspace(self._van_workspace_name)
-
-        for ws_index in range(mantid_helper.get_number_spectra(self._workspace)):
+        raw_van_ws = mantid_helper.retrieve_workspace(self._van_workspace_name)
+        for ws_index in range(mantid_helper.get_number_spectra(raw_van_ws)):
             # strip vanadium peaks
             bank_id = ws_index + 1
             self.strip_v_peaks(bank_id=ws_index+1, peak_fwhm=self._default_fwhm_dict[bank_id],
                                pos_tolerance=peak_pos_tol,
                                background_type=background_type,
                                is_high_background=is_high_background)
-            # smoooth
+            # smooth
             self.smooth_v_spectrum(bank_id=bank_id, smoother_filter_type=smoother_filter_type,
                                    param_n=20, param_order=2)
         # END-FOR
@@ -339,27 +349,28 @@ class VanadiumProcessingManager(object):
         :param is_high_background:
         :return:
         """
-        print (self._workspace)
-        print (self._van_workspace_name)
+        print ('[DB...BAT] Strip {} Bank {}'.format(self._van_workspace_name, bank_id))
 
-        if self._workspace.id() == 'WorkspaceGroup':
-            input_ws_name = self._workspace[bank_id-1].name()
-            bank_list = 0
+        raw_van_ws = mantid_helper.retrieve_workspace(self._van_workspace_name)
+        if mantid_helper.is_workspace_group(self._van_workspace_name):
+            input_ws_name = raw_van_ws[bank_id-1].name()
+            bank_list = [1]
         else:
             input_ws_name = self._van_workspace_name
-            bank_list = bank_id - 1
+            bank_list = [bank_id]
 
         print ('[DB...BAT] Strip Peaks: workspace name: {}'.format(input_ws_name))
 
         output_ws_name = input_ws_name + '_NoPeak'
-        mantid_helper.strip_vanadium_peaks(input_ws_name=input_ws_name,
+        output_ws_dict = mantid_helper.strip_vanadium_peaks(input_ws_name=input_ws_name,
                                                output_ws_name=output_ws_name,
-                                               bank_list=None,
+                                               bank_list=bank_list,
                                                binning_parameter=None,
-                                               fwhm=peak_fwhm,
+                                               fwhm=int(peak_fwhm),  # PEAK FWHM must be integer (legacy)
                                                peak_pos_tol=pos_tolerance,
                                                background_type=background_type,
                                                is_high_background=is_high_background)
+        print ('[DB....BAT] Vanadium-peaks-striped: {}'.format(output_ws_dict))
         self._striped_peaks_ws_dict[bank_id] = output_ws_name
 
         return output_ws_name

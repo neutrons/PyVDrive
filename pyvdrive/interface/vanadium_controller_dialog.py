@@ -103,6 +103,8 @@ class VanadiumProcessControlDialog(QDialog):
         self.myApplyResultSignal.connect(self._myParent.signal_save_processed_vanadium)
         self.myShowVPeaksSignal.connect(self._myParent._subControllerVanadium.event_show_hide_v_peaks)
 
+        self.ui.pushButton_bfSearchSmooth.connect(self.do_smooth_bf)
+
         return
 
     def _init_widgets(self):
@@ -344,6 +346,12 @@ class VanadiumProcessControlDialog(QDialog):
 
         return
 
+    def do_smooth_bf(self):
+        """
+        Use brute force to 
+        :return:
+        """
+
     def _get_banks_group(self):
         # append the banks
         bank_group = str(self.ui.comboBox_banks.currentText())
@@ -391,7 +399,7 @@ class VanadiumProcessControlDialog(QDialog):
             return
 
         # emit signal
-        self.mySmoothVanadiumSignal.emit(bank_group_index, smoother_type, smoother_n, smoother_order)
+        self.mySmoothVanadiumSignal.emit(1, smoother_type, smoother_n, smoother_order)
 
         return
 
@@ -513,15 +521,6 @@ class VanadiumProcessControlDialog(QDialog):
         # the default vanadium peak strip parameters
         for value_name in self._defaultDict.keys():
             settings.setValue(value_name, self._defaultDict[value_name])
-
-        return
-
-    def set_run_number(self, run_number):
-        """ set run number
-        :param run_number:
-        :return:
-        """
-        self.ui.lineEdit_runNumber.setText(str(run_number))
 
         return
 
