@@ -53,10 +53,10 @@ class PeakPickerWindowChildVanadium(object):
                 return
             else:
                 # show!:
-                self._vpeak_indicators = self.ui.graphicsView_mainPlot.add_indicators(VANADIUM_PEAKS_D)
+                self._vpeak_indicators = self.ui.graphicsView_main.add_vanadium_peaks(VANADIUM_PEAKS_D)
         elif not show_v_peaks and self._is_v_peaks_shown:
             # hide/delete vanadium peaks
-            self.ui.graphicsView_mainPlot.remove_indicators(self._vpeak_indicators)
+            self.ui.graphicsView_main.remove_vanadium_peaks(self._vpeak_indicators)
             self._vpeak_indicators = None
 
         return
@@ -192,7 +192,7 @@ class PeakPickerWindowChildVanadium(object):
         self._raw_van_dspace_line = self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='black',
                                                                           x_label='dSpacing')
 
-        return
+        return vec_x, vec_y
 
     def plot_raw_tof(self, bank_id):
         """
@@ -208,7 +208,7 @@ class PeakPickerWindowChildVanadium(object):
         self._raw_van_dspace_line = self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='black',
                                                                           x_label='dSpacing')
 
-        return
+        return vec_x, vec_y
 
     def plot_strip_peak_vanadium(self, bank_id):
         """
@@ -235,7 +235,7 @@ class PeakPickerWindowChildVanadium(object):
 
         return
 
-    def plot_smoothed_peak_vanadium(self, bank_id):
+    def plot_smoothed_peak_vanadium(self, bank_id, with_raw=True):
         """
         Plot vanadium spectrum after vanadium peak removed and smoothed
         :param bank_id:
@@ -243,20 +243,25 @@ class PeakPickerWindowChildVanadium(object):
         """
         datatypeutility.check_int_variable('Bank ID', bank_id, (1, 100))
 
-        # get vector X and Y
-        vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_peak_smoothed_data(bank_id)
-        vec_raw_x, vec_raw_y = self._myController.project.vanadium_processing_manager.get_raw_data(bank_id, is_tof=True)
-
         # remove the previously plot smoothed vanadium line
         self._remove_smoothed_line()
         self._remove_raw_dspace_line()
         self.show_hide_v_peaks(show_v_peaks=False)  # hide vanadium peaks indicators
-        self._raw_van_tof_line = self.ui.graphicsView_main.add_plot_1d(vec_raw_x, vec_raw_y, color='black',
-                                                                       line_style=None, marker='.')
+
+        # get vector X and Y
+        vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_peak_smoothed_data(bank_id)
+        vec_x_list = [vec_x]
+        vec_y_list = [vec_y]
+
         self._smoothed_van_line = self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='blue', x_label='TOF')
 
+        if with_raw:
+            vec_raw_x, vec_raw_y = self.plot_raw_tof(bank_id)
+            vec_x_list.append(vec_raw_x)
+            vec_y_list.append(vec_raw_y)
+
         # reset X Y limit
-        self._reset_figure_range([vec_x, vec_raw_x], [vec_y, vec_raw_y])
+        self._reset_figure_range(vec_x_list, vec_y_list)
 
         return
 
@@ -276,7 +281,6 @@ class PeakPickerWindowChildVanadium(object):
         # set range
         min_x_list = sorted([array_x[0] for array_x in vec_x_list])
         max_x_list = sorted([array_x[-1] for array_x in vec_x_list])
-        self.ui.graphicsView_main.set_x_limits(min_x_list[0], max_x_list[-1])
 
         # Y
         if isinstance(vec_y, numpy.ndarray):
@@ -291,9 +295,10 @@ class PeakPickerWindowChildVanadium(object):
         lower_y = min_y_list[0] - delta_y * 0.01
         upper_y = max_y_list[-1] + delta_y * 0.001
 
-        self.ui.graphicsView_main.set_y_limits(lower_y, upper_y)
-        self.ui.graphicsView_main.adjust_indiators(self._vpeak_indicators, x_range=None,
-                                                   y_range=(lower_y, upper_y))
+        self.ui.graphicsView_main.setXYLimit(min_x_list[0], max_x_list[-1], lower_y, upper_y)
+        if self._vpeak_indicators is not None:
+            self.ui.graphicsView_main.adjust_indiators(self._vpeak_indicators, x_range=None,
+                                                       y_range=(lower_y, upper_y))
 
         return
 
@@ -316,7 +321,7 @@ class PeakPickerWindowChildVanadium(object):
         :return:
         """
         if self._raw_van_dspace_line is not None:
-            self.ui.graphicsView_main.remove(self._raw_van_dspace_line)
+            self.ui.graphicsView_main.remove_line(self._raw_van_dspace_line)
             self._raw_van_dspace_line = None
 
         return
@@ -327,8 +332,8 @@ class PeakPickerWindowChildVanadium(object):
         :return:
         """
         if self._raw_van_tof_line:
-            self.ui.graphicsView_main.remove_line(self._smoothed_van_line)
-            self._smoothed_van_line = None
+            self.ui.graphicsView_main.remove_line(self._raw_van_tof_line)
+            self._raw_van_tof_line = None
 
         return
 
@@ -349,7 +354,7 @@ class PeakPickerWindowChildVanadium(object):
         :return:
         """
         if self._no_peak_van_line is not None:
-            self.ui.graphicsView_main.remove_line(self._smoothed_van_line)
+            self.ui.graphicsView_main.remove_line(self._no_peak_van_line)
             self._no_peak_van_line = None
 
         return

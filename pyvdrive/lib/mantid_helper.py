@@ -1908,6 +1908,8 @@ def mtd_convert_units(ws_name, target_unit, out_ws_name=None):
         target_unit = 'MomentumTransfer'
 
     workspace = retrieve_workspace(ws_name, True)
+    if workspace.id() == 'WorkspaceGroup':
+        workspace = workspace[0]
     if workspace.getAxis(0).getUnit().unitID() == target_unit:
         print ('[INFO] Workspace {} has unit {} already. No need to convert'.format(ws_name, target_unit))
         return

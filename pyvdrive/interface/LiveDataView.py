@@ -6,11 +6,12 @@ try:
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QMainWindow, QLineEdit
+    from PyQt5.QtGui import QPixmap
 except ImportError:
     from PyQt4 import QtCore
     from PyQt4.QtGui import QVBoxLayout
     from PyQt4.uic import loadUi as load_ui
-    from PyQt4.QtGui import QMainWindow, QLineEdit
+    from PyQt4.QtGui import QMainWindow, QLineEdit, QPixmap
 import random
 import time
 import numpy
@@ -26,6 +27,7 @@ from pyvdrive.lib import mantid_helper
 from gui.pvipythonwidget import IPythonWorkspaceViewer
 from pyvdrive.lib import vdrivehelper
 from pyvdrive.lib import datatypeutility
+from gui import GuiUtility
 
 # include this try/except block to remap QString needed when using IPython
 try:
@@ -172,6 +174,7 @@ class VulcanLiveDataView(QMainWindow):
         # multiple thread pool
         self._checkStateTimer = None
         self._2dUpdater = None
+        self._snap_shot_thread = None
 
         self._bankColorDict = {1: 'red', 2: 'blue', 3: 'green'}
         self._mainGraphicDict = {1: self.ui.graphicsView_currentViewB1,
@@ -201,6 +204,27 @@ class VulcanLiveDataView(QMainWindow):
         self._update2DCounter = 0
         #
         self.show_refresh_info()
+
+        # about SNAP shot
+        self._snap_shot_dir = '/home/controls/var'
+        self._snap_shot_image = None
+        if not os.path.exists(self._snap_shot_dir):
+            err_msg = 'Directory {} does not exist'.format(self._snap_shot_dir)
+        elif not os.access(self._snap_shot_dir, os.W_OK):
+            err_msg = 'User does not have writing permission to {}'.format(self._snap_shot_dir)
+        else:
+            self._snap_shot_image = os.path.join(self._snap_shot_dir, 'Vulcan_LiveDataView_SnapShot.png')
+            if os.path.exists(self._snap_shot_image) and os.access(self._snap_shot_image, os.W_OK) is False:
+                err_msg = 'User cannot overwrite {}'.format(self._snap_shot_image)
+            else:
+                err_msg = ''
+        # END-IF
+
+        if err_msg != '':
+            GuiUtility.pop_dialog_error(self, 'Auto snap shot generator is disabled due to {}'.format(err_msg))
+            self._enable_snap_shot = False
+        else:
+            self._enable_snap_shot = True
 
         return
 
@@ -239,6 +263,23 @@ class VulcanLiveDataView(QMainWindow):
         self.ui.frame_graphicsView_comparison.setLayout(graphicsView_comparison_layout)
         self.ui.graphicsView_comparison = GeneralPurpose1DView(self)
         graphicsView_comparison_layout.addWidget(self.ui.graphicsView_comparison)
+
+        return
+
+    def take_snap_shot(self):
+        """
+        Take a snap shot for the window
+        :return:
+        """
+        date = datetime.now()
+        time_message = date.strftime('%Y-%m-%d_%H-%M-%S')
+        p = QPixmap.grabWindow(self.winId())
+
+        if self._enable_snap_shot:
+            p.save(self._snap_shot_image, 'png')  # or jpg
+            print ('[DB...BAT] shot taken at {} and saved to {}'.format(time_message, self._snap_shot_image))
+        else:
+            print ('[DB...BAT] shot taken at {} and but not saved'.format(time_message))
 
         return
 
@@ -598,6 +639,10 @@ class VulcanLiveDataView(QMainWindow):
         self._2dUpdater = TwoDimPlotUpdateThread()
         self._2dUpdater.start()
 
+        # live view snap shot
+        self._snap_shot_thread = SnapShotThread(5, self)
+        self._snap_shot_image.start()
+
         # start start listener
         self._controller.run()
 
@@ -623,6 +668,9 @@ class VulcanLiveDataView(QMainWindow):
 
         if self._controller is not None:
             self._controller.stop()
+
+        if self._snap_shot_thread is not None:
+            self._snap_shot_thread.stop()
 
         # remove the message
         curr_message = str(self.ui.label_info.text())
@@ -1820,6 +1868,57 @@ class TimerThread(QtCore.QThread):
         """
         while self._continueTimerLoop:
             time.sleep(1)
+            self.time_due.emit(1)
+        # END-WHILE
+
+        return
+
+    def stop(self):
+        """ stop the timer by turn off _continueTimeLoop (flag)
+        :return:
+        """
+        self._continueTimerLoop = False
+
+        return
+
+
+class SnapShotThread(QtCore.QThread):
+    """
+    Thread class to do snap shot
+    """
+
+    # signal
+    take_snap_shot = QtCore.pyqtSignal(int)
+
+    def __init__(self, time_step, parent):
+        """
+        initialization
+        :param time_step: in seconds
+        :param parent:
+        """
+        # call base class's constructor
+        super(SnapShotThread, self).__init__()
+        datatypeutility.check_int_variable('Snap shot interval', time_step, (1, None))
+
+        # set up parent
+        self._parent = parent
+
+        # define status
+        self._continueTimerLoop = True
+
+        self._time_step = time_step
+
+        # connect to parent
+        self.time_due.connect(self._parent.take_snap_shot)
+
+        return
+
+    def run(self):
+        """ run the timer thread.  this thread won't be kill until flag _continueTimerLoop is set to False
+        :return:
+        """
+        while self._continueTimerLoop:
+            time.sleep(self._time_step)
             self.time_due.emit(1)
         # END-WHILE
 

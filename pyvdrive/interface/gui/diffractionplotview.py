@@ -1,5 +1,6 @@
 import bisect
 import operator
+import numpy
 try:
     import qtconsole.inprocess
     from PyQt5.QtWidgets import QApplication, QMenu, QAction, QMainWindow
@@ -219,6 +220,21 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return peak_id
 
+    def add_vanadium_peaks(self, peak_pos_list):
+        """ Add vanadium peaks indicators
+        :param peak_pos_list:
+        :return:
+        """
+        datatypeutility.check_list('Peak positions', peak_pos_list)
+        peak_pos_list = sorted(peak_pos_list)
+
+        indicator_id_list = list()
+        for peak_pos in peak_pos_list:
+            peak_indicator_id = self.add_vertical_indicator(peak_pos, color='red')
+            indicator_id_list.append(peak_indicator_id)
+
+        return indicator_id_list
+
     def add_peak_group(self, left_boundary, right_boundary):
         """
         add a peak group with left and right boundary
@@ -392,6 +408,21 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
     #         self.remove_peak_indicator(remove_peak_index[indicator_index])
     #
     #     return
+
+    def adjust_indiators(self, indicator_list, x_range=None, y_range=None):
+
+        # TODO - TONIGHT 1 - Code quality
+
+        if y_range:
+            lower_y, upper_y = y_range
+            new_vec_y = numpy.array([lower_y, upper_y])
+        else:
+            new_vec_y = None
+
+        for indicator_id in indicator_list:
+            self.update_indicator(indicator_id, y_range=new_vec_y)
+
+        return
 
     def edit_group(self, group_id, status):
         """
@@ -1365,16 +1396,23 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         if removable:
             self.remove_indicator(peak_indicator_index)
 
-        # check line ID for indicator and single peak dict
-        # TODO - FIXME - NIGHT - Implement get_indicator_ids() if bug cannot be found.
-        # line_ids_indicators = sorted(self.get_indicator_ids())
-        # line_sp_indicators = sorted(self._mySinglePeakDict.keys())
-        # if line_ids_indicators != line_sp_indicators:
-        #     raise NotImplementedError('[DEBUG OUTPUT] Found DiffractionPlotView has a different (peak) indicators '
-        #                               'set from its parent:\nThis: {}\nParent: {}'
-        #                               ''.format(line_ids_indicators, line_sp_indicators))
-
         return True
+
+    def remove_vanadium_peaks(self, peak_indicator_list):
+        """
+        Remove vanadium peaks indicators
+        :param peak_indicator_list:
+        :return:
+        """
+        datatypeutility.check_list('Vanadium peak indicators', peak_indicator_list)
+
+        for peak_index in range(len(peak_indicator_list)):
+            peak_indicator = peak_indicator_list[peak_index]
+            self.remove_indicator(peak_indicator)
+            peak_indicator_list[peak_index] = None
+        # END-FOR
+
+        return
 
     def remove_show_only_peaks(self):
         """ Removed all the peaks' indicators that is for shown only
