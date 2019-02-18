@@ -58,7 +58,9 @@ class PeakPickerWindow(QMainWindow):
         self._myController = controller
         self.set_data_dir(self._myController.get_working_dir())
 
+        # about loaded runs
         self._loaded_runs = list()
+        self._data_info_dict = dict()  # information dictionary: [data key] = (IPTS, Run, Filename)
 
         # parent
         self._myParent = parent
@@ -76,6 +78,7 @@ class PeakPickerWindow(QMainWindow):
 
         # child window controller
         self._subControllerVanadium = PeakPickWindowVanadium.PeakPickerWindowChildVanadium(self, self.ui)
+        self._vanadiumProcessDialog = None
 
         # Define event handling methods
         # phase set up
@@ -158,7 +161,7 @@ class PeakPickerWindow(QMainWindow):
         self.ui.comboBox_mode.currentIndexChanged.connect(self.event_change_mode)
 
         # Define state variables
-        self._isDataLoaded = False     # state flag that data is loaded
+        self._is_data_loaded = False     # state flag that data is loaded
         self._currentDataFile = None      # name of the data file that is currently loaded
         self._currentRunNumber = None  # current run number
         self._currentBankNumber = -1   # current bank number
@@ -282,22 +285,9 @@ class PeakPickerWindow(QMainWindow):
         :return:
         """
         # launch vanadium dialog window
-        self._vanadiumProcessDialog = vanadium_controller_dialog.VanadiumProcessControlDialog(self)
+        if self._vanadiumProcessDialog is None:
+            self._vanadiumProcessDialog = vanadium_controller_dialog.VanadiumProcessControlDialog(self)
         self._vanadiumProcessDialog.show()
-
-        # get current workspace
-        # current_run_str = str(self.ui.comboBox_runs.currentText())
-        # if current_run_str.isdigit():
-        #     current_run = int(current_run_str)
-        # else:
-        #     current_run = current_run_str
-        # # FWHM
-        # if self._vanadiumFWHM is not None:
-        #     self._vanadiumProcessDialog.set_peak_fwhm(self._vanadiumFWHM)
-
-        # also set up the vanadium processors
-        # workspace_name = self._myController.get_reduced_workspace_name(current_run_str)
-        # self._myController.project.vanadium_processing_manager.init_session(workspace_name, BANK_GROUP_DICT)
 
         return
 
@@ -812,7 +802,7 @@ class PeakPickerWindow(QMainWindow):
             self.statusBar().showMessage('Newly selected bank %d is same as current bank %d.'
                                          '' % (new_bank, self._currentBankNumber))
             return
-        if self._isDataLoaded is False:
+        if self._is_data_loaded is False:
             # it is about to load new data, plotting will be called explicitly. no need to re-plot her
             self.statusBar().showMessage('Data is in loading stage. Change to bank %d won\'t have any effect.'
                                          '' % new_bank)
@@ -829,7 +819,7 @@ class PeakPickerWindow(QMainWindow):
 
         # Clear table and canvas
         # self.ui.tableWidget_peakParameter.remove_all_rows()
-        self.ui.graphicsView_main.reset()
+        self.ui.graphicsView_main.reset_peak_picker_mode()
         self.ui.graphicsView_main.clear_all_lines()
 
         # TODO/NOW/ISSUE/FUTURE - Need to make the table to add the buffered peaks back
@@ -895,7 +885,6 @@ class PeakPickerWindow(QMainWindow):
 
         return
 
-    # TODO/ISSUE/TEST : newly implemented
     def evt_switch_run(self):
         """
         in the event that a new run is set up
@@ -914,15 +903,15 @@ class PeakPickerWindow(QMainWindow):
         bank_id = int(self.ui.comboBox_bankNumbers.currentText())
 
         # clear the current
-        self.ui.graphicsView_main.reset()
+        self.ui.graphicsView_main.reset_peak_picker_mode()
 
         # plot
         if new_workspace_name is None:
             # use run number
-            self.load_plot_run(new_run_number)
+            self.plot_reduced_data(new_run_number)
         else:
             # use workspace name
-            self.load_plot_run(new_workspace_name)
+            self.plot_reduced_data(new_workspace_name)
 
         return
 
@@ -1011,32 +1000,25 @@ class PeakPickerWindow(QMainWindow):
         if self._myController is None:
             raise RuntimeError('Controller/VDriveAPI cannot be None. Initialize first')
 
+        # get IPTS number and run number
         ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber)
         run_number = GuiUtility.parse_integer(self.ui.lineEdit_runNumber)
 
-        # TODO - TONIGHT 1 - Need a better way to manage: ipts/run/data key
-        self._ipts_number = ipts_number
-        self._run_number = run_number
-
-        gsas_file_name = None
-        default_dir = None
-        if ipts_number and run_number:
-            # both are there: load data directly
-            gsas_file_name = self._myController.archive_manager.locate_gsas(ipts_number, run_number)
-            if not os.path.exists(gsas_file_name):
-                gsas_file_name = None
-        # END-IF
-
-        if gsas_file_name is None and ipts_number:
-            # IPTS number to determine binned data
-            default_dir = '/SNS/VULCAN/IPTS-{}/shared/binned_data/'.format(ipts_number)
-            if not os.path.exists(default_dir):
-                default_dir = '/SNS/VULCAN/IPTS-{}/shared'.format(ipts_number)
-        # END-IF
-
-        if gsas_file_name is None:
-            if default_dir is None or not os.path.exists(default_dir):
+        # Explicitly to load data if IPTS and run number are not sufficient
+        if ipts_number is not None and run_number is not None:
+            # well-defined
+            gsas_file_name = None
+            pass
+        else:
+            # user to input
+            if ipts_number:
+                # Use IPTS number to determine binned data
+                default_dir = '/SNS/VULCAN/IPTS-{}/shared/binned_data/'.format(ipts_number)
+                if not os.path.exists(default_dir):
+                    default_dir = '/SNS/VULCAN/IPTS-{}/shared'.format(ipts_number)
+            else:
                 default_dir = self._myController.get_binned_data_directory()
+
             filters = 'GSAS(*.gda);;All Files(*.*)'
             gsas_file_name = QFileDialog.getOpenFileName(self, 'Load GSAS File', default_dir, filters)
             if isinstance(gsas_file_name, tuple):
@@ -1048,34 +1030,61 @@ class PeakPickerWindow(QMainWindow):
                 return
         # END-IF
 
+        data_key = self.load_reduced_data(ipts_number, run_number, gsas_file_name)
+
+        # plot
+        if data_key:
+            self.plot_reduced_data(data_key)
+
+        return
+
+    def load_reduced_data(self, ipts_number, run_number, gsas_file_name):
+        """
+        Load reduced data
+        :return:
+        """
+        # search archive
+        if gsas_file_name is None:
+            assert ipts_number is not None and run_number is not None, 'Cannot happen'
+            gsas_file_name = self._myController.archive_manager.locate_gsas(ipts_number, run_number)
+
         # Load data from GSAS file
         try:
             data_key = self._myController.project.data_loading_manager.load_binned_data(gsas_file_name, 'gsas',
                                                                                         prefix='',
                                                                                         max_int=100, data_key=None,
                                                                                         target_unit='dSpacing')
+            self._data_info_dict[data_key] = ipts_number, run_number, gsas_file_name
             # add to tree: self.ui.treeView_iptsRun.add_child_current_item(data_key)
+
+            # set label
+            self.ui.label_loadedDataInfo.setText('Loaded {}'.format(gsas_file_name))
         except RuntimeError as re:
             GuiUtility.pop_dialog_error(self, str(re))
-            return
+            return None
 
-        # plot
-        self.load_plot_run(data_key)
+        # self._ipts_number = ipts_number
+        # self._run_number = run_number
+        #
+        # gsas_file_name = None
+        # default_dir = None
+        # if ipts_number and run_number:
+        #     # both are there: load data directly
+        #     if not os.path.exists(gsas_file_name):
+        #         gsas_file_name = None
+        # # END-IF
 
-        # set label
-        self.ui.label_loadedDataInfo.setText('Loaded {}'.format(gsas_file_name))
+        return data_key
 
-        return
-
-    def load_plot_run(self, data_key):
-        """ Load and plot a run
+    def plot_reduced_data(self, data_key):
+        """ Load a run from memory and set it correctly to the UI (all the widgets)
         Purpose: Load and plot a run by its data key
         Requirements: Input data key must be either an integer (run number) or a string (data file name)
         Guarantees: Reduced run (run number) or loaded file shall be loaded and plot
         :param data_key: key to the reduced data.  It can be string key or integer key (run number)
         :return:
         """
-        # Get run number
+        # Get run number if data key is recorded in run number
         if isinstance(data_key, int):
             run_number = data_key
         else:
@@ -1087,7 +1096,7 @@ class PeakPickerWindow(QMainWindow):
             # END-IF-ELSE
         # END-IF-ELSE
 
-        # Get reduced run information
+        # Get reduced run information: list of BANKs
         if run_number is None:
             # in case of a loaded data file (gsas, fullprof..)
             status, ret_obj = self._myController.get_reduced_run_info(run_number=None, data_key=data_key)
@@ -1102,7 +1111,7 @@ class PeakPickerWindow(QMainWindow):
             return
 
         # Set the mutex flag
-        self._isDataLoaded = False
+        self._is_data_loaded = False
 
         # Update widgets, including run number, bank IDs (bank ID starts from 1)
         self._evtLockComboBankNumber = True
@@ -1116,6 +1125,7 @@ class PeakPickerWindow(QMainWindow):
 
         # self.ui.comboBox_runNumber.clear()
 
+        # determine that the run number is not a new one
         if run_number is None:
             combo_item_name = str(data_key)
             title_message = 'File %s Bank %d' % (data_key, 1)
@@ -1151,7 +1161,7 @@ class PeakPickerWindow(QMainWindow):
             vec_x = vec_x[:-1]
 
         # reset the current view including all the indicators
-        self.ui.graphicsView_main.reset()
+        self.ui.graphicsView_main.reset_peak_picker_mode()
         # plot loaded diffraction data
         self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y, title=title_message)
 
@@ -1161,7 +1171,7 @@ class PeakPickerWindow(QMainWindow):
         self._currGraphDataKey = data_key
 
         # Release the mutex flag
-        self._isDataLoaded = True
+        self._is_data_loaded = True
 
         return
 
@@ -1412,7 +1422,7 @@ class PeakPickerWindow(QMainWindow):
             return
 
         # Plot
-        self.load_plot_run(run_id_list[0])
+        self.plot_reduced_data(run_id_list[0])
 
         return
 
@@ -1484,24 +1494,6 @@ class PeakPickerWindow(QMainWindow):
         self._indicatorIDList = None
         self._indicatorPositionList = None
         self._peakSelectionMode = ''
-
-        return
-
-    def menu_delete_peak(self):
-        """
-        Delete a peak from menu at where the cursor is pointed to
-        :return:
-        """
-        # TODO/FIXME/ISSUE/62 - Complete and test!
-
-        # find out where the peak is
-        temp_peak_pos = self._currMousePosX
-
-        nearest_peak_index = self.locate_peak(temp_peak_pos, mouse_resolution)
-        if nearest_peak_index is not None:
-            self.ui.graphicsView_main.delete_peak(nearest_peak_index)
-        else:
-            GuiUtility.pop_dialog_error(self, 'No peak is found around %f.' % self._currMousePosX)
 
         return
 
@@ -1704,14 +1696,15 @@ class PeakPickerWindow(QMainWindow):
             self.ui.tabWidget_functionControl.setTabEnabled(tab_index, tab_index == new_mode_index)
 
         # plots shall be reset and re-load data
-        self.ui.graphicsView_main.reset()
+        self.ui.graphicsView_main.reset_peak_picker_mode()
 
-        # TODO - TONIGHT 43 - This is not a good approach to re-load data
-        self.do_load_data()
+        # # TODO - TONIGHT 43 - This is not a good approach to re-load data
+        # self.do_load_data()
 
         if new_mode_index == 1:
             # process vanadium peaks
-            self._subControllerVanadium.set_vanadium_info(self._ipts_number, self._run_number)
+            ipts_number, run_number, gsas_file_name = self._data_info_dict[self._currGraphDataKey]
+            self._subControllerVanadium.set_vanadium_info(ipts_number, run_number)
             self._subControllerVanadium.init_session(self._currGraphDataKey)
 
         return
@@ -1719,12 +1712,6 @@ class PeakPickerWindow(QMainWindow):
     def do_strip_vanadium_peaks(self):
         """ Strip vanadium peaks
         :return:
-        """
-        """
-                # Set up class variables
-        self._currentRunNumber = run_number
-        self._currentBankNumber = 1
-        self._currGraphDataKey = data_key
         """
         self._subControllerVanadium.strip_vanadium_peaks(self._currentBankNumber)
 
@@ -1734,7 +1721,9 @@ class PeakPickerWindow(QMainWindow):
         """ Smooth vanadium spectra
         :return:
         """
-        self._subControllerVanadium.smooth_vanadium_peaks()
+        self._subControllerVanadium.smooth_vanadium_peaks(self._currentBankNumber, None, None, None)
+
+        return
 
     def do_reset_vanadium_processing(self):
         """ Reset vanadium processing to beginning
@@ -1765,11 +1754,6 @@ class PeakPickerWindow(QMainWindow):
 
         self._myController.project.vanadium_processing_manager.save_to_gsas(run_number, output_file_name)
 
-        # status, error_message = self._myController.save_processed_vanadium(van_info_tuple=None,
-        #                                                                    output_file_name=output_file_name)
-        # if not status:
-        #     GuiUtility.pop_dialog_error(self, error_message)
-
         return
 
     def signal_strip_vanadium_peaks(self, bank_group_index, peak_fwhm, tolerance, background_type, is_high_background):
@@ -1784,21 +1768,6 @@ class PeakPickerWindow(QMainWindow):
         self._subControllerVanadium.strip_vanadium_peaks(self._currentBankNumber,
                                                          peak_fwhm, tolerance, str(background_type),
                                                          is_high_background)
-
-
-        # # check inputs
-        # datatypeutility.check_int_variable('FWHM', peak_fwhm, (1, None))
-        #
-        # # from signal, the string is of type unicode.
-        # background_type = str(background_type)
-        #
-        # # note: as it is from a signal with defined parameters types, there is no need to check
-        # #       the validity of parameters
-        #
-        # # strip vanadium peaks
-        # self._myController.project.vanadium_processing_manager.strip_peaks(bank_group_index, peak_fwhm,
-        #                                                                    tolerance, background_type,
-        #                                                                    is_high_background)
 
         return
 
@@ -1868,5 +1837,9 @@ class PeakPickerWindow(QMainWindow):
         return
 
     def event_show_vpeaks(self):
+        """ Show or hide vanadium peaks' indicators
+        :return:
+        """
+        self._subControllerVanadium.show_hide_v_peaks(self.ui.checkBox_vpeakShowPeakPos.isChecked())
         return
 

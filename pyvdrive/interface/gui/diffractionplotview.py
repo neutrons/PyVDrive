@@ -1390,8 +1390,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def reset(self):
-        """ Reset the canvas and peaks managers and single peak lines
+    def reset_peak_picker_mode(self):
+        """ Reset the canvas and peaks managers and single peak lines in peak picker mode
         :return:
         """
         # reset peak indicator for selected peaks
@@ -1412,6 +1412,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         self.clear_all_lines()
 
         return
+
 
     def reset_selected_peaks(self):
         """

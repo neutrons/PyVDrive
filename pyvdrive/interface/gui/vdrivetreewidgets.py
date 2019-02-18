@@ -204,7 +204,7 @@ class SinglePeakFitManageTree(treeView.CustomizedTreeView):
 
         if self._mainWindow is not None:
             print '[INFO] Load and plot data with key = %s.' % str(current_run)
-            self._mainWindow.load_plot_run(current_run)
+            self._mainWindow.plot_reduced_data(current_run)
 
         return
 
