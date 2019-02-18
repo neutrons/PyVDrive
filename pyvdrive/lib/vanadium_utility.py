@@ -9,7 +9,7 @@ class VanadiumProcessingManager(object):
     """
     Controller of the workflow to process vanadium data for calibration purpose
     """
-    def __init__(self, parent, calibration_manager):
+    def __init__(self, parent):
         """
         initialization
         :param parent:
@@ -18,17 +18,11 @@ class VanadiumProcessingManager(object):
 
         # state flag
         self._is_setup = False   # flag such that a parent workspace (to smooth from) has been set up
-        self._bank_group_dict = None
         self._output_ws_name = None  # workspace from merged smoothed/vanadium-peaks-striped workspace
         # NOTE: output workspace shall be of the same range, number of spectra and instrument geometry as input
 
         # by default
         self._output_dir = os.getcwd()
-
-        # single spectrum workspace for the internal steps
-        self._source_single_bank_ws_dict = dict()  # [bank id (1, 2, 3)] = ws name
-        self._striped_peaks_ws_dict = dict()  # [bank id (1, 2, 3)] = ws name
-        self._smoothed_ws_dict = dict()  # [bank id (1, 2, 3)] = ws names
 
         # peak striping
         self._default_fwhm_dict = {1: 7, 2: 7, 3: 12}
@@ -43,16 +37,22 @@ class VanadiumProcessingManager(object):
             self._smooth_param_shift_dict['order'][bank_id] = 2
         # TODO - TONIGHT - NEED TO FILL THE RIGHT VALUES
 
-        # final output binning
-        self._calibration_manager = calibration_manager
-        self._tof_bin_dict = dict()
+        # # final output binning
+        # self._calibration_manager = calibration_manager
+        # self._tof_bin_dict = dict()
 
         # these are updated class variables
         self._van_workspace_name = None   # input vanadium workspace (focused)
+        self._van_workspace_name_tof = None
         self._sample_log_ws_name = None   # sample log workspace's name
         self._ipts_number = None
         self._van_run_number = None
         self._output_gsas_name = None
+
+        # single spectrum workspace for the internal steps
+        self._source_single_bank_ws_dict = dict()  # [bank id (1, 2, 3)] = ws name
+        self._striped_peaks_ws_dict = dict()  # [bank id (1, 2, 3)] = ws name
+        self._smoothed_ws_dict = dict()  # [bank id (1, 2, 3)] = ws names
 
         return
 
@@ -110,6 +110,26 @@ class VanadiumProcessingManager(object):
 
         return workspace.readX(0), workspace.readY(0)
 
+    def get_raw_data(self, bank_id, unit):
+        """
+        Get raw data
+        :param bank_id:
+        :param unit:
+        :return:
+        """
+        datatypeutility.check_int_variable('Bank ID', bank_id, (1, 99))
+        datatypeutility.check_string_variable('Unit', unit, ['TOF', 'dSpacing'])
+
+        if unit == 'TOF':
+            if self._van_workspace_name_tof is None:
+                self._van_workspace_name_tof = self._van_workspace_name + '_tof'
+                mantid_helper.mtd_convert_units(self._van_workspace_name, 'TOF', self._van_workspace_name_tof)
+            workspace = mantid_helper.retrieve_workspace(self._van_workspace_name_tof)
+        else:
+            workspace = mantid_helper.retrieve_workspace(self._van_workspace_name)
+
+        return workspace[bank_id-1].readX(0), workspace[bank_id-1].readY(0)
+
     def get_raw_vanadium(self):
         """ get the raw vanadium spectra dictionary
         :return:
@@ -148,7 +168,6 @@ class VanadiumProcessingManager(object):
             raise NotImplementedError('Need to implement single workspace case to extract spectra')
 
         self._van_workspace_name = workspace_name
-        self._van_workspace_name = workspace_name
 
         self._ipts_number = ipts_number
         self._van_run_number = van_run_number
@@ -159,6 +178,7 @@ class VanadiumProcessingManager(object):
 
         # convert to point data as a request
         mantid_helper.convert_to_point_data(self._van_workspace_name)
+        mantid_helper.mtd_convert_units(self._van_workspace_name, 'dSpacig')
 
         self._sample_log_ws_name = sample_log_ws_name
 

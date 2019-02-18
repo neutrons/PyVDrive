@@ -107,13 +107,38 @@ def clone_workspace(srs_ws_name, target_ws_name):
     return output_ws
 
 
+def is_workspace_point_data(ws_name):
+    """
+    Check whether a workspace point data
+    :param ws_name:
+    :return:
+    """
+    workspace = retrieve_workspace(ws_name)
+    num_spec = get_number_spectra(workspace)
+
+    if workspace.id() == 'WorkspaceGroup':
+        is_point_data = True
+        for ws_index in range(num_spec):
+            if not workspace[ws_index].isHistogramData():
+                is_point_data = False
+                break
+    else:
+        is_point_data = not workspace.isHistogramData()
+
+    return  is_point_data
+
+
 def convert_to_point_data(ws_name):
     """ Convert to point data from histogram
     :param ws_name:
     :return:
     """
-    mantidapi.ConvertToPointData(InputWorkspace=ws_name,
-                                 OutputWorkspace=ws_name)
+    if is_workspace_point_data(ws_name):
+        print ('[INFO] Workspace {} is already of PointData. No need to convert anymore'
+               ''.format(ws_name))
+    else:
+        mantidapi.ConvertToPointData(InputWorkspace=ws_name,
+                                     OutputWorkspace=ws_name)
 
     return
 
@@ -1851,7 +1876,6 @@ def mtd_compress_events(event_ws_name, tolerance=0.01):
     return
 
 
-# TODO - TONIGHT 8 - Modernize
 def mtd_convert_units(ws_name, target_unit, out_ws_name=None):
     """
     Convert the unit of a workspace.
@@ -1861,10 +1885,10 @@ def mtd_convert_units(ws_name, target_unit, out_ws_name=None):
     :return:
     """
     # Check requirements
-    assert isinstance(ws_name, str), 'Input workspace name is not a string but is a %s.' % str(type(ws_name))
-    workspace = retrieve_workspace(ws_name, True)
-    assert isinstance(target_unit, str), 'Input target unit should be a string,' \
-                                         'but is %s.' % str(type(target_unit))
+    datatypeutility.check_string_variable('Input workspace name', ws_name)
+    datatypeutility.check_string_variable('Unit to convert to', target_unit)
+    if not workspace_does_exist(ws_name):
+        raise RuntimeError('Workspace {} does not exist in ADS'.format(ws_name))
 
     if out_ws_name is None:
         out_ws_name = ws_name
@@ -1882,21 +1906,22 @@ def mtd_convert_units(ws_name, target_unit, out_ws_name=None):
         target_unit = 'TOF'
     elif target_unit.lower() == 'q':
         target_unit = 'MomentumTransfer'
-    
+
+    workspace = retrieve_workspace(ws_name, True)
+    if workspace.getAxis(0).getUnit().unitID() == target_unit:
+        print ('[INFO] Workspace {} has unit {} already. No need to convert'.format(ws_name, target_unit))
+        return
+
     # Convert to Histogram, convert unit (must work on histogram) and convert back to point data
-    # if is_histogram is False:
-    #     mantidapi.ConvertToHistogram(InputWorkspace=ws_name, OutputWorkspace=ws_name)
     mantidapi.ConvertUnits(InputWorkspace=ws_name,
                            OutputWorkspace=out_ws_name,
                            Target=target_unit,
                            EMode='Elastic',
                            ConvertFromPointData=True)
-    # if is_histogram is False:
-    #     mantidapi.ConvertToPointData(InputWorkspace=ws_name, OutputWorkspace=ws_name)
-    
+
     # Check output
-    out_ws = retrieve_workspace(out_ws_name)
-    assert out_ws, 'Output workspace {0} cannot be retrieved!'.format(ws_name)
+    if not workspace_does_exist(out_ws_name):
+        raise RuntimeError('Output workspace {0} cannot be retrieved!'.format(ws_name))
     
     return
     

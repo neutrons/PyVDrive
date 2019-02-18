@@ -71,6 +71,10 @@ class PeakProcessingGUITestEnvironment(object):
         # /SNS/VULCAN/IPTS-22752/nexus/VULCAN_171966.nxs.h5
         self.load_gsas(22752, 171966)
 
+        self._peak_process_window.comboBox_mode.setCurrentIndex(1)
+
+        return
+
 
 def test_main():
     """

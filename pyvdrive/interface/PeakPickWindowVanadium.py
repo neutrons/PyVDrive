@@ -188,7 +188,7 @@ class PeakPickerWindowChildVanadium(object):
 
         # Note: there is no need to plot runs in the complicated logic as its parent class
         # Set up class variables
-        vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_raw_data(UNIT['d'])
+        vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_raw_data(bank_id, UNIT['d'])
         self._raw_van_dspace_line = self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='black',
                                                                           x_label='dSpacing')
 
@@ -204,7 +204,7 @@ class PeakPickerWindowChildVanadium(object):
 
         # Note: there is no need to plot runs in the complicated logic as its parent class
         # Set up class variables
-        vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_raw_data(UNIT['tof'])
+        vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_raw_data(bank_id, UNIT['tof'])
         self._raw_van_dspace_line = self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='black',
                                                                           x_label='dSpacing')
 
