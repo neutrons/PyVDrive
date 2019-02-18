@@ -121,7 +121,7 @@ class PeakPickerWindowChildVanadium(object):
 
         return
 
-    def strip_vanadium_peaks(self, bank_id, peak_fwhm=4.,
+    def strip_vanadium_peaks(self, bank_id, peak_fwhm=4,
                              tolerance=0.1, background_type='Quadratic', is_high_background=True):
         """ Strip vanadium peaks of a certain bank
         :return:
