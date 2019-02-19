@@ -641,7 +641,7 @@ class VulcanLiveDataView(QMainWindow):
 
         # live view snap shot
         self._snap_shot_thread = SnapShotThread(5, self)
-        self._snap_shot_image.start()
+        self._snap_shot_thread.start()
 
         # start start listener
         self._controller.run()
@@ -738,9 +738,12 @@ class VulcanLiveDataView(QMainWindow):
         # get list of workspace to plot
         ws_name_list = list()
         ws_index_list = list()
-        print '[DB...BAT...BAT] Index = {0} ' \
-              'Workspace Name = {1}'.format(self._myAccumulationListIndex,
-                                            self._myAccumulationWorkspaceList[self._myAccumulationListIndex])
+        try:
+            print '[DB...BAT...BAT] Index = {0} ' \
+                  'Workspace Name = {1}'.format(self._myAccumulationListIndex,
+                                                self._myAccumulationWorkspaceList[self._myAccumulationListIndex])
+        except IndexError as index_err:
+            raise RuntimeError('In get_accumulation_workspaces(), _myAccumulationListIndex = {} out of range of _myAccumulationWorksapceList'.format(self._myAccumulationListIndex, len(self._myAccumulationWorkspaceList)))
 
         for ws_count in range(last_n_round):
             # get accumulation workspace list index
@@ -1048,6 +1051,8 @@ class VulcanLiveDataView(QMainWindow):
 
         # get log values
         time_vec, log_value_vec, last_pulse_time = self._controller.parse_sample_log(ws_name_list, y_axis_name)
+        if time_vec is None:
+            raise RuntimeError('No log value found in {}'.format(ws_name_list))
 
         # convert the vector of time
         if relative_time is not None:
@@ -1255,19 +1260,23 @@ class VulcanLiveDataView(QMainWindow):
 
             else:
                 # New mode
-                time_vec, value_vec = self.load_sample_log(log_name, last_n_accumulation=-1,
-                                                           relative_time=self._liveStartTimeStamp)
-                if is_main:
-                    self._currMainYLogTimeVector = time_vec
-                    self._currMainYLogValueVector = value_vec
-                else:
-                    self._currRightYLogTimeVector = time_vec
-                    self._currRightYLogValueVector = value_vec
+                try:
+                    time_vec, value_vec = self.load_sample_log(log_name, last_n_accumulation=-1,
+                                                               relative_time=self._liveStartTimeStamp)
+                    if is_main:
+                        self._currMainYLogTimeVector = time_vec
+                        self._currMainYLogValueVector = value_vec
+                    else:
+                        self._currRightYLogTimeVector = time_vec
+                        self._currRightYLogValueVector = value_vec
 
-                append = False
+                    append = False  # For plot
+                except RuntimeError as run_err:
+                    print ('[ERROR] Unable to get and thus plot {} due to {}'.format(log_name, run_err))
+                    return
             # END-IF-ELSE
 
-            # set the label... TODO ASAP shall leave for the graphicsView to do it
+            # set the label
             y_label = log_name
             if is_main:
                 value_vec = self._currMainYLogValueVector
@@ -1289,8 +1298,7 @@ class VulcanLiveDataView(QMainWindow):
                                                             y_label=label_y, line_label=label_line,
                                                             line_style=line_style, marker=marker,
                                                             color=color)
-            # END-IF-ELSE (peak or sample)
-        # END-FOR (y-axis-name)
+        # END-IF-ELSE (y-axis-name)
 
         return
 
@@ -1888,7 +1896,7 @@ class SnapShotThread(QtCore.QThread):
     """
 
     # signal
-    take_snap_shot = QtCore.pyqtSignal(int)
+    snap_shot_time_due = QtCore.pyqtSignal(int)
 
     def __init__(self, time_step, parent):
         """
@@ -1909,7 +1917,7 @@ class SnapShotThread(QtCore.QThread):
         self._time_step = time_step
 
         # connect to parent
-        self.time_due.connect(self._parent.take_snap_shot)
+        self.snap_shot_time_due.connect(self._parent.take_snap_shot)
 
         return
 
@@ -1919,7 +1927,7 @@ class SnapShotThread(QtCore.QThread):
         """
         while self._continueTimerLoop:
             time.sleep(self._time_step)
-            self.time_due.emit(1)
+            self.snap_shot_time_due.emit(1)
         # END-WHILE
 
         return

@@ -593,11 +593,13 @@ class LiveDataDriver(QtCore.QThread):
                 numpy.append(sample_value_vec, value_vec_i)
             # END-IF-ELSE
 
-            # DEBUG OUTPUT
-            print '[DB...SEVERE] Workspace {0} Entry 0: {1}; Entry -1: {2}; Number of Entries: {3}' \
-                  ''.format(ws_name, time_vec_i[0], time_vec_i[-1], len(time_vec_i))
+            if len(time_vec_i) > 0:
+                # DEBUG OUTPUT
+                print '[DB...SEVERE] Workspace {0} Entry 0: {1}; Entry -1: {2}; Number of Entries: {3}' \
+                      ''.format(ws_name, time_vec_i[0], time_vec_i[-1], len(time_vec_i))
 
-            last_pulse_time = temp_workspace.run().getProperty('proton_charge').times[-1]
+                last_pulse_time = temp_workspace.run().getProperty('proton_charge').times[-1]
+            # END
         # END-FOR (workspaces)
 
         return date_time_vec, sample_value_vec, last_pulse_time
