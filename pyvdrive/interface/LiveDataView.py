@@ -206,7 +206,7 @@ class VulcanLiveDataView(QMainWindow):
         self.show_refresh_info()
 
         # about SNAP shot
-        self._snap_shot_dir = '/home/controls/var'
+        self._snap_shot_dir = '/home/controls/var/dataviz'
         self._snap_shot_image = None
         if not os.path.exists(self._snap_shot_dir):
             err_msg = 'Directory {} does not exist'.format(self._snap_shot_dir)

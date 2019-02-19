@@ -253,15 +253,16 @@ class PeakPickerWindowChildVanadium(object):
         vec_x_list = [vec_x]
         vec_y_list = [vec_y]
 
-        self._smoothed_van_line = self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='blue', x_label='TOF')
+        self._smoothed_van_line = self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='red', x_label='TOF',
+                                                                        label='Smoothed')
 
         if with_raw:
             vec_raw_x, vec_raw_y = self.plot_raw_tof(bank_id)
             vec_x_list.append(vec_raw_x)
             vec_y_list.append(vec_raw_y)
-
-        # reset X Y limit
-        self._reset_figure_range(vec_x_list, vec_y_list)
+        #
+        # # reset X Y limit
+        # self._reset_figure_range(vec_x_list, vec_y_list)
 
         return
 
