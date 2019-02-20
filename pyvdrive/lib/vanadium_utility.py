@@ -3,6 +3,7 @@ import os
 import mantid_helper
 import datatypeutility
 import save_vulcan_gsas
+import shutil
 
 
 class VanadiumProcessingManager(object):
@@ -278,7 +279,15 @@ class VanadiumProcessingManager(object):
                                   ipts_number=self._ipts_number, van_run_number=self._van_run_number,
                                   sample_log_ws_name=self._sample_log_ws_name)
 
-        return
+        #  copy file to 2nd location
+        try:
+            gsas_copy = '/SNS/VULCAN/IPTS-{}/shared/Instrument/{}'.format(self._ipts_number,
+                                                                      os.path.basename(self._output_gsas_name))
+            shutil.copyfile(self._output_gsas_name, gsas_copy)
+        except (IOError, OSError) as io_error:
+            raise RuntimeError('Unable to save to {} due to {}'.format(gsas_copy, io_error))
+
+        return self._output_gsas_name
 
     def smooth_v_spectrum(self, bank_id, smoother_filter_type, param_n, param_order, ws_name=None):
         """

@@ -367,7 +367,10 @@ def pop_dialog_information(parent, message):
     :param message:
     :return:
     """
-    QMessageBox.information(parent, 'Information!', message)
+    assert isinstance(message, str), 'Input message "{0}" must be a string but not a {1}' \
+                                     ''.format(message, type(message))
+
+    QMessageBox.information(parent, 'Information', message)
 
     return
 

@@ -344,7 +344,7 @@
          </sizepolicy>
         </property>
         <property name="currentIndex">
-         <number>0</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="tab_peakSelection">
          <attribute name="title">
@@ -377,19 +377,6 @@
              </item>
              <item row="0" column="0">
               <layout class="QGridLayout" name="gridLayout_5">
-               <item row="4" column="5">
-                <widget class="QPushButton" name="pushButton_cancelPhaseChange">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="text">
-                  <string>Cancel Changes</string>
-                 </property>
-                </widget>
-               </item>
                <item row="3" column="1">
                 <widget class="QLineEdit" name="lineEdit_a1">
                  <property name="sizePolicy">
@@ -805,19 +792,6 @@
                  </property>
                 </widget>
                </item>
-               <item row="3" column="5">
-                <widget class="QPushButton" name="pushButton_setPhases">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="text">
-                  <string>Set Phases</string>
-                 </property>
-                </widget>
-               </item>
                <item row="1" column="5">
                 <widget class="QPushButton" name="pushButton_groupAutoPickPeaks">
                  <property name="font">
@@ -826,7 +800,7 @@
                   </font>
                  </property>
                  <property name="text">
-                  <string>Group Peaks</string>
+                  <string>Multi. Peaks</string>
                  </property>
                 </widget>
                </item>
@@ -838,7 +812,7 @@
                   </font>
                  </property>
                  <property name="text">
-                  <string>Clear Group</string>
+                  <string>Clear Mult.</string>
                  </property>
                 </widget>
                </item>
@@ -910,10 +884,10 @@
                   </font>
                  </property>
                  <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove all selected peaks&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;Clear all selected peaks&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="text">
-                  <string>Reset</string>
+                  <string>Clear All</string>
                  </property>
                 </widget>
                </item>
@@ -969,20 +943,6 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="4">
-           <widget class="QCheckBox" name="checkBox_vpeakShowRaw">
-            <property name="text">
-             <string>Raw Data</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="4">
-           <widget class="QCheckBox" name="checkBox_vpeakShowStripped">
-            <property name="text">
-             <string>With V Peaks Stripped</string>
-            </property>
-           </widget>
-          </item>
           <item row="1" column="0">
            <widget class="QRadioButton" name="radioButton_vpeakAllBanks">
             <property name="text">
@@ -1034,6 +994,27 @@
            <widget class="QPushButton" name="pushButton_smoothVPeaks">
             <property name="text">
              <string>Smooth V Spectra</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="4">
+           <widget class="QCheckBox" name="checkBox_vpeakShowStripped">
+            <property name="text">
+             <string>With V Peaks Stripped</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="4">
+           <widget class="QCheckBox" name="checkBox_vpeakShowRaw">
+            <property name="text">
+             <string>Raw Data</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QPushButton" name="pushButton_saveVanSettings">
+            <property name="text">
+             <string>Save Setting</string>
             </property>
            </widget>
           </item>
@@ -1345,6 +1326,18 @@
          </property>
          <property name="text">
           <string>Add Peaks</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QPushButton" name="pushButton_clearPeaksTable">
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Clear Table</string>
          </property>
         </widget>
        </item>

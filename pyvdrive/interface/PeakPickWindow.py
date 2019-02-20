@@ -85,9 +85,9 @@ class PeakPickerWindow(QMainWindow):
 
         # Define event handling methods
         # phase set up
-        self.ui.pushButton_setPhases.clicked.connect(self.do_set_phases)
+        # self.ui.pushButton_setPhases.clicked.connect(self.do_set_phases)
         self.ui.pushButton_clearPhase.clicked.connect(self.do_clear_phases)
-        self.ui.pushButton_cancelPhaseChange.clicked.connect(self.do_undo_phase_changes)
+        # self.ui.pushButton_cancelPhaseChange.clicked.connect(self.do_undo_phase_changes)
 
         # peak processing
         self.ui.radioButton_pickModeQuick.toggled.connect(self.evt_switch_peak_pick_mode)
@@ -124,6 +124,7 @@ class PeakPickerWindow(QMainWindow):
         self.ui.pushButton_smoothVPeaks.clicked.connect(self.do_smooth_vanadium_spectra)
         self.ui.pushButton_resetVPeakProcessing.clicked.connect(self.do_reset_vanadium_processing)
         self.ui.pushButton_saveProcessVanadium.clicked.connect(self.do_save_vanadium_gsas)
+        self.ui.pushButton_saveVanSettings.clicked.connect(self.do_save_vanadium_settings)
 
         self.ui.checkBox_vpeakShowRaw.toggled.connect(self.event_show_raw_van)
         self.ui.checkBox_vpeakShowStripped.toggled.connect(self.event_show_peaks_striped_van)
@@ -571,6 +572,10 @@ class PeakPickerWindow(QMainWindow):
         num_phases_used = 0
         reflection_list = list()
         err_msg = ''
+
+        # TODO - FIXME - TONIGHT 3 - Set  phase here!
+        # self.do_set_phases()
+
         for i_phase in self._phaseDict.keys():
             # Add all peaks calculated from this phase if it is selected
 
@@ -1797,14 +1802,18 @@ class PeakPickerWindow(QMainWindow):
         """
         self._subControllerVanadium.save_processing_result()
 
-        return
+    def do_save_vanadium_settings(self):
+        """
+        Save the vanadium processing parameters to file
+        :return:
+        """
+        self._subControllerVanadium.save_vanadium_process_parameters()
 
     # TODO - TONIGHT 3 - Complete rewrite the signal handling methods including plotting data!
     def signal_save_processed_vanadium(self, output_file_name, run_number):
         """
         save GSAS file from GUI
         :param output_file_name:
-        :param ipts_number:
         :param run_number:
         :return:
         """
@@ -1885,10 +1894,14 @@ class PeakPickerWindow(QMainWindow):
 
         return
 
-    # TODO - TONIGHT 4 - Implement these methods!
     def event_show_raw_van(self):
-        return
+        """
+        Show or hide raw vanadium run on canvas
+        :return:
+        """
+        self._subControllerVanadium.show_hide_raw_data(self.ui.checkBox_vpeakShowRaw.isChecked())
 
+    # TODO - TONIGHT 4 - Implement these methods!
     def event_show_peaks_striped_van(self):
         return
 
