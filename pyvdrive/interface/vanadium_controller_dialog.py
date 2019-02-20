@@ -89,8 +89,6 @@ class VanadiumProcessControlDialog(QDialog):
         self.ui.horizontalSlider_smoothN.valueChanged.connect(self.evt_smooth_param_changed)
         self.ui.horizontalSlider_smoothOrder.valueChanged.connect(self.evt_smooth_param_changed)
 
-        self.ui.comboBox_plotBanks.currentIndexChanged.connect(self.do_plot_vanadiums)
-
         # final
         self.ui.pushButton_applyVanProcessResult.clicked.connect(self.do_save_result)
         self.ui.pushButton_quit.clicked.connect(self.do_quit)
@@ -145,6 +143,16 @@ class VanadiumProcessControlDialog(QDialog):
 
         # check box
         self.ui.checkBox_isHighBackground.setChecked(True)
+
+        # hide
+        self.ui.pushButton_undoPeakStrip.hide()
+        self.ui.pushButton_setPeakStripParamToDefaults.hide()
+        self.ui.pushButton_savePeakStripParamAsDefaults.hide()
+        self.ui.pushButton_undoSmooth.hide()
+        self.ui.pushButton_setSmoothParamToDefaults.hide()
+        self.ui.pushButton_saveSmoothParamAsDefaults.hide()
+        self.ui.pushButton_bfSearchSmooth.hide()
+        self.ui.pushButton_applyVanProcessResult.hide()
 
         return
 
@@ -387,7 +395,7 @@ class VanadiumProcessControlDialog(QDialog):
         smooth vanadium data
         :return:
         """
-        bank_group_index = self._get_banks_group()
+        # bank_group_index = self._get_banks_group()
 
         # get smoothing parameter
         try:
@@ -424,12 +432,12 @@ class VanadiumProcessControlDialog(QDialog):
         #     bank_group_index = 150
         # else:
         #     raise NotImplementedError('Bank group {} is not supported.'.format(bank_group))
-        bank_group_index = self._get_banks_group()
+        # bank_group_index = self._get_banks_group()
 
         background_type = str(self.ui.comboBox_vanPeakBackgroundType.currentText())
         is_high_background = self.ui.checkBox_isHighBackground.isChecked()
 
-        self.myStripPeakSignal.emit(bank_group_index, peak_fwhm, fit_tolerance, background_type, is_high_background)
+        self.myStripPeakSignal.emit(1, peak_fwhm, fit_tolerance, background_type, is_high_background)
 
         return
 
@@ -475,9 +483,13 @@ class VanadiumProcessControlDialog(QDialog):
         # change parameters
         self._slidersMutex = True
         param_n = gutil.parse_integer(self.ui.lineEdit_smoothParameterN, allow_blank=False)
+        if param_n is None or param_n == 0:
+            param_n = 1
         self.ui.horizontalSlider_smoothN.setValue(param_n)
 
         param_order = gutil.parse_integer(self.ui.lineEdit_smoothParameterOrder, allow_blank=False)
+        if param_order is None or param_order == 0:
+            param_order = 1
         self.ui.horizontalSlider_smoothOrder.setValue(param_order)
 
         self._slidersMutex = False

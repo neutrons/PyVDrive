@@ -1428,7 +1428,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def reset_peak_picker_mode(self):
+    def reset_peak_picker_mode(self, remove_diffraction_data=True):
         """ Reset the canvas and peaks managers and single peak lines in peak picker mode
         :return:
         """
@@ -1447,10 +1447,10 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         # FIXME TODO - ASAP - shall not use clear_all_lines.
         # FIXME ...  cont.    but cannot find out the cause for the original diffraciton line not be removed
-        self.clear_all_lines()
+        if remove_diffraction_data:
+            self.clear_all_lines()
 
         return
-
 
     def reset_selected_peaks(self):
         """

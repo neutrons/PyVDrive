@@ -68,6 +68,9 @@ class PeakPickerWindow(QMainWindow):
         # sub window
         self._groupPeakDialog = None
 
+        # mutexes
+        self._run_combo_mutex = False
+
         # set up UI
         ui_path = os.path.join(os.path.dirname(__file__), "gui/VdrivePeakPicker.ui")
         self.ui = load_ui(ui_path, baseinstance=self)
@@ -120,7 +123,7 @@ class PeakPickerWindow(QMainWindow):
         self.ui.pushButton_stripVPeaks.clicked.connect(self.do_strip_vanadium_peaks)
         self.ui.pushButton_smoothVPeaks.clicked.connect(self.do_smooth_vanadium_spectra)
         self.ui.pushButton_resetVPeakProcessing.clicked.connect(self.do_reset_vanadium_processing)
-        self.ui.pushButton_saveResult.clicked.connect(self.do_save_vanadium_gsas)
+        self.ui.pushButton_saveProcessVanadium.clicked.connect(self.do_save_vanadium_gsas)
 
         self.ui.checkBox_vpeakShowRaw.toggled.connect(self.event_show_raw_van)
         self.ui.checkBox_vpeakShowStripped.toggled.connect(self.event_show_peaks_striped_van)
@@ -795,13 +798,32 @@ class PeakPickerWindow(QMainWindow):
 
         # Get new bank
         new_bank = int(self.ui.comboBox_bankNumbers.currentText())
-
         # check for non-plotting case
         if new_bank == self._currentBankNumber:
             # same bank as before. no need to do anything
             self.statusBar().showMessage('Newly selected bank %d is same as current bank %d.'
                                          '' % (new_bank, self._currentBankNumber))
             return
+
+        # check mode
+        curr_mode_index = self.ui.comboBox_mode.currentIndex()
+        if curr_mode_index == 0:
+            self.switch_peak_picker_bank(new_bank)
+        elif curr_mode_index == 1:
+            self._currentBankNumber = new_bank
+            self._subControllerVanadium.switch_bank(new_bank)
+        else:
+            GuiUtility.pop_dialog_error(self, 'Function mode {} does not support switching bank'
+                                              ''.format(self.ui.comboBox_mode.currentText()))
+
+        return
+
+    def switch_peak_picker_bank(self, new_bank):
+        """
+        switch to a new bank in peak picker mode
+        :param new_bank:
+        :return:
+        """
         if self._is_data_loaded is False:
             # it is about to load new data, plotting will be called explicitly. no need to re-plot her
             self.statusBar().showMessage('Data is in loading stage. Change to bank %d won\'t have any effect.'
@@ -890,6 +912,9 @@ class PeakPickerWindow(QMainWindow):
         in the event that a new run is set up
         :return:
         """
+        if self._run_combo_mutex:   # it disables event from plot_reduced_data
+            return
+
         # get the new run number or workspace name
         new_run_str = str(self.ui.comboBox_runNumber.currentText())
         try:
@@ -899,8 +924,6 @@ class PeakPickerWindow(QMainWindow):
             new_run_number = None
             new_workspace_name = new_run_str
         # END-TRY-EXCEPTION
-
-        bank_id = int(self.ui.comboBox_bankNumbers.currentText())
 
         # clear the current
         self.ui.graphicsView_main.reset_peak_picker_mode()
@@ -1030,11 +1053,11 @@ class PeakPickerWindow(QMainWindow):
                 return
         # END-IF
 
-        data_key = self.load_reduced_data(ipts_number, run_number, gsas_file_name)
+        self.load_reduced_data(ipts_number, run_number, gsas_file_name)
 
-        # plot
-        if data_key:
-            self.plot_reduced_data(data_key)
+        # # plot: switch run number will plot the data automatically
+        # if data_key:
+        #     self.plot_reduced_data(data_key)
 
         return
 
@@ -1047,6 +1070,10 @@ class PeakPickerWindow(QMainWindow):
         if gsas_file_name is None:
             assert ipts_number is not None and run_number is not None, 'Cannot happen'
             gsas_file_name = self._myController.archive_manager.locate_gsas(ipts_number, run_number)
+            if gsas_file_name is None:
+                GuiUtility.pop_dialog_error(self, 'Unable to find reduced GSAS file for IPTS-{} Run {}'
+                                            ''.format(ipts_number, run_number))
+                return
 
         # Load data from GSAS file
         try:
@@ -1062,6 +1089,32 @@ class PeakPickerWindow(QMainWindow):
         except RuntimeError as re:
             GuiUtility.pop_dialog_error(self, str(re))
             return None
+
+        # add the new data to combo box
+        # determine that the run number is not a new one
+        if gsas_file_name is not None:
+            # gsas file mode
+            combo_item_name = str(data_key)
+            title_message = 'File %s Bank %d' % (data_key, 1)
+            # self.ui.label_diffractionMessage.setText('File %s Bank %d' % (data_key, 1))
+        else:
+            # memory mode (just reduced)
+            combo_item_name = str(run_number)
+            title_message = 'Run %d Bank %d' % (run_number, 1)
+            # self.ui.label_diffractionMessage.setText('Run %d Bank %d' % (run_number, 1))
+
+        # register this run to the record to avoid adding same item twice
+        if combo_item_name not in self._loaded_runs:
+            first_flag = len(self._loaded_runs) == 0
+            if not first_flag:
+                self._run_combo_mutex = True   # lock event triggered from add value to combo box
+            self.ui.comboBox_runNumber.addItem(combo_item_name)
+            self._run_combo_mutex = False
+            self._loaded_runs.append(combo_item_name)
+
+            self.ui.comboBox_runNumber.setCurrentIndex(len(self._loaded_runs) - 1)
+            # print ('[DB...BAT] Run number box add {}..of type {}. Load Runs: {}'
+            #        ''.format(combo_item_name, type(combo_item_name), self._loaded_runs))
 
         # self._ipts_number = ipts_number
         # self._run_number = run_number
@@ -1125,20 +1178,25 @@ class PeakPickerWindow(QMainWindow):
 
         # self.ui.comboBox_runNumber.clear()
 
-        # determine that the run number is not a new one
+        # # determine that the run number is not a new one
         if run_number is None:
-            combo_item_name = str(data_key)
+            # combo_item_name = str(data_key)
             title_message = 'File %s Bank %d' % (data_key, 1)
             # self.ui.label_diffractionMessage.setText('File %s Bank %d' % (data_key, 1))
         else:
-            combo_item_name = str(run_number)
+            # combo_item_name = str(run_number)
             title_message = 'Run %d Bank %d' % (run_number, 1)
             # self.ui.label_diffractionMessage.setText('Run %d Bank %d' % (run_number, 1))
-
-        # register this run to the record to avoid adding same item twice
-        if combo_item_name not in self._loaded_runs:
-            self.ui.comboBox_runNumber.addItem(combo_item_name)
-            self._loaded_runs.append(combo_item_name)
+        #
+        # # register this run to the record to avoid adding same item twice
+        # if combo_item_name not in self._loaded_runs:
+        #     self._run_combo_mutex = True   # lock event triggered from add value to combo box
+        #     self.ui.comboBox_runNumber.addItem(combo_item_name)
+        #     self._loaded_runs.append(combo_item_name)
+        #     self.ui.comboBox_runNumber.setCurrentIndex(len(self._loaded_runs) - 1)
+        #     self._run_combo_mutex = False
+        #     # print ('[DB...BAT] Run number box add {}..of type {}. Load Runs: {}'
+        #     #        ''.format(combo_item_name, type(combo_item_name), self._loaded_runs))
 
         # Plot data: load bank 1 as default
         try:
@@ -1696,7 +1754,7 @@ class PeakPickerWindow(QMainWindow):
             self.ui.tabWidget_functionControl.setTabEnabled(tab_index, tab_index == new_mode_index)
 
         # plots shall be reset and re-load data
-        self.ui.graphicsView_main.reset_peak_picker_mode()
+        self.ui.graphicsView_main.reset_peak_picker_mode(remove_diffraction_data=True)
 
         # # TODO - TONIGHT 43 - This is not a good approach to re-load data
         # self.do_load_data()
@@ -1706,6 +1764,7 @@ class PeakPickerWindow(QMainWindow):
             ipts_number, run_number, gsas_file_name = self._data_info_dict[self._currGraphDataKey]
             self._subControllerVanadium.set_vanadium_info(ipts_number, run_number)
             self._subControllerVanadium.init_session(self._currGraphDataKey)
+            self._subControllerVanadium.plot_raw_dspace(self._currentBankNumber)
 
         return
 
@@ -1713,7 +1772,7 @@ class PeakPickerWindow(QMainWindow):
         """ Strip vanadium peaks
         :return:
         """
-        self._subControllerVanadium.strip_vanadium_peaks(self._currentBankNumber)
+        self._subControllerVanadium.strip_vanadium_peaks(None)
 
         return
 
@@ -1721,7 +1780,7 @@ class PeakPickerWindow(QMainWindow):
         """ Smooth vanadium spectra
         :return:
         """
-        self._subControllerVanadium.smooth_vanadium_peaks(self._currentBankNumber, None, None, None)
+        self._subControllerVanadium.smooth_vanadium_peaks(None, None, None, None)
 
         return
 
@@ -1738,9 +1797,9 @@ class PeakPickerWindow(QMainWindow):
         """
         self._subControllerVanadium.save_processing_result()
 
+        return
 
     # TODO - TONIGHT 3 - Complete rewrite the signal handling methods including plotting data!
-
     def signal_save_processed_vanadium(self, output_file_name, run_number):
         """
         save GSAS file from GUI
@@ -1765,7 +1824,7 @@ class PeakPickerWindow(QMainWindow):
         :param is_high_background:
         :return:
         """
-        self._subControllerVanadium.strip_vanadium_peaks(self._currentBankNumber,
+        self._subControllerVanadium.strip_vanadium_peaks(None,
                                                          peak_fwhm, tolerance, str(background_type),
                                                          is_high_background)
 
@@ -1782,7 +1841,7 @@ class PeakPickerWindow(QMainWindow):
         # convert smooth_type to string from unicode
         smoother_type = str(smoother_type)
 
-        self._subControllerVanadium.smooth_vanadium_peaks(self._currentBankNumber, smoother_type, param_n,
+        self._subControllerVanadium.smooth_vanadium_peaks(None, smoother_type, param_n,
                                                           param_order)
 
         return

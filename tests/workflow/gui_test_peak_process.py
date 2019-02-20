@@ -59,7 +59,7 @@ class PeakProcessingGUITestEnvironment(object):
         self._peak_process_window.ui.lineEdit_iptsNumber.setText('{}'.format(22126))
         self._peak_process_window.ui.lineEdit_runNumber.setText('{}'.format(171899))
 
-        self._peak_process_window.do_load_run()
+        self._peak_process_window.do_load_data()
 
         return
 

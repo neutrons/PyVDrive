@@ -81,6 +81,12 @@ class VanadiumProcessingManager(object):
 
         return
 
+    def get_default_smooth_n(self, smoother_type, bank_id):
+        return self._smooth_param_dict['n'][bank_id]
+
+    def get_default_smooth_order(self, smoother_type, bank_id):
+        return self._smooth_param_dict['order'][bank_id]
+
     def get_peak_striped_vanadium(self):
         """
         get the vanadium workspace (name) that has peaks striped
@@ -94,7 +100,13 @@ class VanadiumProcessingManager(object):
         :param bank_id:
         :return:
         """
-        ws_name = self._striped_peaks_ws_dict[bank_id]
+        if bank_id in self._striped_peaks_ws_dict:
+            ws_name = self._striped_peaks_ws_dict[bank_id]
+        else:
+            ws_name = None
+        if ws_name is None:
+            raise RuntimeError('Bank {} does not have peak striped'.format(bank_id))
+
         workspace = mantid_helper.retrieve_workspace(ws_name)
 
         return workspace.readX(0), workspace.readY(0)
@@ -105,7 +117,13 @@ class VanadiumProcessingManager(object):
         :param bank_id:
         :return:
         """
-        ws_name = self._smoothed_ws_dict[bank_id]
+        if bank_id in self._smoothed_ws_dict:
+            ws_name = self._smoothed_ws_dict[bank_id]
+        else:
+            ws_name = None
+        if ws_name is None:
+            raise RuntimeError('Bank {} is not smoothed'.format(bank_id))
+
         workspace = mantid_helper.retrieve_workspace(ws_name)
 
         return workspace.readX(0), workspace.readY(0)
@@ -250,7 +268,8 @@ class VanadiumProcessingManager(object):
         input_ws_names = input_ws_names[:-1]
         processed_vanadium_name = '{}_processed'.format(self._van_workspace_name)
         mantid_helper.group_workspaces(input_ws_names, processed_vanadium_name)
-        print (mantid_helper.workspace_does_exist(processed_vanadium_name))
+
+        print ('[DB...BAT] OUTPUT GSAS File: {}'.format(self._output_gsas_name))
 
         gsas_writer = save_vulcan_gsas.SaveVulcanGSS()
         # TODO - TONIGHT 11 - convert_to_vdrive_bins shall be considered if source file is from a high resolution
