@@ -9,6 +9,9 @@ except ImportError:
     from PyQt4.QtGui import QApplication
 
 
+Passed = False   # Not test passed
+
+
 def create_run_file(file_name):
     """
     create a run file on the fly for testing
@@ -31,11 +34,31 @@ def test_ned_vanadium(tester):
     :return:
     """
     # test directory
-    test_dir = '/tmp/merge/runv/'
+    test_dir = '/tmp/merge_runv/'
     command_test_setup.set_test_dir(test_dir)
 
     # run command
-    idl_command = "MERGE,IPTS=21356,RUNLIST=1234 & 1235 & 2242,RUNV=21123,output=\'{}\'".format(test_dir)
+    idl_command = "MERGE,IPTS=22752,RUNLIST=171834 & 171836 & 171837 & 171838 & 171840 & 171839," \
+                  "RUNV=163021,output=\'{}\'".format(test_dir)
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
+
+    return
+
+
+def test_ned_analysis(tester):
+    """
+    Test PreX/nED data with optiona as vanadium
+    :param tester:
+    :return:
+    """
+    # test directory
+    test_dir = '/SNS/VULCAN/IPTS-22752/shared/binned_data/171837/'
+
+    # run command
+    idl_command = "MERGE,IPTS=22752,RUNLIST=171834 & 171836 & 171837 & 171838 & 171840 & 171839, CHOPRUN=171837"
     tester.run_command(idl_command)
 
     # output summary
@@ -74,7 +97,11 @@ def test_main():
     """
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
-    test_ned_simple(command_tester)
+    if Passed:
+        test_ned_simple(command_tester)
+        test_ned_vanadium(command_tester)
+    else:
+        test_ned_analysis(command_tester)
 
     return command_tester.main_window
 

@@ -119,13 +119,13 @@ def is_workspace_point_data(ws_name):
     if workspace.id() == 'WorkspaceGroup':
         is_point_data = True
         for ws_index in range(num_spec):
-            if not workspace[ws_index].isHistogramData():
+            if workspace[ws_index].isHistogramData():
                 is_point_data = False
                 break
     else:
         is_point_data = not workspace.isHistogramData()
 
-    return  is_point_data
+    return is_point_data
 
 
 def convert_to_point_data(ws_name):
@@ -1432,13 +1432,11 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     Guarantees:
     :param gss_file_name:
     :param out_ws_name:
-    :param point_data: flag to require whether the output workspace shall be a PointData
     :param standard_bin_workspace: binning template workspace. It can be None for not aligning
     :return: output workspace name
     """
     # TEST/ISSUE/NOW - Implement feature with standard_bin_workspace...
     # Check
-
     datatypeutility.check_file_name(gss_file_name, True, False, False, 'GSAS file')
     datatypeutility.check_string_variable('Output workspace name', out_ws_name)
     if len(out_ws_name) == 0:
@@ -1466,10 +1464,10 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
         # after nED, with high angle detector
         print ('[SpecialDebug] Edit Instrument: {0}'.format(out_ws_name))
         mantidapi.EditInstrumentGeometry(Workspace=out_ws_name,
-                                                PrimaryFlightPath=43.753999999999998,
-                                                SpectrumIDs='1,2,3',
-                                                L2='2.0,2.0,2.0',
-                                                Polar='90,270,155')
+                                         PrimaryFlightPath=43.753999999999998,
+                                         SpectrumIDs='1,2,3',
+                                         L2='2.0,2.0,2.0',
+                                         Polar='90,270,155')
     else:
         raise RuntimeError('It is not implemented for GSAS file having more than 3 spectra ({0} now).'
                            ''.format(num_spec))

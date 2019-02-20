@@ -1368,45 +1368,28 @@ class VDriveAPI(object):
                                                                               mask_list=mask_list,
                                                                               no_cal_mask=no_cal_mask)
 
-            # TODO - TONIGHT - 1. refactor to methods
-            # TODO - TONIGHT - 2. merge_runs = True: merge runs: make the total proton charge accumulated!
+            # deal with sample logs
+            run_number, ws_name = run_number_list[0]
             if standard_sample_tuple:
                 if len(run_number_list) != 1:
                     return False, 'Standard tag {} can only work with 1 run'.format(standard_sample_tuple)
 
-                # print ('Output Dir: {}'.format(output_directory))
-                # # 'SiTest', '/tmp/SiTest', 'SiTestRecord.txt'
-                # import reduce_VULCAN
-                # print (reduce_VULCAN.RecordBase)
-
                 # get information of run number and workspace
-                run_number, ws_name = run_number_list[0]
-                # convert record-tuple list to three list
-                sample_title_list = [item[0] for item in reduce_VULCAN.RecordBase]
-                sample_name_list = [item[1] for item in reduce_VULCAN.RecordBase]
-                sample_operation_list = [item[2] for item in reduce_VULCAN.RecordBase]
-                material_name, tag_dir, standard_record_file = standard_sample_tuple
-                patch_list = reduce_VULCAN.generate_patch_log_list('VULCAN', ipts_number=ipts_number,
-                                                                   run_number=run_number)
-                status, error_message = \
-                    vdrivehelper.export_experiment_log(ws_name,
-                                                       record_file_name=os.path.join(tag_dir, standard_record_file),
-                                                       sample_name_list=sample_name_list,
-                                                       sample_title_list=sample_title_list,
-                                                       sample_operation_list=sample_operation_list,
-                                                       patch_list=patch_list)
-                # copy GSAS file
-                # TODO - TONIGHT - Better code quality
-                import shutil
-                src_gda = '/SNS/VULCAN/IPTS-{}/shared/binned_data/{}.gda'.format(ipts_number, run_number)
-                assert os.path.exists(src_gda), '{} does not exists'.format(src_gda)
-                shutil.copy(src_gda,
-                            tag_dir)
+                status, error_message = vdrivehelper.export_standard_sample_log(ipts_number, run_number, ws_name,
+                                                                                standard_sample_tuple)
+
+            elif merge_runs:
+                # merge runs
+                record_file_name = os.path.join(output_directory, 'AutoRecord.txt')
+                status, error_message = vdrivehelper.export_normal_sample_log(ipts_number, run_number, ws_name,
+                                                                              record_file_name)
 
             else:
                 status = True
-                error_message = ''
+            error_message = ''
             # END-IF
+
+            # deal with error mssage
             for msg in msg_list:
                 if msg.count('Failed'):
                     status = False

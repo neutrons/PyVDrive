@@ -311,6 +311,53 @@ def export_experiment_log(ws_name, record_file_name, sample_name_list, sample_ti
     return True, ''
 
 
+def export_normal_sample_log(ipts_number, run_number, ws_name, record_file_name):
+    import reduce_VULCAN
+
+    # convert record-tuple list to three list
+    sample_title_list = [item[0] for item in reduce_VULCAN.RecordBase]
+    sample_name_list = [item[1] for item in reduce_VULCAN.RecordBase]
+    sample_operation_list = [item[2] for item in reduce_VULCAN.RecordBase]
+    patch_list = reduce_VULCAN.generate_patch_log_list('VULCAN', ipts_number=ipts_number,
+                                                       run_number=run_number)
+
+    status, error_message = export_experiment_log(ws_name,
+                                                  record_file_name=record_file_name,
+                                                  sample_name_list=sample_name_list,
+                                                  sample_title_list=sample_title_list,
+                                                  sample_operation_list=sample_operation_list,
+                                                  patch_list=patch_list)
+
+    return status, error_message
+
+
+def export_standard_sample_log(ipts_number, run_number, ws_name, standard_sample_tuple):
+    import reduce_VULCAN
+    import shutil
+
+    # convert record-tuple list to three list
+    sample_title_list = [item[0] for item in reduce_VULCAN.RecordBase]
+    sample_name_list = [item[1] for item in reduce_VULCAN.RecordBase]
+    sample_operation_list = [item[2] for item in reduce_VULCAN.RecordBase]
+    material_name, tag_dir, standard_record_file = standard_sample_tuple
+    patch_list = reduce_VULCAN.generate_patch_log_list('VULCAN', ipts_number=ipts_number,
+                                                       run_number=run_number)
+    status, error_message = export_experiment_log(ws_name,
+                                           record_file_name=os.path.join(tag_dir, standard_record_file),
+                                           sample_name_list=sample_name_list,
+                                           sample_title_list=sample_title_list,
+                                           sample_operation_list=sample_operation_list,
+                                           patch_list=patch_list)
+    # copy GSAS file
+    # TODO - TONIGHT - Better code quality
+    src_gda = '/SNS/VULCAN/IPTS-{}/shared/binned_data/{}.gda'.format(ipts_number, run_number)
+    assert os.path.exists(src_gda), '{} does not exists'.format(src_gda)
+    shutil.copy(src_gda, tag_dir)
+
+    return status, error_message
+
+
+
 if __name__ == '__main__':
     time_str1 = '2016-04-27 09:19:50.094796666-EDT'
     time_1 = parse_time(time_str1)

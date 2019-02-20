@@ -149,7 +149,14 @@ def get_default_binned_directory(ipts_number, check_write_and_throw=False, merge
     if merge_flag:
         datatypeutility.check_int_variable('Run number', run_number, (1, 9999999))
         binned_dir = os.path.join(binned_dir, '{}'.format(run_number))
-        os.mkdir(binned_dir)  # default mode is 777
+        if not os.path.exists(binned_dir):
+            try:
+                os.mkdir(binned_dir)  # default mode is 777\
+            except OSError as os_err:
+                raise RuntimeError('Default output directory {} cannot be made due to {}'
+                                   ''.format(binned_dir, os_err))
+        # END-IF
+    # END-IF
 
     # check write permission
     if check_write_and_throw:
