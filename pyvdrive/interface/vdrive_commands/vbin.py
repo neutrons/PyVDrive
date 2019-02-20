@@ -1,5 +1,5 @@
 import os
-import procss_vcommand
+import process_vcommand
 import pyvdrive.lib.vulcan_util as vulcan_util
 
 # VDRIVEBIN, i.e., VBIN
@@ -9,7 +9,7 @@ import pyvdrive.lib.vulcan_util as vulcan_util
 # cmd.run()
 
 
-class AutoReduce(procss_vcommand.VDriveCommand):
+class AutoReduce(process_vcommand.VDriveCommand):
     """
     Command processor to call auto reduce script
     """
@@ -21,7 +21,7 @@ class AutoReduce(procss_vcommand.VDriveCommand):
         :param controller:
         :param command_args:
         """
-        procss_vcommand.VDriveCommand.__init__(self, controller, command_args)
+        process_vcommand.VDriveCommand.__init__(self, controller, command_args)
 
         self._commandName = 'AUTO/AUTOREDUCE'
 
@@ -42,7 +42,7 @@ class AutoReduce(procss_vcommand.VDriveCommand):
             print '[DB...BAT] IPTS = ', ipts
 
         try:
-            run_number_list = self.parse_run_number()
+            run_number_list = self.parse_run_numbers()
         except RuntimeError as error:
             return False, 'Unable to parse run numbers due to {0}'.format(error)
 
@@ -82,13 +82,13 @@ class AutoReduce(procss_vcommand.VDriveCommand):
         return help_str
 
 
-class VBin(procss_vcommand.VDriveCommand):
+class VBin(process_vcommand.VDriveCommand):
     """
     """
     SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BANKS', 'BINW',
                      'RUNV', 'IPARM', 'ONEBANK', 'NOMASK', 'TAG', 'TAGDIR',
                      'BINFOLDER', 'MYTOFMIN', 'MYTOFMAX', 'OUTPUT', 'GROUP', 'VERSION',
-                     'ROI', 'MASK']
+                     'ROI', 'MASK', 'RUNFILE', 'RUNLIST', 'MERGE']
     # NOTE: Here is the list of arguments that will not be supported in March-2019 release
     #       'SKIPXML', 'FOCUS_EW', 'FullProf', 'NoGSAS', 'PlotFlag', 'VDRIVEBIN'
 
@@ -110,17 +110,19 @@ class VBin(procss_vcommand.VDriveCommand):
         'BINFOLDER': 'User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin',
         'OUTPUT': 'User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin',
         'VERSION': 'User specified version of reduction algorithm.  Mantid conventional = 1, PyVDrive simplified = 2',
-        # 'VDRIVEBIN': 'Bin boundaries will be adapted to (IDL) VDRIVE.  By default, it is 1 as True'
     }
 
     def __init__(self, controller, command_args):
         """ Initialization
         """
-        procss_vcommand.VDriveCommand.__init__(self, controller, command_args)
+        process_vcommand.VDriveCommand.__init__(self, controller, command_args)
 
         self._commandName = 'VBIN/VDRIVEBIN'
 
         self.check_command_arguments(self.SupportedArgs)
+
+        # flag to merge
+        self._merge_flag = False
 
         return
 
@@ -128,8 +130,6 @@ class VBin(procss_vcommand.VDriveCommand):
         """
         Execute command: override
         :return: status (bool), error message (str)
-        """
-        """
         """
         # check and set IPTS
         try:
@@ -139,13 +139,18 @@ class VBin(procss_vcommand.VDriveCommand):
 
         # RUNS or CHOPRUN
         try:
-            run_number_list = self.parse_run_number()
+            run_number_list = self.parse_run_numbers()
         except RuntimeError as run_err:
             return False, 'Unable to parse run numbers due to {0}'.format(run_err)
 
         # Use result from CHOP?
         if 'CHOPRUN' in self._commandArgsDict:
-            use_chop_data = True
+            if self._merge_flag:
+                # In VMERGE mode
+                use_chop_data = False
+            else:
+                # in Chop Run mode
+                use_chop_data = True
             chop_run_number = int(self._commandArgsDict['CHOPRUN'])
         else:
             use_chop_data = False
@@ -178,7 +183,10 @@ class VBin(procss_vcommand.VDriveCommand):
             output_dir = self._commandArgsDict['OUTPUT']
         else:
             # neither specified: use default
-            output_dir = vulcan_util.get_default_binned_directory(self._iptsNumber)
+            if chop_run_number is None:
+                chop_run_number = run_number_list[0]
+            output_dir = vulcan_util.get_default_binned_directory(self._iptsNumber, True, self._merge_flag,
+                                                                  chop_run_number)
 
         if 'ONEBANK' in self._commandArgsDict:
             merge_to_one_bank = bool(int(self._commandArgsDict['ONEBANK']))
@@ -235,6 +243,7 @@ class VBin(procss_vcommand.VDriveCommand):
             reduction_alg_ver = 2
 
         # scan the runs with data archive manager and add the runs to project
+        # TODO - NIGHT - use_chop_data can be from a class instance for MERGE
         if use_chop_data:
             # reducing chopped data
             # set vanadium runs
@@ -284,7 +293,8 @@ class VBin(procss_vcommand.VDriveCommand):
                                                                vanadium=van_run,
                                                                standard_sample_tuple=standard_tuple,
                                                                binning_parameters=binning_parameters,
-                                                               merge_runs=False,
+                                                               merge_runs=self._merge_flag,
+                                                               merged_run=chop_run_number,
                                                                num_banks=bank_group,
                                                                version=reduction_alg_ver,
                                                                roi_list=roi_file_names,
@@ -292,6 +302,7 @@ class VBin(procss_vcommand.VDriveCommand):
                                                                no_cal_mask=no_mask)
         # END-IF-ELSE
 
+        # NIGHT - TODO - NEED a new class instance and method
         # process special tag for vanadium: create intensity file for each detector pixel
         if use_chop_data is False and standard_tuple is not None and standard_tuple[0] == 'Vanadium':
             for run_number in run_number_list:
@@ -359,4 +370,8 @@ class VBin(procss_vcommand.VDriveCommand):
         help_str += '> VBIN,IPTS=19577, RUNS=152782, RUNE=153144, BANKS=7\n'
 
         return help_str
+
+    # TODO - TONIGHT - Code quality
+    def set_merge_flag(self, flag):
+        self._merge_flag = flag
 

@@ -575,6 +575,7 @@ class MplGraphicsView(QWidget):
         :param x: None as the automatic mode using default from middle of canvas
         :param color: None as the automatic mode using default
         :param style:
+        :param line_width: With of indicator line
         :return: indicator ID
         """
         # For indicator line's position
@@ -931,24 +932,25 @@ class MplGraphicsView(QWidget):
 
         return self._myCanvas.updateLine(ikey, vecx, vecy, linestyle, linecolor, marker, markercolor, label)
 
-    def update_indicator(self, i_key, color):
+    def update_indicator(self, i_key, color=None, y_range=None):
         """
         Update indicator with new color
         :param i_key:
         :param color:
+        :param y_range:
         :return:
         """
         if self._myIndicatorsManager.get_line_type(i_key) < 2:
             # horizontal or vertical
             canvas_line_index = self._myIndicatorsManager.get_canvas_line_index(i_key)
-            self._myCanvas.updateLine(ikey=canvas_line_index, vecx=None, vecy=None, linecolor=color)
+            self._myCanvas.updateLine(ikey=canvas_line_index, vecx=None, vecy=y_range, linecolor=color)
         else:
             # 2-way
             canvas_line_index_h, canvas_line_index_v = self._myIndicatorsManager.get_canvas_line_index(i_key)
             # h_vec_set, v_vec_set = self._myIndicatorsManager.get_2way_data(i_key)
 
-            self._myCanvas.updateLine(ikey=canvas_line_index_h, vecx=None, vecy=None, linecolor=color)
-            self._myCanvas.updateLine(ikey=canvas_line_index_v, vecx=None, vecy=None, linecolor=color)
+            self._myCanvas.updateLine(ikey=canvas_line_index_h, vecx=None, vecy=y_range, linecolor=color)
+            self._myCanvas.updateLine(ikey=canvas_line_index_v, vecx=None, vecy=y_range, linecolor=color)
 
         return
 

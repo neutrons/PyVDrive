@@ -3,6 +3,7 @@ from os import listdir
 from os.path import isfile, join
 import math
 import mantid_helper
+import datatypeutility
 
 
 class LoadedDataManager(object):
@@ -118,23 +119,62 @@ class LoadedDataManager(object):
 
         return True
 
-    def load_binned_data(self, data_file_name, data_file_type, prefix, max_int, data_key):
+    @staticmethod
+    def construct_workspace_name(file_name, file_type, prefix, max_int):
+        """ Construct a standard workspace for loaded binned data (gsas/processed nexus)
+        :param file_name:
+        :param file_type:
+        :param prefix:
+        :param max_int:
+        :return:
         """
-        load binned data
+        # check inputs
+        datatypeutility.check_string_variable('File name', file_name)
+        datatypeutility.check_string_variable('File type', file_type)
+        datatypeutility.check_string_variable('Workspace prefix', prefix)
+        datatypeutility.check_int_variable('Maximum integer for file sequence number', max_int, (10, None))
+
+        base_ws_name = os.path.basename(file_name).split('.')[0]
+        hash_part = hash(os.path.basename(file_name))
+
+        # add zeros for better sorting
+        if base_ws_name.isdigit():
+            # add number of zeros in front
+            num_zeros = int(math.log(max_int) / math.log(10)) + 1
+            if num_zeros < 1:
+                num_zeros = 1
+            base_ws_name = '{0:0{1}}'.format(int(base_ws_name), num_zeros)
+
+        if prefix != '':
+            data_ws_name = '{}_{}'.format(prefix, base_ws_name)
+        else:
+            data_ws_name = base_ws_name
+
+        if file_type == '':
+            raise RuntimeError('File type cannot be empty string')
+        else:
+            data_ws_name = '{}_{}{}'.format(data_ws_name, file_type[0], hash_part)
+
+        return data_ws_name
+
+    def load_binned_data(self, data_file_name, data_file_type, max_int, prefix='', data_key=None,
+                         target_unit=None):
+        """ Load binned data
         :param data_file_name:
         :param data_file_type:
         :param prefix: prefix of the GSAS workspace name. It can be None, an integer, or a string
         :param max_int: maximum integer for sequence such as 999 for 001, 002, ... 999
-        :param data_key:
+        :param data_key: data key or None (to use workspace name as data key)
+        :param target_unit: target unit or None
         :return: string as data key (aka. workspace name)
         """
         # check inputs
-        assert isinstance(data_file_type, str) or data_file_type is None, \
-            'Data file type {0} must be a string or None but not a {1}.' \
-            ''.format(data_file_type, type(data_file_type))
-        assert isinstance(data_file_name, str), 'Data file name {0} must be a string but not a {1}.' \
-                                                ''.format(data_file_name, type(data_file_name))
-        assert isinstance(data_key, str), 'Data key {0} must be a string.'.format(data_key)
+        datatypeutility.check_file_name(data_file_name, True, False, False, 'Binned/reduced data file to load')
+        if data_file_type is not None:
+            datatypeutility.check_string_variable('Data file type', data_file_type, ['gsas', 'processed nexus'])
+        if data_key is not None:
+            datatypeutility.check_string_variable('Data key', data_key)
+        datatypeutility.check_string_variable('Workspace prefix', prefix)
 
         # find out the type of the data file
         file_name, file_extension = os.path.splitext(data_file_name)
@@ -142,6 +182,8 @@ class LoadedDataManager(object):
         if data_file_type is None:
             if file_extension.lower() in ['.gda', '.gsa', '.gss']:
                 data_file_type = 'gsas'
+            elif file_extension.lower() == '.nxs':
+                data_file_type = 'processed nexus'
             else:
                 raise RuntimeError('Data file type {0} is not recognized.'.format(data_file_type))
         else:
@@ -149,32 +191,25 @@ class LoadedDataManager(object):
         # END-IF-ELSE
 
         # Load data
-        base_ws_name = os.path.basename(file_name)
+        data_ws_name = self.construct_workspace_name(data_file_name, data_file_type, prefix, max_int)
+
         if data_file_type == 'gsas':
             # load as GSAS
-            # get the output workspace name
-            if prefix is None or prefix == '':
-                # no prefix is specified
-                data_ws_name = '{0}_gsas'.format(base_ws_name)
-            elif base_ws_name.isdigit():
-                # base workspace name is an integer and prefix is given.
-                num_zeros = int(math.log(max_int) / math.log(10)) + 1
-                data_ws_name = '{0}_{1:0{2}}'.format(prefix, int(base_ws_name), num_zeros)
-            else:
-                # prefix_basename
-                data_ws_name = '{0}_{1}'.format(prefix, os.path.basename(file_name))
-            # END-IF
-
-            # load data: IDL-VDRIVE binning is disabled due to multiple various binning among banks
             mantid_helper.load_gsas_file(data_file_name, data_ws_name, standard_bin_workspace=None)
-        elif data_file_type == 'nxs':
+        elif data_file_type == 'processed nexus':
             # load processed nexus
-            data_ws_name = '{}'.format(base_ws_name)
             mantid_helper.load_nexus(data_file_name=file_name, output_ws_name=data_ws_name, meta_data_only=False)
         else:
             raise RuntimeError('Unable to support %s file.' % data_file_type)
 
-        # add to data management dictionary
+        # convert unit
+        if target_unit:
+            mantid_helper.mtd_convert_units(data_ws_name, target_unit)
+
+        if data_key is None:
+            data_key = data_ws_name
+
+        # register by adding to data management dictionary
         self._workspaceDict[data_key] = data_ws_name
         self._singleGSASDict[data_key] = data_file_name
 

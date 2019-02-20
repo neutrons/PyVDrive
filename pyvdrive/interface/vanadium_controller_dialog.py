@@ -68,7 +68,7 @@ class VanadiumProcessControlDialog(QDialog):
         self.ui.pushButton_setPeakStripParamToDefaults.clicked.connect(self.do_restore_peak_strip_parameters)
         self.ui.pushButton_savePeakStripParamAsDefaults.clicked.connect(self.do_save_peak_strip_parameters)
 
-        self.ui.pushButton_showVPeaks.clicked.connect(self.do_show_vanadium_peaks)
+        # self.ui.pushButton_showVPeaks.clicked.connect(self.do_show_vanadium_peaks)
         self.ui.pushButton_nDecrease.clicked.connect(self.do_decrease_smooth_n)
         self.ui.pushButton_nIncrease.clicked.connect(self.do_increase_smooth_n)
         self.ui.pushButton_orderDecrease.clicked.connect(self.do_decrease_smooth_order)
@@ -89,8 +89,6 @@ class VanadiumProcessControlDialog(QDialog):
         self.ui.horizontalSlider_smoothN.valueChanged.connect(self.evt_smooth_param_changed)
         self.ui.horizontalSlider_smoothOrder.valueChanged.connect(self.evt_smooth_param_changed)
 
-        self.ui.comboBox_plotBanks.currentIndexChanged.connect(self.do_plot_vanadiums)
-
         # final
         self.ui.pushButton_applyVanProcessResult.clicked.connect(self.do_save_result)
         self.ui.pushButton_quit.clicked.connect(self.do_quit)
@@ -101,7 +99,9 @@ class VanadiumProcessControlDialog(QDialog):
         self.mySmoothVanadiumSignal.connect(self._myParent.signal_smooth_vanadium)
         self.myUndoSmoothVanadium.connect(self._myParent.signal_smooth_vanadium)
         self.myApplyResultSignal.connect(self._myParent.signal_save_processed_vanadium)
-        self.myShowVPeaksSignal.connect(self._myParent.event_show_hide_v_peaks)
+        self.myShowVPeaksSignal.connect(self._myParent._subControllerVanadium.show_hide_v_peaks)
+
+        # TODO - TONIGHT 1 - self.ui.pushButton_bfSearchSmooth.connect(self.do_smooth_bf)
 
         return
 
@@ -143,6 +143,16 @@ class VanadiumProcessControlDialog(QDialog):
 
         # check box
         self.ui.checkBox_isHighBackground.setChecked(True)
+
+        # hide
+        self.ui.pushButton_undoPeakStrip.hide()
+        self.ui.pushButton_setPeakStripParamToDefaults.hide()
+        self.ui.pushButton_savePeakStripParamAsDefaults.hide()
+        self.ui.pushButton_undoSmooth.hide()
+        self.ui.pushButton_setSmoothParamToDefaults.hide()
+        self.ui.pushButton_saveSmoothParamAsDefaults.hide()
+        self.ui.pushButton_bfSearchSmooth.hide()
+        self.ui.pushButton_applyVanProcessResult.hide()
 
         return
 
@@ -344,6 +354,12 @@ class VanadiumProcessControlDialog(QDialog):
 
         return
 
+    def do_smooth_bf(self):
+        """
+        Use brute force to 
+        :return:
+        """
+
     def _get_banks_group(self):
         # append the banks
         bank_group = str(self.ui.comboBox_banks.currentText())
@@ -379,7 +395,7 @@ class VanadiumProcessControlDialog(QDialog):
         smooth vanadium data
         :return:
         """
-        bank_group_index = self._get_banks_group()
+        # bank_group_index = self._get_banks_group()
 
         # get smoothing parameter
         try:
@@ -391,7 +407,7 @@ class VanadiumProcessControlDialog(QDialog):
             return
 
         # emit signal
-        self.mySmoothVanadiumSignal.emit(bank_group_index, smoother_type, smoother_n, smoother_order)
+        self.mySmoothVanadiumSignal.emit(1, smoother_type, smoother_n, smoother_order)
 
         return
 
@@ -416,12 +432,12 @@ class VanadiumProcessControlDialog(QDialog):
         #     bank_group_index = 150
         # else:
         #     raise NotImplementedError('Bank group {} is not supported.'.format(bank_group))
-        bank_group_index = self._get_banks_group()
+        # bank_group_index = self._get_banks_group()
 
         background_type = str(self.ui.comboBox_vanPeakBackgroundType.currentText())
         is_high_background = self.ui.checkBox_isHighBackground.isChecked()
 
-        self.myStripPeakSignal.emit(bank_group_index, peak_fwhm, fit_tolerance, background_type, is_high_background)
+        self.myStripPeakSignal.emit(1, peak_fwhm, fit_tolerance, background_type, is_high_background)
 
         return
 
@@ -467,9 +483,13 @@ class VanadiumProcessControlDialog(QDialog):
         # change parameters
         self._slidersMutex = True
         param_n = gutil.parse_integer(self.ui.lineEdit_smoothParameterN, allow_blank=False)
+        if param_n is None or param_n == 0:
+            param_n = 1
         self.ui.horizontalSlider_smoothN.setValue(param_n)
 
         param_order = gutil.parse_integer(self.ui.lineEdit_smoothParameterOrder, allow_blank=False)
+        if param_order is None or param_order == 0:
+            param_order = 1
         self.ui.horizontalSlider_smoothOrder.setValue(param_order)
 
         self._slidersMutex = False
@@ -516,15 +536,6 @@ class VanadiumProcessControlDialog(QDialog):
 
         return
 
-    def set_run_number(self, run_number):
-        """ set run number
-        :param run_number:
-        :return:
-        """
-        self.ui.lineEdit_runNumber.setText(str(run_number))
-
-        return
-
     def set_peak_fwhm(self, peak_fwhm):
         """
         set vanadium peak's FWHM
@@ -534,6 +545,70 @@ class VanadiumProcessControlDialog(QDialog):
         self.ui.lineEdit_vanPeakFWHM.setText('{0}'.format(peak_fwhm))
 
         return
+
+    # TODO - TONIGHT 101 - This method may be replaced by others
+    def plot_1d_vanadium(self, run_id, bank_id, is_smoothed_data=False):
+        """
+
+        :param run_id:
+        :param bank_id:
+        :return:
+        """
+        # check input
+        datatypeutility.check_string_variable('Run ID', run_id)
+        datatypeutility.check_int_variable('Bank ID', bank_id, (1, 100))
+
+        # clear previous image
+        self.ui.graphicsView_mainPlot.clear_all_lines()
+        # change unit
+        self.ui.comboBox_unit.setCurrentIndex(1)
+
+        # plot original run
+        # raw_van_key = run_id, bank_id, self._currUnit
+        # if raw_van_key in self._currentPlotDataKeyDict:
+        #     # data already been loaded before
+        #     vec_x, vec_y = self._currentPlotDataKeyDict[raw_van_key]
+        # else:
+        #     vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=run_id, bank_id=bank_id,
+        #                                                      unit=self._currUnit)
+        #     self._currentPlotDataKeyDict[raw_van_key] = vec_x, vec_y
+
+        if is_smoothed_data:
+            plot_unit = 'TOF'
+        else:
+            plot_unit = 'dSpacing'
+
+        # get the original raw data
+        ws_name = self._myController.project.vanadium_processing_manager.get_raw_vanadium()[bank_id]
+        vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=ws_name, bank_id=1, unit=plot_unit)
+
+        # plot
+        self._raw_van_plot_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y),
+                                                                                    unit=plot_unit,
+                                                                                    over_plot=False,
+                                                                                    run_id=run_id, bank_id=bank_id,
+                                                                                    chop_tag=None,
+                                                                                    line_color='black',
+                                                                                    label='Raw vanadium {}'
+                                                                                          ''.format(run_id))
+
+        if is_smoothed_data:
+            ws_name = self._myController.project.vanadium_processing_manager.get_smoothed_vanadium()[bank_id]
+        else:
+            ws_name = self._myController.project.vanadium_processing_manager.get_peak_striped_vanadium()[bank_id]
+        vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=ws_name, bank_id=1, unit=plot_unit)
+        # plot vanadium
+        self._strip_van_plot_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y),
+                                                                                      unit=plot_unit,
+                                                                                      over_plot=True,
+                                                                                      run_id=run_id, bank_id=bank_id,
+                                                                                      chop_tag=None,
+                                                                                      line_color='red',
+                                                                                      label='Peak striped vanadium {}'
+                                                                                            ''.format(run_id))
+
+        return
+    # END-CLASS
 
 
 def load_setting_bool(qsettings, param_name, default_value):
@@ -570,12 +645,17 @@ def load_setting_integer(qsettings, param_name, default_value):
     assert isinstance(qsettings, QtCore.QSettings), 'Input settings must be a QSetting instance but not {0}.' \
                                                     ''.format(type(qsettings))
 
-    value_str = qsettings.value(param_name, default_value)
+    # TODO FIXME - TONIGHT 1 - qsettings.value can be (1) QVariant or (2) Unicode
+    # int_value = qsettings.value(param_name, default_value).toInt()
+    int_value = default_value
 
-    try:
-        int_value = int(str(value_str))
-    except TypeError:
-        raise RuntimeError('QSetting cannot cast {0} with value {1} to integer.'.format(param_name, value_str))
+    print ('DB...BAT] From QVariant: {}'.format(int_value))
+
+    # try:
+    #     int_value = int(str(value_str))
+    # except (TypeError, ValueError):
+    #     print ('[ERROR] QSetting cannot cast {0} with value {1} to integer.'.format(param_name, value_str))
+    #     int_value = default_value
 
     return int_value
 
@@ -592,12 +672,14 @@ def load_setting_float(qsettings, param_name, default_value):
     assert isinstance(qsettings, QtCore.QSettings), 'Input settings must be a QSetting instance but not {0}.' \
                                                     ''.format(type(qsettings))
 
-    value_str = qsettings.value(param_name, default_value)
+    # TODO FIXME - TONIGHT 2 - qsettings.value can be (1) QVariant or (2) Unicode
+    # float_value = qsettings.value(param_name, default_value).toFloat()
+    float_value = default_value
 
-    try:
-        float_value = float(str(value_str))
-    except TypeError:
-        raise RuntimeError('QSetting cannot cast {0} with value {1} to a float.'.format(param_name, value_str))
+    # try:
+    #     float_value = float(str(value_str))
+    # except (TypeError, ValueError):
+    #     raise RuntimeError('QSetting cannot cast {0} with value {1} to a float.'.format(param_name, value_str))
 
     return float_value
 

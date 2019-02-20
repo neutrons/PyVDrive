@@ -41,7 +41,7 @@ class ProjectManager(object):
         self._chopManagerDict = dict()   # key: run number, value: SampleLogHelper.SampleLogManager()
         # vanadium processing manager
         self._processVanadiumManager = \
-            vanadium_utility.VanadiumProcessingManager(self, self._reductionManager.calibration_manager)
+            vanadium_utility.VanadiumProcessingManager(self)
 
         # definition of dictionaries
         # dictionary for the information of run number, file name and IPTS
@@ -410,7 +410,7 @@ class ProjectManager(object):
 
         # chop and (optionally) diffraction focus the binning data
         # TODO - NIGHT - Need to pass no_calibration_mask
-        status, error_message = self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
+        status, chop_message = self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
                                                                        run_number=run_number,
                                                                        raw_file_name=data_file,
                                                                        split_ws_name=split_ws_name,
@@ -430,12 +430,16 @@ class ProjectManager(object):
                                                                        bin_overlap_mode=overlap_mode,
                                                                        gda_file_start=gda_start)
 
+        regular_info, error_message = chop_message
+
         # process outputs
         if status:
             if output_directory is None:
                 output_directory = '/SNS/VULCAN/IPTS-{}/shared/binned_data/{}'.format(ipts_number, run_number)
-            message = 'IPTS-{0} Run {1} is chopped, reduced (?={2}) and saved to {3}\nWarning: {4}' \
-                      ''.format(ipts_number, run_number, reduce_flag, output_directory, error_message)
+            message = 'IPTS-{0} Run {1} is chopped, reduced (?={2}) and saved to {3}\n' \
+                      '\n{4}\nWarning: {5}' \
+                      ''.format(ipts_number, run_number, reduce_flag, output_directory, regular_info,
+                                error_message)
         else:
             message = error_message
         # END-IF-ELSE
@@ -600,13 +604,12 @@ class ProjectManager(object):
                                peak_positions, hkl_list, profile):
         """
         Find diffraction peaks
-        :param data_key:
+        :param data_key: a data key (for loaded previously reduced data) or run number. For workspace or WorksapceGroup
         :param bank_number:
         :param x_range:
         :param peak_positions: If not specified (None) then it is in auto mode
         :param hkl_list:
         :param profile:
-        :param auto_find:
         :return:
         """
         # Check input
@@ -616,7 +619,8 @@ class ProjectManager(object):
         assert isinstance(bank_number, int), 'Bank number must be an integer.'
         assert isinstance(x_range, tuple) and len(x_range) == 2, 'X-range must be a 2-tuple.'
         assert isinstance(profile, str), 'Peak profile must be a string.'
-        assert isinstance(peak_positions, list) or peak_positions is None, 'Peak positions must be a list or None.'
+        if peak_positions is not None:
+            datatypeutility.check_list('Peak positions', peak_positions)
 
         # locate the workspace
         if isinstance(data_key, int) and self._reductionManager.has_run_reduced(data_key):
@@ -626,11 +630,18 @@ class ProjectManager(object):
         else:
             raise RuntimeError('Workspace cannot be found with data key/run number {0}'.format(data_key))
 
+        # check WorkspaceGroup
+        ws_index = bank_number - 1
+        if mantid_helper.is_workspace_group(data_ws_name):
+            ws_group = mantid_helper.retrieve_workspace(data_ws_name)
+            data_ws_name = ws_group[ws_index].name()
+            ws_index = 0
+
         #
         if peak_positions is None:
             # find peaks in an automatic way
             peak_info_list = mantid_helper.find_peaks(diff_data=data_ws_name,
-                                                      ws_index=bank_number-1,
+                                                      ws_index=ws_index,
                                                       peak_profile=profile,
                                                       is_high_background=True,
                                                       background_type='Linear')
@@ -980,9 +991,9 @@ class ProjectManager(object):
 
         return do_have
 
+    # TODO - TONIGHT 3 - Find out how to make this working... Better docs
     def load_event_file(self, ipts_number, run_number, nxs_file_name, meta_data_only):
         """
-
         :param ipts_number:
         :param run_number:
         :param nxs_file_name:
@@ -1000,10 +1011,11 @@ class ProjectManager(object):
 
             self.add_run(run_number, nxs_file_name, ipts_number)
 
+            event_ws_name = meta_ws_name
         else:
             raise NotImplementedError('blabla NOWNOW')
 
-        return dict()
+        return event_ws_name
 
     def load_session_from_dict(self, save_dict):
         """ Load session from a dictionary
@@ -1288,14 +1300,16 @@ class ProjectManager(object):
                               roi_list, mask_list, no_cal_mask):
         """ reduce runs in a simplied way! (it can be thought be the version 2.0!)
         Note: this method is used by VBIN
-        :param run_number_list:
+        Note 2: For merging, all the workspaces are merged to run_number_list[0].  So if the user has prference
+                to the run number to be merged and saved to, put it as the first one!
+        :param run_number_list: For merging, refer to Note(2)
         :param output_directory:
         :param d_spacing:
         :param binning_parameters: None for default IDL binning
         :param number_banks: number of banks to focus to
         :param gsas: flag to reduce to GSAS file
         :param vanadium_run: van run (integer or None)
-        :param merge_runs:
+        :param merge_runs: Flag to merge runs and
         :param roi_list:
         :param mask_list:
         :return: 2-tuple: list (run number), list (error message for each run reduced)
@@ -1348,37 +1362,69 @@ class ProjectManager(object):
                                                                              no_cal_mask=no_cal_mask)
 
                 reduced_run_numbers.append((run_number, out_ws_name))
-                # save to GSAS
-                if gsas:
-                    run_date_time = vulcan_util.get_run_date(out_ws_name, raw_file_name)
-                    gsas_file_name = os.path.join(output_directory, '{}.gda'.format(run_number))
-                    if binning_parameters is None:
-                        align_vdrive_bin = True
-                    else:
-                        align_vdrive_bin = False
-
-                    if vanadium_run is not None:
-                        van_gsas_name, iparam_file_name = \
-                            self._parent.archive_manager.locate_process_vanadium(vanadium_run)
-                        van_ws_name = self._reductionManager.gsas_writer.import_vanadium(van_gsas_name)
-                    else:
-                        van_ws_name = None
-                        iparam_file_name = 'vulcan.prm'
-
-                    self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
-                                                            gsas_file_name=gsas_file_name, ipts_number=ipts_number,
-                                                            align_vdrive_bin=align_vdrive_bin,
-                                                            gsas_param_file_name=iparam_file_name,
-                                                            van_ws_name=van_ws_name,
-                                                            is_chopped_run=False,
-                                                            write_to_file=True)
             except RuntimeError as run_error:
                 error_messages.append('Failed to reduce run {0} due to {1}'.format(run_number, run_error))
             else:
                 error_messages.append('[INFO] For {}: {}'.format(run_number, msg))
-            # manage
-
         # END-FOR
+
+        # process reduced data
+        if gsas and vanadium_run is not None:
+            # load vanadium to workspace workspace and get calculation prm file
+            van_gsas_name, iparam_file_name = \
+                        self._parent.archive_manager.locate_process_vanadium(vanadium_run)
+            van_ws_name = self._reductionManager.gsas_writer.import_vanadium(van_gsas_name)
+        else:
+            # default
+            van_ws_name = None
+            iparam_file_name = 'vulcan.prm'
+
+        # binning
+        if binning_parameters is None:
+            align_vdrive_bin = True
+        else:
+            align_vdrive_bin = False
+
+        if gsas and not merge_runs:
+            # save to GSAS without merging
+            for run_number, out_ws_name in reduced_run_numbers:
+                # get IPTS and raw file name
+                raw_file_name, ipts_number = self._dataFileDict[run_number]
+                run_date_time = vulcan_util.get_run_date(out_ws_name, raw_file_name)
+                gsas_file_name = os.path.join(output_directory, '{}.gda'.format(run_number))
+
+                self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
+                                                        gsas_file_name=gsas_file_name, ipts_number=ipts_number,
+                                                        align_vdrive_bin=align_vdrive_bin,
+                                                        gsas_param_file_name=iparam_file_name,
+                                                        van_ws_name=van_ws_name,
+                                                        is_chopped_run=False,
+                                                        write_to_file=True)
+            # END-FOR
+        elif gsas and merge_runs:
+            # merge and then save to GSAS file
+            ws_name_list = [item[1] for item in reduced_run_numbers]
+            # always merged to run_number_list[0]/ws_name_list[0]
+            run_number, out_ws_name = reduced_run_numbers[0]
+            print ('[DB...BAT] Input run numbers: {}'.format(run_number_list))
+            print ('[DB...BAT] Redued runs: {}'.format(reduced_run_numbers))
+            # merge runs
+            mantid_helper.merge_runs(ws_name_list, out_ws_name)
+
+            raw_file_name, ipts_number = self._dataFileDict[run_number]
+            run_date_time = vulcan_util.get_run_date(out_ws_name, raw_file_name)
+            gsas_file_name = os.path.join(output_directory, '{}.gda'.format(run_number))
+
+            self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
+                                                    gsas_file_name=gsas_file_name, ipts_number=ipts_number,
+                                                    align_vdrive_bin=align_vdrive_bin,
+                                                    gsas_param_file_name=iparam_file_name,
+                                                    van_ws_name=van_ws_name,
+                                                    is_chopped_run=False,
+                                                    write_to_file=True)
+        else:
+            # do nothing
+            pass
 
         return reduced_run_numbers, error_messages
 

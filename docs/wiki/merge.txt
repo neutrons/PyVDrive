@@ -1,36 +1,45 @@
-Alias
-=====
+### Alias
 
 VMERGE
 
-Arguments
-=========
+## Examples (Benchmark)
 
-Mandatory arguments
--------------------
+
+### Merge with basic setup and run file
+
+  ```
+  MERGE,IPTS=21356,RUNFILE='{}',output=\'{}\'".format(run_file_name, test_dir)
+  ````
+
+
+### Merge with RUNV
+
+  ```
+  MERGE,IPTS=21356,RUNLIST=1234 & 1235 & 2242,RUNV=21123,output=\'{}\'".format(test_dir)
+  ```
+
+## Run file format
+
+It must be an ASCII file containing a list of run numbers.
+It can be flexible such that the run numbers can be written in arbitrary number of lines separated by space, tab or line return.
+
+- Example of the tab delimited runfile.txt:
+  ```
+  1001 1002 1003 1004 1005 1006 1007
+  1008 1009 1010
+  ...
+
+
+## Arguments
+
+### Mandatory
 
   * IPTS: IPTS number
   * RUNFILE: Name of the file containing runs to merge
 
 
-Optional arguments
-------------------
+### Optional arguments
 
   * CHOPRUN: ... ...
 
 
-Run file format
-===============
-
-It must be an ASCII file containing a list of run numbers.
-It can be flexible such that the run numbers can be written in arbitrary number of lines separated by space, tab or line return.
-
-
-Examples (Benchmark)
-====================
-
-Example 1
----------
-
- * Run file: 
- * Command:

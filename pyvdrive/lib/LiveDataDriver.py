@@ -1,8 +1,8 @@
 import os
 import sys
 
-# path will be ... TODO TODO TODO
-sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
+# # path will be ... TODO TODO TODO
+# sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
 
 
 import numpy
@@ -36,6 +36,8 @@ class LiveDataDriver(QtCore.QThread):
 
     if os.path.exists('/SNS/VULCAN/'):
         LIVE_PROCESS_SCRIPTS = '/SNS/VULCAN/shared/livereduce/vulcan_live_data_v0_9.py'
+    elif os.path.exists('/home/bl-user/.pyvdrive/vulcan_live_data_v0_9.py'):
+        LIVE_PROCESS_SCRIPTS = '/home/bl-user/.pyvdrive/vulcan_live_data_v0_9.py'
     else:
         LIVE_PROCESS_SCRIPTS = '/SNS/users/wzz/VULCAN/shared/livereduce/vulcan_live_data_v0_9.py'
 
@@ -200,6 +202,7 @@ class LiveDataDriver(QtCore.QThread):
 
         return new_ws, is_new_ws
 
+    # TODO - TONIGHT 3 - Consider to remove since mantid_helper is used
     @staticmethod
     def delete_workspace(workspace_name, no_throw=False):
         """
@@ -235,6 +238,30 @@ class LiveDataDriver(QtCore.QThread):
         curr_index = counter_ws.readX(0)[0]
 
         return curr_index
+
+    @staticmethod
+    def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, starting_bank_id=1):
+        """
+        get data from a workspace
+        :param workspace_name:
+        :param bank_id:
+        :param target_unit: None for using current unit
+        :param starting_bank_id: lowest bank ID
+        :return: 2-tuple as (boolean, returned object); boolean as status of executing the method
+                 if status is False, returned object is a string for error message
+                 if status is True and Bank ID is None: returned object is a dictionary with all Bank IDs
+                 if status is True and Bank ID is not None: returned object is a dictionary with the specified bank ID.
+                 The value of each entry is a tuple with vector X, vector Y and vector Z all in numpy.array
+        """
+        try:
+            data_set_dict, curr_unit = mantid_helper.get_data_from_workspace(workspace_name,
+                                                                             bank_id=bank_id,
+                                                                             target_unit=target_unit,
+                                                                             start_bank_id=starting_bank_id)
+        except RuntimeError as run_err:
+            return False, str(run_err)
+
+        return True, (data_set_dict, curr_unit)
 
     @staticmethod
     def get_live_events():
@@ -407,25 +434,25 @@ class LiveDataDriver(QtCore.QThread):
 
         return ADS.retrieve(self._vanadiumWorkspaceDict[bank_id]).readY(0)
 
-    def load_reduced_runs(self, ipts_number, run_number, output_ws_name):
-        """
-
-        :param ipts_number:
-        :param run_number:
-        :return:
-        """
-        assert isinstance(ipts_number, int), 'IPTS number {0} ({1}) must be an integer.' \
-                                             ''.format(ipts_number, type(ipts_number))
-        assert isinstance(run_number, int), 'Run number {0} ({1}) must be an integer.' \
-                                            ''.format(run_number, type(run_number))
-
-        # TODO/ASAP/ - In-Implementation
-
-        gsas_file_name = self._archiveManager.get_data_archive_gsas(ipts_number, run_number)
-
-        mantidsimple.LoadGSS(Filename=gsas_file_name, OutputWorkspace=output_ws_name)
-
-        return
+    # def load_reduced_runs(self, ipts_number, run_number, output_ws_name):
+    #     """
+    #
+    #     :param ipts_number:
+    #     :param run_number:
+    #     :return:
+    #     """
+    #     assert isinstance(ipts_number, int), 'IPTS number {0} ({1}) must be an integer.' \
+    #                                          ''.format(ipts_number, type(ipts_number))
+    #     assert isinstance(run_number, int), 'Run number {0} ({1}) must be an integer.' \
+    #                                         ''.format(run_number, type(run_number))
+    #
+    #     # TODO/ASAP/ - In-Implementation
+    #
+    #     gsas_file_name = self._archiveManager.locate_gsas(ipts_number, run_number)
+    #
+    #     mantidsimple.LoadGSS(Filename=gsas_file_name, OutputWorkspace=output_ws_name)
+    #
+    #     return
 
     def load_smoothed_vanadium(self, van_gsas_file):
         """ Load smoothed vanadium spectra from GSAS file
@@ -438,10 +465,10 @@ class LiveDataDriver(QtCore.QThread):
             raise RuntimeError('Vanadium GSAS file {0} cannot be found.'.format(van_gsas_file))
 
         # load file and edit instrument for dSpacing
-        mantidsimple.LoadGSS(Filename=van_gsas_file, OutputWorkspace='vanadium')
+        mantidsimple.LoadGSS(Filename=van_gsas_file, OutputWorkspace='vanadium')   # 3 banks
         mantidsimple.EditInstrumentGeometry(Workspace='vanadium', PrimaryFlightPath=43.753999999999998,
-                                            SpectrumIDs='1-3',
-                                            L2='2,2,2', Polar='90,270,150')
+                                            SpectrumIDs='1, 2, 3',
+                                            L2='2,2,2', Polar='-90,90,155')
         mantidsimple.ConvertUnits(InputWorkspace='vanadium', OutputWorkspace='vanadium', Target='dSpacing')
 
         # bank 1 and 2: extract, rebin and smooth
@@ -455,6 +482,8 @@ class LiveDataDriver(QtCore.QThread):
                                    Filter='Butterworth', Params='20,2',
                                    IgnoreXBins=True, AllSpectra=True)
             self._vanadiumWorkspaceDict[bank] = ws_name
+        # END-FOR
+        mantid_helper.delete_workspace('van2banks')
 
         # bank3: different algorithm because it has more bins than bank 1 and 2 but has some issue with Mantid
         for bank in [3]:
@@ -481,6 +510,7 @@ class LiveDataDriver(QtCore.QThread):
                 vec_y[i] = xy[1]
             vec_x[-1] = vecx[-1]
 
+            # re-create workspace
             mantidsimple.CreateWorkspace(DataX=vec_x, DataY=vec_y, NSpec=1,
                                          UnitX='dSpacing', OutputWorkspace='vanbank3')
             mantidsimple.Rebin(InputWorkspace='vanbank3', OutputWorkspace='vanbank3', Params='0.3,-0.001, 3.5')
@@ -489,6 +519,18 @@ class LiveDataDriver(QtCore.QThread):
                                    Filter='Butterworth', Params='20,2', IgnoreXBins=True, AllSpectra=True)
 
             self._vanadiumWorkspaceDict[bank] = ws_name
+
+            # clean
+            mantid_helper.delete_workspace('vanbank3')
+            mantid_helper.delete_workspace('vanhighbank')
+        # END-FOR
+
+        # make sure there won't be any less than 0 item
+        for ws_name in self._vanadiumWorkspaceDict.keys():
+            van_bank_i_ws = mantid_helper.retrieve_workspace(self._vanadiumWorkspaceDict[ws_name], True)
+            for i in range(len(van_bank_i_ws.readY(0))):
+                if van_bank_i_ws.readY(0)[i] < 1.:
+                    van_bank_i_ws.dataY(0)[i] = 1.
         # END-FOR
 
         return
@@ -551,11 +593,13 @@ class LiveDataDriver(QtCore.QThread):
                 numpy.append(sample_value_vec, value_vec_i)
             # END-IF-ELSE
 
-            # DEBUG OUTPUT
-            print '[DB...SEVERE] Workspace {0} Entry 0: {1}; Entry -1: {2}; Number of Entries: {3}' \
-                  ''.format(ws_name, time_vec_i[0], time_vec_i[-1], len(time_vec_i))
+            if len(time_vec_i) > 0:
+                # DEBUG OUTPUT
+                print '[DB...SEVERE] Workspace {0} Entry 0: {1}; Entry -1: {2}; Number of Entries: {3}' \
+                      ''.format(ws_name, time_vec_i[0], time_vec_i[-1], len(time_vec_i))
 
-            last_pulse_time = temp_workspace.run().getProperty('proton_charge').times[-1]
+                last_pulse_time = temp_workspace.run().getProperty('proton_charge').times[-1]
+            # END
         # END-FOR (workspaces)
 
         return date_time_vec, sample_value_vec, last_pulse_time
@@ -610,6 +654,7 @@ class LiveDataDriver(QtCore.QThread):
         """ main method to start live data
         :return:
         """
+        print ('[DB...BAT] reduction script: {}'.format(self._live_reduction_script))
         # Test for script: whatever has all the log information...
         # and output_1, output_2 will do good still
         mantidsimple.StartLiveData(UpdateEvery=10,

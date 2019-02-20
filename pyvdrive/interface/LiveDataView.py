@@ -1,15 +1,17 @@
 from datetime import datetime
+import os
 try:
     import qtconsole.inprocess
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QMainWindow, QLineEdit
+    from PyQt5.QtGui import QPixmap
 except ImportError:
     from PyQt4 import QtCore
     from PyQt4.QtGui import QVBoxLayout
     from PyQt4.uic import loadUi as load_ui
-    from PyQt4.QtGui import QMainWindow, QLineEdit
+    from PyQt4.QtGui import QMainWindow, QLineEdit, QPixmap
 import random
 import time
 import numpy
@@ -25,6 +27,7 @@ from pyvdrive.lib import mantid_helper
 from gui.pvipythonwidget import IPythonWorkspaceViewer
 from pyvdrive.lib import vdrivehelper
 from pyvdrive.lib import datatypeutility
+from gui import GuiUtility
 
 # include this try/except block to remap QString needed when using IPython
 try:
@@ -34,7 +37,6 @@ except AttributeError:
 
 # TODO/ISSUE/FUTURE - Consider https://www.tutorialspoint.com/pyqt/pyqt_qsplitter_widget.htm
 #
-# TODO - NEW TO TEST
 # 2. 2D contour plot for reduced runs and in-accumulation run
 
 # Note: Atomic workspace: output_xxxx
@@ -172,6 +174,7 @@ class VulcanLiveDataView(QMainWindow):
         # multiple thread pool
         self._checkStateTimer = None
         self._2dUpdater = None
+        self._snap_shot_thread = None
 
         self._bankColorDict = {1: 'red', 2: 'blue', 3: 'green'}
         self._mainGraphicDict = {1: self.ui.graphicsView_currentViewB1,
@@ -201,6 +204,27 @@ class VulcanLiveDataView(QMainWindow):
         self._update2DCounter = 0
         #
         self.show_refresh_info()
+
+        # about SNAP shot
+        self._snap_shot_dir = '/home/controls/var/dataviz'
+        self._snap_shot_image = None
+        if not os.path.exists(self._snap_shot_dir):
+            err_msg = 'Directory {} does not exist'.format(self._snap_shot_dir)
+        elif not os.access(self._snap_shot_dir, os.W_OK):
+            err_msg = 'User does not have writing permission to {}'.format(self._snap_shot_dir)
+        else:
+            self._snap_shot_image = os.path.join(self._snap_shot_dir, 'Vulcan_LiveDataView_SnapShot.png')
+            if os.path.exists(self._snap_shot_image) and os.access(self._snap_shot_image, os.W_OK) is False:
+                err_msg = 'User cannot overwrite {}'.format(self._snap_shot_image)
+            else:
+                err_msg = ''
+        # END-IF
+
+        if err_msg != '':
+            GuiUtility.pop_dialog_error(self, 'Auto snap shot generator is disabled due to {}'.format(err_msg))
+            self._enable_snap_shot = False
+        else:
+            self._enable_snap_shot = True
 
         return
 
@@ -239,6 +263,23 @@ class VulcanLiveDataView(QMainWindow):
         self.ui.frame_graphicsView_comparison.setLayout(graphicsView_comparison_layout)
         self.ui.graphicsView_comparison = GeneralPurpose1DView(self)
         graphicsView_comparison_layout.addWidget(self.ui.graphicsView_comparison)
+
+        return
+
+    def take_snap_shot(self):
+        """
+        Take a snap shot for the window
+        :return:
+        """
+        date = datetime.now()
+        time_message = date.strftime('%Y-%m-%d_%H-%M-%S')
+        p = QPixmap.grabWindow(self.winId())
+
+        if self._enable_snap_shot:
+            p.save(self._snap_shot_image, 'png')  # or jpg
+            print ('[DB...BAT] shot taken at {} and saved to {}'.format(time_message, self._snap_shot_image))
+        else:
+            print ('[DB...BAT] shot taken at {} and but not saved'.format(time_message))
 
         return
 
@@ -374,6 +415,9 @@ class VulcanLiveDataView(QMainWindow):
         get the reference to the controller instance of this window
         :return:
         """
+        return self._controller
+
+    def get_controller(self):
         return self._controller
 
     def do_clear_log(self):
@@ -595,6 +639,10 @@ class VulcanLiveDataView(QMainWindow):
         self._2dUpdater = TwoDimPlotUpdateThread()
         self._2dUpdater.start()
 
+        # live view snap shot
+        self._snap_shot_thread = SnapShotThread(5, self)
+        self._snap_shot_thread.start()
+
         # start start listener
         self._controller.run()
 
@@ -620,6 +668,9 @@ class VulcanLiveDataView(QMainWindow):
 
         if self._controller is not None:
             self._controller.stop()
+
+        if self._snap_shot_thread is not None:
+            self._snap_shot_thread.stop()
 
         # remove the message
         curr_message = str(self.ui.label_info.text())
@@ -687,9 +738,12 @@ class VulcanLiveDataView(QMainWindow):
         # get list of workspace to plot
         ws_name_list = list()
         ws_index_list = list()
-        print '[DB...BAT...BAT] Index = {0} ' \
-              'Workspace Name = {1}'.format(self._myAccumulationListIndex,
-                                            self._myAccumulationWorkspaceList[self._myAccumulationListIndex])
+        try:
+            print '[DB...BAT...BAT] Index = {0} ' \
+                  'Workspace Name = {1}'.format(self._myAccumulationListIndex,
+                                                self._myAccumulationWorkspaceList[self._myAccumulationListIndex])
+        except IndexError as index_err:
+            raise RuntimeError('In get_accumulation_workspaces(), _myAccumulationListIndex = {} out of range of _myAccumulationWorksapceList'.format(self._myAccumulationListIndex, len(self._myAccumulationWorkspaceList)))
 
         for ws_count in range(last_n_round):
             # get accumulation workspace list index
@@ -881,14 +935,18 @@ class VulcanLiveDataView(QMainWindow):
         for bank_id in range(1, 4):
             # get data
             try:
-                vec_y_i = in_sum_ws.readY(bank_id-1)
+                vec_y_i = in_sum_ws.readY(bank_id-1)[:]
+
+                # Normalize by vanadium: only acted on the vector to plot
                 if norm_by_van:
                     vec_y_van = self._controller.get_vanadium(bank_id)
                     vec_y_i = vec_y_i / vec_y_van
 
                 vec_x_i = in_sum_ws.readX(bank_id-1)[:len(vec_y_i)]
                 color_i = self._bankColorDict[bank_id]
-                label_i = 'in accumulation bank {0}'.format(bank_id)
+                label_i = 'in-accumulation bank {0}'.format(bank_id)
+                if norm_by_van:
+                    label_i += ': normalized by vanadium'
                 self._mainGraphicDict[bank_id].plot_current_plot(vec_x_i, vec_y_i, color_i, label_i, target_unit,
                                                                  auto_scale_y=False)
             except RuntimeError as run_err:
@@ -993,6 +1051,8 @@ class VulcanLiveDataView(QMainWindow):
 
         # get log values
         time_vec, log_value_vec, last_pulse_time = self._controller.parse_sample_log(ws_name_list, y_axis_name)
+        if time_vec is None:
+            raise RuntimeError('No log value found in {}'.format(ws_name_list))
 
         # convert the vector of time
         if relative_time is not None:
@@ -1200,19 +1260,23 @@ class VulcanLiveDataView(QMainWindow):
 
             else:
                 # New mode
-                time_vec, value_vec = self.load_sample_log(log_name, last_n_accumulation=-1,
-                                                           relative_time=self._liveStartTimeStamp)
-                if is_main:
-                    self._currMainYLogTimeVector = time_vec
-                    self._currMainYLogValueVector = value_vec
-                else:
-                    self._currRightYLogTimeVector = time_vec
-                    self._currRightYLogValueVector = value_vec
+                try:
+                    time_vec, value_vec = self.load_sample_log(log_name, last_n_accumulation=-1,
+                                                               relative_time=self._liveStartTimeStamp)
+                    if is_main:
+                        self._currMainYLogTimeVector = time_vec
+                        self._currMainYLogValueVector = value_vec
+                    else:
+                        self._currRightYLogTimeVector = time_vec
+                        self._currRightYLogValueVector = value_vec
 
-                append = False
+                    append = False  # For plot
+                except RuntimeError as run_err:
+                    print ('[ERROR] Unable to get and thus plot {} due to {}'.format(log_name, run_err))
+                    return
             # END-IF-ELSE
 
-            # set the label... TODO ASAP shall leave for the graphicsView to do it
+            # set the label
             y_label = log_name
             if is_main:
                 value_vec = self._currMainYLogValueVector
@@ -1234,8 +1298,7 @@ class VulcanLiveDataView(QMainWindow):
                                                             y_label=label_y, line_label=label_line,
                                                             line_style=line_style, marker=marker,
                                                             color=color)
-            # END-IF-ELSE (peak or sample)
-        # END-FOR (y-axis-name)
+        # END-IF-ELSE (y-axis-name)
 
         return
 
@@ -1814,6 +1877,57 @@ class TimerThread(QtCore.QThread):
         while self._continueTimerLoop:
             time.sleep(1)
             self.time_due.emit(1)
+        # END-WHILE
+
+        return
+
+    def stop(self):
+        """ stop the timer by turn off _continueTimeLoop (flag)
+        :return:
+        """
+        self._continueTimerLoop = False
+
+        return
+
+
+class SnapShotThread(QtCore.QThread):
+    """
+    Thread class to do snap shot
+    """
+
+    # signal
+    snap_shot_time_due = QtCore.pyqtSignal(int)
+
+    def __init__(self, time_step, parent):
+        """
+        initialization
+        :param time_step: in seconds
+        :param parent:
+        """
+        # call base class's constructor
+        super(SnapShotThread, self).__init__()
+        datatypeutility.check_int_variable('Snap shot interval', time_step, (1, None))
+
+        # set up parent
+        self._parent = parent
+
+        # define status
+        self._continueTimerLoop = True
+
+        self._time_step = time_step
+
+        # connect to parent
+        self.snap_shot_time_due.connect(self._parent.take_snap_shot)
+
+        return
+
+    def run(self):
+        """ run the timer thread.  this thread won't be kill until flag _continueTimerLoop is set to False
+        :return:
+        """
+        while self._continueTimerLoop:
+            time.sleep(self._time_step)
+            self.snap_shot_time_due.emit(1)
         # END-WHILE
 
         return

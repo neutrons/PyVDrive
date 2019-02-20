@@ -7,7 +7,6 @@ import pickle
 import mantid_helper
 import vdrivehelper
 import vulcan_util
-import datatypeutility
 import pandas
 import datatypeutility
 
@@ -132,25 +131,37 @@ class DataArchiveManager(object):
 
         return
 
-    @staticmethod
-    def get_data_archive_chopped_gsas(ipts_number, run_number, chop_seq):
+    def locate_chopped_gsas(self, ipts_number, run_number, chop_seq):
         """
         get chopped data from GSAS file stored in archive server
         :param ipts_number:
         :param run_number:
         :param chop_seq:
-        :return:
+        :return: None or GSAS name
         """
-        assert isinstance(ipts_number, int), 'IPTS number must be an integer.'
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        datatypeutility.check_int_variable('Chop sequence number', chop_seq, (1, 100000))
 
         # it could be in either .../ChoppedData/... or in .../binned_data/
         chop_data_dir_1 = '/SNS/VULCAN/IPTS-{0}/shared/binned_data/'.format(ipts_number)
         chop_data_dir_2 = '/SNS/VULCAN/IPTS-%d/shared/ChoppedData/' % ipts_number
 
-        return DataArchiveManager.get_data_chopped_gsas([chop_data_dir_1, chop_data_dir_2], run_number, chop_seq)
+        # search GSAS file (seq.gda) under given directories
+        chop_gsas_name = None
+        for parent_dir in [chop_data_dir_1, chop_data_dir_2]:
+            chop_dir = os.path.join(parent_dir, '%d' % run_number)
+            chop_gsas_name = os.path.join(chop_dir, '%d.gda' % chop_seq)
+            if os.path.exists(chop_gsas_name):
+                break
+        # END-FOR
 
-    @staticmethod
-    def get_data_archive_gsas(ipts_number, run_number):
+        # TODO - TONIGHT - Create a data structure to record searched GSAS
+
+        return chop_gsas_name
+
+    # TODO - TONIGHT - Modernize
+    def locate_gsas(self, ipts_number, run_number):
         """
         get the path of GSAS file stored on archive server
         :param ipts_number:
@@ -171,42 +182,7 @@ class DataArchiveManager(object):
         return gsas_file_name
 
     @staticmethod
-    def get_data_chopped_gsas(search_dirs, run_number, chop_seq):
-        """
-        get chopped data from GSAS files in designated directories.
-        :param search_dirs: list of strings
-        :param run_number:
-        :param chop_seq:
-        :return: dictionary of reduced data. keys are spectral numbers.
-        """
-        assert isinstance(search_dirs, list), 'Search directories must be a list of strings.'
-        assert len(search_dirs) > 0, 'There must be at least 1 diretory to search for chopped data.'
-        assert isinstance(run_number, int), 'Run number %s must be an integer.' % str(run_number)
-        assert isinstance(chop_seq, int), 'Chop sequence %s must be a non-negative integer.' % str(chop_seq)
-
-        # search GSAS file (seq.gda) under given directories
-        found = False
-        chop_gsas_name = None
-        for parent_dir in search_dirs:
-            chop_dir = os.path.join(parent_dir, '%d' % run_number)
-            chop_gsas_name = os.path.join(chop_dir, '%d.gda' % chop_seq)
-            if os.path.exists(chop_gsas_name):
-                found = True
-                break
-        # END-FOR
-
-        if not found:
-            raise RuntimeError('Unable to locate chopped run %d seq %d from these directories: %s.'
-                               '' % (run_number, chop_seq, str(search_dirs)))
-
-        # parse gsas
-        assert chop_gsas_name is not None, 'It is impossible to have a None value of GSAS file name here.'
-        data_set = mantid_helper.get_data_from_gsas(chop_gsas_name)
-
-        return data_set
-
-    @staticmethod
-    def get_data_chopped_nexus(ipts_number, run_number, chop_child_list):
+    def locate_chopped_nexus(ipts_number, run_number, chop_child_list):
         """
         get the default directory for chopped NeXus file from SNS archive
         :exception: RuntimeError if unable to find the directory
@@ -233,7 +209,8 @@ class DataArchiveManager(object):
 
         return nexus_file_list
 
-    def get_event_file(self, ipts_number, run_number, check_file_exist):
+    # TODO - TONIGHT - Modernize
+    def locate_event_nexus(self, ipts_number, run_number, check_file_exist):
         """
         get the raw event NEXUS file from archive
         :param ipts_number:
@@ -428,6 +405,7 @@ class DataArchiveManager(object):
         :return:
         """
 
+    # TODO - FUTURE - Need to move this method to an appropriate module
     @staticmethod
     def get_proton_charge(ipts_number, run_number, chop_sequence):
         """ get proton charge (single value) from a run
@@ -436,8 +414,6 @@ class DataArchiveManager(object):
         :param chop_sequence:
         :return:
         """
-        import pandas
-
         # check inputs' types
         assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not a {1}' \
                                              ''.format(ipts_number, type(ipts_number))
@@ -484,14 +460,6 @@ class DataArchiveManager(object):
 
         return proton_charge
 
-    def get_loaded_runs(self):
-        """
-        get loaded GSAS file
-        :return:
-        """
-
-        return
-
     @staticmethod
     def get_smoothed_vanadium(ipts_number, van_run_number, check_exist=True):
         """
@@ -508,6 +476,37 @@ class DataArchiveManager(object):
                                ''.format(van_run_number, ipts_number, smoothed_van_file))
 
         return smoothed_van_file
+
+    @staticmethod
+    def get_archived_vanadium_gsas_name(ipts_number, run_number, check_write_permission):
+        """
+        Get/generate the vanadium name save to /SNS/VULCAN/shared
+        :param ipts_number:
+        :param run_number:
+        :param check_write_permission: flag to check whether the user can have write permission to the
+                                       file or directory
+        :return: tuple (boolean: state, string: error message)
+        """
+        # check inputs
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, 999999))
+        datatypeutility.check_int_variable('Run number', run_number, (1, 99999999))
+
+        # write to archive's instrument specific calibration directory's instrument specific calibration directory
+        base_name = '{0}-s.gda'.format(run_number)
+        van_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
+
+        # check directory existence and access
+        if os.path.exists(van_dir) is False:
+            return False, 'Vanadium directory {0} does not exist.'.format(van_dir)
+        elif os.access(van_dir, os.W_OK) is False:
+            return False, 'User has no privilege to write to directory {0}'.format(van_dir)
+
+        gsas_file_name = os.path.join(van_dir, base_name)
+        if os.path.exists(gsas_file_name) and os.access(gsas_file_name, os.W_OK) is False:
+            return False, 'Smoothed vanadium GSAS file {0} exists and user does not have privilege to over write.' \
+                          ''.format(gsas_file_name)
+
+        return True, None
 
     @staticmethod
     def get_vulcan_chopped_gsas_dir(ipts_number, run_number):
@@ -601,8 +600,7 @@ class DataArchiveManager(object):
         """
         # check
         assert isinstance(ipts_number, int), 'IPTS number must be an integer.'
-        assert isinstance(run_number_list, list), 'Run number list cannot be of type {0}' \
-                                                  ''.format(type(run_number_list))
+        datatypeutility.check_list('Run numbers', run_number_list)
         assert len(run_number_list) > 0, 'Run number list cannot be empty.'
 
         # form IPTS
@@ -619,7 +617,7 @@ class DataArchiveManager(object):
         # locate file
         for run_number in sorted(run_number_list):
             # form file
-            nexus_file_name = self.get_event_file(ipts_number, run_number, check_file_exist=True)
+            nexus_file_name = self.locate_event_nexus(ipts_number, run_number, check_file_exist=True)
 
             if os.path.exists(nexus_file_name):
                 # create a run information dictionary and put to information-buffering dictionaries

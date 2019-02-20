@@ -1,5 +1,5 @@
 # Goal 1: show information about vanadium with automatic vanadium locator!
-from procss_vcommand import VDriveCommand
+from process_vcommand import VDriveCommand
 import pyvdrive.lib.datatypeutility
 
 

@@ -6,11 +6,12 @@ try:
     import qtconsole.inprocess
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QLineEdit, QMessageBox, QTableWidgetItem, QCheckBox, QWidget, QHBoxLayout, QFileDialog
+    from PyQt5.QtWidgets import QComboBox
     from PyQt5.QtGui import QStandardItemModel, QStandardItem
 except ImportError:
     from PyQt4 import QtCore
     from PyQt4.QtGui import QStandardItemModel, QStandardItem, QLineEdit, QMessageBox, QFileDialog
-    from PyQt4.QtGui import QTableWidgetItem, QCheckBox, QWidget, QHBoxLayout
+    from PyQt4.QtGui import QTableWidgetItem, QCheckBox, QWidget, QHBoxLayout, QComboBox
 #include this try/except block to remap QString needed when using IPython
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -226,9 +227,15 @@ def parse_integer(line_edit, allow_blank=True):
     :return: integer or None
     """
     # Check input
-    assert(isinstance(line_edit, QLineEdit))
+    if isinstance(line_edit, QLineEdit):
+        str_value = line_edit.text()
+    elif isinstance(line_edit, QComboBox):
+        str_value = line_edit.currentText()
+    else:
+        raise AssertionError('Widget {} is not supported'.format(line_edit))
 
-    str_value = str(line_edit.text()).strip()
+    # process
+    str_value = str(str_value).strip()
     if len(str_value) == 0:
         if allow_blank:
             return None
@@ -360,7 +367,35 @@ def pop_dialog_information(parent, message):
     :param message:
     :return:
     """
-    QMessageBox.information(parent, 'Information!', message)
+    assert isinstance(message, str), 'Input message "{0}" must be a string but not a {1}' \
+                                     ''.format(message, type(message))
+
+    QMessageBox.information(parent, 'Information', message)
+
+    return
+
+
+def set_combobox_items(combo_box, items):
+    """ set the items to a combo Box (QComboBox) and by default set the current index to 0
+    :param combo_box:
+    :param items:
+    :return:
+    """
+    # check
+    assert isinstance(combo_box, QComboBox), 'Input widget {} must be a QComboBox instance but not a ' \
+                                             '{}'.format(combo_box, type(combo_box))
+    assert isinstance(items, list), 'Input items {} added to QComboBox must be in list but not in {}' \
+                                    ''.format(items, type(items))
+    if len(items) == 0:
+        raise RuntimeError('Item list is empty!')
+
+    # clear and then add items
+    combo_box.clear()
+    for item in items:
+        combo_box.addItem(item)
+
+    # set to first item
+    combo_box.setCurrentIndex(0)
 
     return
 
@@ -521,9 +556,9 @@ def addComboboxToWSTCell(table, row, col, itemlist, curindex):
     else:
         # Case to add QComboBox
         # check input
-        if isinstance(itemlist, list) is False:
-            raise NotImplementedError("Input 'itemlist' must be list! Current input is of type '%s'", 
-                    str(type(itemlist)))
+        if not isinstance(itemlist, list):
+            raise NotImplementedError("Input 'itemlist' must be list! Current input is of type '{}'"
+                                      "".format(type(itemlist)))
         qlist = []
         for item in itemlist:
             qlist.append(str(item))

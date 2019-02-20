@@ -1559,68 +1559,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return line_id
 
-    def plot_1d_vanadium(self, run_id, bank_id, is_smoothed_data=False):
-        """
-
-        :param run_id:
-        :param bank_id:
-        :return:
-        """
-        # check input
-        datatypeutility.check_string_variable('Run ID', run_id)
-        datatypeutility.check_int_variable('Bank ID', bank_id, (1, 100))
-
-        # clear previous image
-        self.ui.graphicsView_mainPlot.clear_all_lines()
-        # change unit
-        self.ui.comboBox_unit.setCurrentIndex(1)
-
-        # plot original run
-        # raw_van_key = run_id, bank_id, self._currUnit
-        # if raw_van_key in self._currentPlotDataKeyDict:
-        #     # data already been loaded before
-        #     vec_x, vec_y = self._currentPlotDataKeyDict[raw_van_key]
-        # else:
-        #     vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=run_id, bank_id=bank_id,
-        #                                                      unit=self._currUnit)
-        #     self._currentPlotDataKeyDict[raw_van_key] = vec_x, vec_y
-
-        if is_smoothed_data:
-            plot_unit = 'TOF'
-        else:
-            plot_unit = 'dSpacing'
-
-        # get the original raw data
-        ws_name = self._myController.project.vanadium_processing_manager.get_raw_vanadium()[bank_id]
-        vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=ws_name, bank_id=1, unit=plot_unit)
-
-        # plot
-        self._raw_van_plot_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y),
-                                                                                    unit=plot_unit,
-                                                                                    over_plot=False,
-                                                                                    run_id=run_id, bank_id=bank_id,
-                                                                                    chop_tag=None,
-                                                                                    line_color='black',
-                                                                                    label='Raw vanadium {}'
-                                                                                          ''.format(run_id))
-
-        if is_smoothed_data:
-            ws_name = self._myController.project.vanadium_processing_manager.get_smoothed_vanadium()[bank_id]
-        else:
-            ws_name = self._myController.project.vanadium_processing_manager.get_peak_striped_vanadium()[bank_id]
-        vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=ws_name, bank_id=1, unit=plot_unit)
-        # plot vanadium
-        self._strip_van_plot_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y),
-                                                                                      unit=plot_unit,
-                                                                                      over_plot=True,
-                                                                                      run_id=run_id, bank_id=bank_id,
-                                                                                      chop_tag=None,
-                                                                                      line_color='red',
-                                                                                      label='Peak striped vanadium {}'
-                                                                                            ''.format(run_id))
-
-        return
-
     def plot_chopped_data_2d(self, run_number, chop_sequence, bank_id, bank_id_from_1=True, chopped_data_dir=None,
                              vanadium_run_number=None, proton_charge_normalization=False):
         """Plot a chopped run, which is only called from IDL-like command .. 2D

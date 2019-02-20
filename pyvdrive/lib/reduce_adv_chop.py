@@ -50,7 +50,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         :return:
         """
         # get data file names, splitters workspace and output directory from reduction setup object
-        raw_file_name = self._reductionSetup.get_event_file()
+        raw_file_name = self._reductionSetup.locate_event_nexus()
         if split_ws_name is None:
             split_ws_name, info_ws_name = self._reductionSetup.get_splitters(throw_not_set=True)
         elif info_ws_name is None:
@@ -852,12 +852,15 @@ class WriteSlicedLogs(object):
 
         # get difference in REAL starting time (proton_charge[0])
         real_start_time_i = workspace_i.run().getProperty('proton_charge').times[0]
+        real_stop_time_i = workspace_i.run().getProperty('proton_charge').times[-1]
 
         time0 = datetime.datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
         if isinstance(real_start_time_i, numpy.datetime64):
             # absolute time (ns) from 1990-01-01
             temp_time = datetime.datetime.utcfromtimestamp(real_start_time_i.astype('O') * 1.E-9)
             delta_to_t0_ns = temp_time - time0
+            temp_stop_time = datetime.datetime.utcfromtimestamp(real_start_time_i.astype('O') * 1.E-9)
+            delta_to_tf_ns = temp_stop_time - time0
             time_stamp = delta_to_t0_ns.total_seconds()
         else:
             # time_stamp = real_start_time_i.total_nanoseconds()
@@ -866,12 +869,14 @@ class WriteSlicedLogs(object):
         # time (step) in seconds
         try:
             rel_time_to_start = real_start_time_i - run_start_time
+            rel_time_to_stop = real_stop_time_i - run_start_time
         except TypeError as type_err:
             print (type(real_start_time_i))
             print (type(run_start_time))
             raise TypeError('{}, {}: {}'.format(type(real_start_time_i), type(run_start_time), type_err))
         if isinstance(real_start_time_i, numpy.datetime64):
             rel_time_to_start = float(rel_time_to_start) * 1.E-9
+            rel_time_to_stop = float(rel_time_to_stop) * 1.E-9
         else:
             # diff_time = diff_time.total_nanoseconds() * 1.E-9
             raise RuntimeError('proton charge log time shall be datetime64!')
@@ -912,7 +917,10 @@ class WriteSlicedLogs(object):
                 start_value = mean_value = end_value = float(time_stamp)
             elif mts_name == 'Time [sec]':  # relative time to original-run's start time
                 # time step
-                start_value = mean_value = end_value = rel_time_to_start
+                start_value = rel_time_to_start
+                mean_value = (rel_time_to_start + rel_time_to_stop) * 0.5
+                end_value = rel_time_to_stop
+
             elif len(log_name) > 0:
                 # sample log does not exist in NeXus file. warned before. ignore!
                 start_value = mean_value = end_value = 0.
@@ -927,6 +935,9 @@ class WriteSlicedLogs(object):
             end_series_dict[mts_name].set_value(pd_index, end_value)
 
         # END-FOR (entry)
+
+        print (start_series_dict['Time [sec]'])
+        print (mean_series_dict['Time [sec]'])
 
         return
 
@@ -994,6 +1005,8 @@ class WriteSlicedLogs(object):
                                       '{0}sampleenv_chopped_mean.txt'.format(self._run_number))
         end_file_name = os.path.join(self._choppedDataDirectory,
                                      '{0}sampleenv_chopped_end.txt'.format(self._run_number))
+        header_file_name = os.path.join(self._choppedDataDirectory,
+                                        '{0}sampleenv_header.txt'.format(self._run_number))
 
         # output
         # create Pandas series dictionary
@@ -1006,24 +1019,27 @@ class WriteSlicedLogs(object):
         if log_type == 'loadframe':
             # load frame
             header_list = reduce_VULCAN.MTS_Header_List
-            # insert proton charge explicitly
-            header_list.insert(0, ('ProtonCharge', 'proton_charge'))
+            if header_list[0][0] != 'ProtonCharge':
+                # insert proton charge explicitly but avoid adding twice
+                header_list.insert(0, ('ProtonCharge', 'proton_charge'))
         else:
             # furnace
             header_list = reduce_VULCAN.Furnace_Header_List
 
         # initialize the data structure for output
+        print ('[DB...BAT] {}'.format(reduce_VULCAN.MTS_Header_List))
         for entry in reduce_VULCAN.MTS_Header_List:
-            pd_series = pd.Series()
+            # pd_series = pd.Series()
             mts_name, log_name = entry
-            start_series_dict[mts_name] = pd_series
-            mean_series_dict[mts_name] = pd_series
-            end_series_dict[mts_name] = pd_series
+            start_series_dict[mts_name] = pd.Series()
+            mean_series_dict[mts_name] = pd.Series()
+            end_series_dict[mts_name] = pd.Series()
             mts_columns.append(mts_name)
 
             if log_name not in property_name_list:
                 print '[WARNING] Log {0} is not a sample log in NeXus.'.format(log_name)
         # END-FOR
+        print ('[DB...BAT] {}'.format(mts_columns))
 
         for i_ws, ws_name in enumerate(ws_name_list):
             # get workspace
@@ -1042,6 +1058,7 @@ class WriteSlicedLogs(object):
 
         # export to csv file
         # start file
+        print ('[DB...BAT] {}'.format(mts_columns))
         pd_data_frame = pd.DataFrame(start_series_dict, columns=mts_columns)
         if append and os.path.exists(start_file_name):
             with open(start_file_name, 'a') as f:
@@ -1050,6 +1067,7 @@ class WriteSlicedLogs(object):
             pd_data_frame.to_csv(start_file_name, sep='\t', float_format='%.5f', header=False)
 
         # mean file
+        print ('[DB...BAT] {}'.format(mean_series_dict.keys()))
         pd_data_frame = pd.DataFrame(mean_series_dict, columns=mts_columns)
         if os.path.exists(mean_file_name) and append:
             with open(mean_file_name, 'a') as f:
@@ -1058,6 +1076,7 @@ class WriteSlicedLogs(object):
             pd_data_frame.to_csv(mean_file_name, sep='\t', float_format='%.5f', header=False)
 
         # end file
+        print ('[DB...BAT] {}'.format(end_series_dict['Time [sec]']))
         pd_data_frame = pd.DataFrame(end_series_dict, columns=mts_columns)
         if os.path.exists(end_file_name) and append:
             with open(end_file_name, 'a') as f:
@@ -1065,8 +1084,13 @@ class WriteSlicedLogs(object):
         else:
             pd_data_frame.to_csv(end_file_name, sep='\t', float_format='%.5f', header=False)
 
-        # TODO - NIGHT - Write the header for user
-        # self._write_header(mts_columns, )
+        # Write the header for user
+        header_file = open(header_file_name, 'w')
+        header_file.write('{}'.format(mts_columns))
+        header_file.close()
+
+        if mts_columns.count('ProtonCharge') > 1:
+            raise blabla
 
         print '[INFO] Chopped log files are written to %s, %s and %s.' % (start_file_name, mean_file_name,
                                                                           end_file_name)

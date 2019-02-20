@@ -967,8 +967,7 @@ class VdriveMainWindow(QMainWindow):
         """
         # create PeakPickerWindow if it is not initialized
         if self._peakPickerWindow is None:
-            self._peakPickerWindow = PeakPickWindow.PeakPickerWindow(self)
-            self._peakPickerWindow.set_controller(self._myWorkflow)
+            self._peakPickerWindow = PeakPickWindow.PeakPickerWindow(self, self._myWorkflow)
             self._myChildWindows.append(self._peakPickerWindow)
 
         # show it!

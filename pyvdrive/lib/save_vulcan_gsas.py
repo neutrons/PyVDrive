@@ -3,11 +3,9 @@ import os
 import os.path
 import h5py
 import math
-import random
-import mantid.simpleapi as api
-from mantid.api import AnalysisDataService as ADS
 from pyvdrive.lib import datatypeutility
-
+import mantid_helper
+from mantid.simpleapi import ConvertToHistogram, ConvertUnits, Rebin, Divide
 
 PHASE_NED = datetime.datetime(2017, 6, 1)
 PHASE_X1 = datetime.datetime(2019, 7, 1)
@@ -357,20 +355,24 @@ class SaveVulcanGSS(object):
         3. Z: error bar
         :param ws_name:
         :param bank_id:
-        :param ...
+        :param vulcan_tof_vector: If None, then use vector X of workspace
         :param ...
         :return:
         """
         # check vanadium: if not None, assume that number of bins and bin edges are correct
         if van_ws is not None:
-            van_vec_y = van_ws.readY(bank_id - 1)
-            van_vec_e = van_ws.readE(bank_id - 1)
+            if van_ws.id() == 'WorkspaceGroup':
+                van_vec_y = van_ws[bank_id-1].readY(0)
+                van_vec_e = van_ws[bank_id-1].readE(0)
+            else:
+                van_vec_y = van_ws.readY(bank_id - 1)
+                van_vec_e = van_ws.readE(bank_id - 1)
         else:
             van_vec_y = None
             van_vec_e = None
 
         # get workspace
-        diff_ws = ADS.retrieve(ws_name)
+        diff_ws = mantid_helper.retrieve_workspace(ws_name)
         if vulcan_tof_vector is None:
             vec_x = diff_ws.readX(bank_id - 1)
         else:
@@ -443,14 +445,58 @@ class SaveVulcanGSS(object):
         # NOTE (algorithm) use hash to determine the workspace name from file location
         base_name = os.path.basename(vanadium_gsas_file).split('.')[0]
         van_gsas_ws_name = 'Van_{}_{}'.format(base_name, hash(vanadium_gsas_file))
-        if ADS.doesExist(van_gsas_ws_name):
-            van_ws = ADS.retrieve(van_gsas_ws_name)
+        if mantid_helper.workspace_does_exist(van_gsas_ws_name):
+            pass
         else:
-            van_ws = load_vulcan_gsas(vanadium_gsas_file, van_gsas_ws_name)
-
+            mantid_helper.load_gsas_file(vanadium_gsas_file, van_gsas_ws_name, None)
+            mantid_helper.convert_to_point_data(van_gsas_ws_name)
         self._van_ws_names[vanadium_gsas_file] = van_gsas_ws_name
 
-        return van_ws.name()
+        return van_gsas_ws_name
+
+    # TODO - TONIGHT 13 - QA
+    def save_vanadium(self, diff_ws_name, gsas_file_name,
+                      ipts_number, van_run_number, sample_log_ws_name):
+        """
+        Save a WorkspaceGroup which comes from original GSAS workspace
+        :param van_ws_name:
+        :return:
+        """
+        # rebin and then write output
+        gsas_bank_buffer_dict = dict()
+        print ('[DB...BAT]  check 2: {}'.format(mantid_helper.workspace_does_exist(diff_ws_name)))
+        van_ws = mantid_helper.retrieve_workspace(diff_ws_name)
+        num_banks = mantid_helper.get_number_spectra(van_ws)
+        datatypeutility.check_file_name(gsas_file_name, check_exist=False,
+                                        check_writable=True, is_dir=False, note='Output GSAS file')
+
+        # TODO - TONIGHT 5 - This will break if input is a Workspace but not GroupingWorkspace!!!
+        for ws_index in range(num_banks):
+            # get value
+            bank_id = ws_index + 1
+            # write GSAS head considering vanadium
+            tof_vector = None
+            ws_name_i = van_ws[ws_index].name()
+            gsas_section_i = self._write_slog_bank_gsas(ws_name_i, 1, tof_vector, None)
+            gsas_bank_buffer_dict[bank_id] = gsas_section_i
+        # END-FOR
+
+        # header
+        log_ws = mantid_helper.retrieve_workspace(sample_log_ws_name)
+        gsas_header = self._generate_vulcan_gda_header(log_ws, gsas_file_name, ipts_number, gsas_file_name,
+                                                       False)
+
+        # form to a big string
+        gsas_buffer = gsas_header
+        for bank_id in sorted(gsas_bank_buffer_dict.keys()):
+            gsas_buffer += gsas_bank_buffer_dict[bank_id]
+
+        # write to HDD
+        g_file = open(gsas_file_name, 'w')
+        g_file.write(gsas_buffer)
+        g_file.close()
+
+        return
 
     def save(self, diff_ws_name, run_date_time, gsas_file_name, ipts_number, gsas_param_file_name,
              align_vdrive_bin, van_ws_name, is_chopped_run, write_to_file=True):
@@ -467,17 +513,17 @@ class SaveVulcanGSS(object):
         :param write_to_file: flag to write the text buffer to file
         :return: string as the file content
         """
-        diff_ws = ADS.retrieve(diff_ws_name)
+        diff_ws = mantid_helper.retrieve_workspace(diff_ws_name)
 
         # set the unit to TOF
         if diff_ws.getAxis(0).getUnit() != 'TOF':
-            api.ConvertUnits(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name, Target='TOF',
+            ConvertUnits(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name, Target='TOF',
                              EMode='Elastic')
-            diff_ws = ADS.retrieve(diff_ws_name)
+            diff_ws = mantid_helper.retrieve_workspace(diff_ws_name)
 
         # convert to Histogram Data
         if not diff_ws.isHistogramData():
-            api.ConvertToHistogram(diff_ws_name, diff_ws_name)
+            ConvertToHistogram(diff_ws_name, diff_ws_name)
 
         # get the binning parameters
         if align_vdrive_bin:
@@ -490,12 +536,12 @@ class SaveVulcanGSS(object):
         # check for vanadium GSAS file name
         if van_ws_name is not None:
             # check whether a workspace exists
-            if not ADS.doesExist(van_ws_name):
+            if not mantid_helper.workspace_does_exist(van_ws_name):
                 raise RuntimeError('Vanadium workspace {} does not exist in Mantid ADS'.format(van_ws_name))
-            van_ws = ADS.retrieve(van_ws_name)
+            van_ws = mantid_helper.retrieve_workspace(van_ws_name)
 
             # check number of histograms
-            if van_ws.getNumberHistograms() != diff_ws.getNumberHistograms():
+            if mantid_helper.get_number_spectra(van_ws) != mantid_helper.get_number_spectra(diff_ws):
                 raise RuntimeError('Numbers of histograms between vanadium spectra and output GSAS are different')
         else:
             van_ws = None
@@ -511,7 +557,7 @@ class SaveVulcanGSS(object):
 
             # Rebin to these banks' parameters (output = Histogram)
             if bin_params is not None:
-                api.Rebin(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name,
+                Rebin(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name,
                           Params=bin_params, PreserveEvents=True)
 
             # Create output
@@ -531,7 +577,7 @@ class SaveVulcanGSS(object):
         # END-FOR
 
         # header
-        diff_ws = ADS.retrieve(diff_ws_name)
+        diff_ws = mantid_helper.retrieve_workspace(diff_ws_name)
         gsas_header = self._generate_vulcan_gda_header(diff_ws, gsas_file_name, ipts_number, gsas_param_file_name,
                                                        is_chopped_run)
 
@@ -559,10 +605,10 @@ class SaveVulcanGSS(object):
         :param diff_ws_name:
         :return:
         """
-        api.Divide(LHSWorkspace=diff_ws,
+        Divide(LHSWorkspace=diff_ws,
                    RHSWorkspace=van_ws,
                    OutputWorkspace=diff_ws_name)
-        diff_ws = ADS.retrieve(diff_ws_name)
+        diff_ws = mantid_helper.retrieve_workspace(diff_ws_name)
 
         return diff_ws
 
@@ -576,10 +622,14 @@ class SaveVulcanGSS(object):
         :return: Being different (bool), Reason (str)
         """
         iws = bank_id - 1
-        van_vec_x = van_ws.readX(iws)
+        if van_ws.id() == 'WorkspaceGroup':
+            van_vec_x = van_ws[iws].readX(0)
+        else:
+            van_vec_x = van_ws.readX(iws)
         diff_vec_x = diff_tof_vec
         if len(van_vec_x) != len(diff_vec_x):
-            return True, 'Numbers of bins are different of workspace index {}'.format(iws)
+            return True, 'Numbers of bins are different between vanadium workspace {} ws-index {}' \
+                         ' and diffraction pattern: {}  != {}'.format(van_ws, iws, len(van_vec_x), len(diff_tof_vec))
 
         if abs(van_vec_x[0] - diff_vec_x[0]) / (van_vec_x[0]) > 1.E-5:
             # return True, 'X[0] are different for spectrum {}: {} != {}'.format(iws, van_vec_x[0], diff_vec_x[0])
@@ -592,44 +642,3 @@ class SaveVulcanGSS(object):
         return False, None
 
 # END-DEF-CLASS
-
-
-def load_vulcan_gsas(gsas_name, gsas_ws_name):
-    """
-    Load VULCAN GSAS and create a Ragged workspace
-    :param gsas_name:
-    :param gsas_ws_name:s
-    :return:
-    """
-    # load VULCAN's GSAS file into ragged workspace for vec x and vec y information
-    assert isinstance(gsas_name, str), 'GSAS file name {} must be a string but not a {}' \
-                                       ''.format(gsas_name, type(gsas_name))
-    if not os.path.exists(gsas_name):
-        raise RuntimeError('GSAS file {} does not exist.'.format(gsas_name))
-
-    # load GSAS to a ragged workspace
-    temp_out_name = 'temp_{}'.format(random.randint(1, 10000))
-    temp_gss_ws = api.LoadGSS(Filename=gsas_name, OutputWorkspace=temp_out_name)
-
-    # extract, convert to point data workspace for first spectrum
-    api.ExtractSpectra(temp_out_name, WorkspaceIndexList=[0], OutputWorkspace=gsas_ws_name)
-    api.ConvertToPointData(InputWorkspace=gsas_ws_name, OutputWorkspace=gsas_ws_name)
-
-    # for the rest of the spectra
-    for iws in range(1, temp_gss_ws.getNumberHistograms()):
-        # extract, convert to point data, conjoin and clean
-        temp_out_name_i = '{}_{}'.format(temp_out_name, iws)
-        api.ExtractSpectra(temp_out_name, WorkspaceIndexList=[iws], OutputWorkspace=temp_out_name_i)
-        api.ConvertToPointData(InputWorkspace=temp_out_name_i, OutputWorkspace=temp_out_name_i)
-        api.ConjoinWorkspaces(InputWorkspace1=gsas_ws_name,
-                              InputWorkspace2=temp_out_name_i)
-        if ADS.doesExist(temp_out_name_i):
-            api.DeleteWorkspace(temp_out_name_i)
-    # END-FOR
-
-    # clean temp GSAS
-    api.DeleteWorkspace(temp_out_name)
-
-    gsas_ws = ADS.retrieve(gsas_ws_name)
-
-    return gsas_ws

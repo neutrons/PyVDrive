@@ -1,5 +1,6 @@
 import bisect
 import operator
+import numpy
 try:
     import qtconsole.inprocess
     from PyQt5.QtWidgets import QApplication, QMenu, QAction, QMainWindow
@@ -17,6 +18,22 @@ __author__ = 'wzz'
 
 # define constants
 RESOLUTION = 0.005
+
+
+class FunctionMode(object):
+    """ Function mode of the diffraction view
+    """
+    PeakSelectionMode = 0
+    VanadiumProcessingMode = 1
+
+    @staticmethod
+    def is_valid_mode(mode):
+        """
+        Check whether a mode is value
+        :param mode:
+        :return:
+        """
+        return 0 <= mode <= 1
 
 
 class PeakAdditionState(object):
@@ -54,6 +71,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         # parent
         self._parentWindow = None
+
+        # Mode: default to peak selection
+        self._functionMode = FunctionMode.PeakSelectionMode
 
         # Bragg diffraction pattern
         self._lastPlotID = None  # plot ID for the diffraction pattern plotted last
@@ -199,6 +219,21 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         self._myPeakGroupManager.add_peak(group_id, peak_pos, peak_id)
 
         return peak_id
+
+    def add_vanadium_peaks(self, peak_pos_list):
+        """ Add vanadium peaks indicators
+        :param peak_pos_list:
+        :return:
+        """
+        datatypeutility.check_list('Peak positions', peak_pos_list)
+        peak_pos_list = sorted(peak_pos_list)
+
+        indicator_id_list = list()
+        for peak_pos in peak_pos_list:
+            peak_indicator_id = self.add_vertical_indicator(peak_pos, color='red')
+            indicator_id_list.append(peak_indicator_id)
+
+        return indicator_id_list
 
     def add_peak_group(self, left_boundary, right_boundary):
         """
@@ -373,6 +408,21 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
     #         self.remove_peak_indicator(remove_peak_index[indicator_index])
     #
     #     return
+
+    def adjust_indiators(self, indicator_list, x_range=None, y_range=None):
+
+        # TODO - TONIGHT 1 - Code quality
+
+        if y_range:
+            lower_y, upper_y = y_range
+            new_vec_y = numpy.array([lower_y, upper_y])
+        else:
+            new_vec_y = None
+
+        for indicator_id in indicator_list:
+            self.update_indicator(indicator_id, y_range=new_vec_y)
+
+        return
 
     def edit_group(self, group_id, status):
         """
@@ -1346,16 +1396,23 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         if removable:
             self.remove_indicator(peak_indicator_index)
 
-        # check line ID for indicator and single peak dict
-        # TODO - FIXME - NIGHT - Implement get_indicator_ids() if bug cannot be found.
-        # line_ids_indicators = sorted(self.get_indicator_ids())
-        # line_sp_indicators = sorted(self._mySinglePeakDict.keys())
-        # if line_ids_indicators != line_sp_indicators:
-        #     raise NotImplementedError('[DEBUG OUTPUT] Found DiffractionPlotView has a different (peak) indicators '
-        #                               'set from its parent:\nThis: {}\nParent: {}'
-        #                               ''.format(line_ids_indicators, line_sp_indicators))
-
         return True
+
+    def remove_vanadium_peaks(self, peak_indicator_list):
+        """
+        Remove vanadium peaks indicators
+        :param peak_indicator_list:
+        :return:
+        """
+        datatypeutility.check_list('Vanadium peak indicators', peak_indicator_list)
+
+        for peak_index in range(len(peak_indicator_list)):
+            peak_indicator = peak_indicator_list[peak_index]
+            self.remove_indicator(peak_indicator)
+            peak_indicator_list[peak_index] = None
+        # END-FOR
+
+        return
 
     def remove_show_only_peaks(self):
         """ Removed all the peaks' indicators that is for shown only
@@ -1371,8 +1428,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def reset(self):
-        """ Reset the canvas and peaks managers and single peak lines
+    def reset_peak_picker_mode(self, remove_diffraction_data=True):
+        """ Reset the canvas and peaks managers and single peak lines in peak picker mode
         :return:
         """
         # reset peak indicator for selected peaks
@@ -1388,8 +1445,11 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         self._myPeakGroupManager.reset()
         self._highlightsPlotIDList = list()
 
-        # FIXME TODO - ASAP - shall not use clear_all_lines.  but cannot find out the cause for the original diffraciton line not be removed
-        self.clear_all_lines()
+        # FIXME TODO - ASAP - shall not use clear_all_lines.
+        # FIXME ...  cont.    but cannot find out the cause for the original diffraciton line not be removed
+        if remove_diffraction_data:
+            self.clear_all_lines()
+
         return
 
     def reset_selected_peaks(self):
@@ -1465,5 +1525,16 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                 group_id = self.add_peak_group(peak_center - 2*peak_width, peak_center + 2*peak_width)
                 self.add_peak(peak_center, group_id=group_id)
             # END-IF-ELSE
+
+        return
+
+    def switch_mode(self, target_mode):
+        """
+        switch function mode
+        :param target_mode:
+        :return:
+        """
+        # reset current canvas
+        self.reset()
 
         return

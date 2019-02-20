@@ -305,38 +305,38 @@ class VDriveAPI(object):
 
         return
 
-    def find_peaks(self, data_key, bank_number, x_range,
-                   auto_find, profile='Gaussian',
-                   peak_positions=None, hkl_list=None):
-        """
-        Find peaks in a given diffraction pattern
-        Requirements:
-         - by run number, a workspace containing the reduced run must be found
-         - either auto (mode) is on or peak positions are given;
-         - peak profile is default as Gaussian and is limited to the peak profile supported by Mantid
-        :param data_key: a data key (for loaded previously reduced data) or run number
-        :param bank_number:
-        :param x_range:
-        :param peak_positions:
-        :param hkl_list:
-        :param profile:
-        :param auto_find:
-        :return: list of tuples for peak information as (peak center, height, width)
-        """
-        try:
-            # raise exceptions if the input parameters are not allowed.
-            if isinstance(peak_positions, list) and auto_find:
-                raise RuntimeError('It is not allowed to specify both peak positions and turn on auto mode.')
-            if peak_positions is None and auto_find is False:
-                raise RuntimeError('Either peak positions is given. Or auto mode is turned on.')
-
-            peak_info_list = self._myProject.find_diffraction_peaks(data_key, bank_number, x_range,
-                                                                    peak_positions, hkl_list,
-                                                                    profile)
-        except RuntimeError as run_err:
-            return False, 'Failed to find peaks due to {0}'.format(run_err)
-
-        return True, peak_info_list
+    # def find_peaks(self, data_key, bank_number, x_range,
+    #                auto_find, profile='Gaussian',
+    #                peak_positions=None, hkl_list=None):
+    #     """
+    #     Find peaks in a given diffraction pattern
+    #     Requirements:
+    #      - by run number, a workspace containing the reduced run must be found
+    #      - either auto (mode) is on or peak positions are given;
+    #      - peak profile is default as Gaussian and is limited to the peak profile supported by Mantid
+    #     :param data_key: a data key (for loaded previously reduced data) or run number
+    #     :param bank_number:
+    #     :param x_range:
+    #     :param peak_positions:
+    #     :param hkl_list:
+    #     :param profile:
+    #     :param auto_find:
+    #     :return: list of tuples for peak information as (peak center, height, width)
+    #     """
+    #     try:
+    #         # raise exceptions if the input parameters are not allowed.
+    #         if isinstance(peak_positions, list) and auto_find:
+    #             raise RuntimeError('It is not allowed to specify both peak positions and turn on auto mode.')
+    #         if peak_positions is None and auto_find is False:
+    #             raise RuntimeError('Either peak positions is given. Or auto mode is turned on.')
+    #
+    #         peak_info_list = self._myProject.find_diffraction_peaks(data_key, bank_number, x_range,
+    #                                                                 peak_positions, hkl_list,
+    #                                                                 profile)
+    #     except RuntimeError as run_err:
+    #         return False, 'Failed to find peaks due to {0}'.format(run_err)
+    #
+    #     return True, peak_info_list
 
     def gen_data_slice_manual(self, run_number, relative_time, time_segment_list, slice_tag):
         """ generate event slicer for data manually
@@ -464,43 +464,6 @@ class VDriveAPI(object):
         datatypeutility.check_string_variable('Slice ID', slice_id)
 
         return self._myProject.reduction_manager.get_sliced_focused_workspaces(run_number, slice_id)
-
-    # TODO - 20180822 - Find out how this method can be integrated into the ReducedDataView and other UI
-    def get_sliced_gsas_data(self, ipts, run_number, chop_sq):
-
-        # try to get from archive first
-        data_set_dict = None
-        data_found = False
-
-        # search from archive
-        if search_archive:
-            try:
-                data_set_dict = self._myArchiveManager.get_data_archive_chopped_gsas(ipts_number, run_number, chop_seq)
-            except RuntimeError:
-                pass
-            else:
-                data_found = True
-        # END-IF
-
-        # search from user-specified directories
-        if not data_found and search_dirs is not None:
-            try:
-                data_set_dict = self._myArchiveManager.get_data_chopped_gsas(search_dirs, run_number, chop_seq)
-            except RuntimeError:
-                pass
-            else:
-                data_found = True
-        # END-IF
-
-        # check
-        if not data_found:
-            error_message = 'Unable to find chopped and reduced run %d chopped seq %d' % (run_number, chop_seq)
-            ret_obj = error_message
-        else:
-            assert data_set_dict is not None, 'Data set dictionary cannot be None (i.e., data not found)'
-            ret_obj = data_set_dict
-
-        return data_found, ret_obj
 
     def get_reduced_data(self, run_id, target_unit, bank_id=None):
         """ Get reduced data from workspace
@@ -644,6 +607,7 @@ class VDriveAPI(object):
     def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, starting_bank_id=1):
         """
         get data from a workspace
+        Note: this method is to HIDE mantid from callers from INTERFACE
         :param workspace_name:
         :param bank_id:
         :param target_unit: None for using current unit
@@ -1088,6 +1052,7 @@ class VDriveAPI(object):
         :param data_key: user given data key
         :return:
         """
+        raise NotImplementedError('Shall be removed!')
         # check
         assert isinstance(is_chopped_data, bool), 'Flag {0} to indicate the run is a chopped data must be a boolean ' \
                                                   'but not a {1}'.format(is_chopped_data, type(is_chopped_data))
@@ -1119,29 +1084,10 @@ class VDriveAPI(object):
 
         return chopped_key_dict, run_number
 
-    # TODO - NIGHT - This method can be removed
-    def load_diffraction_file(self, file_name, file_type, data_key, unit=None):
-        """ Load reduced diffraction file to analysis project
-        Requirements: file name is a valid string, file type must be a string as 'gsas' or 'fullprof'
-        a.k.a. load_gsas_data
-        :param file_name
-        :param file_type:
-        :param data_key:
-        :return:
-        """
-        data_key = self._myProject.data_loading_manager.load_binned_data(file_name, file_type, prefix=None,
-                                                                         max_int=100, data_key=data_key)
-
-        # convert unit
-        if unit:
-            ws_name = self._myProject.get_workspace_name_by_data_key(data_key)
-            mantid_helper.mtd_convert_units(ws_name, unit)
-
-        return data_key
-
     def load_nexus_file(self, ipts_number, run_number, file_name, meta_data_only):
         """
         Load NeXus file to ADS
+        IPTS/run number OR file name
         :param ipts_number:
         :param run_number:
         :param file_name:
@@ -1155,15 +1101,21 @@ class VDriveAPI(object):
                 # get IPTS number if it is not given
                 ipts_number = self._myProject.get_ipts_number(run_number)
 
-            file_name = self._myArchiveManager.get_event_file(ipts_number, run_number, check_file_exist=True)
+            file_name = self._myArchiveManager.locate_event_nexus(ipts_number, run_number, check_file_exist=True)
             print ('[DB...BAT] Found {} for IPTS-{} Run {}'.format(file_name, ipts_number, run_number))
         # END-IF
 
         # load file
-        info_dict = self._myProject.load_event_file(ipts_number=ipts_number, run_number=run_number,
-                                                    nxs_file_name=file_name, meta_data_only=meta_data_only)
+        # TODO - TONIGHT 7 - Need a better naming routine for Non-IPTS/RUN NUMBER case
+        output_ws_name = self._myProject.load_event_file(ipts_number=ipts_number, run_number=run_number,
+                                                         nxs_file_name=file_name, meta_data_only=meta_data_only)
+        # if meta_data_only:
+        #     output_ws_name = '{}_Meta'.format(run_number)
+        # else:
+        #     output_ws_name = '{}_events'.format(run_number)
+        # mantid_helper.load_nexus(file_name, output_ws_name, meta_data_only)
 
-        return info_dict
+        return output_ws_name
 
     def load_session(self, in_file_name=None):
         """ Load session from saved file
@@ -1265,7 +1217,7 @@ class VDriveAPI(object):
         if raw_data_directory is None:
             # raw data is not given, then search the data in archive
             try:
-                raw_file_list = self._myArchiveManager.get_data_chopped_nexus(ipts_number, run_number, chop_child_list)
+                raw_file_list = self._myArchiveManager.locate_chopped_nexus(ipts_number, run_number, chop_child_list)
             except AssertionError as assert_err:
                 raise AssertionError('Error in calling ArchiveManager.get_data_chopped_nexus(): {0}'.format(assert_err))
             except RuntimeError as run_err:
@@ -1317,7 +1269,7 @@ class VDriveAPI(object):
                         background=False, vanadium=None,
                         record=False, logs=False, gsas=True, output_to_fullprof=False,
                         standard_sample_tuple=None, binning_parameters=None,
-                        merge_runs=False, dspace=False, num_banks=3, roi_list=None,
+                        merge_runs=False, merged_run=None,  dspace=False, num_banks=3, roi_list=None,
                         mask_list=None, no_cal_mask=False,
                         version=2):
         """ Reduce a set of VULCAN runs
@@ -1342,6 +1294,7 @@ class VDriveAPI(object):
         :param binning_parameters: binning parameter. [1] None for default; [2] a size 1 container as bin size
                                            [3] a size-3 container as [TOF_min, Bin Size, TOF_max]
         :param merge_runs: If true, then merge the run together by calling SNSPowderReduction
+        :param merged_run: Paired with flag merge_runs.  It is the run number to be merged to
         :param dspace: If true, then data will reduced to workspace in dSpacing and exported with unit dSpacing
         :param num_banks: number of banks focused to.  Now only 3, 7 and 27 are allowed; Also a special grouping file
         :param roi_list:
@@ -1393,6 +1346,16 @@ class VDriveAPI(object):
 
         elif dspace or version == 2:
             # user version 2 reduction algorithm
+            if merge_runs and merged_run is not None:
+                if merged_run not in runs_to_reduce:
+                    raise RuntimeError('Run number {} to merge to is not the list of run numbers to reduce {}'
+                                       ''.format(merged_run, runs_to_reduce))
+                else:
+                    # put the run number to merge to at the first element in the list
+                    run_index = runs_to_reduce.index(merged_run)
+                    runs_to_reduce.pop(run_index)
+                    runs_to_reduce.insert(0, merged_run)
+
             run_number_list, msg_list = self._myProject.reduce_vulcan_runs_v2(run_number_list=runs_to_reduce,
                                                                               output_directory=output_directory,
                                                                               d_spacing=True,
@@ -1404,74 +1367,38 @@ class VDriveAPI(object):
                                                                               roi_list=roi_list,
                                                                               mask_list=mask_list,
                                                                               no_cal_mask=no_cal_mask)
+
+            # deal with sample logs
+            run_number, ws_name = run_number_list[0]
             if standard_sample_tuple:
                 if len(run_number_list) != 1:
                     return False, 'Standard tag {} can only work with 1 run'.format(standard_sample_tuple)
 
-                # print ('Output Dir: {}'.format(output_directory))
-                # # 'SiTest', '/tmp/SiTest', 'SiTestRecord.txt'
-                # import reduce_VULCAN
-                # print (reduce_VULCAN.RecordBase)
-
                 # get information of run number and workspace
-                run_number, ws_name = run_number_list[0]
-                # convert record-tuple list to three list
-                sample_title_list = [item[0] for item in reduce_VULCAN.RecordBase]
-                sample_name_list = [item[1] for item in reduce_VULCAN.RecordBase]
-                sample_operation_list = [item[2] for item in reduce_VULCAN.RecordBase]
-                material_name, tag_dir, standard_record_file = standard_sample_tuple
-                patch_list = reduce_VULCAN.generate_patch_log_list('VULCAN', ipts_number=ipts_number,
-                                                                   run_number=run_number)
-                status, error_message = \
-                    vdrivehelper.export_experiment_log(ws_name,
-                                                       record_file_name=os.path.join(tag_dir, standard_record_file),
-                                                       sample_name_list=sample_name_list,
-                                                       sample_title_list=sample_title_list,
-                                                       sample_operation_list=sample_operation_list,
-                                                       patch_list=patch_list)
-                # copy GSAS file
-                # TODO - NIGHT - Better code quality
-                import shutil
-                src_gda = '/SNS/VULCAN/IPTS-{}/shared/binned_data/{}.gda'.format(ipts_number, run_number)
-                assert os.path.exists(src_gda), '{} does not exists'.format(src_gda)
-                shutil.copy(src_gda,
-                            tag_dir)
+                status, error_message = vdrivehelper.export_standard_sample_log(ipts_number, run_number, ws_name,
+                                                                                standard_sample_tuple)
+
+            elif merge_runs:
+                # merge runs
+                record_file_name = os.path.join(output_directory, 'AutoRecord.txt')
+                status, error_message = vdrivehelper.export_normal_sample_log(ipts_number, run_number, ws_name,
+                                                                              record_file_name)
 
             else:
                 status = True
-                error_message = ''
+            error_message = ''
             # END-IF
+
+            # deal with error mssage
             for msg in msg_list:
                 if msg.count('Failed'):
                     status = False
                 error_message += msg + '\n'
 
         else:
-            # manual reduction: Reduce runs
-            raise 'Why this still exists?  I dont see any reason!'
-            # print '[INFO] Reduce Runs: {0}. Merge banks = {1}'.format(runs_to_reduce, merge_banks)
-            # TODO - 20181010 - Implement roi list and mask list
-            if len(roi_list) + len(mask_list) > 0:
-                raise RuntimeError('ROI/MASK is not supported! ROI: {}, MASK: {}'.format(roi_list, mask_list))
-            try:
-                status, error_message = self._myProject.reduce_runs(run_number_list=runs_to_reduce,
-                                                              output_directory=output_directory,
-                                                              background=background,
-                                                              vanadium=vanadium,
-                                                              gsas=gsas,
-                                                              fullprof=output_to_fullprof,
-                                                              record_file=record,
-                                                              sample_log_file=logs,
-                                                              standard_sample_tuple=standard_sample_tuple,
-                                                              merge_banks=merge_banks,
-                                                              merge_runs=merge_runs,
-                                                              binning_parameters=binning_parameters,
-                                                              num_banks=num_banks)
-
-            except AssertionError as re:
-                status = False
-                error_message = '[ASSERTION ERROR] from reduce_runs due to %s' % str(re)
-            # END-TRY-EXCEPT
+            # Not auto reduction and Not reduction with version=2
+            # TODO - TONIGHT - Better error message
+            raise RuntimeError('blabla')
         # END-IF-ELSE
 
         # mark the runs be reduced so that they will not be reduced again next time.
@@ -1564,7 +1491,7 @@ class VDriveAPI(object):
         """
         run_info_dict_list = list()
         for run_number in range(start_run, stop_run+1):
-            event_file_name = self._myArchiveManager.get_event_file(ipts_number, run_number, check_file_exist=False)
+            event_file_name = self._myArchiveManager.locate_event_nexus(ipts_number, run_number, check_file_exist=False)
             if os.path.exists(event_file_name):
                 run_info = dict()
                 run_info['run'] = run_number
@@ -1693,7 +1620,7 @@ class VDriveAPI(object):
 
         return self._mtsLogDict[log_file_name].keys()
 
-    # TODO/TEST/NOWNOW/#71 - New feature on binning_parameters
+    # TODO - NOW - - New feature on binning_parameters
     def load_vanadium_run(self, ipts_number, run_number, use_reduced_file, unit='dSpacing',
                           binning_parameters=None, smoothed=False):
         """
@@ -1723,7 +1650,7 @@ class VDriveAPI(object):
 
         if van_file_name is None:
             # if vanadium gsas file is not found, reduce it
-            nxs_file = self._myArchiveManager.get_event_file(ipts_number, run_number, check_file_exist=True)
+            nxs_file = self._myArchiveManager.locate_event_nexus(ipts_number, run_number, check_file_exist=True)
             self._myProject.add_run(run_number, nxs_file, ipts_number)
             reduced, message = self._myProject.reduce_runs(run_number_list=[run_number],
                                                            output_directory=self._myWorkDir,
@@ -1756,7 +1683,7 @@ class VDriveAPI(object):
 
         return True, van_ws_key
 
-    def process_vanadium_run(self, ipts_number, run_number, use_reduced_file,
+    def process_vanadium_run_old(self, ipts_number, run_number, reduced_file,
                              one_bank=False, do_shift=False, local_output=None):
         """
         process vanadium runs
@@ -1768,8 +1695,10 @@ class VDriveAPI(object):
         :param local_output:
         :return:
         """
+        raise NotImplementedError('This method shall not be used because it is a do-everything one')
         try:
             # get reduced vanadium file
+            # TODO - TONIGHT - Always use reduced vanadium run (gda or NeXus)
             status, ret_str = self.load_vanadium_run(ipts_number=ipts_number, run_number=run_number,
                                                      use_reduced_file=use_reduced_file)
             if status:
