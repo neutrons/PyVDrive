@@ -503,7 +503,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
                 # get position to insert and position to set
                 insert_pos = self._loadedChoppedRunList.index(item_name)
-                curr_pos = self._loadedChoppedRunList.index(current_item)
+                try:
+                    curr_pos = self._loadedChoppedRunList.index(current_item)
+                except ValueError as val_err:
+                    raise RuntimeError('Loaded chopped runs ({}) doe not contain {}. FYI: {}'
+                                       ''.format(self._loadedChoppedRunList, current_item, val_err))
 
                 # insert and set
                 self._mutexChopRunList = True

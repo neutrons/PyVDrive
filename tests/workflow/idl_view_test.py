@@ -26,7 +26,7 @@ def test_case_archive_chopped(command_tester):
     :param command_tester:
     :return:
     """
-    command_line = 'view,IPTS=13183,choprun=68607, runs=1, rune=15'
+    command_line = 'view,IPTS=22126,choprun=171899, runs=1, rune=15'
     command_tester.run_command(command_line)
 
     return
@@ -84,15 +84,17 @@ def test_main():
     """
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
-    test_case_archive(command_tester)
-
     test_case_archive_chopped(command_tester)
 
-    test_case_archive_single_normalize(command_tester)
-
-    test_case_reduce_view(command_tester)
-
-    test_case_chop_focus_view(command_tester)
+    # test_case_archive(command_tester)
+    #
+    # test_case_archive_chopped(command_tester)
+    #
+    # test_case_archive_single_normalize(command_tester)
+    #
+    # test_case_reduce_view(command_tester)
+    #
+    # test_case_chop_focus_view(command_tester)
 
     return command_tester.main_window
 
