@@ -52,6 +52,9 @@ class ProjectManager(object):
         # dictionary for loaded data referenced by IPTS and run number. value is the data key
         self._loadedDataDict = dict()
 
+        # chopped data (loaded)
+        self._chopped_data_dict = dict()
+
         # dictionary for sample run mapping to vanadium run
         self._sampleRunVanadiumDict = dict()  # Key: run number (int) / Value: vanadium run number (int)
         # vanadium GSAS file to vanadium run's mapping. Key = integer vanadium run number; Value = GSAS file name
@@ -923,7 +926,7 @@ class ProjectManager(object):
 
         return workspace_name
 
-    def get_reduced_run_information(self, run_number):
+    def get_reduced_run_information(self, run_number=None, data_key=None):
         """
         Purpose: Get the reduced run's information including list of banks
         Requirements: run number is an integer
@@ -931,10 +934,17 @@ class ProjectManager(object):
         :return: a list of integers as bank ID. reduction history...
         """
         # Check
-        assert isinstance(run_number, int), 'Run number must be an integer.'
+        if run_number:
+            datatypeutility.check_int_variable('Run number', run_number, (1, 9999999))
+            run_ws_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=False)
+        elif data_key:
+            run_ws_name = data_key
+            if mantid_helper.workspace_does_exist(run_ws_name) is False:
+                raise RuntimeError('Data key {} is not a workspace name in ADS'.format(data_key))
+        else:
+            raise RuntimeError('Either run number or data key (worksapce name) shall be given!')
 
         # Get workspace
-        run_ws_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=False)
         ws_info = mantid_helper.get_workspace_information(run_ws_name)
 
         return ws_info
@@ -1016,6 +1026,25 @@ class ProjectManager(object):
             raise NotImplementedError('blabla NOWNOW')
 
         return event_ws_name
+
+    def load_chopped_binned_file(self, data_dir, chopped_seq_list, run_number):
+        """
+        Load chopped workspaces
+        :param data_dir:
+        :param chopped_seq_list:
+        :param run_number:
+        :return:
+        """
+        result = self._loadedDataManager.load_chopped_binned_data(data_dir,
+                                                                  chopped_seq_list,
+                                                                  file_format='gsas',
+                                                                  prefix='{}'.format(run_number))
+
+        chopped_data_dict = result[0]   # [seq-index] = workspace name, file name
+
+        self._chopped_data_dict[run_number] = chopped_data_dict
+
+        return chopped_data_dict
 
     def load_session_from_dict(self, save_dict):
         """ Load session from a dictionary

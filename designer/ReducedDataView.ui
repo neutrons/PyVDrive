@@ -276,29 +276,6 @@
              <item>
               <layout class="QHBoxLayout" name="horizontalLayout_3">
                <item>
-                <widget class="QPushButton" name="pushButton_refreshList">
-                 <property name="text">
-                  <string>Refresh</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <spacer name="horizontalSpacer_6">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
-                 </property>
-                 <property name="sizeType">
-                  <enum>QSizePolicy::Ignored</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>40</width>
-                   <height>20</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-               <item>
                 <widget class="QPushButton" name="pushButton_loadSingleGSAS">
                  <property name="font">
                   <font>
@@ -410,7 +387,7 @@
                      </font>
                     </property>
                     <property name="text">
-                     <string>Previous</string>
+                     <string>&lt;&lt;</string>
                     </property>
                    </widget>
                   </item>
@@ -422,7 +399,7 @@
                      </font>
                     </property>
                     <property name="text">
-                     <string>Next</string>
+                     <string>&gt;&gt;</string>
                     </property>
                    </widget>
                   </item>
@@ -558,14 +535,9 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_8">
             <item>
-             <widget class="QPushButton" name="pushButton_clearCanvas">
-              <property name="font">
-               <font>
-                <pointsize>10</pointsize>
-               </font>
-              </property>
+             <widget class="QPushButton" name="pushButton_refreshList">
               <property name="text">
-               <string>Clear Canvas</string>
+               <string>Refresh</string>
               </property>
              </widget>
             </item>
@@ -859,6 +831,18 @@
           </item>
           <item row="1" column="8">
            <widget class="QLineEdit" name="lineEdit_vanRun"/>
+          </item>
+          <item row="0" column="11">
+           <widget class="QPushButton" name="pushButton_clearCanvas">
+            <property name="font">
+             <font>
+              <pointsize>10</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Clear Canvas</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>

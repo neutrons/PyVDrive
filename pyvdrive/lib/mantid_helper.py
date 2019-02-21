@@ -986,7 +986,7 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         # single bank
         datatypeutility.check_int_variable('Bank ID', bank_id, (1, None))
         required_workspace_index = bank_id - start_bank_id
-        if not 0 <= required_workspace_index < workspace.getNumberHistograms():
+        if not 0 <= required_workspace_index < get_number_spectra(workspace):
             raise RuntimeError('Bank ID {0}, aka workspace index {1} is out of spectra of workspace {2}.'
                                ''.format(bank_id, required_workspace_index, workspace_name))
     else:
@@ -1223,7 +1223,8 @@ def get_workspace_information(run_ws_name):
 
     # Retrieve workspace and get bank list (bank number is from 1)
     workspace = retrieve_workspace(run_ws_name)
-    num_spec = workspace.getNumberHistograms()
+    # num_spec = workspace.getNumberHistograms()
+    num_spec = get_number_spectra(workspace)
     bank_id_list = range(1, num_spec+1)
 
     return bank_id_list
@@ -1423,6 +1424,7 @@ def convert_gsas_ws_to_group(ws_name):
     return retrieve_workspace(ws_name)
 
 
+# TODO - TONIGHT 3 - Clean!
 def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     """ Load VULCAN GSAS file and set instrument information.
     Output workspace will be set to PointData
@@ -1474,8 +1476,6 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
 
     # convert to workspace group
     convert_gsas_ws_to_group(out_ws_name)
-
-    print ('[DB....BAT...Break Line 1: {}'.format(ADS.getObjectNames()))
 
     # # convert to point data
     # if point_data:

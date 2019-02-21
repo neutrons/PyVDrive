@@ -1350,7 +1350,7 @@ class ReductionManager(object):
         :param binning_params: binning parameters string
         :param is_vdrive_bin:
         :param unit:
-        :return: Workspace (success) or 2-tuple (False and error message)
+        :return: Workspace name
         """
         # Check requirements
         datatypeutility.check_int_variable('Run number', run_number, (1, None))

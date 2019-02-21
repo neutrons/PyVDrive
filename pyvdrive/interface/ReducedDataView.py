@@ -28,9 +28,9 @@ except AttributeError:
 from pyvdrive.interface.gui.generalrunview import GeneralRunView
 import pyvdrive.lib.datatypeutility
 from pyvdrive.lib import datatypeutility
+import atomic_data_viewers
 
-
-BANK_GROUP_DICT = {90: [1, 2], 150: [3]}
+# BANK_GROUP_DICT = {90: [1, 2], 150: [3]}
 
 
 class GeneralPurposedDataViewWindow(QMainWindow):
@@ -55,6 +55,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._myParent = parent
         self._myController = None
 
+        self._atomic_viewer_list = list()
+
         # list of loaded runs (single and chopped)
         self._loadedSingleRunList = list()
         self._loadedChoppedRunList = list()
@@ -76,6 +78,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._iptsNumber = None
         self._runNumberList = list()
 
+        self._curr_data_key = None  # current (last loaded) workspace name as data key
         self._currRunNumber = None   # run number of single run reduced
         self._currSlicedRunNumber = None   # run number of sliced case
         self._currSlicedWorkspaces = list()   # an ordered list for the sliced (and maybe focused) workspace names
@@ -114,7 +117,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # Event handling
         # section: load data
 
-        self.ui.pushButton_loadSingleGSAS.clicked.connect(self.do_load_single_gsas)
+        self.ui.pushButton_loadSingleGSAS.clicked.connect(self.do_load_single_run)
         self.ui.pushButton_loadChoppedGSASSet.clicked.connect(self.do_load_chopped_gsas)
         self.ui.pushButton_browseAnyGSAS.clicked.connect(self.do_browse_local_gsas)
         self.ui.pushButton_refreshList.clicked.connect(self.do_refresh_existing_runs)
@@ -138,7 +141,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # radio buttons
         self.ui.radioButton_chooseSingleRun.toggled.connect(self.evt_toggle_run_type)
-        self.ui.radioButton_chooseDiffraction.toggled.connect(self.evt_toggle_plot_options)
 
         # other
         self.ui.pushButton_clearCanvas.clicked.connect(self.do_clear_canvas)
@@ -195,13 +197,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.groupBox_plotSingleRun.setEnabled(True)
         self.ui.groupBox_plotChoppedRun.setEnabled(False)
 
-        # select plot data or log
-        self.ui.radioButton_chooseDiffraction.setChecked(True)
-        self.ui.groupBox_plotREducedData.setEnabled(True)
-        self.ui.groupBox_plotLog.setEnabled(False)
-
         # set bank ID combobox
-        self._bankIDList = [1, 2]
+        self._bankIDList = [1, 2, 3]
         self.ui.comboBox_spectraList.clear()
         for bank_id in self._bankIDList:
             self.ui.comboBox_spectraList.addItem('{0}'.format(bank_id))
@@ -274,28 +271,113 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def do_load_preprocessed_nexus(self):
-        """ load previously processed and saved (by Mantid SavePreprocessedNeXus()) nexus file
+    def _is_run_in_memorty(self, run_number):
+        return self._myController.project.reduction_manager.has_run_reduced(run_number)
+
+    def do_load_chopped_runs(self, ipts_number=None, run_number=None, chopped_seq_list=None):
+        """ Load a series chopped and reduced data to reduced data view
+        :param ipts_number:
+        :param run_number:
+        :param chopped_seq_list:
         :return:
         """
-        # get the NeXus file name
-        nxs_file_name = GuiUtility.browse_file(self, 'Select a Mantid PreNeXus file',
-                                               default_dir=self._myController.get_working_dir(),
-                                               file_filter='NeXus File (*.nxs)',
-                                               file_list=False, save_file=False)
-        if nxs_file_name is None:
-            return
+        # read from input for IPTS and run number
+        if ipts_number is None:
+            ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
+        if run_number is None:
+            run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
 
-        # load
-        try:
-            data_key = self._myController.load_nexus_file(nxs_file_name)
-            data_bank_list = self._myController.get_reduced_data_info(data_key=data_key, info_type='bank')
-            self.add_reduced_run(data_key, data_bank_list, True)
-        except RuntimeError as run_err:
-            GuiUtility.pop_dialog_error(self, 'Unable to load {} due to {}'.format(nxs_file_name, run_err))
-            return
+        # get data sets
+        if run_number is not None and self._myController.has_chopped_data(run_number, reduced=True):
+            # load from memory
+            # FIXME - TOMORROW - NOT TEST YET! Need to be on analysis cluster!
+            data_key_dict, run_number_str = self._myController.load_chopped_data(run_number, chopped_seq_list)
+        elif ipts_number is not None and run_number is not None:
+            # load data from archive
+            chopped_data_dir = self._myController.get_archived_data_dir(self._iptsNumber, run_number,
+                                                                        chopped_data=True)
+            result = self._myController.project.load_chopped_binned_file(chopped_data_dir, chopped_seq_list,
+                                                                         run_number)
+            project_chop_key = result
+        else:
+            raise NotImplementedError('Not sure how to load from an arbitrary directory!')
+
+
+        # self.plot_chopped_data_2d(run_number=processor.get_run_number(),
+        #                                  chop_sequence=processor.get_chopped_sequence_range(),
+        #                                  bank_id=1,
+        #                                  bank_id_from_1=True,
+        #                                  chopped_data_dir=processor.get_reduced_data_directory(),
+        #                                  vanadium_run_number=van_run,
+        #                                  proton_charge_normalization=pc_norm)
 
         return
+
+    def do_load_single_run(self, ipts_number=None, run_number=None, plot=True):
+        """
+        Load a single run to reduced data view
+        Note: this is a high level method
+        :param ipts_number:
+        :param run_number:
+        :param plot:
+        :return:
+        """
+        # read from input for IPTS and run number
+        if ipts_number is None:
+            ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
+        if run_number is None:
+            run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
+
+        if run_number is not None and self._is_run_in_memorty(run_number):
+            # load from memory
+            self._curr_data_key = self._myController.project.reduction_manager.get_reduced_workspace(run_number)
+        elif ipts_number is not None and run_number is not None:
+            # load data from archive
+            reduced_file_name = self._myController.archive_manager.get_gsas_file(ipts_number, run_number,
+                                                                                 check_exist=True)
+            file_type = 'gsas'
+            self._curr_data_key = self._myController.project.data_loading_manager.load_binned_data(reduced_file_name,
+                                                                                                   file_type,
+                                                                                                   max_int=99999)
+        else:
+            # load from disk by users' choice
+            if ipts_number is not None:
+                default_dir = '/SNS/VULCAN/IPTS-{}/shared/'.format(ipts_number)
+            else:
+                default_dir = self._myController.get_working_dir()
+
+            file_filter = 'GSAS File (*.gda);;GSAS File (*.gsa);;NeXus File (*.nxs)'
+
+            reduced_data_file = GuiUtility.browse_file(self, 'Select a reduced file',
+                                                       default_dir=default_dir,
+                                                       file_filter=file_filter,
+                                                       file_list=False, save_file=False)
+            # check whether user cancels the operation
+            if reduced_data_file is None or reduced_data_file == '':
+                return
+
+            if reduced_data_file.lower().endswith('nxs'):
+                # processed NeXus
+                try:
+                    self._curr_data_key = self._myController.load_nexus_file(reduced_data_file)
+                except RuntimeError as run_err:
+                    GuiUtility.pop_dialog_error(self, 'Unable to load {} due to {}'.format(reduced_data_file, run_err))
+                    return
+            else:
+                # gsas file
+                reduced_file_name = self._myController.archive_manager.get_gsas_file(ipts_number, run_number,
+                                                                                     check_exist=True)
+                file_type = 'gsas'
+                self._curr_data_key = self._myController.project.data_load_manager.load_binned_data(reduced_file_name,
+                                                                                                    file_type)
+
+        # END-IF-ELSE
+
+        # add reduced run to ...
+        data_bank_list = self._myController.project.get_reduced_run_information(data_key=self._curr_data_key)
+        # self.add_reduced_run(self._curr_data_key, data_bank_list, plot_new=plot)
+
+        return self._curr_data_key
 
     def do_load_single_gsas(self):
         """ Load a single GSAS file either from SNS archive (/SNS/VULCAN/...) or from local HDD
@@ -305,9 +387,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         if self.ui.radioButton_fromArchive.isChecked():
             # load from archive
-            # read from input for IPTS and run number
-            ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
-            run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
+
 
             try:
                 data_key = self._myController.load_archived_gsas(ipts_number, run_number, is_chopped_data,
@@ -580,7 +660,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             self._mutexRunNumberList = False
 
             # optionally set current index to the new item
-            if focus_to_new:
+            if focus_to_new or start_run_key == '':  # new or previously empty combo box
                 final_combo_index = index_to_be
             else:
                 final_combo_index = self._runNumberList.index(start_run_key)
@@ -848,6 +928,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """ Close the window
         :return:
         """
+        # close child widows
+        for i_window in range(len(self._atomic_viewer_list)):
+            self._atomic_viewer_list[i_window].close()
+
         self.close()
 
     def do_normalise_by_current(self):
@@ -1079,14 +1163,15 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def do_refresh_existing_runs(self):
-        """
-        refresh existing runs including single runs and chopped runs
+    def do_refresh_existing_runs(self, set_to=None, plot_selected=False):
+        """ refresh the existing runs in the combo box
+        :param set_to:
+        :param plot_selected: if set_to is True, then plot the new data if True
         :return:
         """
         # Part 1: single runs
         single_runs_list = self._myController.get_loaded_runs(chopped=False)
-        if len(single_runs_list) > 0:
+        if len(single_runs_list) >= 0:
             # current selection
             current_single_run = str(self.ui.comboBox_runs.currentText()).strip()
             if current_single_run == '':
@@ -1111,14 +1196,16 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             self._mutexRunNumberList = True
             if current_single_run is None:
                 new_pos = 0
-                self.ui.comboBox_runs.setCurrentIndex(new_pos)
+            elif set_to is not None:
+                new_pos = self._runNumberList.index(set_to)
             else:
                 new_pos = self._runNumberList.index(current_single_run)
-                self.ui.comboBox_runs.setCurrentIndex(new_pos)
+            self.ui.comboBox_runs.setCurrentIndex(new_pos)
             self._mutexRunNumberList = False
         # END-IF
 
         # Part 2: chopped runs
+        # TODO - FIXME - TONIGHT 1 - This does not sounds right!
         chopped_run_list = self._myController.get_loaded_runs(chopped=True)
         curr_index = self.ui.comboBox_choppedRunNumber.currentIndex()
         self._mutexChopRunList = True
@@ -1464,6 +1551,16 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return vec_x, vec_y
 
+    # TODO - TONIGHT 3 - Quality
+    def launch_single_run_view(self):
+
+        view_window = atomic_data_viewers.AtomicReduced1DViewer(self)
+        view_window.show()
+
+        self._atomic_viewer_list.append(view_window)
+
+        return view_window
+
     def load_sample_logs(self):
         """
         If the diffraction data is loaded from GSAS files, then you need to load the sample logs explicitly
@@ -1518,6 +1615,38 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         assert len(run_number_list) > 0, 'There is no valid run number in string %s.' % run_list_str
 
         return run_number_list
+
+    def plot_single_run(self, data_key, van_norm, van_run, pc_norm):
+        # check existence of data
+
+        bank_id = 1
+
+        entry_key = data_key, bank_id, self._currUnit
+        vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=data_key, bank_id=bank_id,
+                                                         unit=self._currUnit)
+        line_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit=self._currUnit,
+                                                                      over_plot=False,
+                                                                      run_id=data_key, bank_id=bank_id,
+                                                                      chop_tag=None,
+                                                                      label='{}, {}'.format(data_key, bank_id))
+        self.ui.graphicsView_mainPlot.set_title(title='whatever title')
+
+        # deal with Y axis
+        self.ui.graphicsView_mainPlot.auto_rescale()
+
+        # pop the child atomic window
+        for ibank in range(3):
+            child_window = self.launch_single_run_view()
+            vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=data_key, bank_id=ibank+1,
+                                                             unit=self._currUnit)
+            line_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit=self._currUnit,
+                                                                          over_plot=False,
+                                                                          run_id=data_key, bank_id=bank_id,
+                                                                          chop_tag=None,
+                                                                          label='{}, {}'.format(data_key, bank_id))
+            child_window.plot_data(vec_x, vec_y)
+
+        return
 
     def plot_1d_diffraction(self, data_key, bank_id, label='', title='', clear_previous=False, color=None):
         """

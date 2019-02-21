@@ -5,16 +5,17 @@ import sys
 import command_test_setup
 try:
     from PyQt5.QtWidgets import QApplication
-except ImportError:
+except ImportError as import_error:
+    print ('[idl_view_test] Import PyQt5/qtconsole Error: {}'.format(import_error))
     from PyQt4.QtGui import QApplication
 
 
-def test_case_archive(command_tester):
+def test_archive_single_run(command_tester):
     """
     test viewing data from archive with multiple reduced runs
     :return:
     """
-    command_line = 'VIEW,IPTS=14094,RUNS=96450,RUNE=96451'
+    command_line = 'VIEW,IPTS=22126,RUNS=171899'
     command_tester.run_command(command_line)
 
     return
@@ -83,6 +84,8 @@ def test_main():
     test main for command VIEW
     """
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
+
+    # test_archive_single_run(command_tester)
 
     test_case_archive_chopped(command_tester)
 
