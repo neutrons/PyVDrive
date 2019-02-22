@@ -1105,6 +1105,7 @@ class VulcanLiveDataView(QMainWindow):
         """
         # parse the user-specified X and Y axis name and process name in case of 'name (#)'
         # check and etc
+        # TODO - TONIGHT 3 - Modernize
         assert isinstance(y_axis_name_list, list), '{0} shall be list but not {1}' \
                                                    ''.format(y_axis_name_list, type(y_axis_name_list))
         assert isinstance(side_list, list), 'Axis-side {0} shall be given in a list but not a {1}.' \
@@ -1293,6 +1294,8 @@ class VulcanLiveDataView(QMainWindow):
                                                                  include_right=not is_main)
 
             # plot!  FIXME - why APPEND is not passed to plot_sample_log!??
+            print ('[DB...BAT...TODAY] Print sample log {}: {}, {}'.format(label_line, time_vec, value_vec))
+
             self.ui.graphicsView_comparison.plot_sample_log(time_vec, value_vec, is_main=is_main,
                                                             x_label=None,
                                                             y_label=label_y, line_label=label_line,
