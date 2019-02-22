@@ -339,8 +339,8 @@ class VdriveCommandProcessor(object):
             chop_key = view_window.do_load_chopped_runs(ipts_number, run_number,
                                                         processor.get_chopped_sequence_range())
 
-            print (chop_key)
-            # view_window.do_refresh_existing_runs(set_to=chop_key)
+            print ('[DB...BAT] chop_key: {}'.format(chop_key))
+            view_window.do_refresh_existing_runs(set_to=chop_key, plot_selected=False, is_chopped=True)
             #
             # view_window.plot_chopped_run(chop_key,
             #                              van_norm=processor.do_vanadium_normalization,

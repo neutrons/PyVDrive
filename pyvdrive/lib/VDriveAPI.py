@@ -767,7 +767,7 @@ class VDriveAPI(object):
             # chopped runs
             # from archive
             loaded_runs_list = self._myProject.get_loaded_chopped_reduced_runs()
-            print ('[DB...BAT] API: Loaded chopped runs: {}'.format(loaded_runs_list))
+            print ('[DB...BAT] API: Loaded chopped gsas: {}'.format(loaded_runs_list))
 
             # from memory
             reduced_runs_list = self._myProject.reduction_manager.get_reduced_runs(chopped=True)

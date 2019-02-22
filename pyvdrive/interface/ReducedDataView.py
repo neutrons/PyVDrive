@@ -292,13 +292,15 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # load from memory
             # FIXME - TOMORROW - NOT TEST YET! Need to be on analysis cluster!
             data_key_dict, run_number_str = self._myController.load_chopped_data(run_number, chopped_seq_list)
+            raise NotImplementedError('ASAP: What shall be chop key?')
         elif ipts_number is not None and run_number is not None:
             # load data from archive
             chopped_data_dir = self._myController.get_archived_data_dir(self._iptsNumber, run_number,
                                                                         chopped_data=True)
             result = self._myController.project.load_chopped_binned_file(chopped_data_dir, chopped_seq_list,
                                                                          run_number)
-            project_chop_key = result
+            project_chop_key = result[0]
+            project_chop_dict = result[1]
         else:
             raise NotImplementedError('Not sure how to load from an arbitrary directory!')
 
@@ -311,7 +313,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         #                                  vanadium_run_number=van_run,
         #                                  proton_charge_normalization=pc_norm)
 
-        return
+        self._curr_chop_key = project_chop_key
+        self._curr_chop_dict = project_chop_dict
+
+        return project_chop_key
 
     def do_load_single_run(self, ipts_number=None, run_number=None, plot=True):
         """
@@ -503,6 +508,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
             # get workspaces from data key dictionary and add to data management
             diff_ws_list = self.process_loaded_chop_suite(data_key_dict)
+            raise NotImplementedError('add_chopped_workspace shall be remove from here!')   # REMOVE!
             self.add_chopped_workspaces(run_number, diff_ws_list, True)
             seg_list = diff_ws_list
 
@@ -1163,7 +1169,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def do_refresh_existing_runs(self, set_to=None, plot_selected=False):
+    def do_refresh_existing_runs(self, set_to=None, plot_selected=False, is_chopped=False):
         """ refresh the existing runs in the combo box
         :param set_to:
         :param plot_selected: if set_to is True, then plot the new data if True
@@ -1194,9 +1200,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
             # re-focus back to original one
             self._mutexRunNumberList = True
-            if current_single_run is None:
+            if current_single_run is None or is_chopped:
+                # no set_to or set_to is for chopped
                 new_pos = 0
             elif set_to is not None:
+                # set to an existing single run
                 new_pos = self._runNumberList.index(set_to)
             else:
                 new_pos = self._runNumberList.index(current_single_run)
@@ -1205,20 +1213,35 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # END-IF
 
         # Part 2: chopped runs
-        # TODO - FIXME - TONIGHT 1 - This does not sounds right!
-        chopped_run_list = self._myController.get_loaded_runs(chopped=True)
-        curr_index = self.ui.comboBox_choppedRunNumber.currentIndex()
-        self._mutexChopRunList = True
-        for run_number, slice_id in chopped_run_list:
-            if (run_number, slice_id) in self._slicedRunsList:
-                # it has been registered to ReductionWindow already
-                continue
-            # add the combobox
-            self.ui.comboBox_choppedRunNumber.addItem('{}_{}'.format(run_number, slice_id))
-            self._slicedRunsList.append((run_number, slice_id))
-        # END-FOR
-        self.ui.comboBox_choppedRunNumber.setCurrentIndex(curr_index)
-        self._mutexChopRunList = False
+        chopped_run_list = self._myController.get_loaded_runs(chopped=True)  # chop keys
+        if len(chopped_run_list) > 0:
+            # current chopped run
+            curr_chop_run = str(self.ui.comboBox_choppedRunNumber.currentText())
+
+            # refresh from Project for all chopped runs loaded or reduced
+            print ('[DB...BAT] Found chop key {}'.format(chopped_run_list))
+
+            self._mutexChopRunList = True  # turn on mutex
+            self.ui.comboBox_choppedRunNumber.clear()
+            for chop_key in sorted(chopped_run_list):
+                # add the combobox
+                self.ui.comboBox_choppedRunNumber.addItem('{}'.format(chop_key))
+                self._slicedRunsList.append(chop_key)
+            # END-FOR
+
+            # shall I do an explicit set?
+            if set_to is None or not is_chopped or (is_chopped and set_to == curr_chop_run):
+                # not set to OR set to for single run OR same item
+                new_combo_index = chopped_run_list.index(curr_chop_run)
+                self.ui.comboBox_choppedRunNumber.setCurrentIndex(new_combo_index)
+
+            self._mutexChopRunList = False  # turn off mutex
+
+            print ('Set to = {}'.format(set_to))
+            if is_chopped and set_to is not None and set_to != curr_chop_run:
+                new_comob_index = chopped_run_list.index(set_to)
+                self.ui.comboBox_choppedRunNumber.setCurrentIndex(new_comob_index)
+        # END-IF
 
         return
 
@@ -1704,6 +1727,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param proton_charge_normalization:
         :return:
         """
+        raise NotImplementedError('This method shall be re-purposed!')
         # check inputs' validity
         assert isinstance(run_number, int), 'Run number {0} must be an integer but not a {1}.' \
                                             ''.format(run_number, type(run_number))

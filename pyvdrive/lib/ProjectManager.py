@@ -829,7 +829,9 @@ class ProjectManager(object):
         get the runs that are loaded as chopped data from SNS archive or HDD
         :return: list of run numbers (string with special tag)
         """
-        return self._loadedDataManager.get_loaded_chopped_runs()
+        print ('[DB...BAT] Archived loaded data: {}'.format(self._loadedDataManager.get_loaded_chopped_runs()))
+
+        return self._chopped_data_dict.keys()
 
     def get_loaded_reduced_runs(self):
         """
@@ -1033,7 +1035,7 @@ class ProjectManager(object):
         :param data_dir:
         :param chopped_seq_list:
         :param run_number:
-        :return:
+        :return: tuple (key, dict)
         """
         result = self._loadedDataManager.load_chopped_binned_data(data_dir,
                                                                   chopped_seq_list,
@@ -1044,7 +1046,7 @@ class ProjectManager(object):
 
         self._chopped_data_dict[run_number] = chopped_data_dict
 
-        return chopped_data_dict
+        return run_number, chopped_data_dict
 
     def load_session_from_dict(self, save_dict):
         """ Load session from a dictionary

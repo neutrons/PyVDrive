@@ -328,7 +328,7 @@ class LoadedDataManager(object):
         # # END-FOR
 
         # register for chopped data dictionary
-        key = '{0}_gsas'.format(run_number)
+        key = '{0}_gsas'.format(prefix)
         self._choppedGSASSetDict[key] = binned_ws_dict.keys()
 
         return binned_ws_dict, run_number

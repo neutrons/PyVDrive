@@ -1,5 +1,6 @@
 import numpy as np
 import mplgraphicsview
+import mplgraphicsview2d
 
 
 class GeneralRunView(mplgraphicsview.MplGraphicsView):
@@ -259,3 +260,19 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         """
         self.clear_canvas()
         self._has2DImage = False
+
+
+class ContourPlotView(mplgraphicsview2d.MplGraphicsView2D):
+    """
+    Contour plot 2D view
+    """
+    def __init__(self, parent):
+        """
+        An extension to the MplGraphicsView for plotting reduced run
+        :param parent:
+        """
+        super(ContourPlotView, self).__init__(parent)
+
+        # class state variables
+
+        return
