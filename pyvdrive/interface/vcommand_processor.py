@@ -336,16 +336,21 @@ class VdriveCommandProcessor(object):
                 van_run_number = processor.get_vanadium_number(run_number)
             else:
                 van_run_number = None
+
+            chop_seq_list = processor.get_chopped_sequence_range()
             chop_key = view_window.do_load_chopped_runs(ipts_number, run_number,
-                                                        processor.get_chopped_sequence_range())
+                                                        chop_seq_list)
 
             print ('[DB...BAT] chop_key: {}'.format(chop_key))
-            view_window.do_refresh_existing_runs(set_to=chop_key, plot_selected=False, is_chopped=True)
-            #
-            # view_window.plot_chopped_run(chop_key,
-            #                              van_norm=processor.do_vanadium_normalization,
-            #                              van_run=van_run_number,
-            #                              pc_norm=processor.do_proton_charge_normalization)
+
+            # refresh list and set to chop run
+            view_window.do_refresh_existing_runs(set_to=chop_key, seq_list=chop_seq_list,
+                                                 plot_selected=False, is_chopped=True)
+
+            view_window.plot_chopped_run(chop_key,
+                                         van_norm=processor.do_vanadium_normalization,
+                                         van_run=van_run_number,
+                                         pc_norm=processor.do_proton_charge_normalization)
 
         elif len(processor.get_run_tuple_list()) == 1:
             # one run situation

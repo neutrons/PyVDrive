@@ -33,6 +33,9 @@ import atomic_data_viewers
 # BANK_GROUP_DICT = {90: [1, 2], 150: [3]}
 
 
+# TODO ---- DAYTIME ---- ASAP: Re-Define all the widgets and event handling methods!  No more confusion with use cases from UI and IDL
+
+
 class GeneralPurposedDataViewWindow(QMainWindow):
     """ Class for general-purposed plot window to view reduced data
     """
@@ -76,7 +79,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # current status
         self._iptsNumber = None
-        self._runNumberList = list()
 
         self._curr_data_key = None  # current (last loaded) workspace name as data key
         self._currRunNumber = None   # run number of single run reduced
@@ -87,8 +89,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._currBank = 1
         self._currUnit = str(self.ui.comboBox_unit.currentText())
 
-        self._slicedRunsList = list()
-        self._choppedSequenceList = None
+        self._single_run_list = list()  # single run number list
+
+        self._chopped_run_list = list()  # chopped run number (parent-data-key) list
+        self._choppedSequenceList = list()
 
         self._canvasDimension = 1
         self._plotType = None
@@ -118,11 +122,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # section: load data
 
         self.ui.pushButton_loadSingleGSAS.clicked.connect(self.do_load_single_run)
-        self.ui.pushButton_loadChoppedGSASSet.clicked.connect(self.do_load_chopped_gsas)
+        self.ui.pushButton_loadChoppedGSASSet.clicked.connect(self.do_load_chopped_runs)
         self.ui.pushButton_browseAnyGSAS.clicked.connect(self.do_browse_local_gsas)
         self.ui.pushButton_refreshList.clicked.connect(self.do_refresh_existing_runs)
+
         self.ui.radioButton_fromArchive.toggled.connect(self.event_load_options)
-        # TEST : whether the handling method is triggered?
         self.ui.radioButton_anyGSAS.toggled.connect(self.event_load_options)
 
         # section: choose to plot
@@ -139,8 +143,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.comboBox_runs.currentIndexChanged.connect(self.evt_select_new_run_number)
         self.ui.comboBox_chopSeq.currentIndexChanged.connect(self.evt_select_new_chopped_child)
 
-        # radio buttons
-        self.ui.radioButton_chooseSingleRun.toggled.connect(self.evt_toggle_run_type)
+        # radio buttons:  this affect radioButton_chooseChopped
+        self.ui.radioButton_plotSingleRun.toggled.connect(self.evt_toggle_run_type)   # w/ radioButton_chooseChopped
 
         # other
         self.ui.pushButton_clearCanvas.clicked.connect(self.do_clear_canvas)
@@ -193,7 +197,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._set_load_from_hdd_enabled(False)
 
         # select single run or chopped run
-        self.ui.radioButton_chooseSingleRun.setChecked(True)
+        self.ui.radioButton_plotSingleRun.setChecked(True)
         self.ui.groupBox_plotSingleRun.setEnabled(True)
         self.ui.groupBox_plotChoppedRun.setEnabled(False)
 
@@ -320,7 +324,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
     def do_load_single_run(self, ipts_number=None, run_number=None, plot=True):
         """
-        Load a single run to reduced data view
+        Load a single run to reduced data view. But not update anything
         Note: this is a high level method
         :param ipts_number:
         :param run_number:
@@ -378,66 +382,73 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # END-IF-ELSE
 
-        # add reduced run to ...
-        data_bank_list = self._myController.project.get_reduced_run_information(data_key=self._curr_data_key)
-        # self.add_reduced_run(self._curr_data_key, data_bank_list, plot_new=plot)
+        # next step
+        if plot:
+            # refresh
+            self.do_refresh_existing_runs(set_to=self._curr_data_key, is_chopped=False)
+
+
+        # # add reduced run to ...
+        # data_bank_list = self._myController.project.get_reduced_run_information(data_key=self._curr_data_key)
+        # # self.add_reduced_run(self._curr_data_key, data_bank_list, plot_new=plot)
 
         return self._curr_data_key
 
-    def do_load_single_gsas(self):
-        """ Load a single GSAS file either from SNS archive (/SNS/VULCAN/...) or from local HDD
-        :return:
-        """
-        is_chopped_data = False
-
-        if self.ui.radioButton_fromArchive.isChecked():
-            # load from archive
-
-
-            try:
-                data_key = self._myController.load_archived_gsas(ipts_number, run_number, is_chopped_data,
-                                                                 data_key='{0}_G'.format(run_number))
-
-            except RuntimeError as run_error:
-                GuiUtility.pop_dialog_error(self, 'Unable to load run {0} from archive due to\n{1}.'
-                                                  ''.format(run_number, run_error))
-                return
-
-        elif self.ui.radioButton_anyGSAS.isChecked():
-            # load from HDD
-            # input is a file: load a single GSAS file, get GSAS file path
-            gsas_path = str(self.ui.lineEdit_gsasFileName.text())
-            if len(gsas_path) == 0:
-                # check
-                GuiUtility.pop_dialog_information(self, 'No GSAS file is given')
-                return
-
-            # check whether it is a directory for a file
-            if os.path.isdir(gsas_path):
-                raise RuntimeError('User given GSAS file name {0} is a directory.'.format(gsas_path))
-            else:
-                data_key = os.path.basename(gsas_path).split('.')[0] + '_H'  # H stands for HDD
-
-            # load the data file and returned as data key
-            data_key = self._myController.load_diffraction_file(file_name=gsas_path, file_type='gsas',
-                                                                data_key=data_key)
-        else:
-            raise RuntimeError('Neither from archive nor from HDD is selected.')
-
-        # END-IF-ELSE
-
-        # set spectra list
-        try:
-            data_bank_list = self._myController.get_reduced_data_info(data_key=data_key, info_type='bank')
-        except RuntimeError as run_err:
-            GuiUtility.pop_dialog_error(self,
-                                        'Unable to get bank information from {} due to {}d'.format(data_key, run_err))
-            return
-
-        # add run number to run number list and plot
-        self.add_reduced_run(data_key, data_bank_list, True)
-
-        return
+    # NOT BEEN CALLED
+    # def do_load_single_gsas(self):
+    #     """ Load a single GSAS file either from SNS archive (/SNS/VULCAN/...) or from local HDD
+    #     :return:
+    #     """
+    #     is_chopped_data = False
+    #
+    #     if self.ui.radioButton_fromArchive.isChecked():
+    #         # load from archive
+    #
+    #
+    #         try:
+    #             data_key = self._myController.load_archived_gsas(ipts_number, run_number, is_chopped_data,
+    #                                                              data_key='{0}_G'.format(run_number))
+    #
+    #         except RuntimeError as run_error:
+    #             GuiUtility.pop_dialog_error(self, 'Unable to load run {0} from archive due to\n{1}.'
+    #                                               ''.format(run_number, run_error))
+    #             return
+    #
+    #     elif self.ui.radioButton_anyGSAS.isChecked():
+    #         # load from HDD
+    #         # input is a file: load a single GSAS file, get GSAS file path
+    #         gsas_path = str(self.ui.lineEdit_gsasFileName.text())
+    #         if len(gsas_path) == 0:
+    #             # check
+    #             GuiUtility.pop_dialog_information(self, 'No GSAS file is given')
+    #             return
+    #
+    #         # check whether it is a directory for a file
+    #         if os.path.isdir(gsas_path):
+    #             raise RuntimeError('User given GSAS file name {0} is a directory.'.format(gsas_path))
+    #         else:
+    #             data_key = os.path.basename(gsas_path).split('.')[0] + '_H'  # H stands for HDD
+    #
+    #         # load the data file and returned as data key
+    #         data_key = self._myController.load_diffraction_file(file_name=gsas_path, file_type='gsas',
+    #                                                             data_key=data_key)
+    #     else:
+    #         raise RuntimeError('Neither from archive nor from HDD is selected.')
+    #
+    #     # END-IF-ELSE
+    #
+    #     # set spectra list
+    #     try:
+    #         data_bank_list = self._myController.get_reduced_data_info(data_key=data_key, info_type='bank')
+    #     except RuntimeError as run_err:
+    #         GuiUtility.pop_dialog_error(self,
+    #                                     'Unable to get bank information from {} due to {}d'.format(data_key, run_err))
+    #         return
+    #
+    #     # add run number to run number list and plot
+    #     self.add_reduced_run(data_key, data_bank_list, True)
+    #
+    #     return
 
     def update_bank_id_combo(self, data_key):
         """ Update the bank ID combo box.
@@ -474,213 +485,315 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def do_load_chopped_gsas(self):
-        """ load chopped GSAS data
+    # Note: replaced by do_loaded_chopped_runs()
+    # def do_load_chopped_gsas(self):
+    #     """ load chopped GSAS data
+    #     :return:
+    #     """
+    #     if self.ui.radioButton_fromArchive.isChecked():
+    #         # load from archive
+    #         # read from input for IPTS and run number
+    #         ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
+    #         run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
+    #
+    #         try:
+    #             is_chopped_data = True
+    #             data_key = self._myController.load_archived_gsas(ipts_number, run_number, is_chopped_data)
+    #         except RuntimeError as run_error:
+    #             GuiUtility.pop_dialog_error(self, 'Unable to load run {0} from archive due to\n{1}.'
+    #                                               ''.format(run_number, run_error))
+    #             return
+    #
+    #         # process chopped data sequence
+    #         seq_list = data_key['chopped sequence']
+    #         self.add_chopped_data_set(ipts_number=ipts_number, run_number=run_number, controller_data_key=data_key)
+    #
+    #     elif self.ui.radioButton_anyGSAS.isChecked():
+    #         # load from HDD
+    #         # input is a directory: load chopped data series
+    #         raise RuntimeError('Figure out how to specify GSAS file path')
+    #         data_key_dict, run_number = self._myController.load_chopped_diffraction_files(gsas_path, None, 'gsas')
+    #
+    #         # a key as run number
+    #         if run_number is None:
+    #             run_number = gsas_path
+    #
+    #         # get workspaces from data key dictionary and add to data management
+    #         diff_ws_list = self.process_loaded_chop_suite(data_key_dict)
+    #         raise NotImplementedError('add_chopped_workspace shall be remove from here!')   # REMOVE!
+    #         self.add_chopped_workspaces(run_number, diff_ws_list, True)
+    #         seg_list = diff_ws_list
+    #
+    #         data_key = None
+    #
+    #
+    #     else:
+    #         # unsupported case
+    #         raise RuntimeError('Neither from archive nor from HDD is selected.')
+    #
+    #     # load and plot GSAS
+    #     # add segments list
+    #     self.ui.comboBox_chopSeq.clear()
+    #     for segment_index in sorted(seg_list):
+    #         self.ui.comboBox_chopSeq.addItem(segment_index)
+    #
+    #     # plot the first workspace!
+    #     raise RuntimeError('It is supposed to plot the first workspace in the chop list!')
+    #
+    #     return
+
+    def update_chopped_run_combo_box(self):
+        """ Update the chopped run's combo box
         :return:
         """
-        if self.ui.radioButton_fromArchive.isChecked():
-            # load from archive
-            # read from input for IPTS and run number
-            ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
-            run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
+        # get chopped runs in the memory (loaded or real time reduced)
+        chopped_run_list = self._myController.get_loaded_runs(chopped=True)  # chop keys
+        print ('[DB...BAT] Found chopped runs: {}'.format(chopped_run_list))
 
-            try:
-                is_chopped_data = True
-                data_key = self._myController.load_archived_gsas(ipts_number, run_number, is_chopped_data)
-            except RuntimeError as run_error:
-                GuiUtility.pop_dialog_error(self, 'Unable to load run {0} from archive due to\n{1}.'
-                                                  ''.format(run_number, run_error))
-                return
+        self._mutexChopRunList = True  # lock the event triggered and handled elsewhere
 
-            # process chopped data sequence
-            seq_list = data_key['chopped sequence']
-            self.add_chopped_data_set(ipts_number=ipts_number, run_number=run_number, controller_data_key=data_key)
-
-        elif self.ui.radioButton_anyGSAS.isChecked():
-            # load from HDD
-            # input is a directory: load chopped data series
-            raise RuntimeError('Figure out how to specify GSAS file path')
-            data_key_dict, run_number = self._myController.load_chopped_diffraction_files(gsas_path, None, 'gsas')
-
-            # a key as run number
-            if run_number is None:
-                run_number = gsas_path
-
-            # get workspaces from data key dictionary and add to data management
-            diff_ws_list = self.process_loaded_chop_suite(data_key_dict)
-            raise NotImplementedError('add_chopped_workspace shall be remove from here!')   # REMOVE!
-            self.add_chopped_workspaces(run_number, diff_ws_list, True)
-            seg_list = diff_ws_list
-
-            data_key = None
-
+        if len(chopped_run_list) == 0:
+            # nothing as being chopped: clear the combo-box in case
+            self.ui.comboBox_choppedRunNumber.clear()
 
         else:
-            # unsupported case
-            raise RuntimeError('Neither from archive nor from HDD is selected.')
+            # set
+            curr_chop_run = str(self.ui.comboBox_choppedRunNumber.currentText())
 
-        # load and plot GSAS
-        # add segments list
-        self.ui.comboBox_chopSeq.clear()
-        for segment_index in sorted(seg_list):
-            self.ui.comboBox_chopSeq.addItem(segment_index)
+            # add the new one
+            self.ui.comboBox_choppedRunNumber.clear()
+            chopped_run_list.sort()
+            for chop_run_i in chopped_run_list:
+                chop_run_i = '{}'.format(chop_run_i)  # cast to string
+                self.ui.comboBox_choppedRunNumber.addItem(chop_run_i)
+                self._chopped_run_list.append(chop_run_i)
 
-        # plot the first workspace!
-        raise RuntimeError('It is supposed to plot the first workspace in the chop list!')
-
-        return
-
-    # TEST - 20180723 - Just implemented
-    def update_chopped_run_combo_box(self, item_name, remove_item):
-        """ Update the combo-box recording all the chopped runs with new workspace/run number/data ID
-        :param item_name: new item name
-        :param remove_item: flag whether the current items in the combo box shall be cleared
-        :return:
-        """
-        # check
-        pyvdrive.lib.datatypeutility.check_string_variable('Chopped run item', item_name)
-        pyvdrive.lib.datatypeutility.check_bool_variable('Flag to remove existing items in chopped run combo-box',
-                                                         remove_item)
-
-        # remove items if required
-        if remove_item:
-            # remove the specified item
-            if item_name not in self._loadedChoppedRunList:
-                GuiUtility.pop_dialog_error(self, 'Run number {0} is not in the combo-box to remove.'
-                                                  ''.format(item_name))
-                return
-
-            # NOTE: _loadedChoppedRunList is always synchronized with comboBox_choppedRunNumber
-            pos_index = self._loadedChoppedRunList.index(item_name)
-            curr_pos = self.ui.comboBox_choppedRunNumber.currentIndex()
-
-            self._mutexChopRunList = True
-            self.ui.comboBox_choppedRunNumber.removeItem(pos_index)
-            self._loadedChoppedRunList.pop(pos_index)
-
-            # if necessary, reset the current position
-            if pos_index <= curr_pos:
-                self.ui.comboBox_choppedRunNumber.setCurrentIndex(curr_pos-1)
-            self._mutexChopRunList = False
-        else:
-            # add item
-            if item_name in self._loadedChoppedRunList:
-                raise RuntimeError('Entry {0} has been in the combo box already.'.format(item_name))
-
-            # insert and keep current position
-            if self.ui.comboBox_choppedRunNumber.count() == 0:
-                # first item, simply add
-                self._loadedChoppedRunList.append(item_name)
-                self._mutexChopRunList = True
-                self.ui.comboBox_choppedRunNumber.addItem(item_name)
-                self._mutexChopRunList = False
-                insert_pos = 0
+            # handle the new index
+            if curr_chop_run != '' and curr_chop_run in self._chopped_run_list:
+                # focus to the original one and no need to change the sequential number
+                combo_index = self._chopped_run_list.index(curr_chop_run)
+                self.ui.comboBox_choppedRunNumber.setCurrentIndex(combo_index)
             else:
-                # other item exits
-                current_item = str(self.ui.comboBox_choppedRunNumber.currentText())
-                print ('[DB..BAT] Current count = {0}, index = {1}, text = {2}'
-                       ''.format(self.ui.comboBox_choppedRunNumber.count(),
-                                 self.ui.comboBox_choppedRunNumber.currentIndex(),
-                                 self.ui.comboBox_choppedRunNumber.currentText()))
+                # need to refresh: set to first one
+                self.ui.comboBox_choppedRunNumber.setCurrentIndex(0)
+                new_chop_run = str(self.ui.comboBox_choppedRunNumber.currentText())
+                seq_list = self._myController.project.get_chopped_sequence(new_chop_run)
 
-                # add new item to list
-                self._loadedChoppedRunList.append(item_name)
-                self._loadedChoppedRunList.sort()
-
-                # get position to insert and position to set
-                insert_pos = self._loadedChoppedRunList.index(item_name)
-                try:
-                    curr_pos = self._loadedChoppedRunList.index(current_item)
-                except ValueError as val_err:
-                    raise RuntimeError('Loaded chopped runs ({}) doe not contain {}. FYI: {}'
-                                       ''.format(self._loadedChoppedRunList, current_item, val_err))
-
-                # insert and set
-                self._mutexChopRunList = True
-                self.ui.comboBox_choppedRunNumber.insert(insert_pos, item_name)
-                self.ui.comboBox_choppedRunNumber.setCurrentIndex(curr_pos)
-                self._mutexChopRunList = False
+                self._mutexChopSeqList = True    # lock
+                self.ui.comboBox_chopSeq.clear()
+                for seq_i in seq_list:
+                    self.ui.comboBox_chopSeq.addItem('{}'.format(seq_i))
+                self.ui.comboBox_chopSeq.setCurrentIndex(0)
+                self._mutexChopSeqList = False   # unlock
             # END-IF-ELSE
-        # END-IF
-
-        return
-
-    def update_single_run_combo_box(self, run_key, remove_item, focus_to_new):
-        """ update the combo box for single run (no chopped).
-        Note: it will give out the signal whether a re-plot is necessary but it won't do the job
-        :param run_key: a string serving as the key to the run. can be the run number or etc
-        :param remove_item: flag for adding or removing item
-        :param focus_to_new: flag to set the current index to newly added term
-        :return:
-        """
-        # check inputs
-        pyvdrive.lib.datatypeutility.check_string_variable('Single run number', run_key)
-        pyvdrive.lib.datatypeutility.check_bool_variable('Flag to remove the specified run number', remove_item)
-
-        # get current index
-        start_combo_index = self.ui.comboBox_runs.currentIndex()
-        start_run_key = str(self.ui.comboBox_runs.currentText())
-        final_combo_index = start_combo_index
-
-        if remove_item:
-            # remove item
-            print ('[DB...BAT...Update Combo (Remove): item name: {0} type {1}'.format(run_key, type(run_key)))
-
-            try:
-                item_index = self._runNumberList.index(run_key)
-            except ValueError as value_err:
-                raise RuntimeError('Unable to locate {0} in single run list due to {1}.'
-                                   ''.format(run_key, value_err))
-            # check again
-            if not str(self.ui.comboBox_runs.itemText(item_index)) == run_key:
-                err_msg = 'Run to remove with key {} must be equal to {}-th item in combo box (which is {} now)' \
-                          ''.format(run_key, item_index, self.ui.comboBox_runs.itemText(item_index))
-                raise NotImplementedError(err_msg)
-
-            self._mutexRunNumberList = True
-            self.ui.comboBox_runs.removeItem(item_index)
-            self._runNumberList.pop(item_index)
-            self._mutexRunNumberList = False
-
-            # check re-focus: reduce 1 if necessary
-            if start_combo_index <= item_index:
-                final_combo_index = start_combo_index - 1
-                re_plot = True
-
-        else:
-            # add the new item
-            print ('[DB...BAT...Update Combo (Add): item name: {0} type {1}'.format(run_key, type(run_key)))
-
-            # check existing?
-            if run_key in self._runNumberList:
-                raise RuntimeError('Entry {0} has been in the combo box already.'.format(run_key))
-
-            # insert and find position
-            self._runNumberList.append(run_key)
-            self._runNumberList.sort()
-            index_to_be = self._runNumberList.index(run_key)
-
-            # add to combo box
-            self._mutexRunNumberList = True
-            self.ui.comboBox_runs.insertItem(index_to_be, run_key)
-            self._mutexRunNumberList = False
-
-            # optionally set current index to the new item
-            if focus_to_new or start_run_key == '':  # new or previously empty combo box
-                final_combo_index = index_to_be
-            else:
-                final_combo_index = self._runNumberList.index(start_run_key)
-                self.ui.comboBox_runs.setCurrentIndex(index_to_be)
-            # END-IF
         # END-IF-ELSE
 
-        # focus the current index
-        self._mutexRunNumberList = True
-        self.ui.comboBox_runs.setCurrentIndex(final_combo_index)
-        self._mutexRunNumberList = False
-        re_plot = str(self.ui.comboBox_runs.currentText()) != start_run_key
+        self._mutexChopRunList = False  # unlock the chopped run boxes
 
-        return re_plot
+        return
+
+    # # TEST - 20180723 - Just implemented
+    # def update_chopped_run_combo_box_old(self, item_name, remove_item):
+    #     """ Update the combo-box recording all the chopped runs with new workspace/run number/data ID
+    #     :param item_name: new item name
+    #     :param remove_item: flag whether the current items in the combo box shall be cleared
+    #     :return:
+    #     """
+    #     # check
+    #     pyvdrive.lib.datatypeutility.check_string_variable('Chopped run item', item_name)
+    #     pyvdrive.lib.datatypeutility.check_bool_variable('Flag to remove existing items in chopped run combo-box',
+    #                                                      remove_item)
+    #
+    #     # remove items if required
+    #     if remove_item:
+    #         # remove the specified item
+    #         if item_name not in self._loadedChoppedRunList:
+    #             GuiUtility.pop_dialog_error(self, 'Run number {0} is not in the combo-box to remove.'
+    #                                               ''.format(item_name))
+    #             return
+    #
+    #         # NOTE: _loadedChoppedRunList is always synchronized with comboBox_choppedRunNumber
+    #         pos_index = self._loadedChoppedRunList.index(item_name)
+    #         curr_pos = self.ui.comboBox_choppedRunNumber.currentIndex()
+    #
+    #         self._mutexChopRunList = True
+    #         self.ui.comboBox_choppedRunNumber.removeItem(pos_index)
+    #         self._loadedChoppedRunList.pop(pos_index)
+    #
+    #         # if necessary, reset the current position
+    #         if pos_index <= curr_pos:
+    #             self.ui.comboBox_choppedRunNumber.setCurrentIndex(curr_pos-1)
+    #         self._mutexChopRunList = False
+    #     else:
+    #         # add item
+    #         if item_name in self._loadedChoppedRunList:
+    #             raise RuntimeError('Entry {0} has been in the combo box already.'.format(item_name))
+    #
+    #         # insert and keep current position
+    #         if self.ui.comboBox_choppedRunNumber.count() == 0:
+    #             # first item, simply add
+    #             self._loadedChoppedRunList.append(item_name)
+    #             self._mutexChopRunList = True
+    #             self.ui.comboBox_choppedRunNumber.addItem(item_name)
+    #             self._mutexChopRunList = False
+    #             insert_pos = 0
+    #         else:
+    #             # other item exits
+    #             current_item = str(self.ui.comboBox_choppedRunNumber.currentText())
+    #             print ('[DB..BAT] Current count = {0}, index = {1}, text = {2}'
+    #                    ''.format(self.ui.comboBox_choppedRunNumber.count(),
+    #                              self.ui.comboBox_choppedRunNumber.currentIndex(),
+    #                              self.ui.comboBox_choppedRunNumber.currentText()))
+    #
+    #             # add new item to list
+    #             self._loadedChoppedRunList.append(item_name)
+    #             self._loadedChoppedRunList.sort()
+    #
+    #             # get position to insert and position to set
+    #             insert_pos = self._loadedChoppedRunList.index(item_name)
+    #             try:
+    #                 curr_pos = self._loadedChoppedRunList.index(current_item)
+    #             except ValueError as val_err:
+    #                 raise RuntimeError('Loaded chopped runs ({}) doe not contain {}. FYI: {}'
+    #                                    ''.format(self._loadedChoppedRunList, current_item, val_err))
+    #
+    #             # insert and set
+    #             self._mutexChopRunList = True
+    #             self.ui.comboBox_choppedRunNumber.insert(insert_pos, item_name)
+    #             self.ui.comboBox_choppedRunNumber.setCurrentIndex(curr_pos)
+    #             self._mutexChopRunList = False
+    #         # END-IF-ELSE
+    #     # END-IF
+    #
+    #     return
+
+    def update_single_run_combo_box(self):
+        """ Update the single run combo-box with current single runs in the memory
+        Changes will be made to
+        (1) run combo box
+        (2) single_run_list
+        :return:
+        """
+        single_runs_list = self._myController.get_loaded_runs(chopped=False)
+        self._single_run_list = list()
+
+        self._mutexRunNumberList = True  # set on the mutex
+
+        if len(single_runs_list) == 0:
+            # no runs: just clear in case
+            self.ui.comboBox_runs.clear()
+
+        else:
+            # current selection
+            current_single_run = str(self.ui.comboBox_runs.currentText()).strip()
+            if current_single_run == '':
+                current_single_run = None
+
+            # single runs
+            single_runs_list.sort()
+
+            # update
+            self.ui.comboBox_runs.clear()
+            for run_number in single_runs_list:
+                print ('[INFO] Add loaded run {} ({})'.format(run_number, type(run_number)))
+
+                # come up an entry name
+                # convert run  number from integer to string as the standard
+                if isinstance(run_number, int):
+                    run_number = '{0}'.format(run_number)
+
+                # add to combo box as the data key that can be used to refer
+                self.ui.comboBox_runs.addItem(run_number)
+                self._single_run_list.append(run_number)  # synchronize single_run_list with combo box
+            # END-FOR
+
+            # re-focus to the previous one
+            if current_single_run != '' and current_single_run in self._single_run_list:
+                combo_index = self._single_run_list.index(current_single_run)
+                self.ui.comboBox_runs.setCurrentIndex(combo_index)
+        # END-IF-ELSE
+
+        # loose it
+        self._mutexRunNumberList = False
+
+        return
+
+    # def update_single_run_combo_box_old(self, run_key, remove_item, focus_to_new):
+    #     """ update the combo box for single run (no chopped).
+    #     Note: it will give out the signal whether a re-plot is necessary but it won't do the job
+    #     :param run_key: a string serving as the key to the run. can be the run number or etc
+    #     :param remove_item: flag for adding or removing item
+    #     :param focus_to_new: flag to set the current index to newly added term
+    #     :return:
+    #     """
+    #     raise RuntimeError('This is a record! Remove!')
+    #     # check inputs
+    #     pyvdrive.lib.datatypeutility.check_string_variable('Single run number', run_key)
+    #     pyvdrive.lib.datatypeutility.check_bool_variable('Flag to remove the specified run number', remove_item)
+    #
+    #     # get current index
+    #     start_combo_index = self.ui.comboBox_runs.currentIndex()
+    #     start_run_key = str(self.ui.comboBox_runs.currentText())
+    #     final_combo_index = start_combo_index
+    #
+    #     if remove_item:
+    #         # remove item
+    #         print ('[DB...BAT...Update Combo (Remove): item name: {0} type {1}'.format(run_key, type(run_key)))
+    #
+    #         try:
+    #             item_index = self._runNumberList.index(run_key)
+    #         except ValueError as value_err:
+    #             raise RuntimeError('Unable to locate {0} in single run list due to {1}.'
+    #                                ''.format(run_key, value_err))
+    #         # check again
+    #         if not str(self.ui.comboBox_runs.itemText(item_index)) == run_key:
+    #             err_msg = 'Run to remove with key {} must be equal to {}-th item in combo box (which is {} now)' \
+    #                       ''.format(run_key, item_index, self.ui.comboBox_runs.itemText(item_index))
+    #             raise NotImplementedError(err_msg)
+    #
+    #         self._mutexRunNumberList = True
+    #         self.ui.comboBox_runs.removeItem(item_index)
+    #         self._runNumberList.pop(item_index)
+    #         self._mutexRunNumberList = False
+    #
+    #         # check re-focus: reduce 1 if necessary
+    #         if start_combo_index <= item_index:
+    #             final_combo_index = start_combo_index - 1
+    #             re_plot = True
+    #
+    #     else:
+    #         # add the new item
+    #         print ('[DB...BAT...Update Combo (Add): item name: {0} type {1}'.format(run_key, type(run_key)))
+    #
+    #         # check existing?
+    #         if run_key in self._runNumberList:
+    #             raise RuntimeError('Entry {0} has been in the combo box already.'.format(run_key))
+    #
+    #         # insert and find position
+    #         self._runNumberList.append(run_key)
+    #         self._runNumberList.sort()
+    #         index_to_be = self._runNumberList.index(run_key)
+    #
+    #         # add to combo box
+    #         self._mutexRunNumberList = True
+    #         self._mutexRunNumberList = False
+    #
+    #         # optionally set current index to the new item
+    #         if focus_to_new or start_run_key == '':  # new or previously empty combo box
+    #             final_combo_index = index_to_be
+    #         else:
+    #             final_combo_index = self._runNumberList.index(start_run_key)
+    #             self.ui.comboBox_runs.setCurrentIndex(index_to_be)
+    #         # END-IF
+    #     # END-IF-ELSE
+    #
+    #     # focus the current index
+    #     self._mutexRunNumberList = True
+    #     self.ui.comboBox_runs.setCurrentIndex(final_combo_index)
+    #     self._mutexRunNumberList = False
+    #     re_plot = str(self.ui.comboBox_runs.currentText()) != start_run_key
+    #
+    #     return re_plot
 
     # def add_data_set(self, ipts_number, run_number, controller_data_key, unit=None):
     #     """
@@ -729,31 +842,33 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param plot_new: flag to focus the combo box to the newly added run and plot
         :return:
         """
-        # check inputs
-        pyvdrive.lib.datatypeutility.check_string_variable('Reduced data key', data_key)
-        pyvdrive.lib.datatypeutility.check_bool_variable('Flag to plot newly added run', plot_new)
+        raise RuntimeError('This method shall be replaced by "refresh()')
 
-        # # set plot new : NOTE that it is not required to plot newly added data even it was empty before
-        # if len(self._runNumberList) == 0:
-        #     # first run to add
-        #     plot_new = True
-
-        # update run combo box without plotting
-        self.update_single_run_combo_box(data_key, remove_item=False, focus_to_new=plot_new)
-        # END-FOR
-
-        # update bank ID box without plotting
-        if plot_new:
-            self.update_bank_id_combo(bank_id_list)
-            pyvdrive.lib.datatypeutility.check_list('Bank ID list', bank_id_list)
-
-            # register?
-            # self._dataIptsRunDict[run_number] = ipts_number, run_number
-            # self._dataIptsRunDict[controller_data_key] = ipts_number, run_number
-
-        # END-FOR
-
-        return
+        # # check inputs
+        # pyvdrive.lib.datatypeutility.check_string_variable('Reduced data key', data_key)
+        # pyvdrive.lib.datatypeutility.check_bool_variable('Flag to plot newly added run', plot_new)
+        #
+        # # # set plot new : NOTE that it is not required to plot newly added data even it was empty before
+        # # if len(self._runNumberList) == 0:
+        # #     # first run to add
+        # #     plot_new = True
+        #
+        # # update run combo box without plotting
+        # self.update_single_run_combo_box(data_key, remove_item=False, focus_to_new=plot_new)
+        # # END-FOR
+        #
+        # # update bank ID box without plotting
+        # if plot_new:
+        #     self.update_bank_id_combo(bank_id_list)
+        #     pyvdrive.lib.datatypeutility.check_list('Bank ID list', bank_id_list)
+        #
+        #     # register?
+        #     # self._dataIptsRunDict[run_number] = ipts_number, run_number
+        #     # self._dataIptsRunDict[controller_data_key] = ipts_number, run_number
+        #
+        # # END-FOR
+        #
+        # return
 
     def set_current_chopped_run(self, pos=None, name=None, chopped_children=None):
         """
@@ -799,6 +914,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param focus_to_it:
         :return:
         """
+        raise NotImplementedError('This shall not be used anymore')
+
         # check inputs... TODO ASAP blabla
         print ('[DB...BAT] Add chopped run... key = {0} ({1}); workspace list = {2}'
                ''.format(workspace_key, type(workspace_key), workspace_name_list))
@@ -811,7 +928,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         new_item_pos = self.update_chopped_run_combo_box(workspace_key, remove_item=False)
 
         # focus on this one and plot
-        self.ui.radioButton_chooseChopped.setChecked(True)
+        self.ui.radioButton_plotChoppedData.setChecked(True)
         self.ui.groupBox_plotSingleRun.setEnabled(False)
         self.ui.groupBox_plotChoppedRun.setEnabled(True)
 
@@ -991,14 +1108,14 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         data_key_list = list()
 
-        if self.ui.radioButton_chooseChopped.isChecked():
+        if self.ui.radioButton_plotChoppedData.isChecked():
             # plot chopped data
             run_number = str(self.ui.comboBox_choppedRunNumber.currentText())
             for p_int in range(self.ui.comboBox_chopSeq.count()):
                 child_key = str(self.ui.comboBox_chopSeq.itemText(p_int))
                 data_key_list.append((run_number, child_key))
             # END-FOR
-        elif self.ui.radioButton_chooseSingleRun.isChecked():
+        elif self.ui.radioButton_plotSingleRun.isChecked():
             # plot all single runs
             for p_int in range(self.ui.comboBox_runs.count()):
                 data_key = str(self.ui.comboBox_runs.itemText(p_int))
@@ -1037,11 +1154,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         min_x, max_x = self._get_plot_x_range_()
 
         # get data key
-        if self.ui.radioButton_chooseSingleRun.isChecked():
+        if self.ui.radioButton_plotSingleRun.isChecked():
             # single run
             # determine the data to reduce
             curr_run_key = str(self.ui.comboBox_runs.currentText())
-        elif self.ui.radioButton_chooseChopped.isChecked():
+        elif self.ui.radioButton_plotChoppedData.isChecked():
             # chopped run
             seq_index = self.ui.comboBox_chopSeq.currentIndex()
             curr_run_key = self._currSlicedWorkspaces[seq_index]
@@ -1169,79 +1286,36 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def do_refresh_existing_runs(self, set_to=None, plot_selected=False, is_chopped=False):
+    def do_refresh_existing_runs(self, set_to=None, is_chopped=False):
         """ refresh the existing runs in the combo box
         :param set_to:
-        :param plot_selected: if set_to is True, then plot the new data if True
+        :param is_chopped: Flag whether it is good to set to chopped data
         :return:
         """
-        # Part 1: single runs
-        single_runs_list = self._myController.get_loaded_runs(chopped=False)
-        if len(single_runs_list) >= 0:
-            # current selection
-            current_single_run = str(self.ui.comboBox_runs.currentText()).strip()
-            if current_single_run == '':
-                current_single_run = None
+        datatypeutility.check_bool_variable('Flag to plot currently select data', plot_selected)
+        datatypeutility.check_bool_variable('Flag to indicate whether the next will be set to chopped runs'
+                                            'single run', is_chopped)
 
-            # single runs
-            single_runs_list.sort()
+        # Update single runs
+        self.update_single_run_combo_box()
 
-            # update
-            for run_number in single_runs_list:
-                print ('[INFO] Loaded run {} ({})'.format(run_number, type(run_number)))
-                # convert run  number from integer to string as the standard
-                if isinstance(run_number, int):
-                    run_number = '{0}'.format(run_number)
-                # if not existed, then update the single run combo-box
-                if run_number not in self._runNumberList:
-                    self.update_single_run_combo_box(run_number, False, False)
-                    # END-IF
-            # END-IF
+        # Update chopped runs
+        self.update_chopped_run_combo_box()
 
-            # re-focus back to original one
-            self._mutexRunNumberList = True
-            if current_single_run is None or is_chopped:
-                # no set_to or set_to is for chopped
-                new_pos = 0
-            elif set_to is not None:
-                # set to an existing single run
-                new_pos = self._runNumberList.index(set_to)
-            else:
-                new_pos = self._runNumberList.index(current_single_run)
-            self.ui.comboBox_runs.setCurrentIndex(new_pos)
-            self._mutexRunNumberList = False
-        # END-IF
+        # re-focus back to original one
+        if set_to is not None and not is_chopped:
+            # need to update to the
+            self.set_plot_mode(single_run=True, plot=False)
+            new_single_index = self._single_run_list.index(set_to)
+            self.ui.comboBox_runs.setCurrentIndex(new_single_index)  # this will trigger the event to plot!
 
-        # Part 2: chopped runs
-        chopped_run_list = self._myController.get_loaded_runs(chopped=True)  # chop keys
-        if len(chopped_run_list) > 0:
-            # current chopped run
-            curr_chop_run = str(self.ui.comboBox_choppedRunNumber.currentText())
+        elif set_to is not None and is_chopped:
+            # need to update the focus to chopped run and plot
+            self.set_plot_mode(single_run=False, plot=False)
+            new_chop_index = self._chopped_run_list.index(set)
+            self.ui.comboBox_choppedRunNumber.setCurrentIndex(new_chop_index)  # this will trigger the event to plot
 
-            # refresh from Project for all chopped runs loaded or reduced
-            print ('[DB...BAT] Found chop key {}'.format(chopped_run_list))
-
-            self._mutexChopRunList = True  # turn on mutex
-            self.ui.comboBox_choppedRunNumber.clear()
-            for chop_key in sorted(chopped_run_list):
-                # add the combobox
-                self.ui.comboBox_choppedRunNumber.addItem('{}'.format(chop_key))
-                self._slicedRunsList.append(chop_key)
-            # END-FOR
-
-            # shall I do an explicit set?
-            if set_to is None or not is_chopped or (is_chopped and set_to == curr_chop_run):
-                # not set to OR set to for single run OR same item
-                new_combo_index = chopped_run_list.index(curr_chop_run)
-                self.ui.comboBox_choppedRunNumber.setCurrentIndex(new_combo_index)
-
-            self._mutexChopRunList = False  # turn off mutex
-
-            print ('Set to = {}'.format(set_to))
-            if is_chopped and set_to is not None and set_to != curr_chop_run:
-                new_comob_index = chopped_run_list.index(set_to)
-                self.ui.comboBox_choppedRunNumber.setCurrentIndex(new_comob_index)
-        # END-IF
+        # END
 
         return
 
@@ -1286,11 +1360,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             if sliced_run_index < 0:
                 return
 
-            run_number, slice_id = self._slicedRunsList[sliced_run_index]
+            run_number, slice_id = self._chopped_run_list[sliced_run_index]
         except IndexError as index_err:
             err_msg = 'Current index = {}.  Stored sliced runs list = {}: {}' \
                       ''.format(self.ui.comboBox_choppedRunNumber.currentIndex(),
-                                self._slicedRunsList, index_err)
+                                self._chopped_run_list, index_err)
             raise IndexError(err_msg)
 
         if (run_number, slice_id) in self._choppedRunDict:
@@ -1416,20 +1490,27 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     def evt_toggle_run_type(self):
-        """
-        toggle the group boxes for reduced runs
+        """ Change between plotting single run or chopped run
         :return:
         """
-        self.ui.groupBox_plotSingleRun.setEnabled(self.ui.radioButton_chooseSingleRun.isChecked())
-        self.ui.groupBox_plotChoppedRun.setEnabled(self.ui.radioButton_chooseChopped.isChecked())
+        self.ui.groupBox_plotSingleRun.setEnabled(self.ui.radioButton_plotSingleRun.isChecked())
+        self.ui.groupBox_plotChoppedRun.setEnabled(self.ui.radioButton_plotChoppedData.isChecked())
 
-        # set the run number and etc
-        if self.ui.radioButton_chooseChopped.isChecked():
-            print ('Selected chopped run: {}'.format(self.ui.comboBox_choppedRunNumber.currentText()))
-            print ('Current chopped data: {}'.format(self._currSlicedRunNumber))
-
-            self.update_slice_sequence_widgets(mandatory_load=True)
-        # END-IF
+        # # set the run number and etc
+        # if self.ui.radioButton_plotChoppedData.isChecked():
+        #     # plot chopped run in single mode
+        #     self.plot_
+        #
+        #
+        #
+        #     print ('Selected chopped run: {}'.format(self.ui.comboBox_choppedRunNumber.currentText()))
+        #     print ('Current chopped data: {}'.format(self._currSlicedRunNumber))
+        #
+        #     self.update_slice_sequence_widgets(mandatory_load=True)
+        # else:
+        #     # plot single run
+        #     raise NotImplementedError('Implement ASAP')
+        # # END-IF
 
         return
 
@@ -1499,41 +1580,42 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # assert isinstance(controller, VDriveAPI)
         self._myController = controller
 
-        # Set the reduced runs
-        reduced_run_number_list = self._myController.get_loaded_runs(chopped=False)
-        if len(reduced_run_number_list) > 0:
-            reduced_run_number_list.sort()
-            # set up the combo box
-            self.ui.comboBox_runs.clear()
-            for index, run_number in enumerate(reduced_run_number_list):
-                data_key = '{0}'.format(run_number)
-                print ('[DB...BAT] Added run: {0} ({1}) with data key {2}'
-                       ''.format(run_number, type(run_number), data_key))
-                self.update_single_run_combo_box(data_key, remove_item=False,
-                                                 focus_to_new=(index == 0))
-                self.update_bank_id_combo(data_key=data_key)
-            # END-FOR
+        self.do_refresh_existing_runs(set_to=None)
 
-            # plot
-            self.do_plot_diffraction_data()
-        # END-IF
-
-        # also load reduced chopped runs
-        chopped_run_number_list = self._myController.get_loaded_runs(chopped=True)
-        self._slicedRunsList = list()
-        if len(chopped_run_number_list) > 0:
-            chopped_run_number_list.sort()
-            # set up the combo box
-            self.ui.comboBox_choppedRunNumber.clear()
-            for run_number, slice_key in chopped_run_number_list:
-                self.ui.comboBox_choppedRunNumber.addItem('{}_{}'.format(run_number, slice_key))
-                self._slicedRunsList.append((run_number, slice_key))
-            # END-FOR
-
-            # switch radio button if possible
-            if len(reduced_run_number_list) == 0:
-                self.ui.radioButton_chooseChopped.setChecked(True)
-        # END-IF
+        # # Set the reduced runs
+        # reduced_run_number_list = self._myController.get_loaded_runs(chopped=False)
+        # if len(reduced_run_number_list) > 0:
+        #     reduced_run_number_list.sort()
+        #     # set up the combo box
+        #     self.ui.comboBox_runs.clear()
+        #     for index, run_number in enumerate(reduced_run_number_list):
+        #         data_key = '{0}'.format(run_number)
+        #         print ('[DB...BAT] Added run: {0} ({1}) with data key {2}'
+        #                ''.format(run_number, type(run_number), data_key))
+        #         self.update_single_run_combo_box()
+        #         self.update_bank_id_combo(data_key=data_key)
+        #     # END-FOR
+        #
+        #     # plot
+        #     self.do_plot_diffraction_data()
+        # # END-IF
+        #
+        # # also load reduced chopped runs
+        # chopped_run_number_list = self._myController.get_loaded_runs(chopped=True)
+        # self._chopped_run_list = list()
+        # if len(chopped_run_number_list) > 0:
+        #     chopped_run_number_list.sort()
+        #     # set up the combo box
+        #     self.ui.comboBox_choppedRunNumber.clear()
+        #     for run_number, slice_key in chopped_run_number_list:
+        #         self.ui.comboBox_choppedRunNumber.addItem('{}_{}'.format(run_number, slice_key))
+        #         self._chopped_run_list.append((run_number, slice_key))
+        #     # END-FOR
+        #
+        #     # switch radio button if possible
+        #     if len(reduced_run_number_list) == 0:
+        #         self.ui.radioButton_plotChoppedData.setChecked(True)
+        # # END-IF
 
         return
 
@@ -1641,7 +1723,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
     def plot_single_run(self, data_key, van_norm, van_run, pc_norm):
         # check existence of data
-
         bank_id = 1
 
         entry_key = data_key, bank_id, self._currUnit
@@ -1671,7 +1752,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def plot_1d_diffraction(self, data_key, bank_id, label='', title='', clear_previous=False, color=None):
+    # NOTE: It will be used to replace all plot_diffraction_data
+    def plot_1d_diffraction(self, data_key, bank_id, label='', title='', clear_previous=False, color=None,
+                            x_limit=None):
         """
         plot a spectrum in a workspace
         :exception: RuntimeError if the specified data and bank ID does not exist
@@ -1683,6 +1766,29 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param color:
         :return:
         """
+        if False:
+            pass
+        # # check input
+        #     assert isinstance(data_key, str) or isinstance(data_key, tuple),\
+        #         'Data key {0} must be a string or a tuple (for chopped) but not a {1}.'.format(data_key, str(data_key))
+        #
+        #     print ('[DB...BAT] Reduction View:  Plot By Data Key = {} of Type {}'.format(data_key, type(data_key)))
+        #
+        #     # plot
+        #     for index, bank_id in enumerate(bank_id_list):
+        #         if index == 0:
+        #             clear_canvas = not over_plot
+        #         else:
+        #             clear_canvas = False
+        #         self.plot_1d_diffraction(data_key, bank_id, label='Bank {0}'.format(bank_id),
+        #                                  title='data key: {0}'.format(data_key),
+        #                                  clear_previous=clear_canvas)
+        #     # END-FOR
+
+        #         min_x, max_x = x_limit
+        #
+        #     self._currentPlotSampleLogs = False
+
         # check existence of data
         entry_key = data_key, bank_id, self._currUnit
 
@@ -1707,13 +1813,54 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                                       over_plot=not clear_previous,
                                                                       run_id=data_key, bank_id=bank_id,
                                                                       chop_tag=None,
-                                                                      label=label)
+                                                                      label='Bank {}'.format(bank_id),
+                                                                      line_color=color)
+
+        if title is None:
+            title = 'Data (key): {0}'.format(data_key)
         self.ui.graphicsView_mainPlot.set_title(title=title)
+
+        # set X limit
+        if x_limit is None:
+            if self._currUnit == 'TOF':
+                min_x = 3000.
+                max_x = 30000.
+            elif self._currUnit == 'dSpacing':
+                min_x = 0.3
+                max_x = 5.0
+            else:
+                raise NotImplementedError('Unit {} is not defined to support default X-limit'.format(self._currUnit))
+        else:
+            min_x, max_x = x_limit
+        self.ui.graphicsView_mainPlot.setXYLimit(xmin=min_x, xmax=max_x)
 
         # deal with Y axis
         self.ui.graphicsView_mainPlot.auto_rescale()
 
         return line_id
+
+    def plot_chopped_run(self, chop_key, seq_list, van_norm, van_run, pc_norm):
+                                         van_norm=processor.do_vanadium_normalization,
+                                         van_run=van_run_number,
+                                         pc_norm=processor.do_proton_charge_normalization
+
+
+
+
+                         run_number, chop_sequence, bank_id_list,
+                         vanadium_run_number=None, proton_charge_normalization=False, chopped_data_dir=None):
+
+
+        # pop out 2D contour plots
+        for bank_id in bank_id_list:
+            window_i = Simple2DViewer(bank_id)
+            window_i.show()
+            window_i.plot(array_x, array_y)
+            self._2d_plot_dict[bank_id] = window_i
+
+        # pop out 3D line plot
+        for
+
 
     def plot_chopped_data_2d(self, run_number, chop_sequence, bank_id, bank_id_from_1=True, chopped_data_dir=None,
                              vanadium_run_number=None, proton_charge_normalization=False):
@@ -1798,49 +1945,49 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def plot_by_data_key(self, data_key, bank_id_list, over_plot, x_limit):
-        """ plot reduced data including loaded GSAS or reduced in memory
-        :param data_key: str (single run), tuple (chopped run)
-        :param bank_id_list:
-        :param over_plot:
-        :param x_limit:
-        :return:
-        """
-        # check input
-        assert isinstance(data_key, str) or isinstance(data_key, tuple),\
-            'Data key {0} must be a string or a tuple (for chopped) but not a {1}.'.format(data_key, str(data_key))
-
-        print ('[DB...BAT] Reduction View:  Plot By Data Key = {} of Type {}'.format(data_key, type(data_key)))
-
-        # plot
-        for index, bank_id in enumerate(bank_id_list):
-            if index == 0:
-                clear_canvas = not over_plot
-            else:
-                clear_canvas = False
-            self.plot_1d_diffraction(data_key, bank_id, label='Bank {0}'.format(bank_id),
-                                     title='data key: {0}'.format(data_key),
-                                     clear_previous=clear_canvas)
-        # END-FOR
-
-        if x_limit is None:
-            if self._currUnit == 'TOF':
-                min_x = 3000.
-                max_x = 30000.
-            elif self._currUnit == 'dSpacing':
-                min_x = 0.3
-                max_x = 5.0
-            else:
-                print ('[ERROR] Unit {} is not defined to support default X-limit'.format(self._currUnit))
-                min_x = None
-                max_x = None
-        else:
-            min_x, max_x = x_limit
-        self.ui.graphicsView_mainPlot.setXYLimit(xmin=min_x, xmax=max_x)
-
-        self._currentPlotSampleLogs = False
-
-        return
+    # def plot_by_data_key(self, data_key, bank_id_list, over_plot, x_limit):
+    #     """ plot reduced data including loaded GSAS or reduced in memory
+    #     :param data_key: str (single run), tuple (chopped run)
+    #     :param bank_id_list:
+    #     :param over_plot:
+    #     :param x_limit:
+    #     :return:
+    #     """
+    #     # check input
+    #     assert isinstance(data_key, str) or isinstance(data_key, tuple),\
+    #         'Data key {0} must be a string or a tuple (for chopped) but not a {1}.'.format(data_key, str(data_key))
+    #
+    #     print ('[DB...BAT] Reduction View:  Plot By Data Key = {} of Type {}'.format(data_key, type(data_key)))
+    #
+    #     # plot
+    #     for index, bank_id in enumerate(bank_id_list):
+    #         if index == 0:
+    #             clear_canvas = not over_plot
+    #         else:
+    #             clear_canvas = False
+    #         self.plot_1d_diffraction(data_key, bank_id, label='Bank {0}'.format(bank_id),
+    #                                  title='data key: {0}'.format(data_key),
+    #                                  clear_previous=clear_canvas)
+    #     # END-FOR
+    #
+    #     if x_limit is None:
+    #         if self._currUnit == 'TOF':
+    #             min_x = 3000.
+    #             max_x = 30000.
+    #         elif self._currUnit == 'dSpacing':
+    #             min_x = 0.3
+    #             max_x = 5.0
+    #         else:
+    #             print ('[ERROR] Unit {} is not defined to support default X-limit'.format(self._currUnit))
+    #             min_x = None
+    #             max_x = None
+    #     else:
+    #         min_x, max_x = x_limit
+    #     self.ui.graphicsView_mainPlot.setXYLimit(xmin=min_x, xmax=max_x)
+    #
+    #     self._currentPlotSampleLogs = False
+    #
+    #     return
 
     # TESTME - This is refactored recently
     def plot_multiple_runs_2d(self, ws_key_list, bank_id, target_unit):

@@ -25,8 +25,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>338</width>
-         <height>998</height>
+         <width>303</width>
+         <height>996</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout_9">
@@ -329,7 +329,7 @@
              <item row="0" column="0">
               <layout class="QVBoxLayout" name="verticalLayout_7">
                <item>
-                <widget class="QRadioButton" name="radioButton_chooseSingleRun">
+                <widget class="QRadioButton" name="radioButton_plotSingleRun">
                  <property name="maximumSize">
                   <size>
                    <width>18</width>
@@ -486,7 +486,7 @@
              <item row="1" column="0">
               <layout class="QVBoxLayout" name="verticalLayout_10">
                <item>
-                <widget class="QRadioButton" name="radioButton_chooseChopped">
+                <widget class="QRadioButton" name="radioButton_plotChoppedData">
                  <property name="maximumSize">
                   <size>
                    <width>18</width>
@@ -945,7 +945,7 @@
      <x>0</x>
      <y>0</y>
      <width>1479</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
