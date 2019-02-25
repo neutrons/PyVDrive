@@ -977,11 +977,19 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         datatypeutility.check_string_variable('Target unit (can be None)', target_unit, None)
     datatypeutility.check_int_variable('Starting bank ID (min Bank ID value)', start_bank_id, (0, None))
 
-    if workspace_does_exist(workspace_name) is False:
+    if not workspace_does_exist(workspace_name):
         raise RuntimeError('Workspace %s does not exist.' % workspace_name)
 
     # check bank ID not being None
+    if is_a_workspace(workspace_name):
+        # grouping workspace, then choose the right one
+        ws_group = retrieve_workspace(workspace_name)
+        if bank_id is None:
+            raise RuntimeError('Bank ID None does not work with {} as a WorkspaceGroup'.format(workspace_name))
+        workspace_name = ws_group[bank_id-1]
+        bank_id = 1
     workspace = retrieve_workspace(workspace_name)
+
     if bank_id is not None:
         # single bank
         datatypeutility.check_int_variable('Bank ID', bank_id, (1, None))

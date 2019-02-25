@@ -85,15 +85,16 @@ def test_main():
     """
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
-    # test_archive_single_run(command_tester)
+    test_archive_single_run(command_tester)
 
-    test_case_archive_chopped(command_tester)
+    # test_case_archive_single_normalize(command_tester)
+
+    # test_case_archive_chopped(command_tester)
 
     # test_case_archive(command_tester)
     #
     # test_case_archive_chopped(command_tester)
     #
-    # test_case_archive_single_normalize(command_tester)
     #
     # test_case_reduce_view(command_tester)
     #

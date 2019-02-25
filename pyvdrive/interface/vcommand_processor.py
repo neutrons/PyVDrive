@@ -341,13 +341,12 @@ class VdriveCommandProcessor(object):
             chop_key = view_window.do_load_chopped_runs(ipts_number, run_number,
                                                         chop_seq_list)
 
-            print ('[DB...BAT] chop_key: {}'.format(chop_key))
+            print ('[DB...BAT] chop_key: {} seq list: {}'.format(chop_key, chop_seq_list))
 
             # refresh list and set to chop run
-            view_window.do_refresh_existing_runs(set_to=chop_key, seq_list=chop_seq_list,
-                                                 plot_selected=False, is_chopped=True)
+            view_window.do_refresh_existing_runs(set_to=chop_key, is_chopped=True)
 
-            view_window.plot_chopped_run(chop_key,
+            view_window.plot_chopped_run(chop_key, chop_seq_list,
                                          van_norm=processor.do_vanadium_normalization,
                                          van_run=van_run_number,
                                          pc_norm=processor.do_proton_charge_normalization)
@@ -441,7 +440,7 @@ class VdriveCommandProcessor(object):
                 #     view_window.plot_multiple_runs_2d(bank_id=1, bank_id_from_1=True)
                 # # END-IF-ELSE
                 # END-IF-ELSE (chopped or single run)
-
+        # END-DISABLED
 
         # write out the peak parameters
         if processor.do_calculate_peak_parameter:

@@ -824,6 +824,51 @@ class ProjectManager(object):
 
         return ipts_dict
 
+    def get_chopped_sequence(self, chop_data_key):
+        """
+
+        :param chop_data_key:
+        :return:
+        """
+        # TODO - TONIGHT 5 - Clean!
+
+        if chop_data_key.isdigit():
+            chop_data_key = int(chop_data_key)
+
+        print (self._chopped_data_dict.keys())
+        print (chop_data_key, type(chop_data_key))
+        print (chop_data_key in self._chopped_data_dict)
+        print (self._chopped_data_dict[chop_data_key])
+
+        return sorted(self._chopped_data_dict[chop_data_key].keys())
+
+    def get_chopped_sequence_data(self, chop_data_key, chop_sequence):
+        """
+
+        :param chop_data_key:
+        :return:
+        """
+        # TODO - TONIGHT 5 - Clean!
+
+        if isinstance(chop_data_key, str) and chop_data_key.isdigit():
+            chop_data_key = int(chop_data_key)
+
+        print (self._chopped_data_dict.keys())
+        print (chop_data_key, type(chop_data_key))
+        print (chop_data_key in self._chopped_data_dict)
+
+        if chop_sequence not in self._chopped_data_dict[chop_data_key]:
+            print ('{} does not have {}-th'.format(chop_data_key, chop_data_key))
+            return None
+
+        print (self._chopped_data_dict[chop_data_key][chop_sequence])
+
+        print (type(self._chopped_data_dict[chop_data_key][chop_sequence]))
+
+        ws_name = self._chopped_data_dict[chop_data_key][chop_sequence][0]
+
+        return ws_name
+
     def get_loaded_chopped_reduced_runs(self):
         """
         get the runs that are loaded as chopped data from SNS archive or HDD
