@@ -85,17 +85,20 @@ def test_main():
     """
     Passed = False
     Next = False
+    Now = True
 
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
+    if Now:
+        test_archive_single_run(command_tester)
+
     if Passed:
         # no need to test now
-        test_archive_single_run(command_tester)
+        test_case_archive_chopped(command_tester)
 
     if Next:
         test_case_archive_single_normalize(command_tester)
 
-    test_case_archive_chopped(command_tester)
 
     # test_case_archive(command_tester)
     #
