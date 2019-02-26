@@ -25,8 +25,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>338</width>
-         <height>998</height>
+         <width>337</width>
+         <height>996</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout_9">
@@ -798,16 +798,6 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="11">
-           <widget class="QPushButton" name="pushButton_normByCurrent">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Normalize by proton charge&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Normalize By Current</string>
-            </property>
-           </widget>
-          </item>
           <item row="1" column="8">
            <widget class="QLineEdit" name="lineEdit_vanRun"/>
           </item>
@@ -815,7 +805,7 @@
            <widget class="QPushButton" name="pushButton_clearCanvas">
             <property name="font">
              <font>
-              <pointsize>10</pointsize>
+              <pointsize>13</pointsize>
              </font>
             </property>
             <property name="text">
@@ -931,7 +921,7 @@
      <x>0</x>
      <y>0</y>
      <width>1479</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

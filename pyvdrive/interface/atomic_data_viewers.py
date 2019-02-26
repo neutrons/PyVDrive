@@ -52,13 +52,19 @@ class AtomicReduced1DViewer(QMainWindow):
 
         return
 
-    def plot_data(self, vec_x, vec_y):
-
-        self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit='dSapcing',
-                                                                      over_plot=False,
-                                                                      run_id='ID', bank_id=1,
-                                                                      chop_tag=None,
-                                                                      label='whatever')
+    def plot_data(self, vec_x, vec_y, data_key, unit, bank_id):
+        """ Plot 1D diffraction data
+        :param vec_x:
+        :param vec_y:
+        :param data_key: data key
+        :param unit: Unit (just as information)
+        :param bank_id: bank ID (just as information)
+        :return:
+        """
+        self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y),
+                                                            unit=unit, over_plot=False,
+                                                            run_id=data_key, bank_id=bank_id,
+                                                            chop_tag=None, label='{} {}'.format(data_key, bank_id))
 
         return
 

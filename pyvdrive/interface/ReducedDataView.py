@@ -29,6 +29,7 @@ from pyvdrive.interface.gui.generalrunview import GeneralRunView
 import pyvdrive.lib.datatypeutility
 from pyvdrive.lib import datatypeutility
 import atomic_data_viewers
+from gui.samplelogview import LogGraphicsView
 
 # BANK_GROUP_DICT = {90: [1, 2], 150: [3]}
 
@@ -98,6 +99,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._mutexChopRunList = False
         self._mutexChopSeqList = False
         self._mutexBankIDList = False
+        self._mutex_sample_logs = False
 
         # about vanadium process
         self._vanadiumFWHM = None
@@ -127,7 +129,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.comboBox_chopSeq.currentIndexChanged.connect(self.evt_plot_different_chopped_sequence)
 
         # section: plot sample log
-        self.ui.pushButton_loadLogs.clicked.connect()   # TODO - TONIGHT 1 - ASAP
+        self.ui.pushButton_loadLogs.clicked.connect(self.do_load_sample_log)
         self.ui.pushButton_plotSampleLog.clicked.connect(self.do_plot_sample_logs)
 
         # plot related
@@ -159,6 +161,12 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.graphicsView_mainPlot = GeneralRunView(self)
         graphicsView_mainPlot_layout.addWidget(self.ui.graphicsView_mainPlot)
 
+        # sample log view
+        temp_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_sampleLogs.setLayout(temp_layout)
+        self.ui.graphicsView_logPlot = LogGraphicsView(self)
+        temp_layout.addWidget(self.ui.graphicsView_logPlot)
+
         return
 
     def _init_widgets(self):
@@ -176,7 +184,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.comboBox_spectraList.clear()
         for bank_id in self._bankIDList:
             self.ui.comboBox_spectraList.addItem('{0}'.format(bank_id))
-        self.ui.comboBox_spectraList.addItem('All Banks')
 
         # read-only line edit
         self.ui.lineEdit_gsasFileName.setEnabled(False)
@@ -400,6 +407,64 @@ class GeneralPurposedDataViewWindow(QMainWindow):
     #     self.add_reduced_run(data_key, data_bank_list, True)
     #
     #     return
+
+    def do_load_sample_log(self):
+        """
+        Load sample logs (it refers to VDrivePlot.load_sample_run()
+        :return:
+        """
+        try:
+            ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
+            run_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
+        except RuntimeError as run_err:
+            GuiUtility.pop_dialog_error(self,
+                                        'IPTS and run number must be specified for viewing sample logs: {}'
+                                        ''.format(run_err))
+            return
+
+        # Load NeXus (meta only)
+        try:
+            # load workspace with meta data only (return workspace name)
+            meta_data_key = self._myController.load_nexus_file(ipts_number=ipts_number, run_number=run_number,
+                                                               file_name=None, meta_data_only=True)
+        except RuntimeError as run_err:
+            GuiUtility.pop_dialog_error(self, 'Unable to load Meta data due to {}'.format(run_err))
+            return
+
+        # get samples
+        log_name_list = self._myController.get_sample_log_names(run_number, True)
+
+        # update
+        self.update_sample_log_list(log_name_list, reset_plot=True)
+
+        return
+
+    def update_sample_log_list(self, log_name_list, reset_plot=True):
+        """
+        update (or say, reset) the sample log list
+        :param log_name_list:
+        :return:
+        """
+        # lock the event handling
+        self._mutex_sample_logs = True  # lock
+
+        # clear previous
+        self.ui.comboBox_sampleLogsList_x.clear()
+        self.ui.comboBox_sampleLogsList_y.clear()
+
+        # clear image
+        self.ui.graphicsView_logPlot.reset()
+
+        # add log names
+        self.ui.comboBox_sampleLogsList_x.addItem('Time (s)')   # add time for X
+
+        for sample_log_name in log_name_list:
+            self.ui.comboBox_sampleLogsList_x.addItem(sample_log_name)
+            self.ui.comboBox_sampleLogsList_y.addItem(sample_log_name)
+
+        self._mutex_sample_logs = False  # unlock
+
+        return
 
     def update_bank_id_combo(self, data_key):
         """ Update the bank ID combo box.
@@ -1008,6 +1073,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         Normalize by current/proton charge if the reduced run is not.
         :return:
         """
+        # TODO - VERDICT - This method will not be provided in UI.
         # TODO - TONIGHT 4 - Implement ASAP
         raise RuntimeError('This shall be refactored seriously')
         # TEST - 20180730 - Refactored
@@ -1171,21 +1237,35 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     def do_plot_prev_chopped(self):
-        # TODO TONIGHT - 4
-        # option for chopping data
+        """
+        Plot previous chopped sequence
+        :return:
+        """
         current_chop_index = self.ui.comboBox_chopSeq.currentIndex()
-        current_chop_index += 1
-        if current_chop_index >= self.ui.comboBox_chopSeq.count():
-            # already the last one in the list, go back to first one
-            current_chop_index = 0
+        current_chop_index -= 1
+        if current_chop_index < 0:
+            # already the first one in the list, go back to last o ne
+            current_chop_index = self.ui.comboBox_chopSeq.count() - 1
+
         # reset the combobox index. It will trigger an event
         self.ui.comboBox_chopSeq.setCurrentIndex(current_chop_index)
 
         return
 
     def do_plot_next_chopped(self):
-        # TODO TONIGHT - 4
-        GuiUtility.pop_dialog_error(self, 'ASAP')
+        """
+        Plot the next chopped sequence reduced data
+        :return:
+        """
+        current_chop_index = self.ui.comboBox_chopSeq.currentIndex()
+        current_chop_index += 1
+        if current_chop_index >= self.ui.comboBox_chopSeq.count():
+            # already the last one in the list, go back to first one
+            current_chop_index = 0
+
+        # reset the combobox index. It will trigger an event
+        self.ui.comboBox_chopSeq.setCurrentIndex(current_chop_index)
+
         return
 
     def do_plot_sample_logs(self):
@@ -1393,8 +1473,19 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         if self._mutexBankIDList:
             return
 
-        # TODO - TONIGHT - Implement a method to plot select bank on main window
-        self.do_plot_diffraction_data(main_only=True)
+        # new bank ID
+        self._currBank = int(self.ui.comboBox_spectraList.currentText())
+
+        if self.ui.radioButton_chooseSingleRun.isChecked():
+            # plot single run: as it is a change of bank. no need to re-process data
+            self.plot_single_run(data_key=self._curr_data_key, bank_id=self._currBank,
+                                 van_norm=None, van_run=None, pc_norm=None, main_only=True)
+
+        else:
+            # chopped data
+            self.plot_chopped_run(data_key=self._curr_chop_data_key, bank_id=self._currBank,
+                                  seq_list=None, main_only=True,
+                                  van_norm=None, van_run=None, pc_norm=None)
 
         return
 
@@ -1448,7 +1539,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         handling event as radioButton choose diffraction to plot or choose sample log to plot
         :return:
         """
-        if self.ui.radioButton_chooseDiffraction.isChecked():
+        if self.ui.radioButton_chooseSingleRun.isChecked():
             plot_diffraction = True
         else:
             plot_diffraction = False
@@ -1689,11 +1780,22 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return run_number_list
 
-    def plot_single_run(self, data_key, van_norm, van_run, pc_norm):
-        # check existence of data
-        bank_id = 1
+    def plot_single_run(self, data_key, van_norm, van_run, pc_norm, bank_id=1, main_only=False):
+        """
+        Plot a single run
+        :param data_key:
+        :param bank_id:
+        :param van_norm:
+        :param van_run:
+        :param pc_norm:
+        :param main_only:
+        :return:
+        """
+        # check inputs
+        datatypeutility.check_int_variable('Bank ID', bank_id, (1, 99))
 
-        entry_key = data_key, bank_id, self._currUnit
+        # get the entry index for the data
+        # entry_key = data_key, bank_id, self._currUnit
         vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=data_key, bank_id=bank_id,
                                                          unit=self._currUnit)
         line_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit=self._currUnit,
@@ -1701,22 +1803,20 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                                       run_id=data_key, bank_id=bank_id,
                                                                       chop_tag=None,
                                                                       label='{}, {}'.format(data_key, bank_id))
-        self.ui.graphicsView_mainPlot.set_title(title='whatever title')
+        self.ui.graphicsView_mainPlot.set_title(title='{}'.format(data_key))
 
         # deal with Y axis
         self.ui.graphicsView_mainPlot.auto_rescale()
 
         # pop the child atomic window
-        for ibank in range(3):
-            child_window = self.launch_single_run_view()
-            vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=data_key, bank_id=ibank+1,
-                                                             unit=self._currUnit)
-            line_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit=self._currUnit,
-                                                                          over_plot=False,
-                                                                          run_id=data_key, bank_id=bank_id,
-                                                                          chop_tag=None,
-                                                                          label='{}, {}'.format(data_key, bank_id))
-            child_window.plot_data(vec_x, vec_y)
+        if not main_only:
+            for bank_id in range(1, 4):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
+                child_window = self.launch_single_run_view()
+                vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=data_key, bank_id=bank_id,
+                                                                 unit=self._currUnit)
+                child_window.plot_data(vec_x, vec_y, data_key, self._currUnit, bank_id)
+            # END-FOR
+        # END-IF
 
         return
 
@@ -2154,40 +2254,40 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def set_bank_ids(self, bank_id_list, bank_id=None):
-        """
-
-        :param bank_id_list:
-        :return:
-        """
-        # lock it
-        self._mutexBankIDList = True
-
-        # get current index
-        curr_index = self.ui.comboBox_spectraList.currentIndex()
-
-        self.ui.comboBox_spectraList.clear()
-        for bank_key in bank_id_list:
-            self.ui.comboBox_spectraList.addItem('{0}'.format(bank_key))
-
-        # set to original index
-        if bank_id is None:
-            if curr_index < len(bank_id_list):
-                self.ui.comboBox_spectraList.setCurrentIndex(curr_index)
-        else:
-            try:
-                combo_index = bank_id_list.index(bank_id)
-                self.ui.comboBox_spectraList.setCurrentIndex(combo_index)
-            except AttributeError as att_err:
-                print '[ERROR] Bank ID {0} of type {1} cannot be found in Bank ID List {2}.' \
-                      ''.format(bank_id, type(bank_id), self._bankIDList)
-                raise att_err
-        # END-IF-ELSE
-
-        # unlock
-        self._mutexBankIDList = False
-
-        return
+    # TODO - REMOVE - very likely it is a duplicated method
+    # def set_bank_ids(self, bank_id_list, bank_id=None):
+    #     """
+    #     :param bank_id_list:
+    #     :return:
+    #     """
+    #     # lock it
+    #     self._mutexBankIDList = True
+    #
+    #     # get current index
+    #     curr_index = self.ui.comboBox_spectraList.currentIndex()
+    #
+    #     self.ui.comboBox_spectraList.clear()
+    #     for bank_key in bank_id_list:
+    #         self.ui.comboBox_spectraList.addItem('{0}'.format(bank_key))
+    #
+    #     # set to original index
+    #     if bank_id is None:
+    #         if curr_index < len(bank_id_list):
+    #             self.ui.comboBox_spectraList.setCurrentIndex(curr_index)
+    #     else:
+    #         try:
+    #             combo_index = bank_id_list.index(bank_id)
+    #             self.ui.comboBox_spectraList.setCurrentIndex(combo_index)
+    #         except AttributeError as att_err:
+    #             print '[ERROR] Bank ID {0} of type {1} cannot be found in Bank ID List {2}.' \
+    #                   ''.format(bank_id, type(bank_id), self._bankIDList)
+    #             raise att_err
+    #     # END-IF-ELSE
+    #
+    #     # unlock
+    #     self._mutexBankIDList = False
+    #
+    #     return
 
     def set_canvas_type(self, dimension, multi_dim_type=None):
         """
