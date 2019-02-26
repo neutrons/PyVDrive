@@ -167,3 +167,33 @@ class AtomicReduction3DViewer(QMainWindow):
 
     def plot_prototype(self):
         self.ui.graphicsView_mainPlot.plot_runs()
+
+    def plot_runs_3d(self, sequences, data_set_list):
+
+        # data_set_list:  list of vec X and vec Y
+        assert len(sequences) == len(data_set_list), 'blabla not equal'
+
+        # convert
+        line_points = data_set_list[0][0].size
+        line_number = len(sequences)
+
+        sequence_vec = np.array(sequences)
+        matrix_shape = line_number, line_points
+
+        sequence_matrix = np.ndarray(matrix_shape, dtype='float')
+        vec_x_matrix = np.ndarray(matrix_shape, dtype='float')
+        vec_y_matrix = np.ndarray(matrix_shape, dtype='float')
+
+        for i in range(line_number):
+            sequence_matrix[i] = sequence_vec[i]
+            vec_x_matrix[i] = data_set_list[i][0]
+            vec_y_matrix[i] = data_set_list[i][1]
+        #
+
+        flatten_vec_seq = sequence_matrix.flatten()
+        flatten_vec_x = vec_x_matrix.flatten()
+        flatten_vec_y = vec_y_matrix.flatten()
+
+        self.ui.graphicsView_mainPlot.plot_surface_lines(flatten_vec_seq, flatten_vec_x, flatten_vec_y)
+
+        return

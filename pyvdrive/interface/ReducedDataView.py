@@ -262,14 +262,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         else:
             raise NotImplementedError('Not sure how to load from an arbitrary directory!')
 
-
-        # self.plot_chopped_data_2d(run_number=processor.get_run_number(),
-        #                                  chop_sequence=processor.get_chopped_sequence_range(),
-        #                                  bank_id=1,
-        #                                  bank_id_from_1=True,
-        #                                  chopped_data_dir=processor.get_reduced_data_directory(),
-        #                                  vanadium_run_number=van_run,
-        #                                  proton_charge_normalization=pc_norm)
         self._choppedRunDict[project_chop_key] = project_chop_dict
         self._curr_chop_data_key = project_chop_key
 
@@ -1975,14 +1967,16 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
             # launch windows for contour plots and 3D line plots
             for bank_id in range(1, 4):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
+                # data sets
+                seq_list, data_set_list = construct_chopped_data(chop_key, seq_list, bank_id)
+
                 # 2D Contours
                 child_2d_window = self.launch_contour_view()
-                seq_list, data_set_list = construct_chopped_data(chop_key, seq_list, bank_id)
                 child_2d_window.plot_contour(seq_list, data_set_list)
 
                 # 3D Line
                 child_3d_window = self.launch_3d_view()
-                child_3d_window.plot_prototype()
+                child_3d_window.plot_runs_3d(seq_list, data_set_list)
                 # child_3d_window.plot_3d_line_plot(seq_list, data_set_list)
             # END-FOR
         # END-IF

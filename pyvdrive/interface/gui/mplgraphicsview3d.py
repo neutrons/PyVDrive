@@ -26,6 +26,8 @@ except ImportError:
 # from MPLwidgets import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
+import matplotlib
+import matplotlib.pyplot
 
 
 class MplPlot3dCanvas(FigureCanvas):
@@ -253,33 +255,43 @@ class MplPlot3dCanvas(FigureCanvas):
 
         return
 
-    def plot_surface_prototype(self):
+    def plot_surface_lines(self, flatten_vec_seq, flatten_vec_x, flatten_vec_y):
         ax = self._myAxes
 
-        # prepare prototype data
-        url = 'https://python-graph-gallery.com/wp-content/uploads/volcano.csv'
-        import pandas as pd
-        import matplotlib
-        import matplotlib.pyplot
-        # import matplotlib.pyplot.cm
-        data = pd.read_csv(url)
-
-        # print (data)
-
-        # Transform it to a long format
-        df = data.unstack().reset_index()
-        df.columns = ["X", "Y", "Z"]
-
-        # And transform the old column name in something numeric
-        df['X'] = pd.Categorical(df['X'])
-        df['X'] = df['X'].cat.codes
-
         ax.view_init(30, 45)
-        ax.plot_trisurf(df['Y'], df['X'], df['Z'], cmap=matplotlib.pyplot.cm.jet, linewidth=0.01)
+        ax.plot_trisurf(flatten_vec_seq, flatten_vec_x, flatten_vec_y,
+                        cmap=matplotlib.pyplot.cm.jet, linewidth=0.01)
 
         self.draw()
 
         return
+
+    # def plot_surface_prototype(self):
+    #
+    #     ax = self._myAxes
+    #
+    #     # prepare prototype data
+    #     url = 'https://python-graph-gallery.com/wp-content/uploads/volcano.csv'
+    #     import pandas as pd
+    #
+    #     data = pd.read_csv(url)
+    #
+    #     # print (data)
+    #
+    #     # Transform it to a long format
+    #     df = data.unstack().reset_index()
+    #     df.columns = ["X", "Y", "Z"]
+    #
+    #     # And transform the old column name in something numeric
+    #     df['X'] = pd.Categorical(df['X'])
+    #     df['X'] = df['X'].cat.codes
+    #
+    #     ax.view_init(30, 45)
+    #     ax.plot_trisurf(df['Y'], df['X'], df['Z'], cmap=matplotlib.pyplot.cm.jet, linewidth=0.01)
+    #
+    #     self.draw()
+    #
+    #     return
 
     def report_pixel(self, x_d, y_d):
         report = self.format_coord_org(x_d, y_d)
