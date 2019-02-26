@@ -39,7 +39,7 @@ def test_case_archive_single_normalize(command_tester):
     :param command_tester:
     :return:
     """
-    command_line = 'VIEW,IPTS=18420,RUNS=136558,MINV=0.5,MAXV=2.5,NORM=1'
+    command_line = 'VIEW,IPTS=22126,RUNS=171899,MINV=0.5,MAXV=2.5,NORM=1'
     command_tester.run_command(command_line)
 
     return
@@ -83,13 +83,19 @@ def test_main():
     """
     test main for command VIEW
     """
+    Passed = False
+    Next = False
+
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
-    test_archive_single_run(command_tester)
+    if Passed:
+        # no need to test now
+        test_archive_single_run(command_tester)
 
-    # test_case_archive_single_normalize(command_tester)
+    if Next:
+        test_case_archive_single_normalize(command_tester)
 
-    # test_case_archive_chopped(command_tester)
+    test_case_archive_chopped(command_tester)
 
     # test_case_archive(command_tester)
     #

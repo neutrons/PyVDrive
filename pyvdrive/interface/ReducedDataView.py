@@ -136,7 +136,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.pushButton_clearCanvas.clicked.connect(self.do_clear_canvas)
 
         # data processing
-        self.ui.pushButton_normByCurrent.clicked.connect(self.do_normalise_by_current)
         self.ui.pushButton_apply_x_range.clicked.connect(self.do_set_x_range)
         self.ui.pushButton_apply_y_range.clicked.connect(self.do_apply_y_range)
         self.ui.comboBox_spectraList.currentIndexChanged.connect(self.evt_bank_id_changed)
@@ -415,7 +414,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         try:
             ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
-            run_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
+            run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self,
                                         'IPTS and run number must be specified for viewing sample logs: {}'
@@ -1483,7 +1482,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         else:
             # chopped data
-            self.plot_chopped_run(data_key=self._curr_chop_data_key, bank_id=self._currBank,
+            self.plot_chopped_run(chop_key=self._curr_chop_data_key, bank_id=self._currBank,
                                   seq_list=None, main_only=True,
                                   van_norm=None, van_run=None, pc_norm=None)
 
@@ -1583,8 +1582,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         if self._mutexChopSeqList:
             return
 
-        self.do_plot_diffraction_data()
-
+        # chopped data
+        print ('[DB.....BAT.....BAT] Current chop data key: {}'.format(self._curr_chop_data_key))
+        self.plot_chopped_run(chop_key=self._curr_chop_data_key, bank_id=self._currBank,
+                              seq_list=None, main_only=True,
+                              van_norm=None, van_run=None, pc_norm=None)
         return
 
     def evt_unit_changed(self):
@@ -1708,10 +1710,12 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param unit:
         :return:
         """
-        print ('[DB...BAT] ReductionDataView: About to retrieve data from API with Data key = {}'.format(data_key))
+        print ('[DB...BAT] ReductionDataView: About to retrieve data from API with Data key = {}'
+               ' of Bank {}'.format(data_key, bank_id))
 
         data_set = self._myController.get_reduced_data(run_id=data_key, target_unit=unit, bank_id=bank_id)
         # convert to 2 vectors
+        print ('DB...BAT Data Set keys: {}'.format(data_set.keys()))
         vec_x = data_set[bank_id][0]
         vec_y = data_set[bank_id][1]
 
@@ -1748,7 +1752,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         self._atomic_viewer_list.append(view_window)
 
-        return
+        return view_window
 
     def set_sample_log_names(self, log_name_list):
         """
@@ -1933,23 +1937,29 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         def construct_chopped_data(chop_data_key, chop_sequences, bank_index):
             # construct input for contour plot
 
-            data_set_list = list()
+            data_sets = list()
+            new_seq_list = list()
             for chop_seq_i in chop_sequences:
-                vec_x_i, vec_y_i = self._myController.project.get_chopped_sequence_data(chop_data_key, chop_seq_i,
+                print ('[DB...BAT...BAT] Building matrix Seq-{}'.format(chop_seq_i))
+                data = self._myController.project.get_chopped_sequence_data(chop_data_key, chop_seq_i,
                                                                                         bank_index)
-
-                data_set_list.append((vec_x_i, vec_y_i))
+                if data is None:
+                    print ('[DB...BAT...ERROR] Seq {} does not exist'.format(chop_seq_i))
+                else:
+                    vec_x_i, vec_y_i = data
+                    data_sets.append((vec_x_i, vec_y_i))
+                    new_seq_list.append(chop_seq_i)
             # END-FOR
 
-            return data_set_list
+            return new_seq_list, data_sets
 
         # check inputs
-        datatypeutility.check_string_variable('Chopped data key', chop_key)
         datatypeutility.check_int_variable('Bank ID', bank_id, (None, None))
 
         # plot main figure
         curr_seq = int(self.ui.comboBox_chopSeq.currentText())   # get from current sequential
         vec_x, vec_y = self._myController.project.get_chopped_sequence_data(chop_key, curr_seq, bank_id)
+
         self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit=self._currUnit,
                                                             over_plot=True,
                                                             run_id=chop_key, bank_id=bank_id,
@@ -1961,17 +1971,19 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # set sequence
             if seq_list is None:
                 seq_list = self._myController.project.get_chopped_sequence(chop_key)
+            print ('[DB..........BAT] Seq: {}'.format(seq_list))
 
             # launch windows for contour plots and 3D line plots
             for bank_id in range(1, 4):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
                 # 2D Contours
                 child_2d_window = self.launch_contour_view()
-                data_set_list = construct_chopped_data(chop_key, seq_list, bank_id)
+                seq_list, data_set_list = construct_chopped_data(chop_key, seq_list, bank_id)
                 child_2d_window.plot_contour(seq_list, data_set_list)
 
                 # 3D Line
                 child_3d_window = self.launch_3d_view()
-                child_3d_window.plot_3d_line_plot(seq_list, data_set_list)
+                child_3d_window.plot_prototype()
+                # child_3d_window.plot_3d_line_plot(seq_list, data_set_list)
             # END-FOR
         # END-IF
 

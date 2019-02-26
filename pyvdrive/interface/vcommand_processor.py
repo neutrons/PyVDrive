@@ -350,7 +350,8 @@ class VdriveCommandProcessor(object):
                                          seq_list=chop_seq_list,
                                          van_norm=processor.do_vanadium_normalization,
                                          van_run=van_run_number,
-                                         pc_norm=processor.do_proton_charge_normalization)
+                                         pc_norm=processor.do_proton_charge_normalization,
+                                         main_only=False)
 
         elif len(processor.get_run_tuple_list()) == 1:
             # one run situation

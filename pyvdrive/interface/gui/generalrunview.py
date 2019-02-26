@@ -1,6 +1,7 @@
 import numpy as np
 import mplgraphicsview
 import mplgraphicsview2d
+import mplgraphicsview3d
 
 
 class GeneralRunView(mplgraphicsview.MplGraphicsView):
@@ -312,3 +313,18 @@ class ContourPlotView(mplgraphicsview2d.MplGraphicsView2D):
         self._has2DImage = True
 
         return
+
+
+class LinePlot3DView(mplgraphicsview3d.MplPlot3dCanvas):
+    """
+
+    """
+    def __init__(self, parent):
+        super(LinePlot3DView, self).__init__(parent)
+
+        return
+
+    def plot_runs(self):
+
+        self.plot_surface_prototype()
+

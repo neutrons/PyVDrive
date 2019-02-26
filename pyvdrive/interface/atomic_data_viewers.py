@@ -19,6 +19,7 @@ except AttributeError:
 
 from pyvdrive.interface.gui.generalrunview import GeneralRunView
 from pyvdrive.interface.gui.generalrunview import ContourPlotView
+from pyvdrive.interface.gui.generalrunview import LinePlot3DView
 from pyvdrive.lib import datatypeutility
 import numpy as np
 """
@@ -83,7 +84,7 @@ class AtomicReduction2DViewer(QMainWindow):
         # set up UI
         ui_path = os.path.join(os.path.dirname(__file__), 'gui/Simple2DReductionView.ui')
         self.ui = load_ui(ui_path, baseinstance=self)
-        self._promte_widgets()
+        self._promote_widgets()
 
         return
 
@@ -130,6 +131,39 @@ class AtomicReduction2DViewer(QMainWindow):
         for i in range(n):
             vec_y[i] = y_indexes[i]
 
-        self.canvas().add_contour_plot(vec_x, np.array(y_indexes), matrix_y)
+        self.ui.graphicsView_mainPlot.canvas.add_contour_plot(vec_x, np.array(y_indexes), matrix_y)
 
         return
+
+
+class AtomicReduction3DViewer(QMainWindow):
+    """ Class for 2D reduced data viewer
+    """
+    def __init__(self, parent=None):
+        """
+        Init
+        :param parent:
+        """
+        super(AtomicReduction3DViewer, self).__init__(parent)
+
+        # set up UI
+        ui_path = os.path.join(os.path.dirname(__file__), 'gui/Simple2DReductionView.ui')
+        self.ui = load_ui(ui_path, baseinstance=self)
+        self._promote_widgets()
+
+        return
+
+    def _promote_widgets(self):
+        """
+        promote widgets
+        :return:
+        """
+        graphicsView_mainPlot_layout = QVBoxLayout()
+        self.ui.frame_mainPlot.setLayout(graphicsView_mainPlot_layout)
+        self.ui.graphicsView_mainPlot = LinePlot3DView(self)
+        graphicsView_mainPlot_layout.addWidget(self.ui.graphicsView_mainPlot)
+
+        return
+
+    def plot_prototype(self):
+        self.ui.graphicsView_mainPlot.plot_runs()

@@ -842,14 +842,13 @@ class ProjectManager(object):
 
         return sorted(self._chopped_data_dict[chop_data_key].keys())
 
-    def get_chopped_sequence_data(self, chop_data_key, chop_sequence):
+    def get_chopped_sequence_data(self, chop_data_key, chop_sequence, bank_id):
         """
 
         :param chop_data_key:
         :return:
         """
         # TODO - TONIGHT 5 - Clean!
-
         if isinstance(chop_data_key, str) and chop_data_key.isdigit():
             chop_data_key = int(chop_data_key)
 
@@ -862,12 +861,24 @@ class ProjectManager(object):
             return None
 
         print (self._chopped_data_dict[chop_data_key][chop_sequence])
-
         print (type(self._chopped_data_dict[chop_data_key][chop_sequence]))
 
         ws_name = self._chopped_data_dict[chop_data_key][chop_sequence][0]
 
-        return ws_name
+        print ('Workspace name: {}'.format(ws_name))
+        print ('Is it a WorkspaceGroup? {}'.format(mantid_helper.retrieve_workspace(ws_name).id()))
+
+        data_set = mantid_helper.get_data_from_workspace(workspace_name=ws_name,
+                                                         bank_id=bank_id)
+        print ('Data Set: {}'.format(data_set))
+        print ('Data Set [{}]: {}'.format(bank_id, data_set[0][bank_id]))
+
+        data_set = data_set[0][bank_id]
+        unit = data_set[1]
+
+        print ('Unit: {}'.format(unit))
+
+        return data_set[0], data_set[1]
 
     def get_loaded_chopped_reduced_runs(self):
         """

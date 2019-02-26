@@ -980,26 +980,26 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
     if not workspace_does_exist(workspace_name):
         raise RuntimeError('Workspace %s does not exist.' % workspace_name)
 
-    # check bank ID not being None
+    # check bank ID not being None: input spectra
     if is_a_workspace(workspace_name):
         # grouping workspace, then choose the right one
-        ws_group = retrieve_workspace(workspace_name)
         if bank_id is None:
             raise RuntimeError('Bank ID None does not work with {} as a WorkspaceGroup'.format(workspace_name))
-        workspace_name = ws_group[bank_id-1]
-        bank_id = 1
-    workspace = retrieve_workspace(workspace_name)
-
-    if bank_id is not None:
-        # single bank
-        datatypeutility.check_int_variable('Bank ID', bank_id, (1, None))
         required_workspace_index = bank_id - start_bank_id
-        if not 0 <= required_workspace_index < get_number_spectra(workspace):
-            raise RuntimeError('Bank ID {0}, aka workspace index {1} is out of spectra of workspace {2}.'
-                               ''.format(bank_id, required_workspace_index, workspace_name))
     else:
-        # all banks
-        required_workspace_index = None
+        # regular single workspace
+        if bank_id is None:
+            # all banks
+            required_workspace_index = None
+        else:
+            #  single bank
+            datatypeutility.check_int_variable('Bank ID', bank_id, (1, None))
+            required_workspace_index = bank_id - start_bank_id
+            workspace = retrieve_workspace(workspace_name)
+            if not 0 <= required_workspace_index < get_number_spectra(workspace):
+                raise RuntimeError('Bank ID {0}, aka workspace index {1} is out of spectra of workspace {2}.'
+                                   ''.format(bank_id, required_workspace_index, workspace_name))
+        # END-IF
     # END-IF-ELSE
 
     # process target unit
@@ -1036,6 +1036,7 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
     # Convert to point data by checking
     workspace = retrieve_workspace(workspace_name)
     if workspace.id() == 'WorkspaceGroup':
+        # space group
         if workspace[0].isHistogramData():
             mantidapi.ConvertToPointData(InputWorkspace=workspace_name,
                                          OutputWorkspace=temp_ws_name)
@@ -1043,6 +1044,7 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
             temp_ws_name = workspace_name
         # END-IF
     else:
+        # single group
         num_bins_set = set()
         for iws in range(get_number_spectra(workspace)):
             num_bins_set.add(len(workspace.readY(iws)))
@@ -1066,6 +1068,8 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
     workspace = retrieve_workspace(workspace_name)
     is_group = workspace.id() == 'WorkspaceGroup'
     num_spec = get_number_spectra(workspace)
+    print ('[DB........................BAT] Workspace {}: # spec = {}, required index = {}, start bank id = {}'
+           ''.format(workspace_name, num_spec, required_workspace_index, start_bank_id))
     data_set_dict = dict()
     for ws_index in range(num_spec):
         if bank_id is None or ws_index == required_workspace_index:
@@ -1093,6 +1097,8 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
             data_y[:] = vec_y[:]
             data_e[:] = vec_e[:]
 
+            print ('[DB...BAT] ws_index = {}, required index = {}, start bank id = {}'
+                   ''.format(ws_index, required_workspace_index, start_bank_id))
             data_set_dict[ws_index + start_bank_id] = data_x, data_y, data_e
         # END-IF
     # END-FOR
