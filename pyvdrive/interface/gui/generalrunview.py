@@ -276,3 +276,39 @@ class ContourPlotView(mplgraphicsview2d.MplGraphicsView2D):
         # class state variables
 
         return
+
+    def plot_2d_contour(self, run_number_list, data_set_list):
+        """
+        plot 2D contour figure
+        :param run_number_list:
+        :param data_set_list:
+        :return:
+        """
+        # check
+        size_set = set()
+        for data_set in data_set_list:
+            vec_x, vec_y = data_set
+            assert len(vec_x) == len(vec_y), 'Size of vector X (%d) and vector Y (%d) must be same!' % (len(vec_x), len(vec_y))
+            size_set.add(len(vec_x))
+        # END-FOR
+        assert len(size_set) == 1, 'All the reduced data must have equal sizes but not %s.' % str(size_set)
+        vec_x = data_set_list[0][0]
+
+        # build mesh
+        grid_x, grid_y = np.meshgrid(vec_x, run_number_list)
+
+        matrix_y = np.ndarray(grid_x.shape, dtype='float')
+        for i in range(len(run_number_list)):
+            matrix_y[:i] = data_set_list[i][1]
+
+        n = len(run_number_list)
+        vec_y = np.ndarray(shape=(n,), dtype='int')
+        for i in range(n):
+            vec_y[i] = run_number_list[i]
+
+        self.canvas().add_contour_plot(vec_x, np.array(run_number_list), matrix_y)
+
+        # 2D image
+        self._has2DImage = True
+
+        return

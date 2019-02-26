@@ -346,7 +346,8 @@ class VdriveCommandProcessor(object):
             # refresh list and set to chop run
             view_window.do_refresh_existing_runs(set_to=chop_key, is_chopped=True)
 
-            view_window.plot_chopped_run(chop_key, chop_seq_list,
+            view_window.plot_chopped_run(chop_key, bank_id=1,
+                                         seq_list=chop_seq_list,
                                          van_norm=processor.do_vanadium_normalization,
                                          van_run=van_run_number,
                                          pc_norm=processor.do_proton_charge_normalization)

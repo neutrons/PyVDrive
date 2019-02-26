@@ -1122,39 +1122,39 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         raise NotImplementedError('ASAP: Refer to VIEW... process_vcommand.process_view()')
 
-
-    def do_plot_contour_to_remove(self):
-        """ plot Either (1) all the chopped data Or (2) all loaded single runs
-        by contour plot
-        :return:
-        """
-        data_key_list = list()
-
-        if self.ui.radioButton_plotChoppedData.isChecked():
-            # plot chopped data
-            run_number = str(self.ui.comboBox_choppedRunNumber.currentText())
-            for p_int in range(self.ui.comboBox_chopSeq.count()):
-                child_key = str(self.ui.comboBox_chopSeq.itemText(p_int))
-                data_key_list.append((run_number, child_key))
-            # END-FOR
-        elif self.ui.radioButton_plotSingleRun.isChecked():
-            # plot all single runs
-            for p_int in range(self.ui.comboBox_runs.count()):
-                data_key = str(self.ui.comboBox_runs.itemText(p_int))
-                data_key_list.append(data_key)
-        else:
-            # unsupported
-            raise RuntimeError('Neither radio button to choose single run or chopped is checked.')
-
-        # bank information and unit
-        curr_bank = int(self.ui.comboBox_spectraList.currentText())
-        curr_unit = str(self.ui.comboBox_unit.currentText())
-
-        # plot
-        self.plot_multiple_runs_2d(ws_key_list=data_key_list, bank_id=curr_bank,
-                                   target_unit=curr_unit)
-
-        return
+    #
+    # def do_plot_contour_to_remove(self):
+    #     """ plot Either (1) all the chopped data Or (2) all loaded single runs
+    #     by contour plot
+    #     :return:
+    #     """
+    #     data_key_list = list()
+    #
+    #     if self.ui.radioButton_plotChoppedData.isChecked():
+    #         # plot chopped data
+    #         run_number = str(self.ui.comboBox_choppedRunNumber.currentText())
+    #         for p_int in range(self.ui.comboBox_chopSeq.count()):
+    #             child_key = str(self.ui.comboBox_chopSeq.itemText(p_int))
+    #             data_key_list.append((run_number, child_key))
+    #         # END-FOR
+    #     elif self.ui.radioButton_plotSingleRun.isChecked():
+    #         # plot all single runs
+    #         for p_int in range(self.ui.comboBox_runs.count()):
+    #             data_key = str(self.ui.comboBox_runs.itemText(p_int))
+    #             data_key_list.append(data_key)
+    #     else:
+    #         # unsupported
+    #         raise RuntimeError('Neither radio button to choose single run or chopped is checked.')
+    #
+    #     # bank information and unit
+    #     curr_bank = int(self.ui.comboBox_spectraList.currentText())
+    #     curr_unit = str(self.ui.comboBox_unit.currentText())
+    #
+    #     # plot
+    #     self.plot_multiple_runs_2d(ws_key_list=data_key_list, bank_id=curr_bank,
+    #                                target_unit=curr_unit)
+    #
+    #     return
 
     # TESTME - Shall find out how this breaks
     def do_plot_diffraction_data(self, main_only):
@@ -1717,9 +1717,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return vec_x, vec_y
 
-    # TODO - TONIGHT 3 - Quality
     def launch_single_run_view(self):
-
+        """ Launch a reduced data view window for single run
+        :return:
+        """
         view_window = atomic_data_viewers.AtomicReduced1DViewer(self)
         view_window.show()
 
@@ -1727,15 +1728,25 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return view_window
 
-    def load_sample_logs(self):
-        """
-        If the diffraction data is loaded from GSAS files, then you need to load the sample logs explicitly
-        from associated NeXus files
+    def launch_contour_view(self):
+        """ Launch a reduced data view window for multiple runs (chopped or single) in contour plot
         :return:
         """
-        # TODO - TONIGHT 1 - Implement!  What is the difference between this and do_plot_sample_logs() ???
-        print '[IMPLEMENT] pushButton_loadSampleLogs'
-        raise NotImplementedError('ASAP to Implement')
+        view_window = atomic_data_viewers.AtomicReduction2DViewer(self)
+        view_window.show()
+
+        self._atomic_viewer_list.append(view_window)
+
+        return view_window
+
+    def launch_3d_view(self):
+        """ Launch a reduced data view window for multiple runs (chopped or single) in 3d line plot
+        :return:
+        """
+        view_window = atomic_data_viewers.AtomicReduction3DViewer(self)
+        view_window.show()
+
+        self._atomic_viewer_list.append(view_window)
 
         return
 
@@ -1907,35 +1918,64 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return line_id
 
-    def plot_chopped_run(self, chop_key, seq_list, van_norm, van_run, pc_norm):
+    def plot_chopped_run(self, chop_key, bank_id, seq_list, van_norm, van_run, pc_norm, main_only):
+        """
+        plot chopped runs
+        :param chop_key:
+        :param bank_id:
+        :param seq_list:
+        :param van_norm:
+        :param van_run:
+        :param pc_norm:
+        :param main_only:
+        :return:
+        """
+        def construct_chopped_data(chop_data_key, chop_sequences, bank_index):
+            # construct input for contour plot
 
-        # TODO - TONIGHT 0 - ASAP
+            data_set_list = list()
+            for chop_seq_i in chop_sequences:
+                vec_x_i, vec_y_i = self._myController.project.get_chopped_sequence_data(chop_data_key, chop_seq_i,
+                                                                                        bank_index)
 
-        if seq_list is None:
-            seq_list = self._myController.project.get_chopped_sequence(chop_key)
+                data_set_list.append((vec_x_i, vec_y_i))
+            # END-FOR
 
-        for chop_seq_i in seq_list:
-            self._myController.project.get_chopped_sequence_data(chop_key, chop_seq_i)
+            return data_set_list
 
+        # check inputs
+        datatypeutility.check_string_variable('Chopped data key', chop_key)
+        datatypeutility.check_int_variable('Bank ID', bank_id, (None, None))
 
-        #                                          # van_norm=processor.do_vanadium_normalization,
-        #                                # van_run=van_run_number,
-        #                                # pc_norm=processor.do_proton_charge_normalization):
-        #
-        #                  run_number, chop_sequence, bank_id_list,
-        #                  vanadium_run_number=None, proton_charge_normalization=False, chopped_data_dir=None):
-        #
-        #
-        # # pop out 2D contour plots
-        # for bank_id in bank_id_list:
-        #     window_i = Simple2DViewer(bank_id)
-        #     window_i.show()
-        #     window_i.plot(array_x, array_y)
-        #     self._2d_plot_dict[bank_id] = window_i
-        #
-        # # pop out 3D line plot
-        # for
+        # plot main figure
+        curr_seq = int(self.ui.comboBox_chopSeq.currentText())   # get from current sequential
+        vec_x, vec_y = self._myController.project.get_chopped_sequence_data(chop_key, curr_seq, bank_id)
+        self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit=self._currUnit,
+                                                            over_plot=True,
+                                                            run_id=chop_key, bank_id=bank_id,
+                                                            chop_tag='{}'.format(curr_seq),
+                                                            label='Bank {}'.format(bank_id),
+                                                            line_color='black')
 
+        if not main_only:
+            # set sequence
+            if seq_list is None:
+                seq_list = self._myController.project.get_chopped_sequence(chop_key)
+
+            # launch windows for contour plots and 3D line plots
+            for bank_id in range(1, 4):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
+                # 2D Contours
+                child_2d_window = self.launch_contour_view()
+                data_set_list = construct_chopped_data(chop_key, seq_list, bank_id)
+                child_2d_window.plot_contour(seq_list, data_set_list)
+
+                # 3D Line
+                child_3d_window = self.launch_3d_view()
+                child_3d_window.plot_3d_line_plot(seq_list, data_set_list)
+            # END-FOR
+        # END-IF
+
+        return
 
     def plot_chopped_data_2d(self, run_number, chop_sequence, bank_id, bank_id_from_1=True, chopped_data_dir=None,
                              vanadium_run_number=None, proton_charge_normalization=False):
@@ -2063,78 +2103,78 @@ class GeneralPurposedDataViewWindow(QMainWindow):
     #     self._currentPlotSampleLogs = False
     #
     #     return
-
-    # TESTME - This is refactored recently
-    def plot_multiple_runs_2d(self, ws_key_list, bank_id, target_unit):
-        """ Plot multiple runs, including the case for both chopped run and multiple single runs,
-        to contour plot. 2D
-        :param ws_key_list: list of workspace keys (from the UI's combo box widgets)
-        :param bank_id:
-        :param target_unit:
-        :return:
-        """
-        # check inputs
-        pyvdrive.lib.datatypeutility.check_int_variable('Bank ID', bank_id, (1, None))
-        pyvdrive.lib.datatypeutility.check_list('Workspace keys/reference IDs', ws_key_list)
-        pyvdrive.lib.datatypeutility.check_string_variable('Unit', target_unit,
-                                                           ['dSpacing', 'TOF', 'MomentumTransfer'])
-
-        # get the list of runs
-        error_msg = ''
-        run_number_list = list()
-        data_set_list = list()
-
-        # construct input for contour plot
-        for index, data_key in enumerate(ws_key_list):
-            # get index number
-            if isinstance(data_key, str):
-                if data_key.isdigit():
-                    index_number = int(data_key)
-                else:
-                    index_number = index
-            elif isinstance(data_key, tuple):
-                # TODO FIXME ASAP: this is not a robust way to get index number
-                index_number = int(data_key[1].split('_')[-1])
-            else:
-                raise NotImplementedError('Data key {} must be either a string or a 2-tuple but not a {}'
-                                          ''.format(data_key, type(data_key)))
-
-            # get data
-            print ('[DB...BAT] Index {1} Run Index {2} Get data from {0}'.format(data_key, index, index_number))
-            ret_obj = self._myController.get_reduced_data(data_key, self._currUnit, bank_id=bank_id)
-
-            # re-format return
-            vec_x = ret_obj[bank_id][0]
-            vec_y = ret_obj[bank_id][1]
-
-            # add to list
-            run_number_list.append(index_number)
-            data_set_list.append((vec_x, vec_y))
-        # END-FOR
-
-        print '[DB...BAT] Run number list: {0} Data set list size: {1}'.format(run_number_list, len(data_set_list))
-
-        # return if nothing to plot
-        if len(run_number_list) == 0:
-            GuiUtility.pop_dialog_error(self, error_msg)
-            return
-        elif len(error_msg) > 0:
-            print '[Error message] {0}'.format(error_msg)
-
-        # plot
-        self.ui.graphicsView_mainPlot.plot_2d_contour(run_number_list, data_set_list)
-
-        # remove the runs that cannot be found
-        # TODO FIXME ASAP --> make this work!
-        # if len(run_number_list) != self._runNumberList:
-        #     self._mutexRunNumberList = True
-        #     self.ui.comboBox_runs.clear()
-        #     for run_number in sorted(run_number_list):
-        #         self.ui.comboBox_runs.addItem('{0}'.format(run_number))
-        #     self._mutexRunNumberList = False
-        # # END-IF
-
-        return
+    #
+    # # TESTME - This is refactored recently
+    # def plot_multiple_runs_2d(self, ws_key_list, bank_id, target_unit):
+    #     """ Plot multiple runs, including the case for both chopped run and multiple single runs,
+    #     to contour plot. 2D
+    #     :param ws_key_list: list of workspace keys (from the UI's combo box widgets)
+    #     :param bank_id:
+    #     :param target_unit:
+    #     :return:
+    #     """
+    #     # check inputs
+    #     pyvdrive.lib.datatypeutility.check_int_variable('Bank ID', bank_id, (1, None))
+    #     pyvdrive.lib.datatypeutility.check_list('Workspace keys/reference IDs', ws_key_list)
+    #     pyvdrive.lib.datatypeutility.check_string_variable('Unit', target_unit,
+    #                                                        ['dSpacing', 'TOF', 'MomentumTransfer'])
+    #
+    #     # get the list of runs
+    #     error_msg = ''
+    #     run_number_list = list()
+    #     data_set_list = list()
+    #
+    #     # construct input for contour plot
+    #     for index, data_key in enumerate(ws_key_list):
+    #         # get index number
+    #         if isinstance(data_key, str):
+    #             if data_key.isdigit():
+    #                 index_number = int(data_key)
+    #             else:
+    #                 index_number = index
+    #         elif isinstance(data_key, tuple):
+    #             # TODO FIXME ASAP: this is not a robust way to get index number
+    #             index_number = int(data_key[1].split('_')[-1])
+    #         else:
+    #             raise NotImplementedError('Data key {} must be either a string or a 2-tuple but not a {}'
+    #                                       ''.format(data_key, type(data_key)))
+    #
+    #         # get data
+    #         print ('[DB...BAT] Index {1} Run Index {2} Get data from {0}'.format(data_key, index, index_number))
+    #         ret_obj = self._myController.get_reduced_data(data_key, self._currUnit, bank_id=bank_id)
+    #
+    #         # re-format return
+    #         vec_x = ret_obj[bank_id][0]
+    #         vec_y = ret_obj[bank_id][1]
+    #
+    #         # add to list
+    #         run_number_list.append(index_number)
+    #         data_set_list.append((vec_x, vec_y))
+    #     # END-FOR
+    #
+    #     print '[DB...BAT] Run number list: {0} Data set list size: {1}'.format(run_number_list, len(data_set_list))
+    #
+    #     # return if nothing to plot
+    #     if len(run_number_list) == 0:
+    #         GuiUtility.pop_dialog_error(self, error_msg)
+    #         return
+    #     elif len(error_msg) > 0:
+    #         print '[Error message] {0}'.format(error_msg)
+    #
+    #     # plot
+    #     self.ui.graphicsView_mainPlot.plot_2d_contour(run_number_list, data_set_list)
+    #
+    #     # remove the runs that cannot be found
+    #     # TODO FIXME ASAP --> make this work!
+    #     # if len(run_number_list) != self._runNumberList:
+    #     #     self._mutexRunNumberList = True
+    #     #     self.ui.comboBox_runs.clear()
+    #     #     for run_number in sorted(run_number_list):
+    #     #         self.ui.comboBox_runs.addItem('{0}'.format(run_number))
+    #     #     self._mutexRunNumberList = False
+    #     # # END-IF
+    #
+    #     return
 
     def set_unit(self, unit):
         """ set unit from external scripts
