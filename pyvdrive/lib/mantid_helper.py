@@ -449,7 +449,7 @@ def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_pr
         assert isinstance(peak_pos_list, list), 'Peak positions {0} must be given by a list but not a {1}.' \
                                                 ''.format(peak_pos_list, type(peak_pos_list))
         if len(peak_pos_list) > 0:
-            arg_dict['Peaks'] = numpy.array(peak_pos_list)
+            arg_dict['PeakPositions'] = numpy.array(peak_pos_list)
 
     try:
         mantidapi.FindPeaks(**arg_dict)
