@@ -62,6 +62,7 @@ class WindowLogPicker(QMainWindow):
         self._promote_widgets()
 
         # Set up widgets
+        self._disable_widgets()
         self._init_widgets_setup()
 
         # Defining widget handling methods
@@ -175,6 +176,17 @@ class WindowLogPicker(QMainWindow):
         graphicsView_main_layout.addWidget(self.ui.graphicsView_main)
 
         return
+
+    def _disable_widgets(self):
+        """
+        Disable some widgets temporarily
+        :return:
+        """
+        self.ui.pushButton_nextLog.setEnabled(False)
+        self.ui.pushButton_nextLog.hide()
+
+        self.ui.pushButton_prevLog.setEnabled(False)
+        self.ui.pushButton_prevLog.hide()
 
     def _init_widgets_setup(self):
         """
