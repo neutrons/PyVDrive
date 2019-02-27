@@ -151,33 +151,6 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
 
         return self._currLineID
 
-    def plot_sample_data(self, vec_times, vec_value, workspace_key, sample_name):
-        """
-
-        :param vec_times:
-        :param vec_value:
-        :param workspace_key:
-        :param sample_name:
-        :return:
-        """
-        # data mode blabla
-        if self._dataMode != 's':
-            self.reset_1d_plots()
-            self._dataMode = 's'
-
-        # plot
-        auto_color = GeneralRunView.ColorList[len(self._onCanvasIDList) % len(GeneralRunView.ColorList)]
-
-        self._currLineID = self.plot_1d_data(vec_times, vec_value, 'second', label=workspace_key,
-                                             title=sample_name, line_color=auto_color)
-        self._onCanvasIDList.append(self._currLineID)
-
-        # re-scale
-        self.auto_rescale()
-        self.setXYLimit(xmin=0.)
-
-        return
-
     def plot_2d_contour(self, run_number_list, data_set_list):
         """
         plot 2D contour figure

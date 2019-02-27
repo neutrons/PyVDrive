@@ -167,7 +167,7 @@ class PeakPickerWindowChildVanadium(object):
         temp_out_gda_name = os.path.join(gsas_dir, '{}-s.gda'.format(self._run_number))
 
         # load sample log workspace
-        log_ws_name = self._myController.load_nexus_file(self._ipts_number, self._run_number, None, True)
+        log_ws_name = self._myController.load_meta_data(self._ipts_number, self._run_number, None, True)
 
         # call
         processor = self._myController.project.vanadium_processing_manager

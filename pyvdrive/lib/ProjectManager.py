@@ -825,58 +825,55 @@ class ProjectManager(object):
         return ipts_dict
 
     def get_chopped_sequence(self, chop_data_key):
-        """
-
-        :param chop_data_key:
+        """ Get the list of a chopped sequence (integers)
+        :param chop_data_key: key to locate the chopped workspaces
         :return:
         """
-        # TODO - TONIGHT 5 - Clean!
+        if isinstance(chop_data_key, str):
+            if chop_data_key.isdigit():
+                chop_data_key = int(chop_data_key)
+        else:
+            datatypeutility.check_string_variable('Chop data key (integer or string)', chop_data_key)
 
-        if chop_data_key.isdigit():
-            chop_data_key = int(chop_data_key)
-
-        print (self._chopped_data_dict.keys())
-        print (chop_data_key, type(chop_data_key))
-        print (chop_data_key in self._chopped_data_dict)
-        print (self._chopped_data_dict[chop_data_key])
+        if chop_data_key not in self._chopped_data_dict:
+            raise RuntimeError('Chop data key {} is not in chapped data dictionary (keys: {})'
+                               ''.format(chop_data_key, self._chopped_data_dict.keys()))
 
         return sorted(self._chopped_data_dict[chop_data_key].keys())
 
-    def get_chopped_sequence_data(self, chop_data_key, chop_sequence, bank_id):
-        """
-
+    def get_chopped_sequence_data(self, chop_data_key, chop_sequence, bank_id, unit='dSpacing'):
+        """ Get the data (vec x and vec y) of a workspace in a chopped data sequence
         :param chop_data_key:
-        :return:
+        :param chop_sequence: sequence index in the chopped run
+        :param bank_id: bank ID
+        :param unit: target unit
+        :return: 2-tuple (vector X and vector Y)
         """
-        # TODO - TONIGHT 5 - Clean!
-        if isinstance(chop_data_key, str) and chop_data_key.isdigit():
-            chop_data_key = int(chop_data_key)
+        # convert the chop data key to integer if it is an integer
+        if isinstance(chop_data_key, str):
+            if chop_data_key.isdigit():
+                chop_data_key = int(chop_data_key)
+        else:
+            datatypeutility.check_string_variable('Chop data key (integer or string)', chop_data_key)
 
-        print (self._chopped_data_dict.keys())
-        print (chop_data_key, type(chop_data_key))
-        print (chop_data_key in self._chopped_data_dict)
+        # check whether the chop data/sequence is valid
+        if chop_data_key not in self._chopped_data_dict:
+            raise RuntimeError('Chop data key {} is not in chapped data dictionary (keys: {})'
+                               ''.format(chop_data_key, self._chopped_data_dict.keys()))
 
         if chop_sequence not in self._chopped_data_dict[chop_data_key]:
-            print ('{} does not have {}-th'.format(chop_data_key, chop_data_key))
-            return None
+            raise RuntimeError('Chop data (key = {})  does not have {}-th slice'
+                               ''.format(chop_data_key, chop_sequence))
 
-        print (self._chopped_data_dict[chop_data_key][chop_sequence])
-        print (type(self._chopped_data_dict[chop_data_key][chop_sequence]))
-
+        # get the workspace
         ws_name = self._chopped_data_dict[chop_data_key][chop_sequence][0]
 
-        print ('Workspace name: {}'.format(ws_name))
-        print ('Is it a WorkspaceGroup? {}'.format(mantid_helper.retrieve_workspace(ws_name).id()))
-
         data_set = mantid_helper.get_data_from_workspace(workspace_name=ws_name,
-                                                         bank_id=bank_id)
-        print ('Data Set: {}'.format(data_set))
-        print ('Data Set [{}]: {}'.format(bank_id, data_set[0][bank_id]))
+                                                         bank_id=bank_id, target_unit=unit)
 
         data_set = data_set[0][bank_id]
-        unit = data_set[1]
-
-        print ('Unit: {}'.format(unit))
+        # unit = data_set[1]
+        # print ('Unit: {}'.format(unit))
 
         return data_set[0], data_set[1]
 
@@ -1059,31 +1056,28 @@ class ProjectManager(object):
 
         return do_have
 
-    # TODO - TONIGHT 3 - Find out how to make this working... Better docs
-    def load_event_file(self, ipts_number, run_number, nxs_file_name, meta_data_only):
-        """
+    def load_meta_data(self, ipts_number, run_number, nxs_file_name):
+        """ Load meta data from NeXus file
         :param ipts_number:
         :param run_number:
         :param nxs_file_name:
         :return:
         """
-        if meta_data_only:
-            # for log and chopping
-            chopper = self.get_chopper(run_number, nxs_file_name)
-            meta_ws_name = chopper.load_data_file()
+        # for log and chopping
+        chopper = self.get_chopper(run_number, nxs_file_name)
+        meta_ws_name = chopper.load_data_file()
 
-            if ipts_number is None:
-                ipts_number = mantid_helper.get_ipts_number(meta_ws_name)
-            if nxs_file_name.endswith('.nxs') is False and nxs_file_name.endswith('.h5') is False:
-                nxs_file_name = mantid_helper.get_workspace_property(meta_ws_name, 'Filename', True)
+        if ipts_number is None:
+            ipts_number = mantid_helper.get_ipts_number(meta_ws_name)
+        if nxs_file_name.endswith('.nxs') is False and nxs_file_name.endswith('.h5') is False:
+            nxs_file_name = mantid_helper.get_workspace_property(meta_ws_name, 'Filename', True)
 
-            self.add_run(run_number, nxs_file_name, ipts_number)
+        # FIXME - I DON'T KNOW WHETHER THIS IS USEFUL???
+        self.add_run(run_number, nxs_file_name, ipts_number)
 
-            event_ws_name = meta_ws_name
-        else:
-            raise NotImplementedError('blabla NOWNOW')
+        meta_ws_name = meta_ws_name
 
-        return event_ws_name
+        return meta_ws_name
 
     def load_chopped_binned_file(self, data_dir, chopped_seq_list, run_number):
         """

@@ -1287,11 +1287,11 @@ class VdriveMainWindow(QMainWindow):
         # get files
         if nxs_file_name is None:
             # Load data without file name, IPTS number and etc.
-            self._myWorkflow.load_nexus_file(ipts_number=ipts_number, run_number=run, file_name=None,
-                                             meta_data_only=True)
+            self._myWorkflow.load_meta_data(ipts_number=ipts_number, run_number=run, file_name=None,
+                                            meta_data_only=True)
         else:
-            self._myWorkflow.load_nexus_file(ipts_number=None, run_number=run, file_name=nxs_file_name,
-                                             meta_data_only=True)
+            self._myWorkflow.load_meta_data(ipts_number=None, run_number=run, file_name=nxs_file_name,
+                                            meta_data_only=True)
 
         # Get log names
         log_name_list = self._myWorkflow.get_sample_log_names(run, smart)

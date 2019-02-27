@@ -76,23 +76,20 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # self._loadedChoppedRunList = list()   # synchronized with comboBox_choppedRunNumber
         # chopped run number (parent-data-key) list:
         self._chopped_run_list = list()  # synchronized with comboBox_choppedRunNumber
-
         self._choppedRunDict = dict()  # [chop run ID *][seq_number**] = chopped/reduced workspace name
         # * chop run ID in _loadedChoppedRunList  ** seq_number in ...
         self._curr_chop_data_key = None   # run number of sliced case
         self._currSlicedWorkspaces = list()   # an ordered list for the sliced (and maybe focused) workspace names
         self._choppedSequenceList = list()
 
-
+        # sample log runs
+        self._log_data_key = None
 
         # FIND OUT: self._choppedSampleDict = dict()  # key: data workspace name. value: sample (NeXus) workspace name
 
         # Controlling data structure on lines that are plotted on graph
         self._currentPlotDataKeyDict = dict()  # (UI-key): tuple (data key, bank ID, unit); value: value = vec x, vec y
         # this is a temporary storage of reduced data loaded and cached
-
-        # A status flag to show whether the current plot is for sample log or diffraction data
-        self._currentPlotSampleLogs = False
 
         # mutexes to control the event handling for changes in widgets
         self._mutexRunNumberList = False
@@ -318,7 +315,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             if reduced_data_file.lower().endswith('nxs'):
                 # processed NeXus
                 try:
-                    self._curr_data_key = self._myController.load_nexus_file(reduced_data_file)
+                    self._curr_data_key = self._myController.load_meta_data(reduced_data_file)
                 except RuntimeError as run_err:
                     GuiUtility.pop_dialog_error(self, 'Unable to load {} due to {}'.format(reduced_data_file, run_err))
                     return
@@ -356,8 +353,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # Load NeXus (meta only)
         try:
             # load workspace with meta data only (return workspace name)
-            meta_data_key = self._myController.load_nexus_file(ipts_number=ipts_number, run_number=run_number,
-                                                               file_name=None, meta_data_only=True)
+            meta_data_key = self._myController.load_meta_data(ipts_number=ipts_number, run_number=run_number,
+                                                              file_name=None, meta_data_only=True)
+            self._log_data_key = meta_data_key
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self, 'Unable to load Meta data due to {}'.format(run_err))
             return
@@ -686,36 +684,55 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # TODO - TONIGHT - Implement!
             pass
 
-        if self.ui.checkBox_plotallChoppedLog.isChecked():
-            # plot the sample log of all the chopped workspaces
-            workspace_key_list = self._choppedRunDict[self._currRunNumber]
-            # reset if plot-all is checked
-            self.ui.graphicsView_mainPlot.reset_1d_plots()
+        if self.ui.radioButton_chooseSingleRun.isChecked() or self.ui.checkBox_plotallChoppedLog.isChecked():
+            # case for single run or source of chopped runs
+            vec_times, vec_value_y = self._myController.get_sample_log_values(data_key=self._log_data_key,
+                                                                              log_name=curr_log_y_str,
+                                                                              start_time=None, stop_time=None,
+                                                                              relative=True)
+            if curr_log_x_str == 'Time':
+                vec_log_x = vec_times
+            else:
+                vec_times_x, vec_value_x = self._myController.get_sample_log_values(data_key=self._log_data_key,
+                                                                                    log_name=curr_log_x_str,
+                                                                                    start_time=None, stop_time=None,
+                                                                                    relative=True)
+                vec_log_x, vec_log_y = merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
+            # END-IF-ELSE
+
+
         else:
-            # plot the sample log from the current selected chopped workspace
+            # single chopped runs
             workspace_key = str(self.ui.comboBox_chopSeq.currentText())
             workspace_key_list = [workspace_key]
-        # END
+            raise NotImplementedError('Need use case to plot sample logs of a single chopped run but not all')
+
+        # END-IF-ELSE
+
+        # reset plot
+        self.ui.graphicsView_mainPlot.reset_1d_plots()
 
         # plot
-        for workspace_key in workspace_key_list:
-            # get the name of the workspace containing sample logs
-            if workspace_key in self._choppedSampleDict:
-                # this is for loaded GSAS and NeXus file
-                sample_key = self._choppedSampleDict[workspace_key]
-            else:
-                # just reduced workspace
-                sample_key = workspace_key
+        self.ui.graphicsView_logPlot.plot_sample_data(vec_log_x, vec_log_y, plot_label=workspace_key,
+                                                      sample_log_name_x =curr_log_x_str,
+                                                      sample_name=curr_log_y_str)
 
-            # get the sample log time and value
-            vec_times, vec_value = self._myController.get_sample_log_values(sample_key, sample_name, relative=True)
-
-            # plot
-            self.ui.graphicsView_mainPlot.plot_sample_data(vec_times, vec_value, workspace_key, sample_name)
-        # END-FOR
-
-        # set flag
-        self._currentPlotSampleLogs = True
+        # for workspace_key in workspace_key_list:
+        #     # get the name of the workspace containing sample logs
+        #     if workspace_key in self._choppedSampleDict:
+        #         # this is for loaded GSAS and NeXus file
+        #         sample_key = self._choppedSampleDict[workspace_key]
+        #     else:
+        #         # just reduced workspace
+        #         sample_key = workspace_key
+        #
+        #     # get the sample log time and value
+        #     vec_times, vec_value = self._myController.get_sample_log_values(sample_key, sample_name, relative=True)
+        #
+        #     # plot
+        #     self.ui.graphicsView_mainPlot.plot_sample_data(vec_times, vec_value, workspace_key, sample_name)
+        # # END-FOR
+        #
 
         return
 
@@ -1093,20 +1110,24 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         def construct_chopped_data(chop_data_key, chop_sequences, bank_index):
             # construct input for contour plot
-
             data_sets = list()
             new_seq_list = list()
+            error_msg = ''
             for chop_seq_i in chop_sequences:
-                print ('[DB...BAT...BAT] Building matrix Seq-{}'.format(chop_seq_i))
-                data = self._myController.project.get_chopped_sequence_data(chop_data_key, chop_seq_i,
-                                                                                        bank_index)
-                if data is None:
-                    print ('[DB...BAT...ERROR] Seq {} does not exist'.format(chop_seq_i))
-                else:
+                try:
+                    data = self._myController.project.get_chopped_sequence_data(chop_data_key, chop_seq_i,
+                                                                                bank_index)
                     vec_x_i, vec_y_i = data
                     data_sets.append((vec_x_i, vec_y_i))
                     new_seq_list.append(chop_seq_i)
+                except RuntimeError as run_err:
+                    error_msg += '{}\n'.format(run_err)
             # END-FOR
+
+            if len(new_seq_list) == 0:
+                raise RuntimeError('There is no available data from {}:\n{}'.format(chop_data_key, error_msg))
+            if error_msg != '':
+                GuiUtility.pop_dialog_error(self, error_msg)
 
             return new_seq_list, data_sets
 
@@ -1133,7 +1154,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # launch windows for contour plots and 3D line plots
             for bank_id in range(1, 4):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
                 # data sets
-                seq_list, data_set_list = construct_chopped_data(chop_key, seq_list, bank_id)
+                try:
+                    seq_list, data_set_list = construct_chopped_data(chop_key, seq_list, bank_id)
+                except RuntimeError as run_err:
+                    GuiUtility.pop_dialog_error(self, 'Unable to plot chopped data due to {}'.format(run_err))
+                    return
 
                 # 2D Contours
                 child_2d_window = self.launch_contour_view()

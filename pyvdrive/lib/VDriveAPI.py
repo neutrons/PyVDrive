@@ -965,11 +965,11 @@ class VDriveAPI(object):
 
         return sample_name_list
 
-    def get_sample_log_values(self, run_number, log_name, start_time=None, stop_time=None, relative=True):
+    def get_sample_log_values(self, data_key, log_name, start_time=None, stop_time=None, relative=True):
         """
         Get time and value of a sample log in vector
         Returned time is in unit of second as epoch time
-        :param run_number:
+        :param data_key: Run number or workspace name
         :param log_name:
         :param start_time:
         :param stop_time:
@@ -977,17 +977,17 @@ class VDriveAPI(object):
         :return: 2-tuple as status (boolean) and 2-tuple of vectors.
         """
         # check input
-        assert run_number is not None, 'Run number cannot be None.'
+        assert data_key is not None, 'Data key cannot be None.'
 
         # 2 cases: run_number is workspace or run_number is run number
-        if isinstance(run_number, str) and mantid_helper.workspace_does_exist(run_number):
+        if isinstance(data_key, str) and mantid_helper.workspace_does_exist(data_key):
             # input (run number) is workspace's name
-            ws_name = run_number
+            ws_name = data_key
             vec_times, vec_value = mantid_helper.get_sample_log_value(ws_name, log_name, start_time=None,
                                                                       stop_time=None, relative=relative)
         else:
             # get chopper for (integer) run number
-            chopper = self._myProject.get_chopper(run_number)
+            chopper = self._myProject.get_chopper(data_key)
 
             # get log values
             vec_times, vec_value = chopper.get_sample_data(sample_log_name=log_name,
@@ -1043,56 +1043,14 @@ class VDriveAPI(object):
 
         return ref_run, run_start_time, time_segment_list
 
-    # def load_archived_gsas(self, ipts_number, run_number, is_chopped_data, data_key):
-    #     """
-    #     Load GSAS file from SNS archive
-    #     :param ipts_number:
-    #     :param run_number:
-    #     :param is_chopped_data:
-    #     :param data_key: user given data key
-    #     :return:
-    #     """
-    #     raise NotImplementedError('Shall be removed!')
-    #     # check
-    #     assert isinstance(is_chopped_data, bool), 'Flag {0} to indicate the run is a chopped data must be a boolean ' \
-    #                                               'but not a {1}'.format(is_chopped_data, type(is_chopped_data))
-    #
-    #     # get data
-    #     if is_chopped_data:
-    #         # TODO/ISSUE/NOW - Not considered for chopped data
-    #         raise NotImplementedError('It has not been implemented for chopped data in GSAS.')
-    #     else:
-    #         # single GSAS file
-    #         gsas_file_name = self._myArchiveManager.get_gsas_file(ipts_number, run_number, check_exist=True)
-    #
-    #         # load data
-    #         data_key = self.load_diffraction_file(gsas_file_name, 'gsas', data_key=data_key)
-    #     # END-IF-ELSE
-    #
-    #     return data_key
-
-    # def load_chopped_diffraction_files(self, directory, chop_seq_list, file_type):
-    #     """
-    #     loaded chopped and reduced diffraction files
-    #     :param directory:
-    #     :param file_type:
-    #     :return: 2-tuple.  dictionary of 2-tuple: key : data workspace, value = (log workspace, file name) | run number
-    #     """
-    #     chopped_key_dict, run_number = self._myProject.data_loading_manager.load_chopped_binned_data(directory,
-    #                                                                                                  chop_seq_list,
-    #                                                                                                  file_type)
-    #
-    #     return chopped_key_dict, run_number
-
-    def load_nexus_file(self, ipts_number, run_number, file_name, meta_data_only):
+    def load_meta_data(self, ipts_number, run_number, file_name):
         """
         Load NeXus file to ADS
         IPTS/run number OR file name
         :param ipts_number:
         :param run_number:
         :param file_name:
-        :param meta_data_only:
-        :return:
+        :return: output worskpace name
         """
         # get NeXus file name
         if file_name is None:
@@ -1106,14 +1064,8 @@ class VDriveAPI(object):
         # END-IF
 
         # load file
-        # TODO - TONIGHT 7 - Need a better naming routine for Non-IPTS/RUN NUMBER case
-        output_ws_name = self._myProject.load_event_file(ipts_number=ipts_number, run_number=run_number,
-                                                         nxs_file_name=file_name, meta_data_only=meta_data_only)
-        # if meta_data_only:
-        #     output_ws_name = '{}_Meta'.format(run_number)
-        # else:
-        #     output_ws_name = '{}_events'.format(run_number)
-        # mantid_helper.load_nexus(file_name, output_ws_name, meta_data_only)
+        output_ws_name = self._myProject.load_meta_data(ipts_number=ipts_number, run_number=run_number,
+                                                        nxs_file_name=file_name)
 
         return output_ws_name
 
