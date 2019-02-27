@@ -854,7 +854,7 @@ class ProjectManager(object):
             if chop_data_key.isdigit():
                 chop_data_key = int(chop_data_key)
         else:
-            datatypeutility.check_string_variable('Chop data key (integer or string)', chop_data_key)
+            datatypeutility.check_int_variable('Chop data key (integer or string)', chop_data_key, (1, None))
 
         # check whether the chop data/sequence is valid
         if chop_data_key not in self._chopped_data_dict:

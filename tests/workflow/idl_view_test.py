@@ -1,6 +1,5 @@
 #!/usr/bin/python
 # Test the IDL-like command VIEW/VDRIVEVIEW
-import os
 import sys
 import command_test_setup
 try:
@@ -90,11 +89,11 @@ def test_main():
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
     if Now:
-        test_archive_single_run(command_tester)
+        test_case_archive_chopped(command_tester)
 
     if Passed:
         # no need to test now
-        test_case_archive_chopped(command_tester)
+        test_archive_single_run(command_tester)
 
     if Next:
         test_case_archive_single_normalize(command_tester)

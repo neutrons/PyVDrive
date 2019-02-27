@@ -249,10 +249,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             raise NotImplementedError('ASAP: What shall be chop key?')
         elif ipts_number is not None and run_number is not None:
             # load data from archive
-            print ('IPTS number:', self._iptsNumber)
             chopped_data_dir = self._myController.get_archived_data_dir(self._iptsNumber, run_number,
                                                                         chopped_data=True)
-            raise
             result = self._myController.project.load_chopped_binned_file(chopped_data_dir, chopped_seq_list,
                                                                          run_number)
             project_chop_key = result[0]
@@ -831,7 +829,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             :return:
             """
             self.ui.lineEdit_gsasFileName.setEnabled(enabled)
-            self.ui.pushButton_browseAnyGSAS.setEnabled(enabled)
+            # TODO FIXME - TONIGHT - where is this button?   self.ui.pushButton_browseAnyGSAS.setEnabled(enabled)
 
             return
 
@@ -904,7 +902,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._currUnit = str(self.ui.comboBox_unit.currentText())
 
         # plot
-        self.do_plot_diffraction_data(True)
+        # TODO - FIXME - TONIGHT - This shall be locked and fixed: self.do_plot_diffraction_data(True)
 
         return
 
