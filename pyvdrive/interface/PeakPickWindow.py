@@ -118,6 +118,11 @@ class PeakPickerWindow(QMainWindow):
         self.ui.pushButton_clearGroup.clicked.connect(self.do_clear_groups)
         self.ui.pushButton_resetSelection.clicked.connect(self.do_clear_peak_selection)
 
+        # phase: lattice structure constains
+        self.ui.comboBox_structure1.currentIndexChanged.connect(self.evt_structure_1_changed)
+        self.ui.comboBox_structure2.currentIndexChanged.connect(self.evt_structure_2_changed)
+        self.ui.comboBox_structure3.currentIndexChanged.connect(self.evt_structure_3_changed)
+
         # vanadium
         self.ui.pushButton_launchVanProcessDialog.clicked.connect(self.do_launch_vanadium_dialog)
         self.ui.pushButton_stripVPeaks.clicked.connect(self.do_strip_vanadium_peaks)
@@ -187,9 +192,9 @@ class PeakPickerWindow(QMainWindow):
         self._currTableOrder = 0  # 0 for ascending, 1 for descending
 
         # Phases and initialize
-        self._phaseDict = dict()
+        self._phaseDict = dict()   # keys are pre-set to 1, 2, 3
         for i in xrange(1, 4):
-            self._phaseDict[i] = ['', '', 0., 0., 0.]
+            self._phaseDict[i] = [None, None, 0., 0., 0.]   # name, type, a, b, c
 
         # Event handlers lock
         self._evtLockComboBankNumber = False
@@ -199,6 +204,8 @@ class PeakPickerWindow(QMainWindow):
 
         # data directory
         self._dataDirectory = None
+
+        self._set_widgets_post()
 
         return
 
@@ -242,13 +249,16 @@ class PeakPickerWindow(QMainWindow):
         for tup in UnitCellList:
             info_str = '%s (%s)' % (tup[0], tup[1])
             unit_cell_str_list.append(info_str)
-
+        last_index = len(unit_cell_str_list) - 1
         self.ui.comboBox_structure1.clear()
         self.ui.comboBox_structure1.addItems(unit_cell_str_list)
+        self.ui.comboBox_structure1.setCurrentIndex(last_index)
         self.ui.comboBox_structure2.clear()
         self.ui.comboBox_structure2.addItems(unit_cell_str_list)
+        self.ui.comboBox_structure2.setCurrentIndex(last_index)
         self.ui.comboBox_structure3.clear()
         self.ui.comboBox_structure3.addItems(unit_cell_str_list)
+        self.ui.comboBox_structure3.setCurrentIndex(last_index)
 
         # Set up the phase widget groups
         phase_widgets1 = PhaseWidgets(self, self.ui.lineEdit_a1, self.ui.lineEdit_b1, self.ui.lineEdit_c1,
@@ -282,6 +292,13 @@ class PeakPickerWindow(QMainWindow):
         self.ui.radioButton_vpeakCurrentBank.setChecked(True)
 
         return
+
+    def _set_widgets_post(self):
+        # TODO - TONIGHT
+        # set considering event handling
+        self.ui.comboBox_structure1.setCurrentIndex(0)
+        self.ui.comboBox_structure2.setCurrentIndex(0)
+        self.ui.comboBox_structure3.setCurrentIndex(0)
 
     def do_launch_vanadium_dialog(self):
         """
@@ -554,7 +571,9 @@ class PeakPickerWindow(QMainWindow):
         :return:
         """
         # Check requirements
-        assert self._myController is not None, 'Controller must be set up.'
+        if self._myController is None:
+            raise RuntimeError('Controller must be set up.')
+
         if self._peakPickerMode != PeakPickerMode.AutoMode:
             GuiUtility.pop_dialog_error(self, 'Peak pick mode must be in auto-mode.')
             return
@@ -563,20 +582,21 @@ class PeakPickerWindow(QMainWindow):
         min_d = GuiUtility.parse_float(self.ui.lineEdit_xMin)
         max_d = GuiUtility.parse_float(self.ui.lineEdit_xMax)
         if min_d is None:
-            min_d = self.ui.graphicsView_main.getXLimit()[0]
+            min_d = 1.0
+            self.ui.lineEdit_xMin.setText('{}'.format(min_d))
         if max_d is None:
-            max_d = self.ui.graphicsView_main.getXLimit()[1]
-        assert min_d <= max_d, 'Minimum D %f cannot be larger than Maximum D %f.' % (min_d, max_d)
+            max_d = 2.5
+            self.ui.lineEdit_xMax.setText('{}'.format(max_d))
+        if min_d >= max_d:
+            GuiUtility.pop_dialog_error(self, 'Minimum D %f cannot be larger than Maximum D %f.' % (min_d, max_d))
 
         # List all peaks if any is selected
         num_phases_used = 0
         reflection_list = list()
         err_msg = ''
 
-        # TODO - FIXME - TONIGHT 3 - Set  phase here!
-        # self.do_set_phases()
-
-        for i_phase in self._phaseDict.keys():
+        # always: 1, 2, 3
+        for i_phase in self._phaseDict.keys():  # same as [1, 2, 3]
             # Add all peaks calculated from this phase if it is selected
 
             # skip the phase if it is not selected
@@ -614,8 +634,8 @@ class PeakPickerWindow(QMainWindow):
             hkl_list = None
             GuiUtility.pop_dialog_information(self, 'No phase is selected. Find peak automatically!')
         else:
-            peak_position_list = reflection_list[0]
-            hkl_list = reflection_list[1]
+            peak_position_list = [r[0] for r in reflection_list]
+            hkl_list = [r[1] for r in reflection_list]
         # END-IF
 
         # Use algorithm to find peak automatically
@@ -791,6 +811,50 @@ class PeakPickerWindow(QMainWindow):
         # Check groups
 
         return
+
+    def evt_structure_1_changed(self):
+        # TODO
+        self.constrain_structure(self.ui.comboBox_structure1, self.ui.lineEdit_a1, self.ui.lineEdit_b1,
+                                self.ui.lineEdit_c1)
+
+        return
+
+    def evt_structure_2_changed(self):
+        # TODO
+        self.constrain_structure(self.ui.comboBox_structure2, self.ui.lineEdit_a2, self.ui.lineEdit_b2,
+                                self.ui.lineEdit_c2)
+
+        return
+
+    def evt_structure_3_changed(self):
+        # TODO
+        self.constrain_structure(self.ui.comboBox_structure3, self.ui.lineEdit_a3, self.ui.lineEdit_b3,
+                                self.ui.lineEdit_c3)
+
+        return
+
+    @staticmethod
+    def constrain_structure(combo_box, edit_a, edit_b, edit_c):
+        crystal_structure = str(combo_box.currentText())
+        if crystal_structure == '':
+            GuiUtility.pop_dialog_error(self, 'Empty structure')
+            return
+
+        crystal_structure = crystal_structure.strip().split()[0]
+
+        if crystal_structure in ['BCC', 'FCC']:
+            edit_b.setText('')
+            edit_c.setText('')
+            edit_b.setEnabled(False)
+            edit_c.setEnabled(False)
+        elif crystal_structure == 'HCP':
+            edit_b.setText('')
+            edit_b.setEnabled(False)
+            edit_c.setEnabled(True)
+        else:
+            edit_b.setEnabled(True)
+            edit_c.setEnabled(True)
+
 
     def evt_switch_bank(self):
         """

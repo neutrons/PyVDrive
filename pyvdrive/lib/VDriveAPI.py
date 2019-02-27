@@ -172,7 +172,7 @@ class VDriveAPI(object):
     @staticmethod
     def calculate_peaks_position(phase, min_d, max_d):
         """
-        Purpose: calculate the bragg peaks' position from
+        Purpose: calculate the bragg peaks' position from lattice structure
 
         Requirements:
             minimum d-spacing value cannot be 0.

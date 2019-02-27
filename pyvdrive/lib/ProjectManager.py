@@ -647,8 +647,12 @@ class ProjectManager(object):
                                                       background_type='Linear')
         else:
             # # find the peaks with list
-            peak_info_list = mantid_helper.find_peaks(data_ws_name, bank_number, x_range, peak_positions,
-                                                      hkl_list, profile)
+            peak_info_list = mantid_helper.find_peaks(diff_data=data_ws_name,
+                                                      ws_index=ws_index,
+                                                      peak_profile=profile,
+                                                      is_high_background=True,
+                                                      background_type='Linear',
+                                                      peak_pos_list=peak_positions)
 
         return peak_info_list
 
