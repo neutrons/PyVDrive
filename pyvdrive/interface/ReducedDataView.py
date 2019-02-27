@@ -359,7 +359,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             return
 
         # get samples
-        log_name_list = self._myController.get_sample_log_names(run_number, True)
+        # TODO - TONIGHT 1 - !!!!!!!!!! get sample log with limited set and better name!!!
+        log_name_list = self._myController.get_sample_log_names(run_number, True, broken line ----
+                                                                limited=True,
+                                                                shorter_name=True)
 
         # update
         self.update_sample_log_list(log_name_list, reset_plot=True)
@@ -701,10 +704,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                                                     log_name=curr_log_x_str,
                                                                                     start_time=None, stop_time=None,
                                                                                     relative=True)
+                # TODO - TONIGHT - TODO !!!!!!!!!!!!!
+                from pyvdrive.lib.vdrivehelper import merge_2_logs
                 vec_log_x, vec_log_y = merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
             # END-IF-ELSE
-
-
         else:
             # single chopped runs
             workspace_key = str(self.ui.comboBox_chopSeq.currentText())
