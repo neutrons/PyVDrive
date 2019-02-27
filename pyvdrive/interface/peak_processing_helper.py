@@ -269,10 +269,10 @@ class PhaseWidgets(object):
         Requirements:
         1. a, b and c are positive floats
         2. phase name must be given
-        :return: list as [name, type, a, b, c]
+        :return: list as [phase name, crystal structure type, a, b, c]
         """
-        name = str(self._lineEdit_name.text()).strip()
-        assert len(name) > 0, 'Phase name must be given!'
+        phase_name = str(self._lineEdit_name.text()).strip()
+        assert len(phase_name) > 0, 'Phase name must be given!'
 
         cell_type = str(self._comboBox_type.currentText()).split()[0]
         try:
@@ -288,7 +288,10 @@ class PhaseWidgets(object):
         except TypeError as e:
             raise RuntimeError('Lattice parameters a, b or c does not have correct value. Error: %s.' % str(e))
 
-        return [name, cell_type, a, b, c]
+        print ('[DB...BAT] Phase {} of {}: a = {}, b = {}, c = {}'
+               ''.format(phase_name, cell_type, a, b, c))
+
+        return [phase_name, cell_type, a, b, c]
 
     def is_selected(self):
         """
