@@ -480,7 +480,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # set label
         if plot_label == '':
             try:
-                the_label = '%s Y (%f, %f)' % (sample_log_name, min(vec_y), max(vec_y))
+                plot_label = '%s Y (%f, %f)' % (sample_log_name, min(vec_y), max(vec_y))
             except TypeError as type_err:
                 err_msg = 'Unable to generate log with %s and %s: %s' % (
                     str(min(vec_y)), str(max(vec_y)), str(type_err))
@@ -497,7 +497,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # auto resize
         self.resize_canvas(margin=0.05)
         # re-scale
-        self.auto_rescale()
+        # TODO - TONIGHT 3 - FIXME - No self._maxX  self.auto_rescale()
         self.setXYLimit(xmin=0.)
 
         # update

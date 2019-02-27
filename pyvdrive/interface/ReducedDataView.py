@@ -354,7 +354,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         try:
             # load workspace with meta data only (return workspace name)
             meta_data_key = self._myController.load_meta_data(ipts_number=ipts_number, run_number=run_number,
-                                                              file_name=None, meta_data_only=True)
+                                                              file_name=None)
             self._log_data_key = meta_data_key
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self, 'Unable to load Meta data due to {}'.format(run_err))
@@ -672,7 +672,12 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :return:
         """
         # get sample logs
-        curr_log_x_str = str(self.ui.comboBox_sampleLogsList_x.currentText()).strip().split()[0]
+        curr_log_x_str = str(self.ui.comboBox_sampleLogsList_x.currentText()).strip()
+        if curr_log_x_str == '':
+            GuiUtility.pop_dialog_error(self, 'Log not loaded yet')
+            return
+
+        curr_log_x_str = curr_log_x_str.split()[0]
         curr_log_y_str = str(self.ui.comboBox_sampleLogsList_y.currentText()).strip().split()[0]
         if len(curr_log_x_str) == 0:
             GuiUtility.pop_dialog_information(self, 'There is no log that has been loaded.')
@@ -692,6 +697,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                                               relative=True)
             if curr_log_x_str == 'Time':
                 vec_log_x = vec_times
+                vec_log_y = vec_value_y
             else:
                 vec_times_x, vec_value_x = self._myController.get_sample_log_values(data_key=self._log_data_key,
                                                                                     log_name=curr_log_x_str,
@@ -713,9 +719,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.graphicsView_mainPlot.reset_1d_plots()
 
         # plot
-        self.ui.graphicsView_logPlot.plot_sample_data(vec_log_x, vec_log_y, plot_label=workspace_key,
-                                                      sample_log_name_x =curr_log_x_str,
-                                                      sample_name=curr_log_y_str)
+        self.ui.graphicsView_logPlot.plot_sample_log(vec_log_x, vec_log_y,
+                                                     plot_label='{} {}'.format(self._iptsNumber, self._currRunNumber),
+                                                     sample_log_name_x=curr_log_x_str,
+                                                     sample_log_name=curr_log_y_str)
 
         # for workspace_key in workspace_key_list:
         #     # get the name of the workspace containing sample logs
