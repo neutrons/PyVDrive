@@ -488,9 +488,11 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # END-IF
 
         # add plot and register
+        self.reset()
+
         plot_id = self.add_plot_1d(vec_x, vec_y, x_label=sample_log_name_x,
                                    y_label=sample_log_name,
-                                   label='', marker='.', color='blue', show_legend=False)
+                                   label=plot_label, marker='.', color='blue', show_legend=True)
         self.set_title(title=plot_label)
         self._sizeRegister[plot_id] = (min(vec_x), max(vec_x), min(vec_y), max(vec_y))
 

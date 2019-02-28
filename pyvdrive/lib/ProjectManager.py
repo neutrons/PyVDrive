@@ -1379,7 +1379,6 @@ class ProjectManager(object):
 
         return reduce_all_success, message
 
-    # TODO - 20190101 - merge_runs: how to apply this!
     def reduce_vulcan_runs_v2(self, run_number_list, output_directory, d_spacing, binning_parameters,
                               number_banks, gsas, vanadium_run, merge_runs,
                               roi_list, mask_list, no_cal_mask):

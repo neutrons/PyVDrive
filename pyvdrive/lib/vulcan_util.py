@@ -302,6 +302,57 @@ def import_vulcan_log(log_file_name):
     return log_set
 
 
+def import_sample_log_record(ipts_number, run_number, is_chopped, record_type='start'):
+    """
+    :param ipts_number:
+    :param run_number:
+    :param is_chopped:
+    :param record_type:
+    :return:
+    """
+    import pandas as pd
+    import reduce_VULCAN
+
+    if is_chopped:
+        sample_log_name = '/SNS/VULCAN/IPTS-{0}/shared/binned_data/{1}/{1}sampleenv_chopped_{2}.txt' \
+                          ''.format(ipts_number, run_number, record_type)
+        # sample_header_name = '/SNS/VULCAN/IPTS-{0}/shared/binned_data/{1}/IPTS-{0}-MTSLoadFrame-{1}.txt' \
+        #                      ''.format(ipts_number, run_number)
+        assert os.path.exists(sample_log_name), sample_log_name
+        # assert os.path.exists(sample_header_name), sample_header_name
+
+    else:
+        raise NotImplementedError('Auto reduction does not export MTSLog now')
+
+    # read header
+    # head_file = open(sample_header_name, 'r')
+    # line = head_file.readlines()[0]
+    header = [t[0] for t in reduce_VULCAN.MTS_Header_List]
+    header.insert(0, 'chopseq')
+    header.insert(1, 'ProtonCharge')
+
+    print ('HEADER: {}'.format(header))
+
+    # peel file
+    try:
+        peek_file = open(sample_log_name, 'r')
+        line0 = peek_file.readline()
+        peek_file.close()
+        item1 = float(line0.strip().split()[0])
+        row0 = 0
+    except ValueError:
+        row0 = 1
+
+    mts_series = pd.read_csv(sample_log_name, skiprows=row0,
+                             names=header, sep='\t')
+
+    # print (type(mts_series))
+    # print (mts_series['chopseq'])
+    # mts_series['ProtonCharge'][0]
+
+    return header, mts_series
+
+
 def search_vulcan_runs(record_data, start_time, end_time):
     """
     Search runs from Pandas data loaded from record file according to time.

@@ -115,7 +115,7 @@ def convert_utc_to_local_time(utc_time):
     return east_time
 
 
-# TODO - TEST
+# TODO - TONIGHT - UNIT TEST :
 def merge_2_logs(vec_times_x, vec_value_x, vec_times_y, vec_value_y):
     """
     Merge 2 time series sample logs along with the time
@@ -192,6 +192,13 @@ def merge_2_logs(vec_times_x, vec_value_x, vec_times_y, vec_value_y):
         for index in range(index_y, vec_times_y.shape[0]):
             list_x.append(vec_value_x[index_x-1])  # last entry of X
             list_y.append(vec_value_y[index])
+
+    # print (vec_times_x)
+    # print (vec_times_y)
+    # print (vec_value_x)
+    # print (vec_value_y)
+    # print (list_x)
+    # print (list_y)
 
     return np.array(list_x), np.array(list_y)
 

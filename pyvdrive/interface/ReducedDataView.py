@@ -63,6 +63,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._currBank = 1
         self._currUnit = str(self.ui.comboBox_unit.currentText())
 
+        # normalization
+        self._curr_pc_norm = False
+        self._vanadium_dict = dict()
+
         # single runs
         self._single_run_list = list()  # single run number list: synchronized with comboBox_runs
         self._curr_data_key = None  # current (last loaded) workspace name as data key
@@ -81,6 +85,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # sample log runs
         self._log_data_key = None
         self._log_display_name_dict = dict()   # [log display name] = log full name (to look up)
+        self._sample_log_dict = dict()
 
         # FIND OUT: self._choppedSampleDict = dict()  # key: data workspace name. value: sample (NeXus) workspace name
 
@@ -239,8 +244,12 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # read from input for IPTS and run number
         if ipts_number is None:
             ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
+        else:
+            self.ui.lineEdit_iptsNumber.setText('{}'.format(ipts_number))
         if run_number is None:
             run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
+        else:
+            self.ui.lineEdit_run.setText('{}'.format(run_number))
 
         # get data sets
         if run_number is not None and self._myController.has_chopped_data(run_number, reduced=True):
@@ -370,7 +379,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 display_name = log_name.split(':')[-1]
             else:
                 display_name = log_name
-            self._log_display_name_dict[display_name] = log_name
+            self._log_display_name_dict[display_name] = log_name.split()[0]  # remove "(#entries)}"
         # END-FOR
 
         # update
@@ -682,21 +691,18 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :return:
         """
         # get sample logs: from display name to log name in workspace.run()
-        curr_log_x_str = str(self.ui.comboBox_sampleLogsList_x.currentText()).strip()
-        if curr_log_x_str == '':
+        # convert from display name to log name
+        display_name_x = str(self.ui.comboBox_sampleLogsList_x.currentText()).strip()
+        if display_name_x == '':
             GuiUtility.pop_dialog_error(self, 'Log not loaded yet')
             return
+        elif display_name_x.startswith('Time'):
+            curr_x_log_name = 'Time'
+        else:
+            curr_x_log_name = self._log_display_name_dict[display_name_x]
 
-        curr_log_x_str = curr_log_x_str.split()[0]
-        curr_log_y_str = str(self.ui.comboBox_sampleLogsList_y.currentText()).strip().split()[0]
-        if len(curr_log_x_str) == 0:
-            GuiUtility.pop_dialog_information(self, 'There is no log that has been loaded.')
-            return
-
-        # convert from display name to real name
-        if curr_log_x_str != 'Time':
-            curr_log_x_str = self._log_display_name_dict[curr_log_x_str]
-        curr_log_y_str = self._log_display_name_dict[curr_log_y_str]
+        display_name_y = str(self.ui.comboBox_sampleLogsList_y.currentText()).strip()
+        curr_y_log_name = self._log_display_name_dict[display_name_y]
 
         # reset
         self.ui.graphicsView_mainPlot.reset_1d_plots()
@@ -704,15 +710,15 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         if self.ui.radioButton_chooseSingleRun.isChecked() or self.ui.checkBox_plotallChoppedLog.isChecked():
             # case for single run or source of chopped runs
             vec_times, vec_value_y = self._myController.get_sample_log_values(data_key=self._log_data_key,
-                                                                              log_name=curr_log_y_str,
+                                                                              log_name=curr_y_log_name,
                                                                               start_time=None, stop_time=None,
                                                                               relative=True)
-            if curr_log_x_str == 'Time':
+            if curr_x_log_name == 'Time':
                 vec_log_x = vec_times
                 vec_log_y = vec_value_y
             else:
                 vec_times_x, vec_value_x = self._myController.get_sample_log_values(data_key=self._log_data_key,
-                                                                                    log_name=curr_log_x_str,
+                                                                                    log_name=curr_x_log_name,
                                                                                     start_time=None, stop_time=None,
                                                                                     relative=True)
                 vec_log_x, vec_log_y = vdrivehelper.merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
@@ -731,8 +737,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # plot
         self.ui.graphicsView_logPlot.plot_sample_log(vec_log_x, vec_log_y,
                                                      plot_label='{} {}'.format(self._iptsNumber, self._currRunNumber),
-                                                     sample_log_name_x=curr_log_x_str,
-                                                     sample_log_name=curr_log_y_str)
+                                                     sample_log_name_x=curr_x_log_name,
+                                                     sample_log_name=curr_y_log_name)
 
         # for workspace_key in workspace_key_list:
         #     # get the name of the workspace containing sample logs
@@ -814,7 +820,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # chopped data
             self.plot_chopped_run(chop_key=self._curr_chop_data_key, bank_id=self._currBank,
                                   seq_list=None, main_only=True,
-                                  van_norm=None, van_run=None, pc_norm=None)
+                                  van_norm=None, van_run=None, pc_norm=None, plot3d=False)
 
         return
 
@@ -917,6 +923,12 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # TODO - FIXME - TONIGHT - This shall be locked and fixed: self.do_plot_diffraction_data(True)
 
         return
+
+    def get_proton_charge(self, ipts_number, run_number, chop_seq):
+
+        chop_index = chop_seq - 1
+
+        return self._sample_log_dict[ipts_number][run_number]['start'][1]['ProtonCharge'][chop_index]
 
     @staticmethod
     def guess_run_number(gsas_path):
@@ -1113,7 +1125,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def plot_chopped_run(self, chop_key, bank_id, seq_list, van_norm, van_run, pc_norm, main_only):
+    def plot_chopped_run(self, chop_key, bank_id, seq_list, van_norm, van_run, pc_norm, main_only, plot3d):
         """
         plot chopped runs
         :param chop_key:
@@ -1125,7 +1137,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param main_only:
         :return:
         """
-        def construct_chopped_data(chop_data_key, chop_sequences, bank_index):
+        def construct_chopped_data(chop_data_key, chop_sequences, bank_index, pc_norm):
             # construct input for contour plot
             data_sets = list()
             new_seq_list = list()
@@ -1135,10 +1147,15 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                     data = self._myController.project.get_chopped_sequence_data(chop_data_key, chop_seq_i,
                                                                                 bank_index)
                     vec_x_i, vec_y_i = data
+
+                    # normalize by proton charge
+                    if pc_norm:
+                        p_charge_i = self.get_proton_charge(self._iptsNumber, self._currRunNumber, chop_seq_i)
+                        vec_y_i /= p_charge_i
                     data_sets.append((vec_x_i, vec_y_i))
                     new_seq_list.append(chop_seq_i)
-                except RuntimeError as run_err:
-                    error_msg += '{}\n'.format(run_err)
+                except RuntimeError as run_err_i:
+                    error_msg += '{}\n'.format(run_err_i)
             # END-FOR
 
             if len(new_seq_list) == 0:
@@ -1150,10 +1167,28 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # check inputs
         datatypeutility.check_int_variable('Bank ID', bank_id, (None, None))
+        if pc_norm is None:
+            # default
+            pc_norm = self._curr_pc_norm
+        else:
+            datatypeutility.check_bool_variable('Normalize by proton charge', pc_norm)
+            self._curr_pc_norm = pc_norm
 
         # plot main figure
         curr_seq = int(self.ui.comboBox_chopSeq.currentText())   # get from current sequential
         vec_x, vec_y = self._myController.project.get_chopped_sequence_data(chop_key, curr_seq, bank_id)
+
+        # normalize by proton charge
+        if pc_norm:
+            print ('[DB...BAT] Current Seq = {}'.format(curr_seq))
+            pc_seq = self.get_proton_charge(self._iptsNumber, self._currRunNumber, curr_seq)
+            print (type(pc_seq), pc_seq)
+            print (type(vec_y))
+            vec_y /= pc_seq
+
+        if van_norm:
+            print ('[DB...BAT] Vanadium workspace = {}'.format(self._vanadium_dict[van_run]))
+            vec_y /= self._myController.get_reduced_data()
 
         self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit=self._currUnit,
                                                             over_plot=True,
@@ -1172,7 +1207,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             for bank_id in range(1, 4):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
                 # data sets
                 try:
-                    seq_list, data_set_list = construct_chopped_data(chop_key, seq_list, bank_id)
+                    seq_list, data_set_list = construct_chopped_data(chop_key, seq_list, bank_id, pc_norm)
                 except RuntimeError as run_err:
                     GuiUtility.pop_dialog_error(self, 'Unable to plot chopped data due to {}'.format(run_err))
                     return
@@ -1182,11 +1217,20 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 child_2d_window.plot_contour(seq_list, data_set_list)
 
                 # 3D Line
-                child_3d_window = self.launch_3d_view()
-                child_3d_window.plot_runs_3d(seq_list, data_set_list)
-                # child_3d_window.plot_3d_line_plot(seq_list, data_set_list)
+                if plot3d:
+                    child_3d_window = self.launch_3d_view()
+                    child_3d_window.plot_runs_3d(seq_list, data_set_list)
             # END-FOR
         # END-IF
+
+        return
+
+    def set_chopped_logs(self, ipts_number, run_number, log_header, log_set, log_id='start'):
+        if ipts_number not in self._sample_log_dict:
+            self._sample_log_dict[ipts_number] = dict()
+        if run_number not in self._sample_log_dict[ipts_number]:
+            self._sample_log_dict[ipts_number][run_number] = {'start': None, 'mean': None, 'end': None}
+        self._sample_log_dict[ipts_number][run_number][log_id] = log_header, log_set
 
         return
 
@@ -1223,6 +1267,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return set_unit
 
+    def set_vanadium_ws(self, van_run_number, van_ws_name):
+        self._vanadium_dict[van_run_number] = van_ws_name
+
     def resize_canvas(self):
         """
         Resize the canvas if it is necessary
@@ -1257,6 +1304,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._iptsNumber = ipts_number
 
         return
+
+    def set_run_number(self, run_number):
+        self._currRunNumber = run_number
 
     def set_title_plot_run(self, title):
         """

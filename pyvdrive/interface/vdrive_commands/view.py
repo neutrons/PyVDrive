@@ -12,12 +12,15 @@ from process_vcommand import VDriveCommand
 from pyvdrive.lib import vulcan_util
 
 
+# TODO - TONIGHT - No more blabla and better doc!
+
+
 class VdriveView(VDriveCommand):
     """
     Process command VIEW or VDRIVEVIEW
     """
     SupportedArgs = ['IPTS', 'RUNS', 'RUNE', 'CHOPRUN', 'RUNV', 'MINV', 'MAXV', 'NORM', 'DIR', 'SHOW',
-                     'PEAK']
+                     'PEAK', '3D']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -31,7 +34,8 @@ class VdriveView(VDriveCommand):
         'DIR': 'User specified directory to find the reduced data (including those being chopped)',
         'PEAK': 'Integrate peak and output value. PEAK=1: output to console. Otherwise, output '
                 'to the file name',
-        'SHOW': 'Launch the reduced-data viewer'
+        'SHOW': 'Launch the reduced-data viewer',
+        '3D': 'Flag to show 3D line plot for chopped runs'
     }
 
     def __init__(self, controller, command_args, ipts_number=None, run_number_list=None):
@@ -72,6 +76,9 @@ class VdriveView(VDriveCommand):
 
         self._normByVanadium = False
         self._vanRunNumberDict = dict()
+
+        # plot 3D
+        self._plot_3d = False
 
         return
 
@@ -183,6 +190,12 @@ class VdriveView(VDriveCommand):
                 self._vanRunNumberDict[run_number] = van_run_number
             # END-IF
         # END-IF-ELSE
+
+        # 3D
+        if '3D' in self._commandArgsDict:
+            self._plot_3d = int(self._commandArgsDict['3D']) > 0
+        else:
+            self._plot_3d = False
 
         # Calculate peak parameters
         if 'PEAK' in self._commandArgsDict:
@@ -361,6 +374,10 @@ class VdriveView(VDriveCommand):
         :return:
         """
         return self._peakValueFileName
+
+    @property
+    def plot_3d(self):
+        return self._plot_3d
 
     @property
     def unit(self):

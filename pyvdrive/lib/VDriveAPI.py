@@ -972,7 +972,8 @@ class VDriveAPI(object):
             allowed_names = [log_tup[1] for log_tup in reduce_VULCAN.RecordBase]
 
             for sample_name in sample_name_list:
-                if sample_name in allowed_names:
+                name_i = sample_name.split()[0]   # sample name = [name] (# entries)
+                if name_i in allowed_names:
                     return_list.append(sample_name)
             # END-FOR
 
@@ -1656,51 +1657,6 @@ class VDriveAPI(object):
 
         return True, van_ws_key
 
-    def process_vanadium_run_old(self, ipts_number, run_number, reduced_file,
-                             one_bank=False, do_shift=False, local_output=None):
-        """
-        process vanadium runs
-        :param ipts_number:
-        :param run_number:
-        :param use_reduced_file:
-        :param one_bank:
-        :param do_shift:
-        :param local_output:
-        :return:
-        """
-        raise NotImplementedError('This method shall not be used because it is a do-everything one')
-        try:
-            # get reduced vanadium file
-            # TODO - TONIGHT - Always use reduced vanadium run (gda or NeXus)
-            status, ret_str = self.load_vanadium_run(ipts_number=ipts_number, run_number=run_number,
-                                                     use_reduced_file=use_reduced_file)
-            if status:
-                van_ws_key = ret_str
-            else:
-                return False, 'Unable to load vanadium run {0} due to {1}.'.format(run_number, ret_str)
-
-            # process vanadium
-            self._myProject.vanadium_processing_manager.init_session(van_ws_key, ipts_number, run_number)
-            if do_shift:
-                # shift is to use a different wavelength.  To Mantid, it is good to use FWHM = 2
-                self._myProject.vanadium_processing_manager.shift_fwhm_for_wavelength()
-            status, message = self._myProject.vanadium_processing_manager.process_vanadium(save=not one_bank,
-                                                                                           output_dir=local_output)
-
-            if one_bank:
-                # merge the result to 1 bank
-                # TODO/TEST/ISSUE/NOW - Test & remove the debug data
-                self._myProject.vanadium_processing_manager.merge_processed_vanadium(save=True, to_archive=True,
-                                                                                     local_file_name=local_output)
-
-        except RuntimeError as run_err:
-            return False, 'Unable to process vanadium run {0} due to \n\t{1}.'.format(run_number, run_err)
-
-        if status:
-            message = 'Vanadium process is successful.' + message
-
-        return status, message
-
     def read_mts_log(self, log_file_name, format_dict, block_index, start_point_index, end_point_index):
         """
         Read (partially) MTS file
@@ -1742,7 +1698,7 @@ class VDriveAPI(object):
         self._mtsLogDict[log_file_name] = mts_series
         self._currentMTSLogFileName = log_file_name
 
-        return
+        return mts_series
 
     def save_session(self, out_file_name=None):
         """ Save current session
