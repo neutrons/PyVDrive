@@ -945,14 +945,16 @@ class VDriveAPI(object):
 
         return exp_info
 
-    def get_sample_log_names(self, run_number, smart=False):
+    def get_sample_log_names(self, run_number, smart=False, limited=True):
         """
         Get names of sample log with time series property
         :param run_number: run number (integer/string) or workspace name
         :param smart: a smart way to show sample log name with more information
+        :param limited: Flag (boolean) to limit the log names to be those written to AutoRecord
         :return:
         """
-        assert run_number is not None, 'Run number cannot be None.'
+        if run_number is None:
+            raise RuntimeError('Run number cannot be None.')
 
         if isinstance(run_number, str) and mantid_helper.workspace_does_exist(run_number):
             # input (run number) is workspace's name
@@ -963,7 +965,26 @@ class VDriveAPI(object):
             chopper = self._myProject.get_chopper(run_number)
             sample_name_list = chopper.get_sample_log_names(smart)
 
-        return sample_name_list
+        # check: remove
+        if limited:
+            return_list = list()
+            # get the list of allowed name
+            allowed_names = [log_tup[1] for log_tup in reduce_VULCAN.RecordBase]
+
+            for sample_name in sample_name_list:
+                if sample_name in allowed_names:
+                    return_list.append(sample_name)
+            # END-FOR
+
+            # check
+            if len(return_list) == 0:
+                raise RuntimeError('There is no sample log that is in pre-defined sample log list ({})'
+                                   ''.format(allowed_names))
+
+        else:
+            return_list = sample_name_list
+
+        return return_list
 
     def get_sample_log_values(self, data_key, log_name, start_time=None, stop_time=None, relative=True):
         """

@@ -30,11 +30,7 @@ import pyvdrive.lib.datatypeutility
 from pyvdrive.lib import datatypeutility
 import atomic_data_viewers
 from gui.samplelogview import LogGraphicsView
-
-# BANK_GROUP_DICT = {90: [1, 2], 150: [3]}
-
-
-# TODO ---- DAYTIME ---- ASAP: Re-Define all the widgets and event handling methods!  No more confusion with use cases from UI and IDL
+from pyvdrive.lib import vdrivehelper
 
 
 class GeneralPurposedDataViewWindow(QMainWindow):
@@ -84,6 +80,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # sample log runs
         self._log_data_key = None
+        self._log_display_name_dict = dict()   # [log display name] = log full name (to look up)
 
         # FIND OUT: self._choppedSampleDict = dict()  # key: data workspace name. value: sample (NeXus) workspace name
 
@@ -216,7 +213,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return min_x, max_x
 
     def _is_run_in_memory(self, run_number):
-        # TODO - TONIGHT
+        """
+        Check whether a run has been reduced
+        :param run_number:
+        :return:
+        """
         return self._myController.project.reduction_manager.has_run_reduced(run_number)
 
     def do_clear_canvas(self):
@@ -359,13 +360,21 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             return
 
         # get samples
-        # TODO - TONIGHT 1 - !!!!!!!!!! get sample log with limited set and better name!!!
-        log_name_list = self._myController.get_sample_log_names(run_number, True, broken line ----
-                                                                limited=True,
-                                                                shorter_name=True)
+        log_name_list = self._myController.get_sample_log_names(run_number, True,
+                                                                limited=True)
+
+        # convert the log name to a short one for display
+        self._log_display_name_dict.clear()
+        for log_name in log_name_list:
+            if ':' in log_name:
+                display_name = log_name.split(':')[-1]
+            else:
+                display_name = log_name
+            self._log_display_name_dict[display_name] = log_name
+        # END-FOR
 
         # update
-        self.update_sample_log_list(log_name_list, reset_plot=True)
+        self.update_sample_log_list(sorted(self._log_display_name_dict.keys()), reset_plot=True)
 
         return
 
@@ -672,7 +681,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         plot selected sample logs
         :return:
         """
-        # get sample logs
+        # get sample logs: from display name to log name in workspace.run()
         curr_log_x_str = str(self.ui.comboBox_sampleLogsList_x.currentText()).strip()
         if curr_log_x_str == '':
             GuiUtility.pop_dialog_error(self, 'Log not loaded yet')
@@ -684,11 +693,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             GuiUtility.pop_dialog_information(self, 'There is no log that has been loaded.')
             return
 
+        # convert from display name to real name
+        if curr_log_x_str != 'Time':
+            curr_log_x_str = self._log_display_name_dict[curr_log_x_str]
+        curr_log_y_str = self._log_display_name_dict[curr_log_y_str]
+
         # reset
         self.ui.graphicsView_mainPlot.reset_1d_plots()
-        if self.ui.radioButton_chooseSingleRun.isChecked():
-            # TODO - TONIGHT - Implement!
-            pass
 
         if self.ui.radioButton_chooseSingleRun.isChecked() or self.ui.checkBox_plotallChoppedLog.isChecked():
             # case for single run or source of chopped runs
@@ -704,9 +715,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                                                     log_name=curr_log_x_str,
                                                                                     start_time=None, stop_time=None,
                                                                                     relative=True)
-                # TODO - TONIGHT - TODO !!!!!!!!!!!!!
-                from pyvdrive.lib.vdrivehelper import merge_2_logs
-                vec_log_x, vec_log_y = merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
+                vec_log_x, vec_log_y = vdrivehelper.merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
             # END-IF-ELSE
         else:
             # single chopped runs
