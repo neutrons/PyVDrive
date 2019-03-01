@@ -327,6 +327,7 @@ class DataChopper(object):
 
         return out_ws_name
 
+    # TODO - TONIGHT - Modernize
     def set_log_value_slicer(self, log_name, log_value_step, start_time=None, stop_time=None,
                              min_log_value=None, max_log_value=None, direction='Both'):
         """

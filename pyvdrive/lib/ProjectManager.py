@@ -948,10 +948,6 @@ class ProjectManager(object):
             # load from a file
             data_key = self._loadedDataManager.load_binned_data(data_file_name=reduced_data_file,
                                                                 data_file_type=None, prefix=None, max_int=None)
-
-            """
-            data_file_name, data_file_type, prefix, max_int):
-            """
             data_set = self._loadedDataManager.get_data_set(data_key, target_unit)
 
         else:

@@ -63,6 +63,15 @@ class PeakProcessingGUITestEnvironment(object):
 
         return
 
+    def peak_picker_test(self):
+        """
+
+        :return:
+        """
+        self.load_gsas(22752, 171966)
+
+        return
+
     def vanadium_test(self):
         """
 
@@ -82,12 +91,13 @@ def test_main():
     """
     peak_process_ui_test = PeakProcessingGUITestEnvironment()
 
-    if False:  # simple use case test: disabled now
+    if True:  # simple use case test: disabled now
         # simple test:
-        peak_process_ui_test.load_gsas()
+        peak_process_ui_test.peak_picker_test()
 
     # Vanadium processing test
-    peak_process_ui_test.vanadium_test()
+    if False:
+        peak_process_ui_test.vanadium_test()
 
     return peak_process_ui_test.main_window
 

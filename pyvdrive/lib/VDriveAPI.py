@@ -1071,7 +1071,7 @@ class VDriveAPI(object):
         IPTS/run number OR file name
         :param ipts_number:
         :param run_number:
-        :param file_name:
+        :param file_name: could be NONE
         :return: output worskpace name
         """
         # get NeXus file name

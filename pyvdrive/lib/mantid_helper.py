@@ -981,6 +981,7 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         raise RuntimeError('Workspace %s does not exist.' % workspace_name)
 
     # check bank ID not being None: input spectra
+    # TODO - TONIGHT 000 - VERY VERY URGENT!!!
     if is_a_workspace(workspace_name):
         # grouping workspace, then choose the right one
         if bank_id is None:
