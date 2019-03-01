@@ -1170,7 +1170,7 @@ class WindowLogPicker(QMainWindow):
             self.ui.graphicsView_main.reset()
 
         # plot
-        self.ui.graphicsView_main.plot_sample_log(plot_x, plot_y, log_name)
+        self.ui.graphicsView_main.plot_sample_log(plot_x, plot_y, log_name, '', 'Time (s)')
 
         return
 
