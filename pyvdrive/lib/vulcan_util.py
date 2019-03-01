@@ -302,6 +302,16 @@ def import_vulcan_log(log_file_name):
     return log_set
 
 
+# TODO - TONIGHT - QA
+def import_auto_record(ipts_number, run_number):
+    log_file_name = '/SNS/VULCAN/IPTS-{}/shared/AutoRecord.txt'.format(ipts_number)
+    assert os.path.exists(log_file_name), log_file_name
+
+    log_data_set = import_vulcan_log(log_file_name)
+
+    return log_data_set
+
+
 def import_sample_log_record(ipts_number, run_number, is_chopped, record_type='start'):
     """
     :param ipts_number:

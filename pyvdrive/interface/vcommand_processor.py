@@ -331,25 +331,41 @@ class VdriveCommandProcessor(object):
         if processor.do_proton_charge_normalization:
             from pyvdrive.lib import vulcan_util
             run_number, ipts_number = processor.get_run_tuple_list()[0]
-            log_header, log_set = vulcan_util.import_sample_log_record(ipts_number, run_number, is_chopped=True,
-                                                                       record_type='start')
-            view_window.set_chopped_logs(ipts_number, run_number, log_header, log_set, 'start')
+            if processor.is_chopped_run:
+                log_header, log_set = vulcan_util.import_sample_log_record(ipts_number, run_number, is_chopped=True,
+                                                                            record_type='start')
+                view_window.set_chopped_logs(ipts_number, run_number, log_header, log_set, 'start')
+            else:
+                log_set = vulcan_util.import_auto_record(ipts_number, run_number)
+                view_window.set_logs(ipts_number, run_number, log_set)
+
+        # vanadium
+        run_number, ipts_number = processor.get_run_tuple_list()[0]
+        if processor.do_vanadium_normalization:
+            van_run_number = processor.get_vanadium_number(run_number)
+            # load vanadium to workspace workspace and get calculation prm file
+            van_gsas_name, iparam_file_name = \
+                self._myController.archive_manager.locate_process_vanadium(van_run_number)
+            van_ws_name = self._myController.project.reduction_manager.gsas_writer.import_vanadium(van_gsas_name)
+            view_window.set_vanadium_ws(van_run_number, van_ws_name)
+        else:
+            van_run_number = None
 
         # about run number
         if processor.is_chopped_run:
             # chopped run
-            run_number, ipts_number = processor.get_run_tuple_list()[0]
+            # run_number, ipts_number = processor.get_run_tuple_list()[0]
             view_window.set_run_number(run_number)
 
-            if processor.do_vanadium_normalization:
-                van_run_number = processor.get_vanadium_number(run_number)
-                # load vanadium to workspace workspace and get calculation prm file
-                van_gsas_name, iparam_file_name = \
-                    self._myController.archive_manager.locate_process_vanadium(van_run_number)
-                van_ws_name = self._myController.project.reduction_manager.gsas_writer.import_vanadium(van_gsas_name)
-                view_window.set_vanadium_ws(van_run_number, van_ws_name)
-            else:
-                van_run_number = None
+            # if processor.do_vanadium_normalization:
+            #     van_run_number = processor.get_vanadium_number(run_number)
+            #     # load vanadium to workspace workspace and get calculation prm file
+            #     van_gsas_name, iparam_file_name = \
+            #         self._myController.archive_manager.locate_process_vanadium(van_run_number)
+            #     van_ws_name = self._myController.project.reduction_manager.gsas_writer.import_vanadium(van_gsas_name)
+            #     view_window.set_vanadium_ws(van_run_number, van_ws_name)
+            # else:
+            #     van_run_number = None
 
             chop_seq_list = processor.get_chopped_sequence_range()
             chop_key = view_window.do_load_chopped_runs(ipts_number, run_number,
@@ -370,11 +386,18 @@ class VdriveCommandProcessor(object):
 
         elif len(processor.get_run_tuple_list()) == 1:
             # one run situation
-            run_number, ipts_number = processor.get_run_tuple_list()[0]
-            if processor.do_vanadium_normalization:
-                van_run_number = processor.get_vanadium_number(run_number)
-            else:
-                van_run_number = None
+            # run_number, ipts_number = processor.get_run_tuple_list()[0]
+            view_window.set_run_number(run_number)
+
+            # if processor.do_vanadium_normalization:
+            #     van_run_number = processor.get_vanadium_number(run_number)
+            #     # load vanadium to workspace workspace and get calculation prm file
+            #     van_gsas_name, iparam_file_name = \
+            #         self._myController.archive_manager.locate_process_vanadium(van_run_number)
+            #     van_ws_name = self._myController.project.reduction_manager.gsas_writer.import_vanadium(van_gsas_name)
+            #     view_window.set_vanadium_ws(van_run_number, van_ws_name)
+            # else:
+            #     van_run_number = None
             data_key = view_window.do_load_single_run(ipts_number, run_number, False)
             view_window.do_refresh_existing_runs(set_to=data_key)
             view_window.plot_single_run(data_key,

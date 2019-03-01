@@ -6,6 +6,7 @@
 #
 ########################################################################
 import os
+import numpy
 try:
     import qtconsole.inprocess
     from PyQt5.QtWidgets import QMainWindow, QFileDialog
@@ -924,11 +925,32 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
+    # TODO - TONIGHT 2 - Code Quality
     def get_proton_charge(self, ipts_number, run_number, chop_seq):
 
-        chop_index = chop_seq - 1
+        if chop_seq is None:
+            # single run
+            log_data_set = self._sample_log_dict[ipts_number][run_number]
+            pc_vec = log_data_set['ProtonCharge']
+            run_vec = log_data_set['RUN']
+            print (type(run_vec[0]))
+            print (type(run_vec))
 
-        return self._sample_log_dict[ipts_number][run_number]['start'][1]['ProtonCharge'][chop_index]
+            print (numpy.where(run_vec == run_number))
+
+            row_index = numpy.where(run_vec == run_number)
+            print (row_index[0][0])
+            print (log_data_set['ProtonCharge'][row_index[0][0]])
+            row_index = row_index[0][0]
+
+            print (log_data_set['ProtonCharge'])
+
+            total_pc = pc_vec[row_index]
+        else:
+            chop_index = chop_seq - 1
+            total_pc = self._sample_log_dict[ipts_number][run_number]['start'][1]['ProtonCharge'][chop_index]
+
+        return total_pc
 
     @staticmethod
     def guess_run_number(gsas_path):
@@ -1103,6 +1125,24 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # entry_key = data_key, bank_id, self._currUnit
         vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=data_key, bank_id=bank_id,
                                                          unit=self._currUnit)
+        # TODO - TONIGHT - Put to a method (1)
+        if pc_norm:
+            pc_norm = self.get_proton_charge(self._iptsNumber, self._currRunNumber, None)
+        if van_norm:
+            # TODO - TONIGHT 1 - Consider to make this part as a method to call
+            from pyvdrive.lib import mantid_helper
+            print ('[DB...BAT] Vanadium workspace = {}'.format(self._vanadium_dict[van_run]))
+            van_ws_name = self._vanadium_dict[van_run]
+            mantid_helper.mtd_convert_units(van_ws_name, 'dSpacing')
+            van_ws = mantid_helper.retrieve_workspace(van_ws_name, True)
+            if van_ws.id() == 'WorkspaceGroup':
+                van_vec_y = van_ws[bank_id - 1].readY(0)
+            else:
+                van_vec_y = van_ws.readY(bank_id - 1)
+
+            vec_y /= van_vec_y
+            # END-IF
+
         line_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit=self._currUnit,
                                                                       over_plot=False,
                                                                       run_id=data_key, bank_id=bank_id,
@@ -1119,6 +1159,23 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 child_window = self.launch_single_run_view()
                 vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=data_key, bank_id=bank_id,
                                                                  unit=self._currUnit)
+                # TODO - TONIGHT - Put to a method (1)
+                if pc_norm:
+                    pc_norm = self.get_proton_charge(self._iptsNumber, self._currRunNumber, None)
+                if van_norm:
+                    # TODO - TONIGHT 1 - Consider to make this part as a method to call
+                    from pyvdrive.lib import mantid_helper
+                    print ('[DB...BAT] Vanadium workspace = {}'.format(self._vanadium_dict[van_run]))
+                    van_ws_name = self._vanadium_dict[van_run]
+                    mantid_helper.mtd_convert_units(van_ws_name, 'dSpacing')
+                    van_ws = mantid_helper.retrieve_workspace(van_ws_name, True)
+                    if van_ws.id() == 'WorkspaceGroup':
+                        van_vec_y = van_ws[bank_id - 1].readY(0)
+                    else:
+                        van_vec_y = van_ws.readY(bank_id - 1)
+
+                    vec_y /= van_vec_y
+                    # END-IF
                 child_window.plot_data(vec_x, vec_y, data_key, self._currUnit, bank_id)
             # END-FOR
         # END-IF
@@ -1148,6 +1205,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                                                 bank_index)
                     vec_x_i, vec_y_i = data
 
+                    # TODO - TONIGHT - Put to a method (1)
                     # normalize by proton charge
                     if pc_norm:
                         p_charge_i = self.get_proton_charge(self._iptsNumber, self._currRunNumber, chop_seq_i)
@@ -1179,6 +1237,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         vec_x, vec_y = self._myController.project.get_chopped_sequence_data(chop_key, curr_seq, bank_id)
 
         # normalize by proton charge
+        # TODO - TONIGHT - Put to a method (1)
         if pc_norm:
             print ('[DB...BAT] Current Seq = {}'.format(curr_seq))
             pc_seq = self.get_proton_charge(self._iptsNumber, self._currRunNumber, curr_seq)
@@ -1187,9 +1246,21 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             vec_y /= pc_seq
 
         if van_norm:
+            # TODO - TONIGHT 1 - Consider to make this part as a method to call
+            from pyvdrive.lib import mantid_helper
             print ('[DB...BAT] Vanadium workspace = {}'.format(self._vanadium_dict[van_run]))
-            vec_y /= self._myController.get_reduced_data()
+            van_ws_name = self._vanadium_dict[van_run]
+            mantid_helper.mtd_convert_units(van_ws_name, 'dSpacing')
+            van_ws = mantid_helper.retrieve_workspace(van_ws_name, True)
+            if van_ws.id() == 'WorkspaceGroup':
+                van_vec_y = van_ws[bank_id-1].readY(0)
+            else:
+                van_vec_y = van_ws.readY(bank_id - 1)
 
+            vec_y /= van_vec_y
+        # END-IF
+
+        # plot
         self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit=self._currUnit,
                                                             over_plot=True,
                                                             run_id=chop_key, bank_id=bank_id,
@@ -1222,6 +1293,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                     child_3d_window.plot_runs_3d(seq_list, data_set_list)
             # END-FOR
         # END-IF
+
+        return
+
+    def set_logs(self, ipts_number, run_number, log_set):
+        if ipts_number not in self._sample_log_dict:
+            self._sample_log_dict[ipts_number] = dict()
+        self._sample_log_dict[ipts_number][run_number] = log_set  # with head included
 
         return
 
