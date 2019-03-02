@@ -981,29 +981,39 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         raise RuntimeError('Workspace %s does not exist.' % workspace_name)
 
     # check bank ID not being None: input spectra
-    # TODO - TONIGHT 000 - VERY VERY URGENT!!!
-    if is_a_workspace(workspace_name):
-        # grouping workspace, then choose the right one
-        if bank_id is None:
-            raise RuntimeError('Bank ID None does not work with {} as a WorkspaceGroup'.format(workspace_name))
-        required_workspace_index = bank_id - start_bank_id
+    if bank_id is None:
+        required_workspace_index = None
     else:
-        # regular single workspace
-        if bank_id is None:
-            # all banks
-            required_workspace_index = None
-        else:
-            #  single bank
-            datatypeutility.check_int_variable('Bank ID', bank_id, (1, None))
-            required_workspace_index = bank_id - start_bank_id
-            workspace = retrieve_workspace(workspace_name)
-            if not 0 <= required_workspace_index < get_number_spectra(workspace):
-                raise RuntimeError('Bank ID {0}, aka workspace index {1} is out of spectra of workspace {2}.'
-                                   ''.format(bank_id, required_workspace_index, workspace_name))
-        # END-IF
+        workspace = retrieve_workspace(workspace_name)
+        num_specs = get_number_spectra(workspace)
+        required_workspace_index = bank_id - start_bank_id
+        if not 0 <= required_workspace_index < num_specs:
+            raise RuntimeError('Bank ID {0}, aka workspace index {1} is out of spectra of workspace {2}.'
+                               ''.format(bank_id, required_workspace_index, workspace_name))
     # END-IF-ELSE
 
-    # process target unit
+    # if is_a_workspace(workspace_name):
+    #     # grouping workspace, then choose the right one
+    #     if bank_id is None:
+    #         raise RuntimeError('Bank ID None does not work with {} as a WorkspaceGroup'.format(workspace_name))
+    # else:
+    #     # regular single workspace
+    #     if bank_id is None:
+    #         # all banks
+    #         required_workspace_index = None
+    #     else:
+    #         #  single bank
+    #         datatypeutility.check_int_variable('Bank ID', bank_id, (1, None))
+    #         required_workspace_index = bank_id - start_bank_id
+    #         workspace = retrieve_workspace(workspace_name)
+    #         if not 0 <= required_workspace_index < get_number_spectra(workspace):
+    #             raise RuntimeError('Bank ID {0}, aka workspace index {1} is out of spectra of workspace {2}.'
+    #                                ''.format(bank_id, required_workspace_index, workspace_name))
+    #     # END-IF
+    # # END-IF-ELSE
+
+    # Process unit
+    # about: target unit shall be converted to standard name
     if target_unit is not None:
         if target_unit.lower() == 'tof':
             target_unit = 'TOF'
@@ -1013,12 +1023,12 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
             target_unit = 'MomentumTransfer'
     # END-IF
 
-    # define a temporary workspace name
+    # define a temporary workspace name:
     if keep_untouched:
         temp_ws_name = workspace_name + '__{0}'.format(random.randint(1, 100000))
     else:
         temp_ws_name = workspace_name
-    orig_ws_name = workspace_name
+    orig_ws_name = workspace_name   # workspace name can be used for temporary workspace
 
     # get unit
     current_unit = get_workspace_unit(workspace_name)
@@ -1271,8 +1281,12 @@ def get_workspace_unit(workspace_name):
     :param workspace_name:
     :return:
     """
-    assert isinstance(workspace_name, str) and len(workspace_name) > 0
-    assert ADS.doesExist(workspace_name), 'Workspace {0} cannot be found in ADS.'.format(workspace_name)
+    datatypeutility.check_string_variable('Workspace name', workspace_name)
+    if workspace_name == '':
+        raise RuntimeError('mantid_helper.get_workspace_unit(): workspace name cannot be empty')
+    if not ADS.doesExist(workspace_name):
+        raise RuntimeError('mantid_helper.get_workspace_unit(): Workspace {0} cannot be found in ADS.'
+                           .format(workspace_name))
 
     workspace = ADS.retrieve(workspace_name)
     if workspace.id() == 'WorkspaceGroup':
