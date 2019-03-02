@@ -136,6 +136,9 @@ class VanadiumProcessingManager(object):
         :param unit:
         :return:
         """
+        if self._van_workspace_name is None:
+            raise RuntimeError('Vanadium workspace has not been set up yet!')
+
         datatypeutility.check_int_variable('Bank ID', bank_id, (1, 99))
         datatypeutility.check_string_variable('Unit', unit, ['TOF', 'dSpacing'])
 
@@ -170,7 +173,7 @@ class VanadiumProcessingManager(object):
         :param ipts_number:
         :param van_run_number:
         :param out_gsas_name:
-        :param sample_log_ws_name:
+        :param sample_log_ws_name: required for proton charge
         :return:
         """
         datatypeutility.check_string_variable('Workspace name', workspace_name)
