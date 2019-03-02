@@ -320,7 +320,7 @@ class VdriveCommandProcessor(object):
 
         # no IPTS: user wants to load everything in memory
         if ipts_number is None:
-            return True, ''
+            return True, 'Reduced Data Viewer Window is launched'
 
         # set IPTS
         view_window.set_ipts_number(ipts_number)
@@ -328,78 +328,85 @@ class VdriveCommandProcessor(object):
         print ('[DB...BAT] Processor.Unit = {}'.format(processor.unit))
         view_window.set_unit(processor.unit)
 
-        # find out whether the runs to plot are in memory or need to load from HDD/archive/previously reduced
-        in_mem_dict = dict()
-        ipts_dict = dict()
-        for run_i, ipts_i in processor.get_run_tuple_list():
-            if self._myController.project.reduction_manager.has_run_reduced(run_i):
-                in_mem_dict[run_i] = True
+        if processor.do_proton_charge_normalization:
+            from pyvdrive.lib import vulcan_util
+            run_number, ipts_number = processor.get_run_tuple_list()[0]
+            if processor.is_chopped_run:
+                log_header, log_set = vulcan_util.import_sample_log_record(ipts_number, run_number, is_chopped=True,
+                                                                            record_type='start')
+                view_window.set_chopped_logs(ipts_number, run_number, log_header, log_set, 'start')
             else:
-                in_mem_dict[run_i] = False
-            ipts_dict[run_i] = ipts_i
-        # END-FOR
+                log_set = vulcan_util.import_auto_record(ipts_number, run_number)
+                view_window.set_logs(ipts_number, run_number, log_set)
 
-        if processor.is_chopped_run:
-            # chopped run... can be 1D (only 1 chopped data) or 2D (more than 1 chopped data)
-            # get normalization information
-            if processor.do_vanadium_normalization:
-                van_run = processor.get_vanadium_number(processor.get_run_number())
-            else:
-                van_run = None
-            pc_norm = processor.do_proton_charge_normalization
-
-            view_window.plot_chopped_data_2d(run_number=processor.get_run_number(),
-                                             chop_sequence=processor.get_chopped_sequence_range(),
-                                             bank_id=1,
-                                             bank_id_from_1=True,
-                                             chopped_data_dir=processor.get_reduced_data_directory(),
-                                             vanadium_run_number=van_run,
-                                             proton_charge_normalization=pc_norm)
-
+        # vanadium
+        run_number, ipts_number = processor.get_run_tuple_list()[0]
+        if processor.do_vanadium_normalization:
+            van_run_number = processor.get_vanadium_number(run_number)
+            # load vanadium to workspace workspace and get calculation prm file
+            van_gsas_name, iparam_file_name = \
+                self._myController.archive_manager.locate_process_vanadium(van_run_number)
+            van_ws_name = self._myController.project.reduction_manager.gsas_writer.import_vanadium(van_gsas_name)
+            view_window.set_vanadium_ws(van_run_number, van_ws_name)
         else:
-            # regular single runs but the output could be 2D, i.e., multiple runs
+            van_run_number = None
 
-            # shall do vanadium first
-            # TODO - NEXT - How to use the vanadium dictionary?
-            if processor.do_vanadium_normalization:
-                vanadium_dict = dict()
-                for run_number in processor.get_run_number():
-                    van_run_number = processor.get_vanadium_number(run_number)
-                    vanadium_dict[run_number] = van_run_number
-                    self._myController.set_vanadium_run(run_number, van_run_number)
-            else:
-                vanadium_dict = None
-            # END-IF-ELSE
+        # about run number
+        if processor.is_chopped_run:
+            # chopped run
+            # run_number, ipts_number = processor.get_run_tuple_list()[0]
+            view_window.set_run_number(run_number)
 
-            # add runs to reduced data viewer
-            for i_run, run_number in enumerate(sorted(in_mem_dict.keys())):
-                # load
-                if in_mem_dict[run_number]:
-                    data_key = self._myController.get_reduced_run_ref_id(run_number)
-                else:
-                    data_key = self._myController.load_gsas_from_archive(run_number)
-
-                if i_run == 0:
-                    bank_id_list = self._myController.get_reduced_run_banks(ipts_dict[run_number], run_number)
-                else:
-                    bank_id_list = None
-                view_window.add_reduced_run(self, data_key, bank_id_list=bank_id_list, plot_new=False)
-            # END-FOR
-
-            # plot 1D as default
-            view_window.set_canvas_type(dimension=1)
-            view_window.do_plot_diffraction_data()
-
-            # if processor.is_1_d:
-            #     # 1-D image
-            #     view_window.set_canvas_type(dimension=1)
-            #     view_window.do_plot_diffraction_data()
+            # if processor.do_vanadium_normalization:
+            #     van_run_number = processor.get_vanadium_number(run_number)
+            #     # load vanadium to workspace workspace and get calculation prm file
+            #     van_gsas_name, iparam_file_name = \
+            #         self._myController.archive_manager.locate_process_vanadium(van_run_number)
+            #     van_ws_name = self._myController.project.reduction_manager.gsas_writer.import_vanadium(van_gsas_name)
+            #     view_window.set_vanadium_ws(van_run_number, van_ws_name)
             # else:
-            #     # 2-D image or 3-D image for multiple runs
-            #     view_window.set_canvas_type(dimension=2)
-            #     view_window.plot_multiple_runs_2d(bank_id=1, bank_id_from_1=True)
-            # # END-IF-ELSE
-        # END-IF-ELSE (chopped or single run)
+            #     van_run_number = None
+
+            chop_seq_list = processor.get_chopped_sequence_range()
+            chop_key = view_window.do_load_chopped_runs(ipts_number, run_number,
+                                                        chop_seq_list)
+
+            print ('[DB...BAT] chop_key: {} seq list: {}'.format(chop_key, chop_seq_list))
+
+            # refresh list and set to chop run
+            view_window.do_refresh_existing_runs(set_to=chop_key, is_chopped=True)
+
+            view_window.plot_chopped_run(chop_key, bank_id=1,
+                                         seq_list=chop_seq_list,
+                                         van_norm=processor.do_vanadium_normalization,
+                                         van_run=van_run_number,
+                                         pc_norm=processor.do_proton_charge_normalization,
+                                         main_only=False,
+                                         plot3d=processor.plot_3d)
+
+        elif len(processor.get_run_tuple_list()) == 1:
+            # one run situation
+            # run_number, ipts_number = processor.get_run_tuple_list()[0]
+            view_window.set_run_number(run_number)
+
+            # if processor.do_vanadium_normalization:
+            #     van_run_number = processor.get_vanadium_number(run_number)
+            #     # load vanadium to workspace workspace and get calculation prm file
+            #     van_gsas_name, iparam_file_name = \
+            #         self._myController.archive_manager.locate_process_vanadium(van_run_number)
+            #     van_ws_name = self._myController.project.reduction_manager.gsas_writer.import_vanadium(van_gsas_name)
+            #     view_window.set_vanadium_ws(van_run_number, van_ws_name)
+            # else:
+            #     van_run_number = None
+            data_key = view_window.do_load_single_run(ipts_number, run_number, False)
+            view_window.do_refresh_existing_runs(set_to=data_key)
+            view_window.plot_single_run(data_key,
+                                        van_norm=processor.do_vanadium_normalization,
+                                        van_run=van_run_number,
+                                        pc_norm=processor.do_proton_charge_normalization)
+        else:
+            # multiple but none chopped run
+            raise NotImplementedError('ASAP')
 
         # write out the peak parameters
         if processor.do_calculate_peak_parameter:

@@ -7,6 +7,7 @@ from dateutil import tz
 import datatypeutility
 import mantid
 import stat
+import numpy as np
 
 __author__ = 'wzz'
 
@@ -112,6 +113,94 @@ def convert_utc_to_local_time(utc_time):
     east_time = utc_time.astimezone(to_zone)
 
     return east_time
+
+
+# TODO - TONIGHT - UNIT TEST :
+def merge_2_logs(vec_times_x, vec_value_x, vec_times_y, vec_value_y):
+    """
+    Merge 2 time series sample logs along with the time
+    For example:
+    We have
+    x: (t1, x1), (t3, x2), (t6, x3)
+    y: (t2, y1), (t4, y2), (t5, y3)
+    where t_i < t_(i+1)
+    The output shall be
+    (x1, y1) @ t2, (x2, y1) @ t3, (x2, y2) @ t4, (x2, y3) @ t5, (x3, y3) @ t6
+    :param vec_times_x:
+    :param vec_value_x:
+    :param vec_times_y:
+    :param vec_value_y:
+    :return:
+    """
+    datatypeutility.check_numpy_arrays('X times and value vectors', [vec_times_x, vec_value_x], 1, True)
+    datatypeutility.check_numpy_arrays('Y times and value vectors', [vec_times_y, vec_value_y], 1, True)
+
+    list_x = list()
+    list_y = list()
+
+    # search for the start
+    if vec_times_x[0] == vec_times_y[0]:
+        index_x = 0
+        index_y = 0
+    elif vec_times_x[0] < vec_times_y[0]:
+        # Y starts later
+        index_x = np.searchsorted(vec_times_x, vec_times_y[0]) - 1
+        index_y = 0
+        assert index_x >= 0, 'As X starts first, starting searching index of X cannot be 0'
+    else:
+        # X starts later
+        index_x = 0
+        index_y = np.searchsorted(vec_times_y, vec_times_x[0]) - 1
+        assert index_y >= 0, 'As Y starts first, starting searching index of Y cannot be 0'
+    # END-IF-ELSE
+
+    # add entries interveningly
+    continue_add = True
+    while continue_add:
+        list_x.append(vec_value_x[index_x])
+        list_y.append(vec_value_y[index_y])
+        if vec_times_x[index_x] == vec_times_y[index_y]:
+            # index X and Y are same: occur at tx = ty
+            update_x = True
+            update_y = True
+        elif vec_value_x[index_x] < vec_times_y[index_y]:
+            # time X is earlier: occur @ ty
+            update_x = True
+            update_y = False
+        else:
+            # time Y is earlier: occur @ tx
+            update_x = False
+            update_y = True
+
+        # update index of X and Y
+        if update_x:
+            index_x += 1
+        if update_y:
+            index_y += 1
+
+        # end loop signal
+        if index_x == vec_times_x.shape[0] or index_y == vec_value_y.shape[0]:
+            continue_add = False
+    # END-WHILE
+
+    # add entries from a single side
+    if index_x < vec_times_x.shape[0]:  # X is not running out
+        for index in range(index_x, vec_times_x.shape[0]):
+            list_x.append(vec_value_x[index])
+            list_y.append(vec_value_y[index_y-1])  # last entry of Y
+    elif index_y < vec_times_y.shape[0]:  # Y is not running oout
+        for index in range(index_y, vec_times_y.shape[0]):
+            list_x.append(vec_value_x[index_x-1])  # last entry of X
+            list_y.append(vec_value_y[index])
+
+    # print (vec_times_x)
+    # print (vec_times_y)
+    # print (vec_value_x)
+    # print (vec_value_y)
+    # print (list_x)
+    # print (list_y)
+
+    return np.array(list_x), np.array(list_y)
 
 
 def parse_time(date_time_str, local_est=True):

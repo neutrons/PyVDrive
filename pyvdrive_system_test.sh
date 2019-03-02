@@ -34,9 +34,9 @@ if [ "$1" = "2" ] || [ "$1" = "all" ]  ; then
         PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH build/scripts-2.7/idl_chop_test.py
 fi
 
-if [ "$1" = "3" ] || [ "$1" = "all" ] ; then
-	echo "Test VIEW: Not Implemented"
-        # PYTHONPATH=build/lib:$PYTHONPATH build/scripts-2.7/idl_view_test.py
+if [ "$1" = "3" ] || [ "$1" = "view" ] ; then
+	echo "Test VIEW"
+        PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH build/scripts-2.7/idl_view_test.py
 fi
 
 if [ "$1" = "4" ]; then

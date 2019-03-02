@@ -558,7 +558,7 @@ class SaveVulcanGSS(object):
             # Rebin to these banks' parameters (output = Histogram)
             if bin_params is not None:
                 Rebin(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name,
-                          Params=bin_params, PreserveEvents=True)
+                      Params=bin_params, PreserveEvents=True)
 
             # Create output
             for bank_id in bank_id_list:

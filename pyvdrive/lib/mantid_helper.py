@@ -977,24 +977,43 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         datatypeutility.check_string_variable('Target unit (can be None)', target_unit, None)
     datatypeutility.check_int_variable('Starting bank ID (min Bank ID value)', start_bank_id, (0, None))
 
-    if workspace_does_exist(workspace_name) is False:
+    if not workspace_does_exist(workspace_name):
         raise RuntimeError('Workspace %s does not exist.' % workspace_name)
 
-    # check bank ID not being None
-    workspace = retrieve_workspace(workspace_name)
-    if bank_id is not None:
-        # single bank
-        datatypeutility.check_int_variable('Bank ID', bank_id, (1, None))
+    # check bank ID not being None: input spectra
+    if bank_id is None:
+        required_workspace_index = None
+    else:
+        workspace = retrieve_workspace(workspace_name)
+        num_specs = get_number_spectra(workspace)
         required_workspace_index = bank_id - start_bank_id
-        if not 0 <= required_workspace_index < workspace.getNumberHistograms():
+        if not 0 <= required_workspace_index < num_specs:
             raise RuntimeError('Bank ID {0}, aka workspace index {1} is out of spectra of workspace {2}.'
                                ''.format(bank_id, required_workspace_index, workspace_name))
-    else:
-        # all banks
-        required_workspace_index = None
     # END-IF-ELSE
 
-    # process target unit
+    # if is_a_workspace(workspace_name):
+    #     # grouping workspace, then choose the right one
+    #     if bank_id is None:
+    #         raise RuntimeError('Bank ID None does not work with {} as a WorkspaceGroup'.format(workspace_name))
+    # else:
+    #     # regular single workspace
+    #     if bank_id is None:
+    #         # all banks
+    #         required_workspace_index = None
+    #     else:
+    #         #  single bank
+    #         datatypeutility.check_int_variable('Bank ID', bank_id, (1, None))
+    #         required_workspace_index = bank_id - start_bank_id
+    #         workspace = retrieve_workspace(workspace_name)
+    #         if not 0 <= required_workspace_index < get_number_spectra(workspace):
+    #             raise RuntimeError('Bank ID {0}, aka workspace index {1} is out of spectra of workspace {2}.'
+    #                                ''.format(bank_id, required_workspace_index, workspace_name))
+    #     # END-IF
+    # # END-IF-ELSE
+
+    # Process unit
+    # about: target unit shall be converted to standard name
     if target_unit is not None:
         if target_unit.lower() == 'tof':
             target_unit = 'TOF'
@@ -1004,12 +1023,12 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
             target_unit = 'MomentumTransfer'
     # END-IF
 
-    # define a temporary workspace name
+    # define a temporary workspace name:
     if keep_untouched:
         temp_ws_name = workspace_name + '__{0}'.format(random.randint(1, 100000))
     else:
         temp_ws_name = workspace_name
-    orig_ws_name = workspace_name
+    orig_ws_name = workspace_name   # workspace name can be used for temporary workspace
 
     # get unit
     current_unit = get_workspace_unit(workspace_name)
@@ -1028,6 +1047,7 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
     # Convert to point data by checking
     workspace = retrieve_workspace(workspace_name)
     if workspace.id() == 'WorkspaceGroup':
+        # space group
         if workspace[0].isHistogramData():
             mantidapi.ConvertToPointData(InputWorkspace=workspace_name,
                                          OutputWorkspace=temp_ws_name)
@@ -1035,6 +1055,7 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
             temp_ws_name = workspace_name
         # END-IF
     else:
+        # single group
         num_bins_set = set()
         for iws in range(get_number_spectra(workspace)):
             num_bins_set.add(len(workspace.readY(iws)))
@@ -1058,6 +1079,8 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
     workspace = retrieve_workspace(workspace_name)
     is_group = workspace.id() == 'WorkspaceGroup'
     num_spec = get_number_spectra(workspace)
+    print ('[DB........................BAT] Workspace {}: # spec = {}, required index = {}, start bank id = {}'
+           ''.format(workspace_name, num_spec, required_workspace_index, start_bank_id))
     data_set_dict = dict()
     for ws_index in range(num_spec):
         if bank_id is None or ws_index == required_workspace_index:
@@ -1085,6 +1108,8 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
             data_y[:] = vec_y[:]
             data_e[:] = vec_e[:]
 
+            print ('[DB...BAT] ws_index = {}, required index = {}, start bank id = {}'
+                   ''.format(ws_index, required_workspace_index, start_bank_id))
             data_set_dict[ws_index + start_bank_id] = data_x, data_y, data_e
         # END-IF
     # END-FOR
@@ -1223,7 +1248,8 @@ def get_workspace_information(run_ws_name):
 
     # Retrieve workspace and get bank list (bank number is from 1)
     workspace = retrieve_workspace(run_ws_name)
-    num_spec = workspace.getNumberHistograms()
+    # num_spec = workspace.getNumberHistograms()
+    num_spec = get_number_spectra(workspace)
     bank_id_list = range(1, num_spec+1)
 
     return bank_id_list
@@ -1255,8 +1281,12 @@ def get_workspace_unit(workspace_name):
     :param workspace_name:
     :return:
     """
-    assert isinstance(workspace_name, str) and len(workspace_name) > 0
-    assert ADS.doesExist(workspace_name), 'Workspace {0} cannot be found in ADS.'.format(workspace_name)
+    datatypeutility.check_string_variable('Workspace name', workspace_name)
+    if workspace_name == '':
+        raise RuntimeError('mantid_helper.get_workspace_unit(): workspace name cannot be empty')
+    if not ADS.doesExist(workspace_name):
+        raise RuntimeError('mantid_helper.get_workspace_unit(): Workspace {0} cannot be found in ADS.'
+                           .format(workspace_name))
 
     workspace = ADS.retrieve(workspace_name)
     if workspace.id() == 'WorkspaceGroup':
@@ -1423,6 +1453,7 @@ def convert_gsas_ws_to_group(ws_name):
     return retrieve_workspace(ws_name)
 
 
+# TODO - TONIGHT 3 - Clean!
 def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     """ Load VULCAN GSAS file and set instrument information.
     Output workspace will be set to PointData
@@ -1474,8 +1505,6 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
 
     # convert to workspace group
     convert_gsas_ws_to_group(out_ws_name)
-
-    print ('[DB....BAT...Break Line 1: {}'.format(ADS.getObjectNames()))
 
     # # convert to point data
     # if point_data:

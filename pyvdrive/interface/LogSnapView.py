@@ -188,7 +188,7 @@ class DialogLogSnapView(QDialog):
         self._currSessionDiscardable = False
 
         # Get log value
-        vec_x, vec_y = self._myWorkflowController.get_sample_log_values(run_number=self._currRunNumber,
+        vec_x, vec_y = self._myWorkflowController.get_sample_log_values(data_key=self._currRunNumber,
                                                                         log_name=sample_log_name, relative=True)
 
         # Plot

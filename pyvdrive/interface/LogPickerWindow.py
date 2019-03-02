@@ -27,6 +27,7 @@ import gui.GuiUtility as GuiUtility
 from pyvdrive.interface.gui.vdrivetreewidgets import VdriveRunManagerTree
 from pyvdrive.interface.gui.samplelogview import LogGraphicsView
 from pyvdrive.lib import datatypeutility
+import ReducedDataView
 import LoadMTSLogWindow
 import QuickChopDialog
 
@@ -693,8 +694,6 @@ class WindowLogPicker(QMainWindow):
         launch the window to view reduced data
         :return:
         """
-        import ReducedDataView
-
         # launch reduced-data-view window
         view_window = self._myParent.do_launch_reduced_data_viewer()
         assert isinstance(view_window, ReducedDataView.GeneralPurposedDataViewWindow),\
@@ -706,16 +705,22 @@ class WindowLogPicker(QMainWindow):
             info_dict = self.get_controller().get_chopped_data_info(self._currRunNumber,
                                                                     slice_key=self._currSlicerKey,
                                                                     reduced=True)
-            chopped_workspace_list = info_dict['workspaces']
-            view_window.add_chopped_workspaces(self._currRunNumber, chopped_workspace_list, focus_to_it=True)
-            view_window.ui.groupBox_plotChoppedRun.setEnabled(True)
-            view_window.ui.groupBox_plotSingleRun.setEnabled(False)
-            view_window.do_plot_diffraction_data()
+            print ('[DB...BAT] Chopped data info: {}'.format(info_dict))
+            data_key = self.get_controller().project.current_chopped_key()
+            view_window.do_refresh_existing_runs(set_to=data_key, plot_selected=True, is_chopped=True)
 
-            # set up the run time
-            view_window.label_loaded_data(run_number=self._currRunNumber,
-                                          is_chopped=True,
-                                          chop_seq_list=range(len(chopped_workspace_list)))
+            if False:
+                # chopped_workspace_list = info_dict['workspaces']
+                # view_window.add_chopped_workspaces(self._currRunNumber, chopped_workspace_list, focus_to_it=True)
+                # view_window.ui.groupBox_plotChoppedRun.setEnabled(True)
+                # view_window.ui.groupBox_plotSingleRun.setEnabled(False)
+                # view_window.do_plot_diffraction_data()
+
+                # set up the run time
+                # view_window.label_loaded_data(run_number=self._currRunNumber,
+                #                               is_chopped=True,
+                #                               chop_seq_list=range(len(chopped_workspace_list)))
+                raise NotImplementedError('Removed!')
 
         except RuntimeError as run_err:
             error_msg = 'Unable to get chopped and reduced workspaces. for run {0} with slicer {1} due to {2}.' \
@@ -1165,7 +1170,7 @@ class WindowLogPicker(QMainWindow):
             self.ui.graphicsView_main.reset()
 
         # plot
-        self.ui.graphicsView_main.plot_sample_log(plot_x, plot_y, log_name)
+        self.ui.graphicsView_main.plot_sample_log(plot_x, plot_y, log_name, '', 'Time (s)')
 
         return
 

@@ -1,4 +1,4 @@
-# Zoo of utility methods for IO via file
+# Zoo of utility methods for IO via file for VULCAN
 # All the PyVDrive specific files will be parsed or written by methods in this module
 import os
 import time

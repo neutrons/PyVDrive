@@ -109,7 +109,7 @@ class VanadiumPeak(VDriveCommand):
             # load logs for future
             if True:
                 # only support vanadium now
-                sample_log_ws_name = self._controller.load_nexus_file(self._iptsNumber, self._vanRunNumber, None, True)
+                sample_log_ws_name = self._controller.load_meta_data(self._iptsNumber, self._vanRunNumber, None)
             else:
                 sample_log_ws_name = None
             self._controller.project.vanadium_processing_manager.init_session(self._myVanDataKey,

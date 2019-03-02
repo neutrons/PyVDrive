@@ -8,9 +8,8 @@ try:
 except ImportError:
     from PyQt4 import QtCore
     from PyQt4.QtGui import QMenu, QAction, QCursor
-    
-    
 import mplgraphicsview
+from pyvdrive.lib import datatypeutility
 
 COLOR_LIST = ['red', 'green', 'black', 'cyan', 'magenta', 'yellow']
 
@@ -463,7 +462,8 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def plot_sample_log(self, vec_x, vec_y, sample_log_name):
+    # TODO - TONIGHT 1 - clean
+    def plot_sample_log(self, vec_x, vec_y, sample_log_name, plot_label, sample_log_name_x='Time'):
         """ Purpose: plot sample log
 
         Guarantee: canvas is replot
@@ -473,27 +473,35 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         :return:
         """
         # check
-        assert isinstance(vec_x, np.ndarray), 'VecX must be a numpy array but not %s.' \
-                                              '' % vec_x.__class__.__name__
-        assert isinstance(vec_y, np.ndarray), 'VecY must be a numpy array but not %s.' \
-                                              '' % vec_y.__class__.__name__
-        assert isinstance(sample_log_name, str)
+        datatypeutility.check_numpy_arrays('Vector X and Y', [vec_x, vec_y], 1, True)
+        datatypeutility.check_string_variable('Sample log name', sample_log_name)
+        datatypeutility.check_string_variable('Sample log name (x-axis)', sample_log_name_x)
+        datatypeutility.check_string_variable('Plot label', plot_label)
 
         # set label
-        try:
-            the_label = '%s Y (%f, %f)' % (sample_log_name, min(vec_y), max(vec_y))
-        except TypeError as type_err:
-            err_msg = 'Unable to generate log with %s and %s: %s' % (
-                str(min(vec_y)), str(max(vec_y)), str(type_err))
-            raise TypeError(err_msg)
+        if plot_label == '':
+            try:
+                plot_label = '%s Y (%f, %f)' % (sample_log_name, min(vec_y), max(vec_y))
+            except TypeError as type_err:
+                err_msg = 'Unable to generate log with %s and %s: %s' % (
+                    str(min(vec_y)), str(max(vec_y)), str(type_err))
+                raise TypeError(err_msg)
+        # END-IF
 
         # add plot and register
-        plot_id = self.add_plot_1d(vec_x, vec_y, label='', marker='.', color='blue', show_legend=False)
-        self.set_title(title=the_label)
+        self.reset()
+
+        plot_id = self.add_plot_1d(vec_x, vec_y, x_label=sample_log_name_x,
+                                   y_label=sample_log_name,
+                                   label=plot_label, marker='.', color='blue', show_legend=True)
+        self.set_title(title=plot_label)
         self._sizeRegister[plot_id] = (min(vec_x), max(vec_x), min(vec_y), max(vec_y))
 
         # auto resize
         self.resize_canvas(margin=0.05)
+        # re-scale
+        # TODO - TONIGHT 3 - FIXME - No self._maxX  self.auto_rescale()
+        self.setXYLimit(xmin=0.)
 
         # update
         self._currPlotID = plot_id

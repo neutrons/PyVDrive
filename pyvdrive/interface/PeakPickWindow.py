@@ -1098,9 +1098,8 @@ class PeakPickerWindow(QMainWindow):
 
         # Explicitly to load data if IPTS and run number are not sufficient
         if ipts_number is not None and run_number is not None:
-            # well-defined
+            # well-defined: get data from archive automatically
             gsas_file_name = None
-            pass
         else:
             # user to input
             if ipts_number:
@@ -1156,7 +1155,7 @@ class PeakPickerWindow(QMainWindow):
             # set label
             self.ui.label_loadedDataInfo.setText('Loaded {}'.format(gsas_file_name))
         except RuntimeError as re:
-            GuiUtility.pop_dialog_error(self, str(re))
+            GuiUtility.pop_dialog_error(self, 'Failed to load GSAS {}: {}'.format(gsas_file_name, str(re)))
             return None
 
         # add the new data to combo box

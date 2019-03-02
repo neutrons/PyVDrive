@@ -767,7 +767,7 @@ class VDriveAPI(object):
             # chopped runs
             # from archive
             loaded_runs_list = self._myProject.get_loaded_chopped_reduced_runs()
-            print ('[DB...BAT] API: Loaded chopped runs: {}'.format(loaded_runs_list))
+            print ('[DB...BAT] API: Loaded chopped gsas: {}'.format(loaded_runs_list))
 
             # from memory
             reduced_runs_list = self._myProject.reduction_manager.get_reduced_runs(chopped=True)
@@ -945,14 +945,16 @@ class VDriveAPI(object):
 
         return exp_info
 
-    def get_sample_log_names(self, run_number, smart=False):
+    def get_sample_log_names(self, run_number, smart=False, limited=True):
         """
         Get names of sample log with time series property
         :param run_number: run number (integer/string) or workspace name
         :param smart: a smart way to show sample log name with more information
+        :param limited: Flag (boolean) to limit the log names to be those written to AutoRecord
         :return:
         """
-        assert run_number is not None, 'Run number cannot be None.'
+        if run_number is None:
+            raise RuntimeError('Run number cannot be None.')
 
         if isinstance(run_number, str) and mantid_helper.workspace_does_exist(run_number):
             # input (run number) is workspace's name
@@ -963,13 +965,33 @@ class VDriveAPI(object):
             chopper = self._myProject.get_chopper(run_number)
             sample_name_list = chopper.get_sample_log_names(smart)
 
-        return sample_name_list
+        # check: remove
+        if limited:
+            return_list = list()
+            # get the list of allowed name
+            allowed_names = [log_tup[1] for log_tup in reduce_VULCAN.RecordBase]
 
-    def get_sample_log_values(self, run_number, log_name, start_time=None, stop_time=None, relative=True):
+            for sample_name in sample_name_list:
+                name_i = sample_name.split()[0]   # sample name = [name] (# entries)
+                if name_i in allowed_names:
+                    return_list.append(sample_name)
+            # END-FOR
+
+            # check
+            if len(return_list) == 0:
+                raise RuntimeError('There is no sample log that is in pre-defined sample log list ({})'
+                                   ''.format(allowed_names))
+
+        else:
+            return_list = sample_name_list
+
+        return return_list
+
+    def get_sample_log_values(self, data_key, log_name, start_time=None, stop_time=None, relative=True):
         """
         Get time and value of a sample log in vector
         Returned time is in unit of second as epoch time
-        :param run_number:
+        :param data_key: Run number or workspace name
         :param log_name:
         :param start_time:
         :param stop_time:
@@ -977,17 +999,17 @@ class VDriveAPI(object):
         :return: 2-tuple as status (boolean) and 2-tuple of vectors.
         """
         # check input
-        assert run_number is not None, 'Run number cannot be None.'
+        assert data_key is not None, 'Data key cannot be None.'
 
         # 2 cases: run_number is workspace or run_number is run number
-        if isinstance(run_number, str) and mantid_helper.workspace_does_exist(run_number):
+        if isinstance(data_key, str) and mantid_helper.workspace_does_exist(data_key):
             # input (run number) is workspace's name
-            ws_name = run_number
+            ws_name = data_key
             vec_times, vec_value = mantid_helper.get_sample_log_value(ws_name, log_name, start_time=None,
                                                                       stop_time=None, relative=relative)
         else:
             # get chopper for (integer) run number
-            chopper = self._myProject.get_chopper(run_number)
+            chopper = self._myProject.get_chopper(data_key)
 
             # get log values
             vec_times, vec_value = chopper.get_sample_data(sample_log_name=log_name,
@@ -1043,56 +1065,14 @@ class VDriveAPI(object):
 
         return ref_run, run_start_time, time_segment_list
 
-    def load_archived_gsas(self, ipts_number, run_number, is_chopped_data, data_key):
-        """
-        Load GSAS file from SNS archive
-        :param ipts_number:
-        :param run_number:
-        :param is_chopped_data:
-        :param data_key: user given data key
-        :return:
-        """
-        raise NotImplementedError('Shall be removed!')
-        # check
-        assert isinstance(is_chopped_data, bool), 'Flag {0} to indicate the run is a chopped data must be a boolean ' \
-                                                  'but not a {1}'.format(is_chopped_data, type(is_chopped_data))
-
-        # get data
-        if is_chopped_data:
-            # TODO/ISSUE/NOW - Not considered for chopped data
-            raise NotImplementedError('It has not been implemented for chopped data in GSAS.')
-        else:
-            # single GSAS file
-            gsas_file_name = self._myArchiveManager.get_gsas_file(ipts_number, run_number, check_exist=True)
-
-            # load data
-            data_key = self.load_diffraction_file(gsas_file_name, 'gsas', data_key=data_key)
-        # END-IF-ELSE
-
-        return data_key
-
-    def load_chopped_diffraction_files(self, directory, chop_seq_list, file_type):
-        """
-        loaded chopped and reduced diffraction files
-        :param directory:
-        :param file_type:
-        :return: 2-tuple.  dictionary of 2-tuple: key : data workspace, value = (log workspace, file name) | run number
-        """
-        chopped_key_dict, run_number = self._myProject.data_loading_manager.load_chopped_binned_data(directory,
-                                                                                                     chop_seq_list,
-                                                                                                     file_type)
-
-        return chopped_key_dict, run_number
-
-    def load_nexus_file(self, ipts_number, run_number, file_name, meta_data_only):
+    def load_meta_data(self, ipts_number, run_number, file_name):
         """
         Load NeXus file to ADS
         IPTS/run number OR file name
         :param ipts_number:
         :param run_number:
-        :param file_name:
-        :param meta_data_only:
-        :return:
+        :param file_name: could be NONE
+        :return: output worskpace name
         """
         # get NeXus file name
         if file_name is None:
@@ -1106,14 +1086,8 @@ class VDriveAPI(object):
         # END-IF
 
         # load file
-        # TODO - TONIGHT 7 - Need a better naming routine for Non-IPTS/RUN NUMBER case
-        output_ws_name = self._myProject.load_event_file(ipts_number=ipts_number, run_number=run_number,
-                                                         nxs_file_name=file_name, meta_data_only=meta_data_only)
-        # if meta_data_only:
-        #     output_ws_name = '{}_Meta'.format(run_number)
-        # else:
-        #     output_ws_name = '{}_events'.format(run_number)
-        # mantid_helper.load_nexus(file_name, output_ws_name, meta_data_only)
+        output_ws_name = self._myProject.load_meta_data(ipts_number=ipts_number, run_number=run_number,
+                                                        nxs_file_name=file_name)
 
         return output_ws_name
 
@@ -1683,51 +1657,6 @@ class VDriveAPI(object):
 
         return True, van_ws_key
 
-    def process_vanadium_run_old(self, ipts_number, run_number, reduced_file,
-                             one_bank=False, do_shift=False, local_output=None):
-        """
-        process vanadium runs
-        :param ipts_number:
-        :param run_number:
-        :param use_reduced_file:
-        :param one_bank:
-        :param do_shift:
-        :param local_output:
-        :return:
-        """
-        raise NotImplementedError('This method shall not be used because it is a do-everything one')
-        try:
-            # get reduced vanadium file
-            # TODO - TONIGHT - Always use reduced vanadium run (gda or NeXus)
-            status, ret_str = self.load_vanadium_run(ipts_number=ipts_number, run_number=run_number,
-                                                     use_reduced_file=use_reduced_file)
-            if status:
-                van_ws_key = ret_str
-            else:
-                return False, 'Unable to load vanadium run {0} due to {1}.'.format(run_number, ret_str)
-
-            # process vanadium
-            self._myProject.vanadium_processing_manager.init_session(van_ws_key, ipts_number, run_number)
-            if do_shift:
-                # shift is to use a different wavelength.  To Mantid, it is good to use FWHM = 2
-                self._myProject.vanadium_processing_manager.shift_fwhm_for_wavelength()
-            status, message = self._myProject.vanadium_processing_manager.process_vanadium(save=not one_bank,
-                                                                                           output_dir=local_output)
-
-            if one_bank:
-                # merge the result to 1 bank
-                # TODO/TEST/ISSUE/NOW - Test & remove the debug data
-                self._myProject.vanadium_processing_manager.merge_processed_vanadium(save=True, to_archive=True,
-                                                                                     local_file_name=local_output)
-
-        except RuntimeError as run_err:
-            return False, 'Unable to process vanadium run {0} due to \n\t{1}.'.format(run_number, run_err)
-
-        if status:
-            message = 'Vanadium process is successful.' + message
-
-        return status, message
-
     def read_mts_log(self, log_file_name, format_dict, block_index, start_point_index, end_point_index):
         """
         Read (partially) MTS file
@@ -1769,7 +1698,7 @@ class VDriveAPI(object):
         self._mtsLogDict[log_file_name] = mts_series
         self._currentMTSLogFileName = log_file_name
 
-        return
+        return mts_series
 
     def save_session(self, out_file_name=None):
         """ Save current session
