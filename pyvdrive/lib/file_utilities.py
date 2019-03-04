@@ -96,6 +96,117 @@ def import_detector_efficiency(h5_name):
     return pid_vec, det_eff_factor_vec
 
 
+# TODO - TODAY - TEST : with new workflow test on cyclic data
+def load_sample_logs_h5(log_h5_name, log_name=None):
+    """
+    Load standard sample log (TimeSeriesProperty) from an HDF file
+    Note: this is paired with save_sample_logs_h5
+    :param log_h5_name:
+    :param log_name: specified log name to load.  If None, then load all the sample logs
+    :return: dictionary: d[log name] = vec_times, vec_values  of numpy arrays
+    """
+    def is_sample_log(log_entry_name):
+        return log_h5[log_entry_name].has_attribute('sample log')
+
+    def read_log(log_entry_name):
+        vec_times = log_h5[log_entry_name]['time']
+        vec_value = log_h5[log_entry_name]['value']
+        return vec_times, vec_value
+
+    datatypeutility.check_file_name(log_h5_name, True, False, False, 'PyVDRive HDF5 sample log file')
+
+    log_h5 = h5py.File(log_h5_name, 'r')
+
+    sample_log_dict = dict()
+    if log_name is None:
+        for log_name in log_h5.keys():
+            if not is_sample_log(log_name):
+                continue
+            sample_log_dict[log_name] = read_log(log_name)
+    else:
+        sample_log_dict[log_name] = read_log(log_name)
+
+    return sample_log_dict
+
+
+# TODO - TODAY - TEST : with MantidPlot loaded with cyclic data log already!
+# TODO - TONIGHT - Integrate to cyclic data chopping
+def save_sample_logs(workspace, log_names, log_h5_name):
+    """ Save sample logs to an HDF5 file
+    :param workspace:
+    :param log_names:
+    :param log_h5_name:
+    :return:
+    """
+    def write_sample_log(entry_name, vec_times, vec_value):
+        """ Write a TimeSeriesProperty to an entry (group) in HDF5 file
+        :param entry_name:
+        :param vec_times:
+        :param vec_value:
+        :return:
+        """
+        log_entry = log_h5.create_group(entry_name)
+        log_entry.create_dataset('time', vec_times)
+        log_entry.create_dataset('value', vec_value)
+        log_entry.attrs['sample log']
+
+        return
+
+    try:
+        run_obj = workspace.run()
+    except AttributeError as any_err:
+        raise RuntimeError('Input {} shall be a workspace with Run object but not a {}: FYI {}'
+                           ''.format(workspace, type(workspace), any_err))
+
+    datatypeutility.check_list('Sample log names', log_names)
+    datatypeutility.check_string_variable('Output HDF5 log file name', log_names)
+    datatypeutility.check_file_name(log_h5_name, False, True, False, 'Output PyVDrive HDF5 sample log file')
+
+    # create file
+    log_h5 = h5py.File(log_h5_name, 'w')
+
+    error_msg = ''
+    written_at_least_one = False
+    for log_name_i in log_names:
+        try:
+            vec_times_i = run_obj.getProperty(log_name_i).times()
+            vec_value_i = run_obj.getProperty(log_name_i).value()
+            # write
+            write_sample_log(log_name_i, vec_times_i, vec_value_i)
+            # record
+            written_at_least_one = True
+        except KeyError as any_error:
+            error_msg += '{}: {}'.format(log_name_i, any_error)
+
+
+    log_h5.close()
+
+    return error_msg
+
+
+def load_event_slice_file():
+    slicer_file = open(slicer_file_name, 'r')
+    raw_lines = slicer_file.readlines()
+    slicer_file.close()
+
+    slicer_list = list()
+    for line in raw_lines:
+        # print '[DB...BAT] Line: {0}'.format(line)
+        line = line.strip()
+        if len(line) == 0 or line[0] == '#':
+            continue
+
+        terms = line.split()
+        # print '[DB...BAT] Line split to {0}'.format(terms)
+        if len(terms) < 3:
+            continue
+        start_time = float(terms[0])
+        stop_time = float(terms[1])
+        target_ws = str(terms[2])
+        slicer_list.append((start_time, stop_time, target_ws))
+        # END-FOR
+
+
 def load_processed_nexus(nexus_file_name, output_ws_name):
     """
     load a Mantid processed Nexus file
