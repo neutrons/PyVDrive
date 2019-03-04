@@ -129,8 +129,6 @@ def load_sample_logs_h5(log_h5_name, log_name=None):
     return sample_log_dict
 
 
-# TODO - TODAY - TEST : with MantidPlot loaded with cyclic data log already!
-# TODO - TONIGHT - Integrate to cyclic data chopping
 def save_sample_logs(workspace, log_names, log_h5_name):
     """ Save sample logs to an HDF5 file
     :param workspace:
@@ -138,6 +136,7 @@ def save_sample_logs(workspace, log_names, log_h5_name):
     :param log_h5_name:
     :return:
     """
+
     def write_sample_log(entry_name, vec_times, vec_value):
         """ Write a TimeSeriesProperty to an entry (group) in HDF5 file
         :param entry_name:
@@ -146,18 +145,20 @@ def save_sample_logs(workspace, log_names, log_h5_name):
         :return:
         """
         log_entry = log_h5.create_group(entry_name)
-        log_entry.create_dataset('time', vec_times)
-        log_entry.create_dataset('value', vec_value)
-        log_entry.attrs['sample log']
+        # convert from datetime to float (second)
+        vec_times_second = (vec_times - vec_times[0]).astype('float') * 1.E-9
+        log_entry.create_dataset('time', data=vec_times_second)
+        log_entry.create_dataset('value', data=vec_value)
+        log_entry["type"] = 'sample log'
 
         return
 
+    # check inputs
     try:
         run_obj = workspace.run()
     except AttributeError as any_err:
         raise RuntimeError('Input {} shall be a workspace with Run object but not a {}: FYI {}'
                            ''.format(workspace, type(workspace), any_err))
-
     datatypeutility.check_list('Sample log names', log_names)
     datatypeutility.check_string_variable('Output HDF5 log file name', log_names)
     datatypeutility.check_file_name(log_h5_name, False, True, False, 'Output PyVDrive HDF5 sample log file')
@@ -169,17 +170,19 @@ def save_sample_logs(workspace, log_names, log_h5_name):
     written_at_least_one = False
     for log_name_i in log_names:
         try:
-            vec_times_i = run_obj.getProperty(log_name_i).times()
-            vec_value_i = run_obj.getProperty(log_name_i).value()
+            vec_times_i = run_obj.getProperty(log_name_i).times
+            vec_value_i = run_obj.getProperty(log_name_i).value
             # write
             write_sample_log(log_name_i, vec_times_i, vec_value_i)
             # record
             written_at_least_one = True
-        except KeyError as any_error:
+        except (KeyError, RuntimeError) as any_error:
             error_msg += '{}: {}'.format(log_name_i, any_error)
 
-
     log_h5.close()
+
+    if not written_at_least_one:
+        raise RuntimeError(error_msg)
 
     return error_msg
 
