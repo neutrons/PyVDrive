@@ -112,6 +112,9 @@ class WindowLogPicker(QMainWindow):
         # menu actions
         self.ui.actionExit.triggered.connect(self.evt_quit_no_save)
 
+        # TODO - TONIGHT - URGENT: pushButton_cyclic_helper
+        # TODO - TONIGHT - URGENT: actionOpenH5Log
+
         # # Event handling for pickers
         self._mtsFileLoaderWindow = None
 
