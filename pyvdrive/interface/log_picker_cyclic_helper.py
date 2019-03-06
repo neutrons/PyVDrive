@@ -1,7 +1,16 @@
 from pyvdrive.lib import datatypeutility
+from pyvdrive.lib import file_utilities
 from gui import GuiUtility
+from mantid.simpleapi import CreateWorkspace
+from pyvdrive.lib import mantid_helper
+from numpy import argrelextrema
 import os
 import numpy
+import h5py
+
+"""
+Note: Mantid workspace is used to store the data because smoothing algorithm is used
+"""
 
 
 class CyclicEventFilterSetupHelper(object):
@@ -25,7 +34,6 @@ class CyclicEventFilterSetupHelper(object):
 
         return
 
-    # TODO - TODAY - TEST NEW METHOD
     def do_load_sample_log_file(self):
         """
         Load a sample log file other than EventNeXus file.
@@ -42,20 +50,11 @@ class CyclicEventFilterSetupHelper(object):
             return
 
         # load
-        from pyvdrive.lib import file_utilities
-        self._curr_sample_log_dict = file_utilities.load_sample_logs_h5(log_file_name)
+        self._curr_sample_log_dict = self.load_sample_logs_h5(log_file_name)
+        #  file_utilities.load_sample_logs_h5(log_file_name)
 
         return
 
-    def find_cycle_boundaries(self):
-        """
-        Locate the boundaries between any adjacent cycles
-        :return:
-        """
-        # locate the zero value in the 2nd derivative and use 2nd derivative to select the lower point
-        numpy.where(vector > -0.001 and vector < 0.001 )
-        self._curr_sample_log_deriv_1
-        self._curr_sample_log_deriv_2
 
     def show_cycle_boundaries(self):
         """
@@ -104,237 +103,182 @@ class CyclicEventFilterSetupHelper(object):
 
         return n_th_time
 
-    # TODO - TONIGHT - From prototype to software
-    def clean_load_log_h5(self):
-        import h5py
+    def load_sample_logs_h5(self, log_h5_name, log_name=None):
+        """
+        Load standard sample log (TimeSeriesProperty) from an HDF file
+        Note: this is paired with save_sample_logs_h5
+        :param log_h5_name:
+        :param log_name: specified log name to load.  If None, then load all the sample logs
+        :return: dictionary: d[log name] = vec_times, vec_values  of numpy arrays
+        """
 
-        # TODO - TODAY - TEST : with new workflow test on cyclic data
-        def load_sample_logs_h5(log_h5_name, log_name=None):
-            """
-            Load standard sample log (TimeSeriesProperty) from an HDF file
-            Note: this is paired with save_sample_logs_h5
-            :param log_h5_name:
-            :param log_name: specified log name to load.  If None, then load all the sample logs
-            :return: dictionary: d[log name] = vec_times, vec_values  of numpy arrays
-            """
+        def is_sample_log(log_entry_name):
+            return log_h5[log_entry_name].has_attribute('sample log')
 
-            def is_sample_log(log_entry_name):
-                return log_h5[log_entry_name].has_attribute('sample log')
+        def read_log(log_entry_name):
+            vec_times = log_h5[log_entry_name]['time'].value
+            vec_value = log_h5[log_entry_name]['value'].value
+            return vec_times, vec_value
 
-            def read_log(log_entry_name):
-                vec_times = log_h5[log_entry_name]['time'].value
-                vec_value = log_h5[log_entry_name]['value'].value
-                return vec_times, vec_value
+        # datatypeutility.check_file_name(log_h5_name, True, False, False, 'PyVDRive HDF5 sample log file')
 
-            # datatypeutility.check_file_name(log_h5_name, True, False, False, 'PyVDRive HDF5 sample log file')
+        log_h5 = h5py.File(log_h5_name, 'r')
 
-            log_h5 = h5py.File(log_h5_name, 'r')
-
-            sample_log_dict = dict()
-            if log_name is None:
-                for log_name in log_h5.keys():
-                    if not is_sample_log(log_name):
-                        continue
-                    sample_log_dict[log_name] = read_log(log_name)
-            else:
+        sample_log_dict = dict()
+        if log_name is None:
+            for log_name in log_h5.keys():
+                if not is_sample_log(log_name):
+                    continue
                 sample_log_dict[log_name] = read_log(log_name)
+        else:
+            sample_log_dict[log_name] = read_log(log_name)
 
-            return sample_log_dict
+        return sample_log_dict
 
-        h5_name = 'furnace2c.h5'
-        log_dict = load_sample_logs_h5(h5_name, log_name='loadframe.furnace2')
+    def pre_process_logs(self, vec_times, vec_log_value, num_neighbors):
+        """ Pre-process sample logs for locating cycle boundaries
+        :param vec_times:
+        :param vec_log_value:
+        :param num_neighbors:
+        :return:
+        """
+        datatypeutility.check_numpy_arrays('Vector for times and log values', [vec_times, vec_log_value], 1, True)
+        datatypeutility.check_int_variable('Number of neighbors to smooth', num_neighbors, (2, None))
 
-        vec_times, vec_value = log_dict['loadframe.furnace2']
+        raw_ws_name = 'furnac2.raw'
+        smoothed_ws_name = raw_ws_name.split('.')[0] + '.smoothed'
+        CreateWorkspace(DataX=vec_times, DataY=vec_log_value, NSpec=1, OutputWorkspace=raw_ws_name)
+        SmoothNeighbor(InputWorkspace=raw_ws_name, OutputWorkspace=smoothed_ws_name, N=num_neighbors)
 
-        # import mantid
-        # rom mantid.simpleapi import *
+        return raw_ws_name, smoothed_ws_name
 
-        CreateWorkspace(DataX=vec_times, DataY=vec_value, NSpec=1, OutputWorkspace='furnac2.raw')
+    def locate_cycle_boundaries(self, raw_ws_name, smoothed_ws_name, x_start, x_stop, cycle_local_max_lower_limit,
+                                num_neighbors):
 
-        print (vec_times)
-        vec_times[0]
 
-        import numpy as np
+        def check_statistic(max_x_vector, max_y_vector, level):
+            diff_max_x_vec = max_x_vector[1:] - max_x_vector[:-1]
+            std_dev = numpy.std(diff_max_x_vec)
+            avg_cycle_time = numpy.average(diff_max_x_vec)
+            false_indexes = numpy.where(diff_max_x_vec < numpy.std(diff_max_x_vec))[0]
 
-        gradient = np.gradient(vec_value, vec_times)
-        print (gradient)
+            msg = 'Cycle time = {} +/- {}\nFalse local maxima: {}, {}' \
+                  ''.format(avg_cycle_time, std_dev, max_x_vector[false_indexes], max_y_vector[false_indexes])
+            print ('[{}]: {}'.format(level.upper(), msg))
 
-        deriv = (vec_value[1:] - vec_value[:-1]) / (vec_times[1:] - vec_times[:-1])
-        deriv2 = (deriv[1:] - deriv[:-1]) / ((vec_times[1:] - vec_times[:-1])[:-1])
-
-        from matplotlib import pyplot as plt
-
-        plt.plot(vec_times, vec_value)
-        plt.plot(vec_times[:-1], deriv)
-        plt.plot(vec_times[:-2], deriv2)
-        plt.show()
-
-        # Study and convertToWaterfall
-        from scipy.signal import argrelextrema
-        import numpy as np
-
-        x = mtd['furnac2.raw.SmoothData'].readY(0)
-        x = x[1000:5000]
-        print (mtd['furnac2.raw.SmoothData'].readX(0)[1000])
-        print (mtd['furnac2.raw.SmoothData'].readX(0)[5000])
-
-        # for local maxima
-        maxes = argrelextrema(x, np.greater)
-        maxes = maxes[0]
-        print ('maximum indexes: {}'.format(maxes))
-
-        vec_x = mtd['furnac2.raw.SmoothData'].readX(0)[1000:5000][maxes]
-        vec_y = x[maxes]
-
-        # filter out the small values
-        y_indexes = np.where(vec_y > 400)
-        vec_x = vec_x[y_indexes]
-        vec_y = vec_y[y_indexes]
-        filter_indexes = maxes[y_indexes]
-        print (filter_indexes)
-
-        max_points = CreateWorkspace(DataX=vec_x, DataY=vec_y, NSpec=1)
-
-        vec_raw_x = mtd['furnac2.raw.SmoothData'].readX(0)[1000:5000]
-        vec_raw_y = mtd['furnac2.raw.SmoothData'].readY(0)[1000:5000]
-
-        slot1 = filter_indexes[0], filter_indexes[1]
-        print (slot1)
-
-        min_index = np.argmin(vec_raw_y[slot1[0]: slot1[1]])
-        print (min_index)
-
-        raise
-        # for local minima
-        mins = argrelextrema(x, np.less)
-        mins = mins[0]
-
-        vec_min_y = x[mins]
-        vec_min_x = mtd['furnac2.raw.SmoothData'].readX(0)[1000:5000][mins]
-        min_points = CreateWorkspace(DataX=vec_min_x, DataY=vec_min_y, NSpec=1)
-
-        vec_s_x = mtd['furnac2.raw.SmoothData'].readX(0)[1000:5000]
-        vec_s_y = mtd['furnac2.raw.SmoothData'].readY(0)[1000:5000]
-        deriv_s_x = (vec_s_y[1:] - vec_s_y[:-1]) / (vec_s_x[1:] - vec_s_x[:-1])
-        print (deriv_s_x[mins])
-        print (max(deriv_s_x[mins]))
-
-    # TODO - TONIGHT - From prototype to software
-    def find_boundaries_sort(self):
-        from scipy.signal import argrelextrema
-        import numpy as np
-        import h5py
+            return avg_cycle_time, std_dev
 
         # User input from observation
         # Requirement: precisely pin point the start of first cycle and stop of last cycle
-        x_start = 1713
-        x_stop = 45073
-        cycle_max_lower_limit = 400
+        # x_start = 1713
+        # x_stop = 45073
+        # cycle_max_lower_limit = 400
 
-        # use moderate smoothed neightbour data
-        """
-        x = mtd['furnac2.raw.SmoothData'].readY(0)
-        """
+        # check inputs
+        datatypeutility.check_float_variable('Starting time of cycles', x_start, (0, None))
+        datatypeutility.check_float_variable('Stopping time of cycles', x_stop, (0, None))
+        if x_start >= x_stop:
+            raise RuntimeError('Starting time {} cannot be equal to later than stopping time {}'
+                               ''.format(x_start, x_stop))
 
-        vec_x = mtd['furnac2.raw.SmoothData'].readX(0)
-        vec_y = mtd['furnac2.raw.SmoothData'].readY(0)
+        # get workspaces
+        raw_ws = mantid_helper.retrieve_workspace(raw_ws_name, True)
+        smooth_ws = mantid_helper.retrieve_workspace(smoothed_ws_name, True)
 
-        # numpy.searchsorted(a, v, side='left', sorter=None)[source]
-        start_index = np.searchsorted(vec_x, x_start)
-        stop_index = np.searchsorted(vec_x, x_stop, 'right')
+        # use smoothed workspace to locate maxima first
+        vec_x = smooth_ws.readX(0)
+        vec_y = smooth_ws.readY(0)
+
+        raw_vec_times = raw_ws.readX(0)
+        raw_vec_value = raw_ws.readY(0)
+
+        # determine start and stop indexes
+        start_index = numpy.searchsorted(vec_x, x_start)
+        stop_index = numpy.searchsorted(vec_x, x_stop, 'right')
         print ('[INFO] Start X = {}, Y = {}, Index = {}'.format(vec_x[start_index], vec_y[start_index], start_index))
         print ('[INFO] Stap  X = {}, Y = {}, Index = {}'.format(vec_x[stop_index], vec_y[stop_index], stop_index))
 
-        """
-        x = x[1000:5000]
-        print (mtd['furnac2.raw.SmoothData'].readX(0)[1000])
-        print (mtd['furnac2.raw.SmoothData'].readX(0)[5000])
-        """
-
-        # for local maxima on smoothed data
+        # Step 1: use smoothed data to find local maxima: use 'argrelextrema' to find local maxima
         roi_vec_x = vec_x[start_index:stop_index]
         roi_vec_y = vec_y[start_index:stop_index]
 
-        maxes = argrelextrema(roi_vec_y, np.greater)
-        maxes = maxes[0]  # get to list
-        print ('[DEBUG] maximum indexes (in ROI arrays): {}'.format(maxes))
+        roi_maxima_indexes = argrelextrema(roi_vec_y, numpy.greater)
+        roi_maxima_indexes = roi_maxima_indexes[0]  # get to list
+        print ('[DEBUG] maximum indexes (in ROI arrays): {}'.format(roi_maxima_indexes))
 
-        """
-        vec_x =  mtd['furnac2.raw.SmoothData'].readX(0)[1000:5000][maxes]
-        vec_y = x[maxes]
-        """
-        max_x_vector = roi_vec_x[maxes]
-        max_y_vector = roi_vec_y[maxes]
+        # convert to the raw
+        local_maxima_indexes = roi_maxima_indexes + start_index
 
-        # filter out the small values
-        y_indexes = np.where(max_y_vector > cycle_max_lower_limit)
-        max_index_vector = maxes[y_indexes]
-        max_x_vector = max_x_vector[y_indexes]
-        max_y_vector = max_y_vector[y_indexes]
-        print ('Filtered indexes: {}'.format(max_index_vector))
+        # there are a lot of local maxima from signal noise: filter out the small values
+        max_y_vector = raw_vec_value[local_maxima_indexes]   # log values of local maxima
+        y_indexes = numpy.where(max_y_vector > cycle_local_max_lower_limit)  # indexes for max Y vector
+        local_maxima_indexes = local_maxima_indexes[y_indexes]
+        maxima_times_vec = raw_vec_times[local_maxima_indexes]   # times for local maxima
+        # equivalent to: max_x_vector = max_x_vector[y_indexes]
+        maxima_value_vec = raw_vec_value[local_maxima_indexes]   # log values of local maxima
+        # equivalent to: max_y_vector = max_y_vector[y_indexes]
+        # print ('Filtered indexes: {}'.format(max_index_vector))
 
-        # check 1
-        diff_max_x_vec = max_x_vector[1:] - max_x_vector[:-1]
-        print (np.std(diff_max_x_vec))
-        print (np.where(diff_max_x_vec < np.std(diff_max_x_vec)))
-        indexes = np.where(diff_max_x_vec < np.std(diff_max_x_vec))[0]
-        print (max_x_vector[indexes], max_y_vector[indexes])
-        print ('\n------------------------------\n')
+        check_statistic(maxima_times_vec, maxima_value_vec, level='debug')
 
-        # filtering method 2: mapping to original data
-        raw_roi_vec_x = mtd['furnac2.raw'].readX(0)[start_index:stop_index]
-        raw_roi_vec_y = mtd['furnac2.raw'].readY(0)[start_index:stop_index]
-
+        # Step 2: map from smoothed data to raw data (real maxima)
         max_index_set = set()
-        N = 5
-        for max_index_i in max_index_vector:
+        for max_index_i in local_maxima_indexes:
             # search the nearby N = 5 points
-            i_start = max_index_i - N
-            i_stop = max_index_i + N
-            max_index_i = np.argmax(raw_roi_vec_y[i_start:i_stop])
+            i_start = max_index_i - num_neighbors
+            i_stop = max_index_i + num_neighbors
+            max_index_i = numpy.argmax(raw_vec_value[i_start:i_stop])
             max_index_set.add(max_index_i + i_start)
+        # END-FOR
+
         # convert to vector
-        max_index_vector = np.array(sorted(list(max_index_set)))
-        max_x_vector = raw_roi_vec_x[max_index_vector]
-        max_y_vector = raw_roi_vec_y[max_index_vector]
-        print ('Filtered indexes: {}'.format(max_index_vector))
+        max_index_vector = numpy.array(sorted(list(max_index_set)))
+        maxima_times_vec = raw_vec_times[max_index_vector]
+        maxima_value_vec = raw_vec_value[max_index_vector]
 
-        # check 2
-        diff_max_x_vec = max_x_vector[1:] - max_x_vector[:-1]
-        print (np.std(diff_max_x_vec))
-        print (np.where(diff_max_x_vec < np.std(diff_max_x_vec)))
-        indexes = np.where(diff_max_x_vec < np.std(diff_max_x_vec))[0]
-        print (max_x_vector[indexes], max_y_vector[indexes])
+        # check
+        avg_cycle_time, std_dev = check_statistic(maxima_times_vec, maxima_value_vec, 'info')
 
-        max_points = CreateWorkspace(DataX=max_x_vector, DataY=max_y_vector, NSpec=1)
+        # create a workspace
+        CreateWorkspace(DataX=maxima_times_vec, DataY=maxima_value_vec, NSpec=1, OutputWorkspace='debug_maxima')
 
-        local_minima_indexes = list()
-        # locate the minima
+        if maxima_times_vec.shape[0] < 2:
+            raise RuntimeError('Only found {} local maxima. Unable to proceed'.format(maxima_times_vec.shape[0]))
+
+        # Step 3: find (real) minima by finding minimum between 2 neighboring local maxima
+        local_minima_indexes = numpy.ndarray(shape=(maxima_value_vec.shape[0]+2, ), dtype='int64')
         for i_cycle in range(len(max_index_vector) - 1):
+            # locate the minima
             start_index_i = max_index_vector[i_cycle]
             stop_index_i = max_index_vector[i_cycle + 1]
             print ('# index: start = {}, stop = {}, # points = {}'.format(start_index_i, stop_index_i,
                                                                           stop_index_i - start_index_i))
-            vec_x_i = roi_vec_x[start_index_i:stop_index_i]
-            vec_y_i = roi_vec_y[start_index_i:stop_index_i]
-            print (
-            '[DEBUG] Cycle {}: Start @ {}, {}, Stop @ {}, {}'.format(i_cycle, vec_x_i[0], vec_y_i[0], vec_x_i[-1],
-                                                                     vec_y_i[-1]))
+            vec_x_i = raw_vec_times[start_index_i:stop_index_i]
+            vec_y_i = raw_vec_value[start_index_i:stop_index_i]
+            print ('[DEBUG] Cycle {}: Start @ {}, {}, Stop @ {}, {}'
+                   ''.format(i_cycle, vec_x_i[0], vec_y_i[0], vec_x_i[-1], vec_y_i[-1]))
 
             # find local minima
-            min_index_i = np.argmin(vec_y_i)
-            print (
-            '[DEBUG]    Local minimum: X = {}, Y = {} @ index = {}'.format(vec_x_i[min_index_i], vec_y_i[min_index_i],
-                                                                           min_index_i))
+            min_index_i = numpy.argmin(vec_y_i)
+            print ('[DEBUG]    Local minimum: X = {}, Y = {} @ index = {}'
+                   ''.format(vec_x_i[min_index_i], vec_y_i[min_index_i], min_index_i))
 
             # store the result
-            local_minima_indexes.append(start_index_i + min_index_i)
+            local_minima_indexes[i_cycle + 1] = start_index_i + min_index_i
         # END-FOR
 
-        # create from index
-        min_x_vector = roi_vec_x[local_minima_indexes]
-        min_y_vector = roi_vec_y[local_minima_indexes]
-        min_points = CreateWorkspace(DataX=min_x_vector, DataY=min_y_vector, NSpec=1)
+        # add the first and last local minimum as the cycle starts and ends at lower temperature
+        # use the 1st (i=1) local minimum time to determine the start (i=0)
+        minimum_1_time = raw_vec_times[local_minima_indexes[1]]
+        estimated_start_time = minimum_1_time - avg_cycle_time
+        cycle_indexes_size = local_minima_indexes[2] - local_minima_indexes[1]
+
+        start_cycle_index = numpy.searchsorted(raw_vec_times[(local_minima_indexes[1] - int(1.5 * cycle_indexes_size)):local_maxima_indexes[0]], estimated_start_time, 'right')
+        local_minima_indexes[0] = start_index[0][0] + (local_minima_indexes[1] - int(1.5 * cycle_indexes_size))
+
+        estimated_stop_time = raw_vec_times[local_minima_indexes[-2]] + avg_cycle_time
+        end_cycle_index = numpy.searchsorted(raw_vec_times[local_maxima_indexes[-1]:(local_minima_indexes[-2] + int(1.5 * cycle_indexes_size))], estimated_stop_time, 'left')
+        local_minima_indexes[-1] = end_cycle_index
 
         # export to HDF5
         if False:
@@ -346,57 +290,68 @@ class CyclicEventFilterSetupHelper(object):
             log_group.create_dataset('maxima', data=max_index_vector)
             log_group['logname'] = 'furnace2'
             cycle_file.close()
-        else:
-            # convert to original x range
-            local_minima_indexes += start_index
-            max_index_vector += start_index
+        # END-IF
 
-        # TODO -TONIGHT - Deperately need a good algorithm to
-        local_maxima_indexes = max_index_vector
-        local_minima_indexes = numpy.insert(local_minima_indexes, 0, 5)
-        local_minima_indexes = numpy.append(local_minima_indexes, max_index_vector[-1] + 100)
+        return local_minima_indexes, local_maxima_indexes
+
+
+    def set_event_splitters(self, raw_ws_name, local_minima_indexes, local_maxima_indexes):
+
+        raw_ws = mantid_helper.retrieve_workspace(raw_ws_name, True)
 
         # prototype for create the event filters
-        raw_vec_x = mtd['furnac2.raw'].readX(0)
-        raw_vec_y = mtd['furnac2.raw'].readY(0)
+        raw_vec_x = raw_ws.readX(0)
+        raw_vec_y = raw_ws.readY(0)
+
+        log_boundaries = np.arange(100, 1000, 100)
+
 
         # skip for loop
         # rising edge
-        i_cycle = 2
-        i_start = local_minima_indexes[i_cycle]
-        i_stop = local_maxima_indexes[i_cycle]
 
-        splitter_index_vec = np.array([i_start, i_stop])
+        for i_cycle in range(local_maxima_indexes.shape[0]):
+            # i_cycle = 2
+            i_start = local_minima_indexes[i_cycle]
+            i_stop = local_maxima_indexes[i_cycle]
 
-        log_boundaries = np.arange(100, 1000, 100)
-        for log_i in log_boundaries:
-            index_i = np.searchsorted(raw_vec_y[i_start:i_stop], log_i)
-            index_i += i_start
-            splitter_index_vec = np.append(splitter_index_vec, index_i)
-            print (index_i, type(index_i))
-        splitter_index_vec = np.sort(splitter_index_vec)
+            # local splitter boundaries indexes
+            splitter_index_vec = numpy.array([i_start, i_stop])
 
-        splitter_times = raw_vec_x[splitter_index_vec]
-        splitter_refs = raw_vec_y[splitter_index_vec]
+            for log_i in log_boundaries:
+                index_i = numpy.searchsorted(raw_vec_y[i_start:i_stop], log_i)
+                index_i += i_start
+                splitter_index_vec = numpy.append(splitter_index_vec, index_i)
+                print (index_i, type(index_i))
+                splitter_index_vec = numpy.sort(splitter_index_vec)
 
+            splitter_times = raw_vec_x[splitter_index_vec]
+            splitter_refs = raw_vec_y[splitter_index_vec]
+        # END-IF
+
+        # debug output
         splitters = CreateWorkspace(DataX=splitter_times, DataY=splitter_refs, NSpec=1)
 
-        """
-        raise
-        # for local minima
-        mins = argrelextrema(x, np.less)
-        mins = mins[0]
+        return
 
-        vec_min_y = x[mins]
-        vec_min_x =  mtd['furnac2.raw.SmoothData'].readX(0)[1000:5000][mins]
-        min_points = CreateWorkspace(DataX=vec_min_x, DataY=vec_min_y, NSpec=1)
-
-        vec_s_x =  mtd['furnac2.raw.SmoothData'].readX(0)[1000:5000]
-        vec_s_y =  mtd['furnac2.raw.SmoothData'].readY(0)[1000:5000]
-        deriv_s_x = (vec_s_y[1:] - vec_s_y[:-1]) / (vec_s_x[1:] - vec_s_x[:-1])
-        print (deriv_s_x[mins])
-        print (max(deriv_s_x[mins]))
+    def test_load_process_(self):
         """
+        Load log file written in HDF format as a test client method
+        :return:
+        """
+        h5_name = 'furnace2c.h5'
+        log_name = 'loadframe.furnace2'
+
+        # get the sample log value from log file and create a workspace
+        log_dict = self.load_sample_logs_h5(h5_name, log_name=log_name)
+        vec_times, vec_value = log_dict['loadframe.furnace2']
+
+        self.pre_process_logs
+
+        self.locate_cycle_boundaries(vec_times, vec_value)
+
+
+        # smooth
+
 
     # TODO FIXME TONIGHT - This shall be moved to chop utility
     def set_cyclic_filter(self, vec_times, vec_value, cyclic_boundary_vec, cycle_range, min_value, max_value, value_step):
