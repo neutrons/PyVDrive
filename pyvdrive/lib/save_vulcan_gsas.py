@@ -93,7 +93,10 @@ class SaveVulcanGSS(object):
                                'for calculating run start/stop in nanoseconds'.format(gsas_workspace.name()))
 
         # zero time:
-        time0 = datetime.datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
+        try:
+            time0 = datetime.datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
+        except AttributeError:
+            time0 = datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
 
         if run.hasProperty('proton_charge'):
             # use proton charge to calculate run start/stop
@@ -498,6 +501,7 @@ class SaveVulcanGSS(object):
 
         return
 
+    # TODO - TONIGHT 0 - Write workspace name to header
     def save(self, diff_ws_name, run_date_time, gsas_file_name, ipts_number, gsas_param_file_name,
              align_vdrive_bin, van_ws_name, is_chopped_run, write_to_file=True):
         """
@@ -518,7 +522,7 @@ class SaveVulcanGSS(object):
         # set the unit to TOF
         if diff_ws.getAxis(0).getUnit() != 'TOF':
             ConvertUnits(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name, Target='TOF',
-                             EMode='Elastic')
+                         EMode='Elastic')
             diff_ws = mantid_helper.retrieve_workspace(diff_ws_name)
 
         # convert to Histogram Data

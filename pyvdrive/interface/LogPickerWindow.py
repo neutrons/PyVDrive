@@ -115,6 +115,8 @@ class WindowLogPicker(QMainWindow):
         # TODO - TONIGHT - URGENT: pushButton_cyclic_helper
         # TODO - TONIGHT - URGENT: actionOpenH5Log
 
+        # TODO - TONIGHT 0 - Urgent: actionIPython_Command_Console: launch terminal view
+
         # # Event handling for pickers
         self._mtsFileLoaderWindow = None
 

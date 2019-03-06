@@ -337,6 +337,7 @@ class ProjectManager(object):
 
         return status, error_message, available_runs
 
+    # TODO - TONIGHT 0 - Better codes
     def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus,
                  number_banks, tof_correction, output_directory,
                  user_bin_parameter, roi_list, mask_list, nexus_file_name=None,

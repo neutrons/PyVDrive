@@ -250,6 +250,7 @@ class SliceFocusVulcan(object):
                               RelativeTime=is_relative_time)
 
         # get output workspaces' names
+        # TODO - TONIGHT 0 - Make this a method (private)
         output_names = None
         for r in result:
             if isinstance(r, int):
@@ -347,6 +348,12 @@ class SliceFocusVulcan(object):
                            vanadium_gda_name=gsas_info_dict['vanadium'],
                            gsas_writer=gsas_writer, run_start_date=run_date_time,  # ref_tof_sets=binning_parameters,
                            gsas_file_index_start=gsas_file_index_start)
+
+        # TODO - TONIGHT 0 - Write all the sample logs
+        # import file_utilities
+        # import reduce_VULCAN
+        # log_names = reduce_VULCAN.VulcanSampleLogList  # and also the special mantid log + workspace name
+        # file_utilities.save_sample_logs()
 
         # write to logs
         self.write_log_records(output_names, log_type='loadframe')

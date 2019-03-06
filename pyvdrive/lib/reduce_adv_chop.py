@@ -982,8 +982,8 @@ class WriteSlicedLogs(object):
                                'It must be either furnace or loadframe'.format(log_type, type(log_type)))
 
         # get workspaces and properties
-
         ws_name_list = self.sort_workspace_names(ws_name_list)
+        print ('[DB...BAT...1] Workspace names: {}'.format(ws_name_list))
 
         # get the properties' names list
         ws_name = ws_name_list[0]
@@ -1041,6 +1041,7 @@ class WriteSlicedLogs(object):
         # END-FOR
         print ('[DB...BAT] {}'.format(mts_columns))
 
+        print ('[DB...BAT...X] Workspace names: {}'.format(ws_name_list))
         for i_ws, ws_name in enumerate(ws_name_list):
             # get workspace
             if ws_name == '':

@@ -142,7 +142,7 @@ class DataChopper(object):
     def generate_events_filter_manual(self, run_number, split_list, relative_time, splitter_tag):
         """ Generate a split workspace with arbitrary input time
         :param run_number:
-        :param split_list:
+        :param split_list: list of 2-element or 3-element
         :param relative_time:
         :param splitter_tag: 2-tuple : split workspace, information workspace OR None
                 boolean, ???? (...)/string (error message)

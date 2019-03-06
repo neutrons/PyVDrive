@@ -486,10 +486,10 @@ def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_pr
 
     return peak_list
 
-
+# TODO - TONIGHT 0 - Clean
 def generate_event_filters_arbitrary(ws_name, split_list, relative_time, tag, auto_target):
     """ Generate event filter (splitters workspace) by arbitrary time stamps
-    :param split_list:
+    :param split_list: list of 2-element or 3-element
     :param relative_time:
     :param tag: string for tag name
     :return: 2-tuple

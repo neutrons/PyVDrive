@@ -1180,6 +1180,7 @@
      <string>Tools</string>
     </property>
     <addaction name="actionShow_Run_Information"/>
+    <addaction name="actionIPython_Command_Console"/>
    </widget>
    <addaction name="menuTest"/>
    <addaction name="menuAbout"/>
@@ -1224,6 +1225,11 @@
   <action name="actionOpenH5Log">
    <property name="text">
     <string>Open HDF Log</string>
+   </property>
+  </action>
+  <action name="actionIPython_Command_Console">
+   <property name="text">
+    <string>IPython/Command Console</string>
    </property>
   </action>
  </widget>

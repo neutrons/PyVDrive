@@ -120,6 +120,8 @@ class ManualSlicerSetupTableDialog(QDialog):
         # Call parent method to generate random event slicer (splitters workspace or table)
         if self._myParent is not None:
             self._myParent.generate_manual_slicer(split_tup_list, slicer_name=slicer_name)
+
+            # TODO - TONIGHT 0 - Save splitters as default
         # END-IF
 
         return
