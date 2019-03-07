@@ -141,7 +141,7 @@ def check_list(var_name, variable):
     :return:
     """
     check_string_variable('var_name', var_name)
-    assert isinstance(variable, list), '{0} (= {1}) must be a dict but not a {2}' \
+    assert isinstance(variable, list), '{0} ({1}) must be a list but not a {2}' \
                                        ''.format(var_name, variable, type(variable))
 
     return

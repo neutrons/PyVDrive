@@ -1476,7 +1476,9 @@ class ProjectManager(object):
                 gsas_file_name = os.path.join(output_directory, '{}.gda'.format(run_number))
 
                 self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
-                                                        gsas_file_name=gsas_file_name, ipts_number=ipts_number,
+                                                        gsas_file_name=gsas_file_name,
+                                                        ipts_number=ipts_number,
+                                                        run_number=run_number,
                                                         align_vdrive_bin=align_vdrive_bin,
                                                         gsas_param_file_name=iparam_file_name,
                                                         van_ws_name=van_ws_name,
@@ -1498,7 +1500,9 @@ class ProjectManager(object):
             gsas_file_name = os.path.join(output_directory, '{}.gda'.format(run_number))
 
             self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
-                                                    gsas_file_name=gsas_file_name, ipts_number=ipts_number,
+                                                    gsas_file_name=gsas_file_name,
+                                                    ipts_number=ipts_number,
+                                                    run_number=run_number,
                                                     align_vdrive_bin=align_vdrive_bin,
                                                     gsas_param_file_name=iparam_file_name,
                                                     van_ws_name=van_ws_name,

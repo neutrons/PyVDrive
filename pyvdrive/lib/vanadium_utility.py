@@ -266,14 +266,9 @@ class VanadiumProcessingManager(object):
         """
         bank_id_list = sorted(self._smoothed_ws_dict.keys())
         # group workspaces
-        input_ws_names = ''
-        for bank_id in bank_id_list:
-            input_ws_names += '{},'.format(self._smoothed_ws_dict[bank_id])
-        input_ws_names = input_ws_names[:-1]
+        bank_ws_name_list = [self._smoothed_ws_dict[bank_id] for bank_id in bank_id_list]
         processed_vanadium_name = '{}_processed'.format(self._van_workspace_name)
-        mantid_helper.group_workspaces(input_ws_names, processed_vanadium_name)
-
-        print ('[DB...BAT] OUTPUT GSAS File: {}'.format(self._output_gsas_name))
+        mantid_helper.group_workspaces(bank_ws_name_list, processed_vanadium_name)
 
         gsas_writer = save_vulcan_gsas.SaveVulcanGSS()
         # TODO - TONIGHT 11 - convert_to_vdrive_bins shall be considered if source file is from a high resolution

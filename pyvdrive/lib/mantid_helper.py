@@ -1885,7 +1885,12 @@ def group_workspaces(input_ws_names, group_name):
     datatypeutility.check_list('Names of workspaces to group', input_ws_names)
     datatypeutility.check_string_variable('Target WorkspaceGroup name', group_name)
 
-    mantidapi.GroupWorkspaces(InputWorkspaces=input_ws_names, OutputWorkspace=group_name)
+    input_ws_names_str = ''
+    for index, ws_name in enumerate(input_ws_names):
+        input_ws_names_str += '{},'.format(ws_name)
+    input_ws_names_str = input_ws_names_str[:-1]  # remove last ','
+
+    mantidapi.GroupWorkspaces(InputWorkspaces=input_ws_names_str, OutputWorkspace=group_name)
 
     return
 
