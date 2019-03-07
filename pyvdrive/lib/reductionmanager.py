@@ -1054,7 +1054,7 @@ class ReductionManager(object):
         #         Multiply(LHSWorkspace=ws_name, RHSWorkspace=self._det_eff_ws_name, OutputWorkspace=ws_name)
         raise NotImplementedError('ASAP')
 
-    # TODO - NIGHT - Code quality
+    # TODO - TONIGHT 0 - Code quality
     def chop_vulcan_run(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
                         output_directory, reduce_data_flag, save_chopped_nexus, number_banks,
                         tof_correction, user_binning_parameter,

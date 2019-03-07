@@ -9,17 +9,17 @@ import os
 import numpy
 try:
     import qtconsole.inprocess
-    from PyQt5.QtWidgets import QMainWindow, QFileDialog
+    from PyQt5.QtWidgets import QMainWindow
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
     from PyQt5 import QtCore
 except ImportError:
-    from PyQt4.QtGui import QMainWindow, QFileDialog
+    from PyQt4.QtGui import QMainWindow
     from PyQt4.QtGui import QVBoxLayout
     from PyQt4.uic import loadUi as load_ui
     from PyQt4 import QtCore
 import gui.GuiUtility as GuiUtility
-
+from pyvdrive.lib import vulcan_util
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
@@ -1412,6 +1412,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
+    # TODO - TONIGHT - Shall be applied to VIEW
     def set_x_range(self, min_x, max_x):
         """
         set the range of X values
@@ -1434,5 +1435,28 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # set X range
         # self.do_set_x_range()
+
+        return
+
+    # NEW METHOD
+    # TODO - TODAY - TEST
+    def do_load_chopped_log_files(self):
+        """
+        Load PyVDrive sample log files (chopped data) other than NeXus file
+        :return:
+        """
+        # load a record file containing all the chopped data information
+        record_name = GuiUtility.get_load_file_by_dialog(self, 'Chopped sample log record file',
+                                                         self._myController.get_working_dir(),
+                                                         'Text file (*.txt)')
+
+        if record_name == '':
+            # cancel the operation
+            return
+
+        # load
+        chopped_log_dict = vulcan_util.load_chopped_log_files(record_name)
+
+        self.load_chopped_logs(chopped_log_dict)
 
         return

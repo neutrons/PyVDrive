@@ -337,6 +337,7 @@ class ProjectManager(object):
 
         return status, error_message, available_runs
 
+    # TODO - TONIGHT 0 - Better codes
     def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus,
                  number_banks, tof_correction, output_directory,
                  user_bin_parameter, roi_list, mask_list, nexus_file_name=None,
@@ -414,24 +415,24 @@ class ProjectManager(object):
         # chop and (optionally) diffraction focus the binning data
         # TODO - NIGHT - Need to pass no_calibration_mask
         status, chop_message = self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
-                                                                       run_number=run_number,
-                                                                       raw_file_name=data_file,
-                                                                       split_ws_name=split_ws_name,
-                                                                       split_info_name=info_ws_name,
-                                                                       slice_key=slicer_key,
-                                                                       output_directory=output_directory,
-                                                                       reduce_data_flag=reduce_flag,
-                                                                       save_chopped_nexus=save_chopped_nexus,
-                                                                       number_banks=number_banks,
-                                                                       tof_correction=tof_correction,
-                                                                       user_binning_parameter=user_bin_parameter,
-                                                                       roi_list=roi_list,
-                                                                       mask_list=mask_list,
-                                                                       van_gda_name=van_gsas_name,
-                                                                       gsas_parm_name=iparam_file_name,
-                                                                       no_cal_mask=False,
-                                                                       bin_overlap_mode=overlap_mode,
-                                                                       gda_file_start=gda_start)
+                                                                      run_number=run_number,
+                                                                      raw_file_name=data_file,
+                                                                      split_ws_name=split_ws_name,
+                                                                      split_info_name=info_ws_name,
+                                                                      slice_key=slicer_key,
+                                                                      output_directory=output_directory,
+                                                                      reduce_data_flag=reduce_flag,
+                                                                      save_chopped_nexus=save_chopped_nexus,
+                                                                      number_banks=number_banks,
+                                                                      tof_correction=tof_correction,
+                                                                      user_binning_parameter=user_bin_parameter,
+                                                                      roi_list=roi_list,
+                                                                      mask_list=mask_list,
+                                                                      van_gda_name=van_gsas_name,
+                                                                      gsas_parm_name=iparam_file_name,
+                                                                      no_cal_mask=False,
+                                                                      bin_overlap_mode=overlap_mode,
+                                                                      gda_file_start=gda_start)
 
         regular_info, error_message = chop_message
 
@@ -449,6 +450,7 @@ class ProjectManager(object):
 
         return status, message
 
+    # TODO - TOMORROW - Find out how this method is used!
     def chop_run_time_segment_period(self, run_number, slicer_key, chop_period, reduce_data_flag, vanadium,
                                      save_chopped_nexus, output_dir, export_log_type):
         """
@@ -1474,7 +1476,9 @@ class ProjectManager(object):
                 gsas_file_name = os.path.join(output_directory, '{}.gda'.format(run_number))
 
                 self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
-                                                        gsas_file_name=gsas_file_name, ipts_number=ipts_number,
+                                                        gsas_file_name=gsas_file_name,
+                                                        ipts_number=ipts_number,
+                                                        run_number=run_number,
                                                         align_vdrive_bin=align_vdrive_bin,
                                                         gsas_param_file_name=iparam_file_name,
                                                         van_ws_name=van_ws_name,
@@ -1496,7 +1500,9 @@ class ProjectManager(object):
             gsas_file_name = os.path.join(output_directory, '{}.gda'.format(run_number))
 
             self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
-                                                    gsas_file_name=gsas_file_name, ipts_number=ipts_number,
+                                                    gsas_file_name=gsas_file_name,
+                                                    ipts_number=ipts_number,
+                                                    run_number=run_number,
                                                     align_vdrive_bin=align_vdrive_bin,
                                                     gsas_param_file_name=iparam_file_name,
                                                     van_ws_name=van_ws_name,

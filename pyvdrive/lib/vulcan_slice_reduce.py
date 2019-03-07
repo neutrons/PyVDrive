@@ -7,11 +7,12 @@ from mantid.simpleapi import EditInstrumentGeometry, GeneratePythonScript
 import threading
 import os
 import time
-import file_utilities
 import datatypeutility
 import mantid_helper
 import reduce_adv_chop
 import vulcan_util
+import file_utilities
+import reduce_VULCAN
 
 
 class SliceFocusVulcan(object):
@@ -62,6 +63,34 @@ class SliceFocusVulcan(object):
         """
         return 'Slice and focus VULCAN data into {0}-bank with {1} threads'.format(self._number_banks,
                                                                                    self._number_threads)
+
+    @staticmethod
+    def export_split_logs(split_ws_names, gsas_file_index_start, output_dir):
+        """
+        Export split sample logs to a series of HDF5
+        and also the special mantid log + workspace name
+        :param split_ws_names:
+        :param gsas_file_index_start:
+        :param output_dir:
+        :return:
+        """
+        log_names = [log_pair[1] for log_pair in reduce_VULCAN.VulcanSampleLogList]
+        info = ''
+
+        for index, ws_name in enumerate(split_ws_names):
+            ws_i = mantid_helper.retrieve_workspace(ws_name, True)
+            out_file_name = os.path.join(output_dir, '{}.hdf5'.format(index + gsas_file_index_start))
+            gda_name = '{}.gda'.format(index + gsas_file_index_start)
+            attribute_dict = {'GSAS': gda_name, 'Workspace': ws_name}
+            file_utilities.save_sample_logs(ws_i, log_names, out_file_name, attribute_dict)
+            info += '{}  \t{}  \t{}\n'.format(index, out_file_name, gda_name)
+        # END-FOR
+
+        sum_file = open(os.path.join(output_dir, 'summary.txt'), 'w')
+        sum_file.write(info)
+        sum_file.close()
+
+        return
 
     def focus_workspace_list(self, ws_name_list, gsas_ws_name_list, group_ws_name):
         """ Do diffraction focus on a list workspaces and also convert them to IDL GSAS
@@ -250,29 +279,9 @@ class SliceFocusVulcan(object):
                               RelativeTime=is_relative_time)
 
         # get output workspaces' names
-        output_names = None
-        for r in result:
-            if isinstance(r, int):
-                # print r
-                pass
-            elif isinstance(r, list):
-                output_names = r
-                # process the output workspaces
-                num_outputs = len(output_names)
-                for i_ws in range(num_outputs-1, -1, -1):
-                    ws_name = output_names[i_ws].strip()
-                    if ws_name == '':
-                        output_names.pop(i_ws)
-                        # print ('Pop out {} for empty string'.format(i_ws))
-                    elif ws_name.lower().endswith('_unfiltered'):
-                        output_names.pop(i_ws)
-                        # print ('Pop out {} / {} for no needed'.format(i_ws, ws_name))
-                # END-FOR
-                # print (output_names)
-            else:
-                continue
-            # END-IF-ELSE
-        # END-IF
+        output_names = mantid_helper.get_filter_events_outputs(result)
+        if output_names is None:
+            raise RuntimeError('There is no workspace found in the result of FilterEvents (vulcan_slice_reduce)')
 
         t2 = time.time()
 
@@ -348,6 +357,10 @@ class SliceFocusVulcan(object):
                            gsas_writer=gsas_writer, run_start_date=run_date_time,  # ref_tof_sets=binning_parameters,
                            gsas_file_index_start=gsas_file_index_start)
 
+        if True:
+            self.export_split_logs(output_names, gsas_file_index_start=gsas_file_index_start,
+                                   output_dir=self._output_dir)
+
         # write to logs
         self.write_log_records(output_names, log_type='loadframe')
         tf = time.time()
@@ -413,6 +426,7 @@ class SliceFocusVulcan(object):
             text_buffer = gsas_writer.save(diff_ws_name=ws_name, run_date_time=run_start_date,
                                            gsas_file_name=gsas_file_name_list[index_ws],
                                            ipts_number=ipts_number,
+                                           run_number=self._run_number,
                                            gsas_param_file_name=parm_file_name, align_vdrive_bin=True,
                                            van_ws_name=van_ws_name, is_chopped_run=True, write_to_file=False)
             self._gsas_buffer_dict[ws_name] = text_buffer

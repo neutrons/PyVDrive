@@ -142,7 +142,7 @@ class DataChopper(object):
     def generate_events_filter_manual(self, run_number, split_list, relative_time, splitter_tag):
         """ Generate a split workspace with arbitrary input time
         :param run_number:
-        :param split_list:
+        :param split_list: list of 2-element or 3-element
         :param relative_time:
         :param splitter_tag: 2-tuple : split workspace, information workspace OR None
                 boolean, ???? (...)/string (error message)
@@ -164,8 +164,7 @@ class DataChopper(object):
                                              ''.format(split_list, type(split_list))
 
         # Generate split workspace
-        status, ret_obj = mantid_helper.generate_event_filters_arbitrary(self._mtdWorkspaceName,
-                                                                         split_list,
+        status, ret_obj = mantid_helper.generate_event_filters_arbitrary(split_list,
                                                                          relative_time=relative_time,
                                                                          tag=splitter_tag,
                                                                          auto_target=True)

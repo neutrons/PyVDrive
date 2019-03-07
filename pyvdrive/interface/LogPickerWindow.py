@@ -112,6 +112,11 @@ class WindowLogPicker(QMainWindow):
         # menu actions
         self.ui.actionExit.triggered.connect(self.evt_quit_no_save)
 
+        # TODO - TONIGHT - URGENT: pushButton_cyclic_helper
+        # TODO - TONIGHT - URGENT: actionOpenH5Log
+
+        # TODO - TONIGHT 0 - Urgent: actionIPython_Command_Console: launch terminal view
+
         # # Event handling for pickers
         self._mtsFileLoaderWindow = None
 
@@ -406,32 +411,6 @@ class WindowLogPicker(QMainWindow):
             err_msg = str(ret_obj)
             GuiUtility.pop_dialog_error(self, err_msg)
             return
-
-        # parse file
-        # if True:
-        #     # TODO/FIXME/NOWNOW - This method should be generalized with other slicer file parser
-        #     #                    chop_utility via controller
-        #     slicer_file = open(slicer_file_name, 'r')
-        #     raw_lines = slicer_file.readlines()
-        #     slicer_file.close()
-        #
-        #     slicer_list = list()
-        #     for line in raw_lines:
-        #         # print '[DB...BAT] Line: {0}'.format(line)
-        #         line = line.strip()
-        #         if len(line) == 0 or line[0] == '#':
-        #             continue
-        #
-        #         terms = line.split()
-        #         # print '[DB...BAT] Line split to {0}'.format(terms)
-        #         if len(terms) < 3:
-        #             continue
-        #         start_time = float(terms[0])
-        #         stop_time = float(terms[1])
-        #         target_ws = str(terms[2])
-        #         slicer_list.append((start_time, stop_time, target_ws))
-        #         # END-FOR
-        # # END-IF
 
         # check
         if len(slicer_list) == 0:

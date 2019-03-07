@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import os
 import os.path
 import h5py
@@ -7,8 +7,8 @@ from pyvdrive.lib import datatypeutility
 import mantid_helper
 from mantid.simpleapi import ConvertToHistogram, ConvertUnits, Rebin, Divide
 
-PHASE_NED = datetime.datetime(2017, 6, 1)
-PHASE_X1 = datetime.datetime(2019, 7, 1)
+PHASE_NED = datetime(2017, 6, 1)
+PHASE_X1 = datetime(2019, 7, 1)
 
 
 class SaveVulcanGSS(object):
@@ -93,7 +93,7 @@ class SaveVulcanGSS(object):
                                'for calculating run start/stop in nanoseconds'.format(gsas_workspace.name()))
 
         # zero time:
-        time0 = datetime.datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
+        time0 = datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
 
         if run.hasProperty('proton_charge'):
             # use proton charge to calculate run start/stop
@@ -103,7 +103,7 @@ class SaveVulcanGSS(object):
 
             duration_ns = (pc_stop_time - pc_start_time).astype('int')
             # convert proton charge first time to datetime.datetime
-            run_start_time = datetime.datetime.utcfromtimestamp(pc_start_time.astype('O') * 1.E-9)
+            run_start_time = datetime.utcfromtimestamp(pc_start_time.astype('O') * 1.E-9)
 
             delta_to_t0_ns = run_start_time - time0
             total_nanosecond_start = int(delta_to_t0_ns.total_seconds() * int(1.0E9))
@@ -124,8 +124,8 @@ class SaveVulcanGSS(object):
             runstart_sec = runstart.split(".")[0]
             runstart_ns = runstart.split(".")[1]
             try:
-                utctime = datetime.datetime.strptime(runstart_sec, '%Y-%m-%dT%H:%M:%S')
-                time0 = datetime.datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
+                utctime = datetime.strptime(runstart_sec, '%Y-%m-%dT%H:%M:%S')
+                time0 = datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
                 print ('UTC time: {}, Time 0: {}'.format(str(utctime), str(time0)))
             except AttributeError as attrib_error:
                 print ('[DB...BAT] run start sec = {}'.format(str(runstart_sec)))
@@ -148,12 +148,14 @@ class SaveVulcanGSS(object):
 
         return total_nanosecond_start, total_nanosecond_stop
 
-    def _generate_vulcan_gda_header(self, gsas_workspace, gsas_file_name, ipts, gsas_param_file_name, from_sliced_ws):
+    def _generate_vulcan_gda_header(self, gsas_workspace, gsas_file_name, ipts, run_number,
+                                    gsas_param_file_name, from_sliced_ws):
         """
         generate a VDRIVE compatible GSAS file's header
         :param gsas_workspace:
         :param gsas_file_name:
         :param ipts:
+        :param run_number
         :param gsas_param_file_name:
         :param from_sliced_ws: flag to indicate whether the GSAS workspace is from sliced
         :return: string : multiple lines
@@ -182,7 +184,9 @@ class SaveVulcanGSS(object):
         new_header += "%-80s\n" % title
         new_header += "%-80s\n" % ("Instrument parameter file: %s" % gsas_param_file_name)
         new_header += "%-80s\n" % ("#IPTS: %s" % str(ipts))
-        new_header += "%-80s\n" % ("#binned by: Mantid (refrence workspace: {}".format(str(gsas_workspace)))
+        if run_number is not None:
+            new_header += "%-80s\n" % ("#RUN: %s" % str(run_number))
+        new_header += "%-80s\n" % ("#binned by: Mantid. From refrence workspace: {})".format(str(gsas_workspace)))
         new_header += "%-80s\n" % ("#GSAS file name: %s" % os.path.basename(gsas_file_name))
         new_header += "%-80s\n" % ("#GSAS IPARM file: %s" % gsas_param_file_name)
         new_header += "%-80s\n" % ("#Pulsestart:    %d" % total_nanosecond_start)
@@ -255,7 +259,7 @@ class SaveVulcanGSS(object):
         :param run_date_time: datetime instance
         :return:
         """
-        assert isinstance(run_date_time,datetime.datetime), 'Run date {} must be a datetime.datetime instance ' \
+        assert isinstance(run_date_time, datetime), 'Run date {} must be a datetime.datetime instance ' \
                                                     'but not of type {}'.format(run_date_time,
                                                                                 type(run_date_time))
 
@@ -454,17 +458,23 @@ class SaveVulcanGSS(object):
 
         return van_gsas_ws_name
 
-    # TODO - TONIGHT 13 - QA
     def save_vanadium(self, diff_ws_name, gsas_file_name,
                       ipts_number, van_run_number, sample_log_ws_name):
-        """
-        Save a WorkspaceGroup which comes from original GSAS workspace
-        :param van_ws_name:
+        """  Save a WorkspaceGroup which comes from original GSAS workspace
+        :param diff_ws_name: diffraction workspace (group) name
+        :param gsas_file_name: output GSAS file name
+        :param ipts_number: ITPS
+        :param van_run_number: (van) run number
+        :param sample_log_ws_name: workspace containing sample logs (proton charges)
         :return:
         """
+        datatypeutility.check_string_variable('Diffraction workspace (group) name', diff_ws_name)
+        datatypeutility.check_file_name(gsas_file_name, False, True, False, 'Smoothed vanadium GSAS file')
+        datatypeutility.check_int_variable('IPTS', ipts_number, (1, None))
+        datatypeutility.check_string_variable('Sample log workspace name', sample_log_ws_name)
+
         # rebin and then write output
         gsas_bank_buffer_dict = dict()
-        print ('[DB...BAT]  check 2: {}'.format(mantid_helper.workspace_does_exist(diff_ws_name)))
         van_ws = mantid_helper.retrieve_workspace(diff_ws_name)
         num_banks = mantid_helper.get_number_spectra(van_ws)
         datatypeutility.check_file_name(gsas_file_name, check_exist=False,
@@ -483,8 +493,8 @@ class SaveVulcanGSS(object):
 
         # header
         log_ws = mantid_helper.retrieve_workspace(sample_log_ws_name)
-        gsas_header = self._generate_vulcan_gda_header(log_ws, gsas_file_name, ipts_number, gsas_file_name,
-                                                       False)
+        gsas_header = self._generate_vulcan_gda_header(log_ws, gsas_file_name, ipts_number, van_run_number,
+                                                       gsas_file_name, False)
 
         # form to a big string
         gsas_buffer = gsas_header
@@ -498,7 +508,7 @@ class SaveVulcanGSS(object):
 
         return
 
-    def save(self, diff_ws_name, run_date_time, gsas_file_name, ipts_number, gsas_param_file_name,
+    def save(self, diff_ws_name, run_date_time, gsas_file_name, ipts_number, run_number, gsas_param_file_name,
              align_vdrive_bin, van_ws_name, is_chopped_run, write_to_file=True):
         """
         Save a workspace to a GSAS file or a string
@@ -506,6 +516,7 @@ class SaveVulcanGSS(object):
         :param run_date_time: date and time of the run
         :param gsas_file_name: output file name. None as not output
         :param ipts_number:
+        :param run_number: if not None, run number
         :param gsas_param_file_name:
         :param align_vdrive_bin: Flag to align with VDRIVE bin edges/boundaries
         :param van_ws_name: name of vanadium workspaces loaded from GSAS (replacing vanadium_gsas_file)
@@ -518,7 +529,7 @@ class SaveVulcanGSS(object):
         # set the unit to TOF
         if diff_ws.getAxis(0).getUnit() != 'TOF':
             ConvertUnits(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name, Target='TOF',
-                             EMode='Elastic')
+                         EMode='Elastic')
             diff_ws = mantid_helper.retrieve_workspace(diff_ws_name)
 
         # convert to Histogram Data
@@ -578,8 +589,8 @@ class SaveVulcanGSS(object):
 
         # header
         diff_ws = mantid_helper.retrieve_workspace(diff_ws_name)
-        gsas_header = self._generate_vulcan_gda_header(diff_ws, gsas_file_name, ipts_number, gsas_param_file_name,
-                                                       is_chopped_run)
+        gsas_header = self._generate_vulcan_gda_header(diff_ws, gsas_file_name, ipts_number, run_number,
+                                                       gsas_param_file_name, is_chopped_run)
 
         # form to a big string
         gsas_buffer = gsas_header

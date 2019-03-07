@@ -18,7 +18,7 @@ try:
 except AttributeError:
     _fromUtf8 = lambda s: s
 
-import pyvdrive.lib.datatypeutility
+from pyvdrive.lib import datatypeutility
 
 
 def add_runs_to_tree(treewidget, ipts, runlist):
@@ -65,14 +65,14 @@ def browse_file(parent, caption, default_dir, file_filter, file_list=False, save
     """
     # check inputs
     assert isinstance(parent, object), 'Parent {} must be of some object.'.format(parent)
-    pyvdrive.lib.datatypeutility.check_string_variable('File browsing title/caption', caption)
-    pyvdrive.lib.datatypeutility.check_file_name(default_dir, check_exist=False, is_dir=True)
-    pyvdrive.lib.datatypeutility.check_bool_variable('Flag for browse a list of files to load', file_list)
-    pyvdrive.lib.datatypeutility.check_bool_variable('Flag to select loading or saving file', save_file)
+    datatypeutility.check_string_variable('File browsing title/caption', caption)
+    datatypeutility.check_file_name(default_dir, check_exist=False, is_dir=True)
+    datatypeutility.check_bool_variable('Flag for browse a list of files to load', file_list)
+    datatypeutility.check_bool_variable('Flag to select loading or saving file', save_file)
     if file_filter is None:
         file_filter = 'All Files (*.*)'
     else:
-        pyvdrive.lib.datatypeutility.check_string_variable('File filter', file_filter)
+        datatypeutility.check_string_variable('File filter', file_filter)
 
     if save_file:
         # browse file name to save to
@@ -196,6 +196,31 @@ def convert_to_qdate_epoch(epoch_time):
     m_date = QtCore.QDate(year, month, day)
 
     return m_date
+
+
+# TODO - TODAY - TEST - NEW Method
+def get_load_file_by_dialog(parent, title, default_dir, file_filter):
+    """ Get the file name to load via QFileDialog
+    :param parent:
+    :param title:
+    :param default_dir:
+    :param file_filter:
+    :param is_dir: if True, then only select the directories
+    :return:
+    """
+    datatypeutility.check_string_variable('Title (to load file)', title)
+    datatypeutility.check_string_variable('Default directory to load file', default_dir)
+    datatypeutility.check_file_name(default_dir, True, False, True, 'Default directory to load file')
+    datatypeutility.check_file_name('File filter', file_filter)
+
+    # append "All files:
+    if file_filter.count('*.*') == 0:
+        file_filter += ';;All files (*.*)'
+
+    # get file name
+    file_name = str(QFileDialog.getOpenFileName(parent, title, default_dir, file_filter)).strip()
+
+    return file_name
 
 
 def get_save_file_by_dialog(parent, title, default_dir, file_filter):

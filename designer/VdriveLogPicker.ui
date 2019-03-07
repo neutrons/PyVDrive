@@ -454,6 +454,18 @@
             <item>
              <layout class="QVBoxLayout" name="verticalLayout_9">
               <item>
+               <widget class="QPushButton" name="pushButton_cyclic_helper">
+                <property name="font">
+                 <font>
+                  <pointsize>10</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Strobescope (cyclic)</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QPushButton" name="pushButton_setupAutoSlicer">
                 <property name="font">
                  <font>
@@ -1148,6 +1160,7 @@
     <property name="title">
      <string>File</string>
     </property>
+    <addaction name="actionOpenH5Log"/>
     <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
@@ -1167,6 +1180,7 @@
      <string>Tools</string>
     </property>
     <addaction name="actionShow_Run_Information"/>
+    <addaction name="actionIPython_Command_Console"/>
    </widget>
    <addaction name="menuTest"/>
    <addaction name="menuAbout"/>
@@ -1206,6 +1220,16 @@
   <action name="actionShow_Run_Information">
    <property name="text">
     <string>Show Run Information</string>
+   </property>
+  </action>
+  <action name="actionOpenH5Log">
+   <property name="text">
+    <string>Open HDF Log</string>
+   </property>
+  </action>
+  <action name="actionIPython_Command_Console">
+   <property name="text">
+    <string>IPython/Command Console</string>
    </property>
   </action>
  </widget>

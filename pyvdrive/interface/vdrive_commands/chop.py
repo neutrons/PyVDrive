@@ -521,8 +521,7 @@ class VdriveChop(VDriveCommand):
             del chop_option_dict['DBIN']
 
         if 'PICKDATA' in self._commandArgsDict:
-            user_slice_file = self._commandArgsDict['PICKDATA']
-            chop_option_dict['PICKDATA'] = user_slice_file
+            chop_option_dict['PICKDATA'] = self._commandArgsDict['PICKDATA']
 
         # check inputs' validity: at most 1 chopping option can be used
         if len(chop_option_dict) > 1:
@@ -847,6 +846,7 @@ class VdriveChop(VDriveCommand):
 
         return help_str
 
+    # TODO - TONIGHT 0 - 1. move to file_util.py   2. read target workspace name
     @staticmethod
     def parse_pick_data(file_name):
         """ Parse an ascii file for slicer setup
