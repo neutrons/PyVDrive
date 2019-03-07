@@ -160,7 +160,7 @@ def save_sample_logs(workspace, log_names, log_h5_name, attribution_dict=None):
         raise RuntimeError('Input {} shall be a workspace with Run object but not a {}: FYI {}'
                            ''.format(workspace, type(workspace), any_err))
     datatypeutility.check_list('Sample log names', log_names)
-    datatypeutility.check_string_variable('Output HDF5 log file name', log_names)
+    datatypeutility.check_string_variable('Output HDF5 log file name', log_h5_name)
     datatypeutility.check_file_name(log_h5_name, False, True, False, 'Output PyVDrive HDF5 sample log file')
 
     # create file
