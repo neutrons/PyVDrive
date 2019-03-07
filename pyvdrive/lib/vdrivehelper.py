@@ -2,7 +2,7 @@ import os
 import time
 import pytz
 from dateutil.parser import parse
-from datetime import datetime
+import datetime
 from dateutil import tz
 import datatypeutility
 import mantid
@@ -95,7 +95,7 @@ def convert_utc_to_local_time(utc_time):
     """
     # convert UTC time to a certain string in the format as 2017-11-29T13:51:42.787380666
     utc_time_formatted = str(utc_time).split('.')[0]
-    utc_time = datetime.strptime(utc_time_formatted, '%Y-%m-%dT%H:%M:%S')
+    utc_time = datetime.datetime.strptime(utc_time_formatted, '%Y-%m-%dT%H:%M:%S')
 
     # METHOD 1: Hardcode zones:
     from_zone = tz.gettz('UTC')

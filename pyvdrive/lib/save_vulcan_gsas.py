@@ -95,7 +95,8 @@ class SaveVulcanGSS(object):
         # zero time:
         try:
             time0 = datetime.datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
-        except AttributeError:
+        except AttributeError as any_error:
+            print (any_error)
             time0 = datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
 
         if run.hasProperty('proton_charge'):

@@ -120,8 +120,13 @@ class ManualSlicerSetupTableDialog(QDialog):
         # Call parent method to generate random event slicer (splitters workspace or table)
         if self._myParent is not None:
             self._myParent.generate_manual_slicer(split_tup_list, slicer_name=slicer_name)
-
-            # TODO - TONIGHT 0 - Save splitters as default
+            # auto save
+            file_name = os.path.join(self.controller.get_working_dir(), 'slicer_{}.dat'.format(slicer_name))
+            status, err_msg = self.controller.save_time_slicers(split_tup_list, file_name)
+            if status:
+                print ('[INFO] Splitters are save to {}'.format(file_name))
+            else:
+                print ('[ERROR] Unable to save splitters due to {}'.format(err_msg))
         # END-IF
 
         return
@@ -232,6 +237,7 @@ class ManualSlicerSetupTableDialog(QDialog):
             return
 
         # pop a dialog for the name of the slicer
+        # TODO - TONIGHT 3 - Use stanard methods
         file_filter = 'Data Files (*.dat);; All Files (*.*)'
         file_name = QFileDialog.getSaveFileName(self, 'Time slicer file name',
                                                           self.controller.get_working_dir(),
