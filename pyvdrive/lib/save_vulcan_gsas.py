@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import os
 import os.path
 import h5py
@@ -7,8 +7,8 @@ from pyvdrive.lib import datatypeutility
 import mantid_helper
 from mantid.simpleapi import ConvertToHistogram, ConvertUnits, Rebin, Divide
 
-PHASE_NED = datetime.datetime(2017, 6, 1)
-PHASE_X1 = datetime.datetime(2019, 7, 1)
+PHASE_NED = datetime(2017, 6, 1)
+PHASE_X1 = datetime(2019, 7, 1)
 
 
 class SaveVulcanGSS(object):
@@ -93,11 +93,7 @@ class SaveVulcanGSS(object):
                                'for calculating run start/stop in nanoseconds'.format(gsas_workspace.name()))
 
         # zero time:
-        try:
-            time0 = datetime.datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
-        except AttributeError as any_error:
-            print (any_error)
-            time0 = datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
+        time0 = datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
 
         if run.hasProperty('proton_charge'):
             # use proton charge to calculate run start/stop
@@ -107,7 +103,7 @@ class SaveVulcanGSS(object):
 
             duration_ns = (pc_stop_time - pc_start_time).astype('int')
             # convert proton charge first time to datetime.datetime
-            run_start_time = datetime.datetime.utcfromtimestamp(pc_start_time.astype('O') * 1.E-9)
+            run_start_time = datetime.utcfromtimestamp(pc_start_time.astype('O') * 1.E-9)
 
             delta_to_t0_ns = run_start_time - time0
             total_nanosecond_start = int(delta_to_t0_ns.total_seconds() * int(1.0E9))
@@ -128,8 +124,8 @@ class SaveVulcanGSS(object):
             runstart_sec = runstart.split(".")[0]
             runstart_ns = runstart.split(".")[1]
             try:
-                utctime = datetime.datetime.strptime(runstart_sec, '%Y-%m-%dT%H:%M:%S')
-                time0 = datetime.datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
+                utctime = datetime.strptime(runstart_sec, '%Y-%m-%dT%H:%M:%S')
+                time0 = datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
                 print ('UTC time: {}, Time 0: {}'.format(str(utctime), str(time0)))
             except AttributeError as attrib_error:
                 print ('[DB...BAT] run start sec = {}'.format(str(runstart_sec)))
@@ -263,7 +259,7 @@ class SaveVulcanGSS(object):
         :param run_date_time: datetime instance
         :return:
         """
-        assert isinstance(run_date_time,datetime.datetime), 'Run date {} must be a datetime.datetime instance ' \
+        assert isinstance(run_date_time, datetime), 'Run date {} must be a datetime.datetime instance ' \
                                                     'but not of type {}'.format(run_date_time,
                                                                                 type(run_date_time))
 
