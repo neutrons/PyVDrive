@@ -129,14 +129,14 @@ def load_sample_logs_h5(log_h5_name, log_name=None):
     return sample_log_dict
 
 
-def save_sample_logs(workspace, log_names, log_h5_name):
+def save_sample_logs(workspace, log_names, log_h5_name, attribution_dict=None):
     """ Save sample logs to an HDF5 file
     :param workspace:
     :param log_names:
     :param log_h5_name:
+    :param attribution_dict: extra attribution written to GSAS
     :return:
     """
-
     def write_sample_log(entry_name, vec_times, vec_value):
         """ Write a TimeSeriesProperty to an entry (group) in HDF5 file
         :param entry_name:
@@ -178,6 +178,12 @@ def save_sample_logs(workspace, log_names, log_h5_name):
             written_at_least_one = True
         except (KeyError, RuntimeError) as any_error:
             error_msg += '{}: {}'.format(log_name_i, any_error)
+
+    # writing attribution
+    if attribution_dict is not None:
+        datatypeutility.check_dict('Attributions', attribution_dict)
+        for attrib_name in attribution_dict.keys():
+            log_h5[attrib_name] = attribution_dict[attrib_name]
 
     log_h5.close()
 

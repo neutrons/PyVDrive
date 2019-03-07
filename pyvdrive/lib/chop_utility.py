@@ -164,8 +164,7 @@ class DataChopper(object):
                                              ''.format(split_list, type(split_list))
 
         # Generate split workspace
-        status, ret_obj = mantid_helper.generate_event_filters_arbitrary(self._mtdWorkspaceName,
-                                                                         split_list,
+        status, ret_obj = mantid_helper.generate_event_filters_arbitrary(split_list,
                                                                          relative_time=relative_time,
                                                                          tag=splitter_tag,
                                                                          auto_target=True)

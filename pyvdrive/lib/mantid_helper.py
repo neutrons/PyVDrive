@@ -486,8 +486,8 @@ def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_pr
 
     return peak_list
 
-# TODO - TONIGHT 0 - Clean
-def generate_event_filters_arbitrary(ws_name, split_list, relative_time, tag, auto_target):
+
+def generate_event_filters_arbitrary(split_list, relative_time, tag, auto_target):
     """ Generate event filter (splitters workspace) by arbitrary time stamps
     :param split_list: list of 2-element or 3-element
     :param relative_time:
@@ -496,16 +496,11 @@ def generate_event_filters_arbitrary(ws_name, split_list, relative_time, tag, au
         1. status (boolean)
         2. 2-tuple as splitter workspace's name and information (table) workspace's name
     """
-    print '[DB...BAT] Workspace Name: ', ws_name
-
-    # # check
-    # if relative_time is False:
-    #     raise RuntimeError('It has not been implemented for absolute time stamp!')
-
     # check
     datatypeutility.check_list('Splitters', split_list)
     datatypeutility.check_string_variable('Splitter tag', tag, None)
-    assert len(tag) > 0, 'Split tag cannot be empty.'
+    if len(tag) == 0:
+        raise RuntimeError('Split tag cannot be empty for generate_event_filters_arbitrary')
 
     # create an empty workspace
     splitters_ws_name = tag
@@ -1303,6 +1298,38 @@ def event_data_ws_name(run_number):
     return 'VULCAN_%d_Raw' % run_number
 
 
+def get_filter_events_outputs(result, excluding_unfiltered=True):
+    """ get the output workspace names from FilterEvents
+    :param result:  return from FilterEvents
+    :param excluding_unfiltered: flag to exclude the events no in any event filters
+    :return: workspace names in the order as being returned from FilterEvents
+    """
+    output_names = None
+    for r in result:
+        if isinstance(r, int):
+            # other returns
+            continue
+        elif isinstance(r, list):
+            output_names = r
+            # process the output workspaces
+            num_outputs = len(output_names)
+            for i_ws in range(num_outputs - 1, -1, -1):
+                ws_name = output_names[i_ws].strip()
+                if ws_name == '':
+                    # remove the empty string in returned workspace names
+                    output_names.pop(i_ws)
+                elif ws_name.lower().endswith('_unfiltered') and excluding_unfiltered:
+                    # remove unfiltered
+                    output_names.pop(i_ws)
+            # END-FOR
+        else:
+            continue
+        # END-IF-ELSE
+    # END-IF
+
+    return output_names
+
+
 def get_standard_ws_name(file_name, meta_only):
     """
     Get the standard name for a loaded workspace
@@ -1311,7 +1338,7 @@ def get_standard_ws_name(file_name, meta_only):
     :param meta_only:
     :return:
     """
-    assert isinstance(file_name, str), 'File name should be a string but not %s.' % str(type(file_name))
+    datatypeutility.check_string_variable('File name', file_name)
 
     ws_name = os.path.basename(file_name).split('.')[0]
     file_type = os.path.basename(file_name).split('.')[1]
@@ -1453,7 +1480,6 @@ def convert_gsas_ws_to_group(ws_name):
     return retrieve_workspace(ws_name)
 
 
-# TODO - TONIGHT 3 - Clean!
 def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     """ Load VULCAN GSAS file and set instrument information.
     Output workspace will be set to PointData
@@ -1487,10 +1513,10 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     if num_spec == 2:
         # before nED, no high angle detector
         mantidapi.EditInstrumentGeometry(Workspace=out_ws_name,
-                                                PrimaryFlightPath=43.753999999999998,
-                                                SpectrumIDs='1,2',
-                                                L2='2.00944,2.00944',
-                                                Polar='90,270')
+                                         PrimaryFlightPath=43.753999999999998,
+                                         SpectrumIDs='1,2',
+                                         L2='2.00944,2.00944',
+                                         Polar='90,270')
     elif num_spec == 3:
         # after nED, with high angle detector
         print ('[SpecialDebug] Edit Instrument: {0}'.format(out_ws_name))
@@ -1505,11 +1531,6 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
 
     # convert to workspace group
     convert_gsas_ws_to_group(out_ws_name)
-
-    # # convert to point data
-    # if point_data:
-    #     convert_to_point_data(out_ws_name, common_bins=False)
-    #     gss_ws = retrieve_workspace(out_ws_name)
 
     # convert unit and to point data
     if standard_bin_workspace is not None and num_spec == 2:
@@ -1854,10 +1875,19 @@ def edit_compressed_chopped_workspace_geometry(ws_name):
 
     return
 
-# TODO - TONIGHT 5 - Better QA
+
 def group_workspaces(input_ws_names, group_name):
-    print ('Grouping {} to {}'.format(input_ws_names, group_name))
+    """ Group workspaces
+    :param input_ws_names: list of names of the workspaces to be grouped
+    :param group_name: target workspace group ame
+    :return:
+    """
+    datatypeutility.check_list('Names of workspaces to group', input_ws_names)
+    datatypeutility.check_string_variable('Target WorkspaceGroup name', group_name)
+
     mantidapi.GroupWorkspaces(InputWorkspaces=input_ws_names, OutputWorkspace=group_name)
+
+    return
 
 
 def merge_runs(ws_name_list, out_ws_name):
