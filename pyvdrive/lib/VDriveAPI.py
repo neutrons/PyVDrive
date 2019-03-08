@@ -1769,27 +1769,6 @@ class VDriveAPI(object):
 
         return
 
-    def slice_data_segment_period(self, run_number, slicer_id, chop_period, reduce_data,
-                                  vanadium, save_chopped_nexus, output_dir, export_log_type):
-        """
-        slice/chop data with chopping period, i.e.,any two adjacent time segments will have a certain distance (in time)
-        other than time_interval value.
-        :param run_number:
-        :param slicer_id:
-        :param chop_period:
-        :param reduce_data:
-        :param vanadium:
-        :param save_chopped_nexus:
-        :param output_dir:
-        :param export_log_type:
-        :return:
-        """
-        status, message = self._myProject.chop_run_time_segment_period(run_number, slicer_id,
-                                                                       chop_period, reduce_data, vanadium,
-                                                                       save_chopped_nexus, output_dir, export_log_type)
-
-        return status, message
-
     def set_ipts_config(self, ipts_number, data_dir, binned_data_dir):
         """
         Set configuration for a particular IPTS
@@ -1811,28 +1790,6 @@ class VDriveAPI(object):
         self._iptsConfigDict[ipts_number] = [data_dir, binned_data_dir]
 
         return
-
-    # def set_reduction_parameters(self, parameter_dict):
-    #     """ Set parameters used for reducing powder event data
-    #     Purpose:
-    #         Set up the reduction parameters
-    #     Requirements:
-    #         Parameters' value are given via dictionary
-    #     Guarantees:
-    #         ... ...
-    #     :return:
-    #     """
-    #     assert isinstance(parameter_dict, dict)
-    #
-    #     try:
-    #         self._myProject.set_reduction_parameters(parameter_dict)
-    #         status = True
-    #         error_msg = ''
-    #     except RuntimeError as re:
-    #         status = False
-    #         error_msg = 'Unable to set reduction parameters due to %s.' % str(re)
-    #
-    #     return status, error_msg
 
     def set_vanadium_to_runs(self, ipts_number, run_number_list, van_run_number):
         """
