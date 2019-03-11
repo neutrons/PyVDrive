@@ -526,6 +526,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         else:
             # set
+            # TODO - TONIGHT 0 - Need a dictionary to associate
+            # TODO - cont.     - (1) combo item name (string) and (2) run/slicer key (combo)
             curr_chop_run = str(self.ui.comboBox_choppedRunNumber.currentText())
 
             # add the new one
@@ -545,6 +547,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 # need to refresh: set to first one
                 self.ui.comboBox_choppedRunNumber.setCurrentIndex(0)
                 new_chop_run = str(self.ui.comboBox_choppedRunNumber.currentText())
+                print ('[DB...BAT] New Chop Run: {}'.format(new_chop_run))
                 seq_list = self._myController.project.get_chopped_sequence(new_chop_run)
                 print ('[DB...BAT] Chopped sequence: {}'.format(seq_list))
 

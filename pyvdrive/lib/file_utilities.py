@@ -175,7 +175,7 @@ def save_sample_logs(workspace, log_names, log_h5_name, start_time, attribution_
             vec_times_i = run_obj.getProperty(log_name_i).times
             vec_value_i = run_obj.getProperty(log_name_i).value
             # write
-            write_sample_log(log_name_i, vec_times_i, vec_value_i)
+            write_sample_log(log_name_i, vec_times_i, vec_value_i, time_0=start_time)
             # record
             written_at_least_one = True
         except (KeyError, RuntimeError) as any_error:

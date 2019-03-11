@@ -766,11 +766,11 @@ class VDriveAPI(object):
         if chopped:
             # chopped runs
             # from archive
-            loaded_runs_list = self._myProject.get_loaded_chopped_reduced_runs()
+            loaded_runs_list = self._myProject.data_loading_manager.get_loaded_chopped_runs()
             print ('[DB...BAT] API: Loaded chopped gsas: {}'.format(loaded_runs_list))
 
             # from memory
-            reduced_runs_list = self._myProject.reduction_manager.get_reduced_runs(chopped=True)
+            reduced_runs_list = self._myProject.reduction_manager.get_reduced_chopped_runs()
             print ('[DB...BAT] API: In-Memory chopped runs: {}'.format(reduced_runs_list))
 
         else:
@@ -778,7 +778,7 @@ class VDriveAPI(object):
             loaded_runs_list = self._myProject.get_loaded_reduced_runs()
 
             # from project
-            reduced_runs_list = self._myProject.reduction_manager.get_reduced_runs(chopped=False)
+            reduced_runs_list = self._myProject.reduction_manager.get_reduced_single_runs()
             print ('[DB...BAT] API: In-Memory reduced single-runs: {}'.format(reduced_runs_list))
 
         # END-IF-ELSE

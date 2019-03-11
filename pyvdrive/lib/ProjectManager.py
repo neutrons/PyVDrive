@@ -50,10 +50,7 @@ class ProjectManager(object):
         self._scannedRunDict = dict()  # key = run number, value = archive manager's run_info dictionary
 
         # dictionary for loaded data referenced by IPTS and run number. value is the data key
-        self._loadedDataDict = dict()
-
-        # chopped data (loaded)
-        self._chopped_data_dict = dict()
+        self._loadedDataDict = dict()  # FIXME TODO - TODAY - Consider to remove too
 
         # dictionary for sample run mapping to vanadium run
         self._sampleRunVanadiumDict = dict()  # Key: run number (int) / Value: vanadium run number (int)
@@ -438,6 +435,13 @@ class ProjectManager(object):
 
         # process outputs
         if status:
+            # # register: returned is a tuple
+            # print ('[UND] Successful return of chop vulcan run: {}. Slice key: {}'.format(chop_message, slicer_key))
+            # self._chopped_data_dict[(run_number, slicer_key)] = chop_message
+            #
+            # self._reductionManager.get_sliced_focused_workspaces(run_number, slicer_key)  # UND
+
+            # better output message
             if output_directory is None:
                 output_directory = '/SNS/VULCAN/IPTS-{}/shared/binned_data/{}'.format(ipts_number, run_number)
             message = 'IPTS-{0} Run {1} is chopped, reduced (?={2}) and saved to {3}\n' \
@@ -745,66 +749,82 @@ class ProjectManager(object):
         return ipts_dict
 
     def get_chopped_sequence(self, chop_data_key):
-        """ Get the list of a chopped sequence (integers)
+        """ Get the list of a chopped sequence (integers).
+        Note: this method will examine both loaded data manager and reduced data manager
+              thus, it is kept in Project
         :param chop_data_key: key to locate the chopped workspaces
         :return:
         """
-        if isinstance(chop_data_key, str):
-            if chop_data_key.isdigit():
-                chop_data_key = int(chop_data_key)
+        print ('[UND] CHOP DATA KEY {} of type {}'.format(chop_data_key, type(chop_data_key)))
+
+        # check reduced data
+        if self._reductionManager.has_run_sliced_reduced(chop_data_key):
+            # reduced runs
+            sequence_keys = self._reductionManager.get_sliced_focused_workspaces(chop_data_key[0],
+                                                                                 chop_data_key[1])
+
         else:
-            datatypeutility.check_string_variable('Chop data key (integer or string)', chop_data_key)
+            # loaded runs
+            raise NotImplementedError('Not Implemented Yet for Chopped Sequence')
+            if isinstance(chop_data_key, str):
+                if chop_data_key.isdigit():
+                    chop_data_key = int(chop_data_key)
+            else:
+                datatypeutility.check_string_variable('Chop data key (integer or string)', chop_data_key)
 
-        if chop_data_key not in self._chopped_data_dict:
-            raise RuntimeError('Chop data key {} is not in chapped data dictionary (keys: {})'
-                               ''.format(chop_data_key, self._chopped_data_dict.keys()))
+            if chop_data_key not in self._chopped_data_dict:
+                raise RuntimeError('Chop data key {} is not in chapped data dictionary (keys: {})'
+                                   ''.format(chop_data_key, self._chopped_data_dict.keys()))
+        # END-IF-ELSE
 
-        return sorted(self._chopped_data_dict[chop_data_key].keys())
+        return sequence_keys
 
-    def get_chopped_sequence_data(self, chop_data_key, chop_sequence, bank_id, unit='dSpacing'):
-        """ Get the data (vec x and vec y) of a workspace in a chopped data sequence
-        :param chop_data_key:
-        :param chop_sequence: sequence index in the chopped run
-        :param bank_id: bank ID
-        :param unit: target unit
-        :return: 2-tuple (vector X and vector Y)
-        """
-        # convert the chop data key to integer if it is an integer
-        if isinstance(chop_data_key, str):
-            if chop_data_key.isdigit():
-                chop_data_key = int(chop_data_key)
-        else:
-            datatypeutility.check_int_variable('Chop data key (integer or string)', chop_data_key, (1, None))
+    # NOTE: give this to reduction manager
+    # def get_chopped_sequence_data(self, chop_data_key, chop_sequence, bank_id, unit='dSpacing'):
+    #     """ Get the data (vec x and vec y) of a workspace in a chopped data sequence
+    #     :param chop_data_key:
+    #     :param chop_sequence: sequence index in the chopped run
+    #     :param bank_id: bank ID
+    #     :param unit: target unit
+    #     :return: 2-tuple (vector X and vector Y)
+    #     """
+    #     # convert the chop data key to integer if it is an integer
+    #     if isinstance(chop_data_key, str):
+    #         if chop_data_key.isdigit():
+    #             chop_data_key = int(chop_data_key)
+    #     else:
+    #         datatypeutility.check_int_variable('Chop data key (integer or string)', chop_data_key, (1, None))
+    #
+    #     # check whether the chop data/sequence is valid
+    #     if chop_data_key not in self._chopped_data_dict:
+    #         raise RuntimeError('Chop data key {} is not in chapped data dictionary (keys: {})'
+    #                            ''.format(chop_data_key, self._chopped_data_dict.keys()))
+    #
+    #     if chop_sequence not in self._chopped_data_dict[chop_data_key]:
+    #         raise RuntimeError('Chop data (key = {})  does not have {}-th slice'
+    #                            ''.format(chop_data_key, chop_sequence))
+    #
+    #     # get the workspace
+    #     ws_name = self._chopped_data_dict[chop_data_key][chop_sequence][0]
+    #
+    #     data_set = mantid_helper.get_data_from_workspace(workspace_name=ws_name,
+    #                                                      bank_id=bank_id, target_unit=unit)
+    #
+    #     data_set = data_set[0][bank_id]
+    #     # unit = data_set[1]
+    #     # print ('Unit: {}'.format(unit))
+    #
+    #     return data_set[0], data_set[1]
 
-        # check whether the chop data/sequence is valid
-        if chop_data_key not in self._chopped_data_dict:
-            raise RuntimeError('Chop data key {} is not in chapped data dictionary (keys: {})'
-                               ''.format(chop_data_key, self._chopped_data_dict.keys()))
-
-        if chop_sequence not in self._chopped_data_dict[chop_data_key]:
-            raise RuntimeError('Chop data (key = {})  does not have {}-th slice'
-                               ''.format(chop_data_key, chop_sequence))
-
-        # get the workspace
-        ws_name = self._chopped_data_dict[chop_data_key][chop_sequence][0]
-
-        data_set = mantid_helper.get_data_from_workspace(workspace_name=ws_name,
-                                                         bank_id=bank_id, target_unit=unit)
-
-        data_set = data_set[0][bank_id]
-        # unit = data_set[1]
-        # print ('Unit: {}'.format(unit))
-
-        return data_set[0], data_set[1]
-
-    def get_loaded_chopped_reduced_runs(self):
-        """
-        get the runs that are loaded as chopped data from SNS archive or HDD
-        :return: list of run numbers (string with special tag)
-        """
-        print ('[DB...BAT] Archived loaded data: {}'.format(self._loadedDataManager.get_loaded_chopped_runs()))
-
-        return self._chopped_data_dict.keys()
+    # # TODO FIXME - TODAY - Find out how NOT to use this method
+    # def get_loaded_chopped_reduced_runs(self):
+    #     """
+    #     get the runs that are loaded as chopped data from SNS archive or HDD
+    #     :return: list of run numbers (string with special tag)
+    #     """
+    #     print ('[DB...BAT] Archived loaded data: {}'.format(self._loadedDataManager.get_loaded_chopped_runs()))
+    #
+    #     return self._chopped_data_dict.keys()
 
     def get_loaded_reduced_runs(self):
         """
@@ -995,24 +1015,25 @@ class ProjectManager(object):
 
         return meta_ws_name
 
-    def load_chopped_binned_file(self, data_dir, chopped_seq_list, run_number):
-        """
-        Load chopped workspaces
-        :param data_dir:
-        :param chopped_seq_list:
-        :param run_number:
-        :return: tuple (key, dict)
-        """
-        result = self._loadedDataManager.load_chopped_binned_data(data_dir,
-                                                                  chopped_seq_list,
-                                                                  file_format='gsas',
-                                                                  prefix='{}'.format(run_number))
-
-        chopped_data_dict = result[0]   # [seq-index] = workspace name, file name
-
-        self._chopped_data_dict[run_number] = chopped_data_dict
-
-        return run_number, chopped_data_dict
+    # TODO FIXME - TODAY 0 - Reduction data view: how NOT to use it
+    # def load_chopped_binned_file(self, data_dir, chopped_seq_list, run_number):
+    #     """
+    #     Load chopped workspaces
+    #     :param data_dir:
+    #     :param chopped_seq_list:
+    #     :param run_number:
+    #     :return: tuple (key, dict)
+    #     """
+    #     result = self._loadedDataManager.load_chopped_binned_data(data_dir,
+    #                                                               chopped_seq_list,
+    #                                                               file_format='gsas',
+    #                                                               prefix='{}'.format(run_number))
+    #
+    #     chopped_data_dict = result[0]   # [seq-index] = workspace name, file name
+    #
+    #     self._chopped_data_dict[run_number] = chopped_data_dict
+    #
+    #     return run_number, chopped_data_dict
 
     def load_session_from_dict(self, save_dict):
         """ Load session from a dictionary

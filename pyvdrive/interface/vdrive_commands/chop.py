@@ -217,6 +217,7 @@ class VdriveChop(VDriveCommand):
             exp_log_type = None
 
         # chop
+        print ('[DB...BAT...UND] Slicer key = {}'.format(slicer_key))
         status, message = self._controller.project.chop_run(run_number, slicer_key,
                                                             reduce_flag=reduce_flag,
                                                             vanadium=vanadium, save_chopped_nexus=save_to_nexus,
