@@ -97,46 +97,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return status, ret_obj
 
-    # TESTME/TODO - Implement and develop
-    def chop_data_overlap_slicers(self, raw_ws_name, tof_correction,
-                                       output_dir, is_epoch_time, num_target_ws,
-                                       delete_split_ws=True):
-        """ Slice workspace by time.  The time bins may have overlapped (in time) events
-        :param raw_ws_name:
-        :param tof_correction:
-        :param output_dir:
-        :param is_epoch_time:
-        :param num_target_ws:
-        :param delete_split_ws:
-        :return:
-        """
-        # TODO - Algorithm concept
-        # 1. find out the overlapped time periods.
-        # 2. separate the overlapped time periods from the original time periods and book keep these tends to be
-        #    overlapped time periods
-        # 3. diffraction focus all the sliced workspaces
-        # 4. duplicate the focused workspace belonged to overlapped time period and add them to its neighboring
-        #    workspaces (both left and right)
-
-        # get split information workspace
-        split_ws_name, split_info_name = self._reductionSetup.get_splitters(throw_not_set=True)
-        # check that the splitters workspace must be a TableWorkspace
-        assert mantid_helper.is_table_workspace(split_ws_name),'Splitters workspace {0} must be a table workspace.' \
-                                                               ''.format(split_ws_name)
-
-        # convert to a set of non-overlapping splitters
-        time_segment_period = self._reductionSetup.get_time_segment_period()
-        if time_segment_period is None:
-            split_ws_list = mantid_helper.convert_to_non_overlap_splitters_bf(split_ws_name)
-        else:
-            split_ws_list = mantid_helper.convert_to_non_overlap_splitters_period(split_ws_name, time_segment_period)
-
-        # reduce
-        for split_ws_name in split_ws_list:
-            self.chop_data(split_ws_name, split_info_name)
-
-        return True, ''
-
     def chop_data_large_number_targets(self, raw_ws_name, tof_correction,
                                        output_dir, is_epoch_time, num_target_ws,
                                        delete_split_ws=True):
@@ -154,7 +114,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         # get run start time
         if is_epoch_time:
-            print ('[DB...BAT...chop_data_large] About to get pcharge.firstTime()')
             run_start_ns = raw_ws.run().getProperty('proton_charge').firstTime().totalNanoseconds()
         else:
             run_start_ns = 0
@@ -237,7 +196,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         args['CalibrationFile'] = self._reductionSetup.get_focus_file()
         args['CharacterizationRunsFile'] = self._reductionSetup.get_characterization_file()
         # args['Binning'] = "-0.001"
-        print '[DB...BAT] Binning parameter: {0}.'.format(self._reductionSetup.binning_parameters)
         args['Binning'] = self._reductionSetup.binning_parameters
         args['SaveAS'] = ""
         args['OutputDirectory'] = self._reductionSetup.get_gsas_dir()
@@ -267,8 +225,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             use_special_name = False
 
         chopped_ws_name_list = list()
-
-        print '[DB...BAT] Output workspace number: {0}'.format(num_split_ws)
         message = 'Output GSAS files include:\n'
 
         for i_ws in range(num_split_ws):
@@ -422,8 +378,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             everything_is_right = True
             for chopped_ws_name in chopped_ws_name_list:
                 # get the split workspace's name
-                print '[DB...BAT] Process log of chopped workspace {0}: '.format(chopped_ws_name)
-
                 # check whether the proposed-chopped workspace does exist
                 if AnalysisDataService.doesExist(chopped_ws_name):
                     pass
@@ -471,7 +425,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
             # TODO/ISSUE/Now/ - Need to delete the other reduced workspaces too, ???_TOF
             for ws_name in vulcan_bin_ws_list:
-                print '[DB...BAT] Vulcan BIN workspace: {0}'.format(ws_name)
+                print '[DB...BAT] Vulcan BIN workspace: {0}... Shall be deleted in future'.format(ws_name)
                 pass
 
             # delete all the workspaces!
@@ -482,61 +436,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # END-FOR (loop)
 
         return everything_is_right, message
-
-    def chop_save_reduce(self, save_nexus=False):
-        """
-        chop the data, save to NeXus file and then reduce them
-        :param save_nexus:
-        :return: 2-tuple.  (1) boolean: successful or failed  (2) list of 3-tuples: chopped file name,
-                                                                                    reduced successful,
-                                                                                    reduced result
-        """
-        # chop and save data
-        status, ret_obj = self.chop_data()
-        if status:
-            raw_chopped_tuples = ret_obj
-        else:
-            return False, ret_obj, None
-
-        # reduce
-        chopped_tup_list = list()
-        lookup_list = list()
-        gsas_index = 1
-        for chop_tup in raw_chopped_tuples:
-            # get the nexus file and workspace tuple
-            event_nexus_name, ws_name = chop_tup
-            assert isinstance(ws_name, str), 'Workspace name {0} must be a string but not a {1}.' \
-                                             ''.format(ws_name, type(ws_name))
-            # check TODO/ISSUE/TODAY - Delete raw workspace to reduce from file or reduce directly from workspace
-            print '[DB...BAT] Previously split workspace (not used): {0}.  Exist? {1}' \
-                  ''.format(ws_name, mantid_helper.workspace_does_exist(ws_name))
-
-            # skip unfiltered
-            if ws_name.endswith('_unfiltered'):
-                continue
-
-            # reduce data
-            gsas_new_name = os.path.join(self._reductionSetup.get_gsas_dir(), '{0}.gda'.format(gsas_index))
-            status, message, reduced_ws_name = self.reduce_powder_diffraction_data(event_nexus_name, user_gsas_file_name=gsas_new_name)
-            chopped_tup_list.append((status, event_nexus_name, reduced_ws_name))
-            gsas_file_name = self._reductionSetup.get_gsas_file(main_gsas=True)
-            print '[INFO] Reduced chopped event file {0} successfully ({1}) to {2} with file {3}.' \
-                  ''.format(event_nexus_name, status, reduced_ws_name, gsas_file_name)
-
-            # rename to VULCAN VDrive compatible name
-            if os.path.exists(gsas_file_name):
-                # no need to rename
-                # gsas_new_name = os.path.join(self._reductionSetup.get_gsas_dir(), '{0}.gda'.format(gsas_index))
-                # os.rename(gsas_file_name, gsas_new_name)
-                lookup_list.append((gsas_new_name, event_nexus_name, reduced_ws_name))
-                gsas_index += 1
-            # END-IF
-        # END-IF
-
-        # export a table-lookup file for workspace, event nexus file and target GSAS
-        self.export_chopped_information(lookup_list)
-
-        return status, '', chopped_tup_list
 
     def create_chop_dir(self, reduced_data=True, chopped_data=True):
         """
@@ -608,7 +507,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             print message
         else:
             # matrix workspace
-            print '[DB...BAT] It is MatrixWorkspace!'
+            pass
 
         return
 
@@ -656,8 +555,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                                                       output_dir=self._reductionSetup.get_chopped_directory()[0])
         run_number = self._reductionSetup.get_run_number()
         runner.set_run_number(run_number)
-
-        print ('[DB...BAT] Writing GSAS to {}'.format(self._reductionSetup.get_chopped_directory()[0]))
 
         info, output_ws_names = runner.slice_focus_event_workspace(event_ws_name=event_ws_name,
                                                                    geometry_calib_ws_name=calib_ws_name,
@@ -749,7 +646,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # split
         if isinstance(split_ws, SplittersWorkspace):
             # splitters workspace
-            # TODO/TEST - Need to verify
             mantidsimple.CreateEmptyTableWorkspace(OutputWorkspace=sub_split_ws_name)
             sub_split_ws = AnalysisDataService.retrieve(sub_split_ws_name)
             sub_split_ws.addColumn('float', 'start')
@@ -762,13 +658,10 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                 stop_time = (split_ws.cell(i_row, 1) - run_start_ns) * 1.E-9
                 target = str(split_ws.cell(i_row, 2))
                 sub_split_ws.addRow([start_time, stop_time, target])
-
-                print '[DB...BAT] Convert Splitters {0} to {1}.'.format(i_row, [start_time, stop_time, target])
             # END-FOR
 
         elif isinstance(split_ws, MatrixWorkspace):
             # Matrix workspace
-            # TODO/TEST - Need to test
             vec_x = split_ws.readX(0)[split_start_index:split_stop_index+1]
             vec_y = split_ws.readY(0)[split_start_index:split_stop_index]
             vec_e = split_ws.readE(0)[split_start_index:split_stop_index]
@@ -778,7 +671,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         elif isinstance(split_ws, ITableWorkspace):
             # Table workspace
-            # TODO/TEST - Need to verify
             mantidsimple.CreateEmptyTableWorkspace(OutputWorkspace=sub_split_ws_name)
             sub_split_ws = AnalysisDataService.retrieve(sub_split_ws_name)
             sub_split_ws.addColumn('float', 'start')
@@ -983,8 +875,6 @@ class WriteSlicedLogs(object):
 
         # get workspaces and properties
         # NOTE: workspace names are given in order. No need to sort again
-        #       ws_name_list = self.sort_workspace_names(ws_name_list)
-        print ('[DB...BAT...1] Workspace names: {}'.format(ws_name_list))
 
         # get the properties' names list
         ws_name = ws_name_list[0]
@@ -1028,7 +918,6 @@ class WriteSlicedLogs(object):
             header_list = reduce_VULCAN.Furnace_Header_List
 
         # initialize the data structure for output
-        print ('[DB...BAT] {}'.format(reduce_VULCAN.MTS_Header_List))
         for entry in reduce_VULCAN.MTS_Header_List:
             # pd_series = pd.Series()
             mts_name, log_name = entry
@@ -1040,9 +929,7 @@ class WriteSlicedLogs(object):
             if log_name not in property_name_list:
                 print '[WARNING] Log {0} is not a sample log in NeXus.'.format(log_name)
         # END-FOR
-        print ('[DB...BAT] {}'.format(mts_columns))
 
-        print ('[DB...BAT...X] Workspace names: {}'.format(ws_name_list))
         for i_ws, ws_name in enumerate(ws_name_list):
             # get workspace
             if ws_name == '':
@@ -1060,7 +947,6 @@ class WriteSlicedLogs(object):
 
         # export to csv file
         # start file
-        print ('[DB...BAT] {}'.format(mts_columns))
         pd_data_frame = pd.DataFrame(start_series_dict, columns=mts_columns)
         if append and os.path.exists(start_file_name):
             with open(start_file_name, 'a') as f:
@@ -1069,7 +955,6 @@ class WriteSlicedLogs(object):
             pd_data_frame.to_csv(start_file_name, sep='\t', float_format='%.5f', header=False)
 
         # mean file
-        print ('[DB...BAT] {}'.format(mean_series_dict.keys()))
         pd_data_frame = pd.DataFrame(mean_series_dict, columns=mts_columns)
         if os.path.exists(mean_file_name) and append:
             with open(mean_file_name, 'a') as f:
@@ -1078,7 +963,6 @@ class WriteSlicedLogs(object):
             pd_data_frame.to_csv(mean_file_name, sep='\t', float_format='%.5f', header=False)
 
         # end file
-        print ('[DB...BAT] {}'.format(end_series_dict['Time [sec]']))
         pd_data_frame = pd.DataFrame(end_series_dict, columns=mts_columns)
         if os.path.exists(end_file_name) and append:
             with open(end_file_name, 'a') as f:

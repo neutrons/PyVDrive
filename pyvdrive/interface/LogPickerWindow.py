@@ -389,7 +389,6 @@ class WindowLogPicker(QMainWindow):
 
         return
 
-    # TODO - TEST-NEXT - ASAP March Release
     def do_import_slicer_file(self):
         """ Import an ASCII file which contains the slicers.
         The format will be a 3 column file as run start (in second), run stop(in second) and target workspace
@@ -424,7 +423,6 @@ class WindowLogPicker(QMainWindow):
         slicer_start_time = slicer_list[0][0]
         if slicer_start_time > 3600 * 24 * 365:
             # larger than 1 year. then must be an absolute time
-            # TODO/ISSUE/NOWNOW : need to check label_runStartEpoch
             run_start_s = int(self.ui.label_runStartEpoch.text())
         else:
             # relative time: no experiment in 1991
@@ -540,10 +538,9 @@ class WindowLogPicker(QMainWindow):
 
         return
 
-    # TODO - TEST - ASAP March Release
     def do_load_run(self):
         """
-        Load a run and plot
+        Load a (single) run and plot
         :return:
         """
         # Get run number
@@ -587,12 +584,6 @@ class WindowLogPicker(QMainWindow):
         self.plot_nexus_log(log_name)
         self._currLogName = log_name
 
-        # set up the epoch start time
-        # TODO/ISSUE/NEXT - make this work!
-        # run_start_epoch = self.get_controller().get_run_start(run_number, epoch_time=True)
-        # self.ui.label_runStartEpoch.setText('{0}'.format(run_start_epoch))
-
-
         return
 
     def do_load_next_log(self):
@@ -602,7 +593,7 @@ class WindowLogPicker(QMainWindow):
         # get current index of the combo box and find out the next
         current_index = self.ui.comboBox_logNames.currentIndex()
         max_index = self.ui.comboBox_logNames.size()
-        # TODO/TODO/FIXME/FIXME - logNames.size() may not a correction method to find total number of entries of a combo box
+        # TODO - TODAY - Test - logNames.size() may not a correction method to find total number of entries of a combo box
         next_index = (current_index + 1) % int(max_index)
 
         # advance to the next one

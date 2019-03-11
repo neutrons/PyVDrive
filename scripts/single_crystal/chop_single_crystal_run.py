@@ -77,8 +77,9 @@ def main(argv):
     ipts_number = arg_dict['ipts']
     run_number = arg_dict['run']
     try:
-        nexus_file_name = archivemanager.DataArchiveManager(instrument='VULCAN'
-                                                            ).locate_event_nexus(ipts_number, run_number, True)
+        nexus_file_name = archivemanager.DataArchiveManager(instrument='VULCAN').locate_event_nexus(ipts_number,
+                                                                                                    run_number)
+
         data_ws_name = 'VULCAN_{0}_events'.format(run_number)
         mantid_helper.load_nexus(data_file_name=nexus_file_name, output_ws_name=data_ws_name, meta_data_only=False)
     except RuntimeError as run_err:

@@ -388,6 +388,66 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
+    # NEW - TODO - TODAY - TEST
+    # TODO - TONIGHT - Add UI
+    def do_load_sliced_logs(self):
+        """
+        Load sliced sample logs
+        :return:
+        """
+        from pyvdrive.lib import reduce_VULCAN
+
+        try:
+            ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
+            run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
+        except RuntimeError as run_err:
+            GuiUtility.pop_dialog_error(self,
+                                        'IPTS and run number must be specified for viewing sample logs: {}'
+                                        ''.format(run_err))
+            return
+        # END-TRY
+
+        # load log
+        if self._myController.has_chopped_data(ipts_number, run_number, in_memory=True):
+            # TODO - TONIGHT 0 - need a static method to convert the sample logs list to a list of sample log name
+            sample_log_names = reduce_VULCAN.VulcanSampleLogList
+        else:
+            try:
+                log_files = self._myController.archive_manager.get_sliced_logs(ipts_number, run_number)
+            except RuntimeError as any_err:
+                GuiUtility.pop_dialog_error(self, 'blabla')
+                return
+            whatever = self._myController.load_chopped_logs(log_files)
+            sample_log_names = whatever.get_sample_logs()
+        # END-IF-ELSE
+
+        # Referene of old design
+        """
+        # load a record file containing all the chopped data information
+        record_name = GuiUtility.get_load_file_by_dialog(self, 'Chopped sample log record file',
+                                                         self._myController.get_working_dir(),
+                                                         'Text file (*.txt)')
+
+        if record_name == '':
+            # cancel the operation
+            return
+
+        # load
+        chopped_log_dict = vulcan_util.load_chopped_log_files(record_name)
+
+        self.load_chopped_logs(chopped_log_dict)
+        """
+
+        # set combo boxes
+        self._set_sample_log_combo_box(self.ui.comboBox_sampleLogsList_y, sample_log_names)
+        sample_log_names.insert(0, 'Time')
+        self._set_sample_log_combo_box(self.ui.comboBox_sampleLogsList_x, sample_log_names)
+
+        # plot current sample log
+        self.do_plot_sample_logs()
+
+        return
+
     def update_sample_log_list(self, log_name_list, reset_plot=True):
         """
         update (or say, reset) the sample log list
@@ -707,6 +767,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # reset
         self.ui.graphicsView_mainPlot.reset_1d_plots()
+
+        # TODO - 2 THINGS - TONIGHT 0 - plot original + select runs
 
         if self.ui.radioButton_chooseSingleRun.isChecked() or self.ui.checkBox_plotallChoppedLog.isChecked():
             # case for single run or source of chopped runs
@@ -1438,25 +1500,3 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    # NEW METHOD
-    # TODO - TODAY - TEST
-    def do_load_chopped_log_files(self):
-        """
-        Load PyVDrive sample log files (chopped data) other than NeXus file
-        :return:
-        """
-        # load a record file containing all the chopped data information
-        record_name = GuiUtility.get_load_file_by_dialog(self, 'Chopped sample log record file',
-                                                         self._myController.get_working_dir(),
-                                                         'Text file (*.txt)')
-
-        if record_name == '':
-            # cancel the operation
-            return
-
-        # load
-        chopped_log_dict = vulcan_util.load_chopped_log_files(record_name)
-
-        self.load_chopped_logs(chopped_log_dict)
-
-        return

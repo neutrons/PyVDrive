@@ -129,7 +129,7 @@ def load_sample_logs_h5(log_h5_name, log_name=None):
     return sample_log_dict
 
 
-def save_sample_logs(workspace, log_names, log_h5_name, attribution_dict=None):
+def save_sample_logs(workspace, log_names, log_h5_name, start_time, attribution_dict=None):
     """ Save sample logs to an HDF5 file
     :param workspace:
     :param log_names:
@@ -137,7 +137,7 @@ def save_sample_logs(workspace, log_names, log_h5_name, attribution_dict=None):
     :param attribution_dict: extra attribution written to GSAS
     :return:
     """
-    def write_sample_log(entry_name, vec_times, vec_value):
+    def write_sample_log(entry_name, vec_times, vec_value, time_0):
         """ Write a TimeSeriesProperty to an entry (group) in HDF5 file
         :param entry_name:
         :param vec_times:
@@ -145,8 +145,10 @@ def save_sample_logs(workspace, log_names, log_h5_name, attribution_dict=None):
         :return:
         """
         log_entry = log_h5.create_group(entry_name)
-        # convert from datetime to float (second)
-        vec_times_second = (vec_times - vec_times[0]).astype('float') * 1.E-9
+        # convert from datetime to float (second) relative to time zero
+        if time_0 is None:
+            time_0 = vec_times[0]
+        vec_times_second = (vec_times - time_0).astype('float') * 1.E-9
         log_entry.create_dataset('time', data=vec_times_second)
         log_entry.create_dataset('value', data=vec_value)
         log_entry["type"] = 'sample log'
@@ -226,8 +228,6 @@ def load_processed_nexus(nexus_file_name, output_ws_name):
     datatypeutility.check_file_name(nexus_file_name, check_exist=True, check_writable=False,
                                     note='Mantid processed NeXus file')
     datatypeutility.check_string_variable('Output workspace name', output_ws_name)
-    # LoadNexusProcessed(Filename='/home/wzz/Projects/PyVDrive/tests/data/vulcan_vanadium.nxs',
-    #                    OutputWorkspace='7bankvanadium')
 
     LoadNexusProcessed(Filename=nexus_file_name, OutputWorkspace=output_ws_name)
 

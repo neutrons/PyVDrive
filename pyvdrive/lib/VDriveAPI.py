@@ -1080,9 +1080,9 @@ class VDriveAPI(object):
             if ipts_number is None:
                 # get IPTS number if it is not given
                 ipts_number = self._myProject.get_ipts_number(run_number)
+            # END-IF
 
-            file_name = self._myArchiveManager.locate_event_nexus(ipts_number, run_number, check_file_exist=True)
-            print ('[DB...BAT] Found {} for IPTS-{} Run {}'.format(file_name, ipts_number, run_number))
+            file_name = self._myArchiveManager.locate_event_nexus(ipts_number, run_number=run_number)
         # END-IF
 
         # load file
@@ -1107,7 +1107,8 @@ class VDriveAPI(object):
                 return False, 'Unable to locate default session file %s.' % in_file_name
 
         # check session file
-        assert len(in_file_name) > 0
+        if len(in_file_name) == 0:
+            raise RuntimeError('Input session file name cannot be an empty string.')
 
         status, save_dict = archivemanager.load_from_xml(in_file_name)
         if status is False:
@@ -1465,8 +1466,10 @@ class VDriveAPI(object):
         """
         run_info_dict_list = list()
         for run_number in range(start_run, stop_run+1):
-            event_file_name = self._myArchiveManager.locate_event_nexus(ipts_number, run_number, check_file_exist=False)
-            if os.path.exists(event_file_name):
+            event_file_name = self._myArchiveManager.locate_event_nexus(ipts_number, run_number)
+            if event_file_name is None:
+                continue
+            else:
                 run_info = dict()
                 run_info['run'] = run_number
                 run_info['ipts'] = ipts_number
@@ -1624,7 +1627,9 @@ class VDriveAPI(object):
 
         if van_file_name is None:
             # if vanadium gsas file is not found, reduce it
-            nxs_file = self._myArchiveManager.locate_event_nexus(ipts_number, run_number, check_file_exist=True)
+            nxs_file = self._myArchiveManager.locate_event_nexus(ipts_number, run_number)
+            if nxs_file is None:
+                return False, 'Vanadium file of IPTS {} Run {} does not exist.'.format(ipts_number, run_number)
             self._myProject.add_run(run_number, nxs_file, ipts_number)
             reduced, message = self._myProject.reduce_runs(run_number_list=[run_number],
                                                            output_directory=self._myWorkDir,
