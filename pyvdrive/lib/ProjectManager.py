@@ -755,66 +755,50 @@ class ProjectManager(object):
         :param chop_data_key: key to locate the chopped workspaces
         :return:
         """
-        print ('[UND] CHOP DATA KEY {} of type {}'.format(chop_data_key, type(chop_data_key)))
-
         # check reduced data
         if self._reductionManager.has_run_sliced_reduced(chop_data_key):
-            # reduced runs
+            # reduced runs from memory
             sequence_keys = self._reductionManager.get_sliced_focused_workspaces(chop_data_key[0],
                                                                                  chop_data_key[1])
 
         else:
-            # loaded runs
-            raise NotImplementedError('Not Implemented Yet for Chopped Sequence')
-            if isinstance(chop_data_key, str):
-                if chop_data_key.isdigit():
-                    chop_data_key = int(chop_data_key)
-            else:
-                datatypeutility.check_string_variable('Chop data key (integer or string)', chop_data_key)
-
-            if chop_data_key not in self._chopped_data_dict:
-                raise RuntimeError('Chop data key {} is not in chapped data dictionary (keys: {})'
-                                   ''.format(chop_data_key, self._chopped_data_dict.keys()))
+            # loaded from GSAS files
+            sequence_keys = self._loadedDataManager.get_chopped_sequences(chop_data_key)
+            print ('[UND] sequence keys: {}'.format(sequence_keys))
         # END-IF-ELSE
 
         return sequence_keys
 
-    # NOTE: give this to reduction manager
-    # def get_chopped_sequence_data(self, chop_data_key, chop_sequence, bank_id, unit='dSpacing'):
-    #     """ Get the data (vec x and vec y) of a workspace in a chopped data sequence
-    #     :param chop_data_key:
-    #     :param chop_sequence: sequence index in the chopped run
-    #     :param bank_id: bank ID
-    #     :param unit: target unit
-    #     :return: 2-tuple (vector X and vector Y)
-    #     """
-    #     # convert the chop data key to integer if it is an integer
-    #     if isinstance(chop_data_key, str):
-    #         if chop_data_key.isdigit():
-    #             chop_data_key = int(chop_data_key)
-    #     else:
-    #         datatypeutility.check_int_variable('Chop data key (integer or string)', chop_data_key, (1, None))
-    #
-    #     # check whether the chop data/sequence is valid
-    #     if chop_data_key not in self._chopped_data_dict:
-    #         raise RuntimeError('Chop data key {} is not in chapped data dictionary (keys: {})'
-    #                            ''.format(chop_data_key, self._chopped_data_dict.keys()))
-    #
-    #     if chop_sequence not in self._chopped_data_dict[chop_data_key]:
-    #         raise RuntimeError('Chop data (key = {})  does not have {}-th slice'
-    #                            ''.format(chop_data_key, chop_sequence))
-    #
-    #     # get the workspace
-    #     ws_name = self._chopped_data_dict[chop_data_key][chop_sequence][0]
-    #
-    #     data_set = mantid_helper.get_data_from_workspace(workspace_name=ws_name,
-    #                                                      bank_id=bank_id, target_unit=unit)
-    #
-    #     data_set = data_set[0][bank_id]
-    #     # unit = data_set[1]
-    #     # print ('Unit: {}'.format(unit))
-    #
-    #     return data_set[0], data_set[1]
+    def get_chopped_sequence_data(self, chop_data_key, chop_sequence, bank_id, unit='dSpacing'):
+        """ Get the data (vec x and vec y) of a workspace in a chopped data sequence
+        :param chop_data_key:
+        :param chop_sequence: sequence index in the chopped run
+        :param bank_id: bank ID
+        :param unit: target unit
+        :return: 2-tuple (vector X and vector Y)
+        """
+        # check inputs
+        datatypeutility.check_int_variable('Chopped data sequence (index)', chop_sequence, (0, None))
+        datatypeutility.check_int_variable('Bank ID', bank_id, (1, 999))
+
+        # check reduced data
+        if self._reductionManager.has_run_sliced_reduced(chop_data_key):
+            # reduced runs from memory
+            sequence_keys = self._reductionManager.get_sliced_focused_workspaces(chop_data_key[0],
+                                                                                 chop_data_key[1])
+            workspace_name = sequence_keys[chop_sequence]
+
+        else:
+            # loaded from GSAS files
+            datatypeutility.check_int_variable('Run number/chop data key', chop_data_key, (1, None))
+            info_tuple = self._loadedDataManager.get_chopped_sequence_info(chop_data_key, chop_sequence)
+            workspace_name = info_tuple[0]
+        # END-IF
+
+        data_set_dict, data_unit = mantid_helper.get_data_from_workspace(workspace_name, bank_id, unit)
+        data_set = data_set_dict[bank_id]
+
+        return data_set[0], data_set[1]
 
     # # TODO FIXME - TODAY - Find out how NOT to use this method
     # def get_loaded_chopped_reduced_runs(self):

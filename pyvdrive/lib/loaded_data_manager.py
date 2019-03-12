@@ -22,7 +22,7 @@ class LoadedDataManager(object):
 
         # more detailed information: key = run number (GSAS) / data key
         self._singleGSASDict = dict()
-        self._choppedGSASSetDict = dict()
+        self._chopped_gsas_dict = dict()  # [run number] = dictionary ([seq order] = ws_name, gsas file, log file)
 
         return
 
@@ -74,12 +74,29 @@ class LoadedDataManager(object):
 
         return data_set_dict
 
+    def get_chopped_sequences(self, run_number):
+        """
+        get the GSAS workspaces of a chopped run as a sequence
+        :param run_number:
+        :return:
+        """
+        # datatypeutility.check_int_variable('Run number', run_number, (1, 99999999))
+        if run_number not in self._chopped_gsas_dict.keys():
+            raise RuntimeError('Chopped run number {} has not been loaded.  Loaded chopped runs are {}'
+                               ''.format(run_number, self._chopped_gsas_dict.keys()))
+
+        return sorted(self._chopped_gsas_dict[run_number].keys())
+
+    def get_chopped_sequence_info(self, run_number, chop_sequence):
+        # TODO - TONIGHT 0 - QA
+        return self._chopped_gsas_dict[run_number][chop_sequence]
+
     def get_loaded_chopped_runs(self):
         """
         get the run numbers or data keys of the loaded chopped data
         :return:
         """
-        loaded_chopped_runs = self._choppedGSASSetDict.keys()
+        loaded_chopped_runs = self._chopped_gsas_dict.keys()
         loaded_chopped_runs.sort()
 
         return loaded_chopped_runs
@@ -228,58 +245,66 @@ class LoadedDataManager(object):
         return chop_info_file
 
     # TODO - TONIGHT 4 - Clean up!
-    def load_chopped_binned_data(self, chopped_data_dir, chop_sequence=None, file_format='gsas', prefix=None):
+    def load_chopped_binned_data(self, run_number, chopped_data_dir, chop_sequences=None, file_format='gsas'):
         """
         load chopped and binned data (in GSAS format) for a directory.
         Chopping information file will be searched first
         About returned workspaces dictionary:
             key = sequence, value = (workspace name, data file name)
         :param chopped_data_dir:
-        :param chop_sequence:
+        :param chop_sequences: chop sequence (order) indexes
         :param file_format:
+        :param run_number: prefix to the loaded workspace from GSAS. It is just for decoration
         :return: 2-tuple of dictionary and integer (run number)
-            dictionary: key is data workspace name;
-                        value is 2-tuple as (1) log workspace name or None (if no NeXus file) and (2) gsas file name
+            dictionary: [order] = (workspace name, gsas file name, log HDF file name)    i.e., 3-tuple
         """
         # check inputs
+        datatypeutility.check_int_variable('Run number', run_number, (1, 9999999))
+
         assert isinstance(chopped_data_dir, str), 'Directory {0} must be given as a string but not a {1}.' \
                                                   ''.format(chopped_data_dir, str(chopped_data_dir))
         assert isinstance(file_format, str), 'Reduced data file format {0} must be a string.'.format(file_format)
+        if file_format != 'gsas':
+            raise NotImplementedError('File format {} (other than GSAS) is not supported yet'.format(file_format))
 
         if not os.path.exists(chopped_data_dir):
             raise RuntimeError('Directory {0} for chopped data does not exist.'.format(chopped_data_dir))
 
         # list the files in a directory
         file_list = [f for f in listdir(chopped_data_dir) if isfile(join(chopped_data_dir, f))]
-
+        print ('[DB...BAT] Files: {}'.format(file_list))
         chop_info_file = self.search_chop_info_file(file_list)
 
         if chop_info_file:
             # parsing the chopping information file for reduced file and raw event files
             print '[INFO] Load Chop Information File: {0}'.format(chop_info_file)
             reduced_tuple_dict = self.parse_chop_info_file(os.path.join(chopped_data_dir, chop_info_file))
-            run_number = chop_info_file.split('_')[1]
         else:
             # look into each file
             # # chopping information file is not given, then search reduced diffraction files from hard disk
             print '[WARNING] Unable to Find Chop Information File in {0}. No Sample Log Loaded.' \
                   ''.format(chopped_data_dir)
             reduced_tuple_dict = self.search_reduced_files(file_format, file_list, chopped_data_dir)
-            run_number = None
+
+        # END-IF-ELSE
+        chopped_sequence_keys = sorted(reduced_tuple_dict.keys())
 
         # data key list:
-        data_key_list = sorted(reduced_tuple_dict.keys())
-        if chop_sequence is None:
-            chop_sequence = range(1, len(data_key_list) + 1)
-            print ('[DB...BAT] Default sequence: {}'.format(chop_sequence))
+        if chop_sequences is None:
+            # default for all data
+            chop_sequences = range(1, len(chopped_sequence_keys) + 1)
+        elif isinstance(chop_sequences, int):
+            # convert single sequence to a list
+            chop_sequences = [chop_sequences]
         else:
-            print ('[DB...BAT] User specified sequence: {}'.format(chop_sequence))
-        print ('[DB...BAT] Files: {}'.format(file_list))
+            datatypeutility.check_list('Chopped sequences to load', chop_sequences)
+            print ('[DB...BAT] User specified sequence: {}'.format(chop_sequences))
+        # END-IF-ELSE
 
-        binned_ws_dict = dict()   # [sequence] = workspace_name, file_name, None
-        if prefix is None:
-            prefix = '{}'.format(run_number)
-        for seq_index in chop_sequence:
+        loaded_gsas_dict = dict()   # [sequence] = workspace_name, file_name, None
+        if run_number is None and run_number is None:
+            raise RuntimeError('Run number must be given (or  ')
+        for seq_index in chop_sequences:
             # load GSAS file
             if seq_index not in reduced_tuple_dict:
                 print ('[DB...BAT] {}-th chopped data does not exist.'.format(seq_index))
@@ -287,51 +312,16 @@ class LoadedDataManager(object):
             file_name = reduced_tuple_dict[seq_index][0]
             print ('[DB...BAT] Seq-index = {}, GSAS file name = {}'.format(seq_index, file_name))
             data_ws_name = self.load_binned_data(data_file_name=file_name, data_file_type=file_format,
-                                                 prefix=prefix, max_int=len(data_key_list)+1)
-            binned_ws_dict[seq_index] = data_ws_name, file_name, None
-
-        # # chop sequence is used to determine the specified files
-        # # check values
-        # if chop_sequence is not None:
-        #     assert isinstance(chop_sequence, list), 'Chop sequence must be a list blabla'
-        #     # this is VERY VULCAN specific
-        #     vulcan_file_list = list()
-        #     for seq_index in sorted(chop_sequence):
-        #         assert isinstance(seq_index, int) and seq_index >= 0,\
-        #             'Sequence {0} in list must be a non-negative integer.'.format(seq_index)
-        #         vulcan_file_list.append('{0}.gda'.format(seq_index))
-        # else:
-        #     vulcan_file_list = None
-        #
-        # # load file
-        # data_key_dict = dict()
-        #
-        # for file_name, nexus_file_name, ws_name in reduced_tuple_list:
-        #     # select specified file if there is such ...
-        #     base_file_name = os.path.basename(file_name)
-        #     if vulcan_file_list is not None and base_file_name not in vulcan_file_list:
-        #         continue
-        #
-        #     # load GSAS file
-        #     data_ws_name = self.load_binned_data(data_file_name=file_name, data_file_type=file_format,
-        #                                          prefix=prefix, max_int=len(reduced_tuple_list))
-        #
-        #     # TODO - TOMORROW - Need to reconsider shall we use ProcessedNeXus?
-        #     # if nexus_file_name is not None:
-        #     #     # load raw NeXus file for sample logs
-        #     #     mantid_helper.load_nexus(data_file_name=nexus_file_name, output_ws_name=ws_name,
-        #     #                              meta_data_only=True)
-        #     # # END-IF
-        #
-        #     # form output
-        #     data_key_dict[data_ws_name] = (ws_name, file_name)
-        # # END-FOR
+                                                 prefix='G{}'.format(run_number),
+                                                 max_int=len(chopped_sequence_keys) + 1)
+            loaded_gsas_dict[seq_index] = data_ws_name, file_name, None
+            # FIXME TODO - TONIGHT 1 - None shall be replaced by x.hdf5
+        # END-FOR
 
         # register for chopped data dictionary
-        key = '{0}_gsas'.format(prefix)
-        self._choppedGSASSetDict[key] = binned_ws_dict.keys()
+        self._chopped_gsas_dict[run_number] = loaded_gsas_dict
 
-        return binned_ws_dict, run_number
+        return loaded_gsas_dict
 
     @staticmethod
     def parse_chop_info_file(info_file_name):

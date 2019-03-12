@@ -368,13 +368,15 @@ class VdriveCommandProcessor(object):
             #     van_run_number = None
 
             chop_seq_list = processor.get_chopped_sequence_range()
-            chop_key = view_window.do_load_chopped_runs(ipts_number, run_number,
-                                                        chop_seq_list)
+            chop_key_dict = view_window.do_load_chopped_runs(ipts_number, run_number,
+                                                             chop_seq_list)
 
+            chop_name = '{}: GSAS'.format(run_number)  # TODO - FIXME - TOMORROW - This is a risky hand shaking protocol
+            chop_key = run_number
             print ('[DB...BAT] chop_key: {} seq list: {}'.format(chop_key, chop_seq_list))
 
             # refresh list and set to chop run
-            view_window.do_refresh_existing_runs(set_to=chop_key, is_chopped=True)
+            view_window.do_refresh_existing_runs(set_to=chop_name, is_chopped=True)
 
             view_window.plot_chopped_run(chop_key, bank_id=1,
                                          seq_list=chop_seq_list,

@@ -757,9 +757,9 @@ class VDriveAPI(object):
 
         return sns_dir
 
-    def get_loaded_runs(self, chopped):
+    def get_focused_runs(self, chopped):
         """
-        get the run number (or data key) to the loaded or reduced data in memory
+        get the data keys of focused data that are loaded or reduced data in memory
         :param chopped: if flag is True, then get chopped (reduced data); otherwise, get the single run
         :return: (1) list of integers (for single runs); (2) list of integers (for chopped runs)
         """
