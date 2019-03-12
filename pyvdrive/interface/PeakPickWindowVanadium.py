@@ -137,7 +137,11 @@ class PeakPickerWindowChildVanadium(object):
         return bank_id
 
     def reset_processing(self):
-
+        """
+        Reset including all the indicators and etc...
+        :return:
+        """
+        # TODO - TONIGHT 0 - Implement!
         return
 
     def save_processing_result(self):
@@ -155,7 +159,8 @@ class PeakPickerWindowChildVanadium(object):
 
     def init_session(self, data_key):
         """
-        Init a vanadium processing session
+        Init a vanadium processing session including
+        (1) laod meta data
         :param data_key:
         :return:
         """
@@ -169,6 +174,7 @@ class PeakPickerWindowChildVanadium(object):
         temp_out_gda_name = os.path.join(gsas_dir, '{}-s.gda'.format(self._run_number))
 
         # load sample log workspace
+        # TODO - TODAY 9 - Load meta data can take up to 3 seconds.  Make it on a separate thread
         log_ws_name = self._myController.load_meta_data(self._ipts_number, self._run_number, None)
 
         # call
@@ -255,6 +261,7 @@ class PeakPickerWindowChildVanadium(object):
         # Note: there is no need to plot runs in the complicated logic as its parent class
         # Set up class variables
         vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_raw_data(bank_id, UNIT['d'])
+        # TODO - TONIGHT 0 - This is a bad call to base class
         self._raw_van_dspace_line = self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='black',
                                                                           x_label='dSpacing')
         # set unit and bank

@@ -1821,18 +1821,22 @@ class PeakPickerWindow(QMainWindow):
         for tab_index in range(3):
             self.ui.tabWidget_functionControl.setTabEnabled(tab_index, tab_index == new_mode_index)
 
-        # plots shall be reset and re-load data
-        self.ui.graphicsView_main.reset_peak_picker_mode(remove_diffraction_data=True)
-
         # # TODO - TONIGHT 43 - This is not a good approach to re-load data
         # self.do_load_data()
 
         if new_mode_index == 1:
             # process vanadium peaks
             ipts_number, run_number, gsas_file_name = self._data_info_dict[self._currGraphDataKey]
+            # self.reset_plot_session()  # TODO - TONIGHT 0 - Implement by referring to: self.do_reset_vanadium_processing()
+            # plots shall be reset and re-load data
+            self.ui.graphicsView_main.reset_peak_picker_mode(remove_diffraction_data=True)
             self._subControllerVanadium.set_vanadium_info(ipts_number, run_number)
             self._subControllerVanadium.init_session(self._currGraphDataKey)
             self._subControllerVanadium.plot_raw_dspace(self._currentBankNumber)
+        elif new_mode_index == 0:
+            # process peaks for single peak fitting (VDRIVE)
+            self._subControllerVanadium.reset_processing()
+
 
         return
 

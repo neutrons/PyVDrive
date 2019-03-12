@@ -81,7 +81,7 @@ class CalibrationManager(object):
 
         # 3 bank
         self._focus_instrument_dict['L2'][3] = [2., 2., 2.]
-        self._focus_instrument_dict['Polar'][3] = [-90, 90., 155]
+        self._focus_instrument_dict['Polar'][3] = [-90, 90., mantid_helper.HIGH_ANGLE_BANK_2THETA]
         self._focus_instrument_dict['Azimuthal'][3] = [0., 0, 0.]
         self._focus_instrument_dict['SpectrumIDs'][3] = [1, 2, 3]
 
@@ -92,7 +92,7 @@ class CalibrationManager(object):
         self._focus_instrument_dict['L2'][7] = [2.] * 7  # [2., 2., 2.]
         self._focus_instrument_dict['Polar'][7] = [-90.] * 3
         self._focus_instrument_dict['Polar'][7].extend([90.] * 3)
-        self._focus_instrument_dict['Polar'][7].extend([155.])
+        self._focus_instrument_dict['Polar'][7].extend([mantid_helper.HIGH_ANGLE_BANK_2THETA])
         self._focus_instrument_dict['Azimuthal'][7] = [0.] * 7
         self._focus_instrument_dict['SpectrumIDs'][7] = range(1, 8)
 
@@ -108,7 +108,7 @@ class CalibrationManager(object):
         for ws_index in range(9):
             self._focus_instrument_dict['Polar'][27][ws_index] = -90.
             self._focus_instrument_dict['Polar'][27][ws_index + 9] = 90.
-            self._focus_instrument_dict['Polar'][27][ws_index + 18] = 155.
+            self._focus_instrument_dict['Polar'][27][ws_index + 18] = mantid_helper.HIGH_ANGLE_BANK_2THETA
 
         return
 
