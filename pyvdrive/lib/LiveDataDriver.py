@@ -468,7 +468,7 @@ class LiveDataDriver(QtCore.QThread):
         mantidsimple.LoadGSS(Filename=van_gsas_file, OutputWorkspace='vanadium')   # 3 banks
         mantidsimple.EditInstrumentGeometry(Workspace='vanadium', PrimaryFlightPath=43.753999999999998,
                                             SpectrumIDs='1, 2, 3',
-                                            L2='2,2,2', Polar='-90,90,155')
+                                            L2='2,2,2', Polar='-90,90,{}'.format(mantid_helper.HIGH_ANGLE_BANK_2THETA))
         mantidsimple.ConvertUnits(InputWorkspace='vanadium', OutputWorkspace='vanadium', Target='dSpacing')
 
         # bank 1 and 2: extract, rebin and smooth

@@ -788,6 +788,13 @@ class MplGraphicsView(QWidget):
         """
         return self._myCanvas.getYLimit()
 
+    def get_x_limit(self):
+        """
+        get the current X limits
+        :return:
+        """
+        return self._myCanvas.getXLimit()
+
     def get_y_min(self):
         """
         Get the minimum Y value of the plots on canvas

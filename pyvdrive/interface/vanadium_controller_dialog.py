@@ -49,9 +49,9 @@ class VanadiumProcessControlDialog(QDialog):
         self._slidersMutex = False  # mutex for sliders
 
         # class variables
-        self._min_smooth_n = None
+        self._min_smooth_n = 2  # 1 is the lower boundary for minimum smooth N
         self._max_smooth_n = None
-        self._min_smooth_order = None
+        self._min_smooth_order = 1  # 1 is the lower boundary for minimum smooth order
         self._max_smooth_order = None
 
         # setup UI
@@ -123,11 +123,11 @@ class VanadiumProcessControlDialog(QDialog):
         self._inInteractiveMode = self.ui.checkBox_interactiveSmoothing.isChecked()
 
         # set range of the sliders
-        self.ui.horizontalSlider_smoothN.setRange(0, 50)
-        self._min_smooth_n = 0
+        self.ui.horizontalSlider_smoothN.setRange(2, 50)
+        self._min_smooth_n = 2
         self._max_smooth_n = 50
-        self.ui.horizontalSlider_smoothOrder.setRange(0, 40)
-        self._min_smooth_order = 0
+        self.ui.horizontalSlider_smoothOrder.setRange(1, 40)
+        self._min_smooth_order = 1
         self._max_smooth_order = 40
 
         # initial value
@@ -204,7 +204,6 @@ class VanadiumProcessControlDialog(QDialog):
         :return:
         """
         curr_value = self.ui.horizontalSlider_smoothOrder.value()
-
         # stop at maximum
         if curr_value == self._min_smooth_order:
             return
@@ -330,7 +329,7 @@ class VanadiumProcessControlDialog(QDialog):
             return
 
         self.ui.horizontalSlider_smoothN.setRange(min_value, max_value)
-        self._min_smooth_n = min_value
+        self._min_smooth_n = min(2, min_value)
         self._max_smooth_n = max_value
 
         return
@@ -349,7 +348,7 @@ class VanadiumProcessControlDialog(QDialog):
             return
 
         self.ui.horizontalSlider_smoothOrder.setRange(min_value, max_value)
-        self._min_smooth_order = min_value
+        self._min_smooth_order = min(1, min_value)
         self._max_smooth_order = max_value
 
         return
@@ -407,6 +406,8 @@ class VanadiumProcessControlDialog(QDialog):
             return
 
         # emit signal
+        print ('[DB...BAT] Smooth type = {}, n = {}, order = {}'.format(smoother_type, smoother_n,
+                                                                        smoother_order))
         self.mySmoothVanadiumSignal.emit(1, smoother_type, smoother_n, smoother_order)
 
         return

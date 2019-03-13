@@ -20,6 +20,9 @@ class PeakPickerWindowChildVanadium(object):
         assert ui_class is not None, 'UI class cannot be None'
 
         self._parent = parent
+
+        # inherit from parent
+        self._myController = parent._myController
         self.ui = ui_class
 
         # init widgets
@@ -27,8 +30,6 @@ class PeakPickerWindowChildVanadium(object):
 
         self._ipts_number = None
         self._run_number = None
-
-        self._myController = parent._myController
 
         # 4 lines that are allowed
         self._no_peak_van_line = None   # d-space
@@ -94,6 +95,7 @@ class PeakPickerWindowChildVanadium(object):
             # show peaks
             if self._curr_unit != UNIT['d']:
                 GuiUtility.pop_dialog_error(self._parent, 'Vanadium peaks can only been shown when unit is dSpacing')
+                self.ui.checkBox_vpeakShowPeakPos.setChecked(False)
                 return
             else:
                 # show!:
@@ -137,6 +139,26 @@ class PeakPickerWindowChildVanadium(object):
         return bank_id
 
     def reset_processing(self):
+        """
+        Reset including all the indicators and etc...
+        :return:
+        """
+        # hide indicators and raw
+        self.ui.checkBox_vpeakShowRaw.setChecked(False)
+        self.ui.checkBox_vpeakShowPeakPos.setChecked(False)
+
+        self._ipts_number = None
+        self._run_number = None
+
+        # remove all the lines
+        self._remove_raw_tof_line()
+        self._remove_raw_dspace_line()
+        self._remove_striped_peaks_line()
+        self._remove_smoothed_line()
+
+        # flag about V-PEAK indicators
+        self._curr_bank = 0
+        self._curr_unit = UNIT['d']     # unit on the figure
 
         return
 
@@ -155,7 +177,8 @@ class PeakPickerWindowChildVanadium(object):
 
     def init_session(self, data_key):
         """
-        Init a vanadium processing session
+        Init a vanadium processing session including
+        (1) laod meta data
         :param data_key:
         :return:
         """
@@ -169,6 +192,7 @@ class PeakPickerWindowChildVanadium(object):
         temp_out_gda_name = os.path.join(gsas_dir, '{}-s.gda'.format(self._run_number))
 
         # load sample log workspace
+        # TODO - TODAY 9 - Load meta data can take up to 3 seconds.  Make it on a separate thread
         log_ws_name = self._myController.load_meta_data(self._ipts_number, self._run_number, None)
 
         # call
@@ -240,7 +264,8 @@ class PeakPickerWindowChildVanadium(object):
                                                       ''.format(bank_id, run_err))
             return
 
-        self.plot_smoothed_peak_vanadium(bank_id)
+        self.plot_smoothed_peak_vanadium(bank_id, with_raw=self.ui.checkBox_vpeakShowRaw.isChecked(),
+                                         label='{}: {}/{}'.format(smoother_type, param_n, param_order))
 
         return
 
@@ -253,9 +278,13 @@ class PeakPickerWindowChildVanadium(object):
         datatypeutility.check_int_variable('Bank ID', bank_id, (1, 100))
 
         # Note: there is no need to plot runs in the complicated logic as its parent class
-        # Set up class variables
+        # remove previously plot line
+        if self._raw_van_dspace_line:
+            self.ui.graphicsView_main.remove_line(self._raw_van_dspace_line)
+        # draw a new raw vanadium line in dSpacing
         vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_raw_data(bank_id, UNIT['d'])
         self._raw_van_dspace_line = self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='black',
+                                                                          label='Raw Vanadium Bank {}'.format(bank_id),
                                                                           x_label='dSpacing')
         # set unit and bank
         self._curr_unit = UNIT['d']
@@ -273,11 +302,15 @@ class PeakPickerWindowChildVanadium(object):
         datatypeutility.check_int_variable('Bank ID', bank_id, (1, 100))
 
         # Note: there is no need to plot runs in the complicated logic as its parent class
+        # remove the previously plot line for vanadium TOF
+        if self._raw_van_tof_line:
+            self.ui.graphicsView_main.remove_line(self._raw_van_tof_line)
+
         # Set up class variables
         vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_raw_data(bank_id, UNIT['tof'])
         self._raw_van_tof_line = self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='black',
                                                                        x_label='TOF',
-                                                                       label='Bank {} Raw'.format(bank_id))
+                                                                       label='Raw Vanadium Bank {}'.format(bank_id))
         # set unit
         self._curr_unit = UNIT['tof']
         self._curr_bank = bank_id
@@ -325,7 +358,7 @@ class PeakPickerWindowChildVanadium(object):
 
         return
 
-    def plot_smoothed_peak_vanadium(self, bank_id, with_raw=True):
+    def plot_smoothed_peak_vanadium(self, bank_id, with_raw=True, label=''):
         """
         Plot vanadium spectrum after vanadium peak removed and smoothed
         :param bank_id:
@@ -350,7 +383,7 @@ class PeakPickerWindowChildVanadium(object):
             vec_y_list.append(vec_raw_y)
 
         self._smoothed_van_line = self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='red', x_label='TOF',
-                                                                        label='Bank {} Smoothed'.format(bank_id))
+                                                                        label='Bank {} {}'.format(bank_id, label))
 
         #
         # reset X Y limit
@@ -409,6 +442,7 @@ class PeakPickerWindowChildVanadium(object):
         self._remove_raw_tof_line()
         self._remove_raw_dspace_line()
         self.show_hide_v_peaks(False)
+        self.ui.checkBox_vpeakShowRaw.setChecked(False)
 
         return
 
@@ -428,7 +462,6 @@ class PeakPickerWindowChildVanadium(object):
         remove raw vanadium spectrum plotted in TOF
         :return:
         """
-        print ('[DB...BAT] Removing Raw TOF: {}'.format(self._raw_van_tof_line))
         if self._raw_van_tof_line:
             self.ui.graphicsView_main.remove_line(self._raw_van_tof_line)
             self._raw_van_tof_line = None
@@ -500,7 +533,9 @@ class PeakPickerWindowChildVanadium(object):
         try:
             # if smoothed then plot smoothed value
             self._myController.project.vanadium_processing_manager.get_peak_smoothed_data(bank_id)
-            self.plot_smoothed_peak_vanadium(bank_id)
+            self.plot_smoothed_peak_vanadium(bank_id, True, 'Smoothed')
+            # show raw
+            self.ui.checkBox_vpeakShowRaw.setChecked(True)  # trigger events handling
             return
         except RuntimeError:
             pass
@@ -509,10 +544,14 @@ class PeakPickerWindowChildVanadium(object):
             # if peak striped
             self._myController.project.vanadium_processing_manager.get_peak_striped_data(bank_id)
             self.plot_strip_peak_vanadium(bank_id)
+            # show raw
+            self.ui.checkBox_vpeakShowRaw.setChecked(True)  # trigger events handling
             return
         except RuntimeError:
             pass
 
+        # show raw
+        self.ui.checkBox_vpeakShowRaw.setChecked(True)  # trigger events handling
         # just plot raw dSpacing
         vec_x, vec_y = self.plot_raw_dspace(bank_id)
         self._reset_figure_range([vec_x], [vec_y])

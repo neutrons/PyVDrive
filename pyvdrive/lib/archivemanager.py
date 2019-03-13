@@ -160,19 +160,17 @@ class DataArchiveManager(object):
 
         return chop_gsas_name
 
-    # TODO - TONIGHT - Modernize
-    def locate_gsas(self, ipts_number, run_number):
+    @staticmethod
+    def locate_gsas(ipts_number, run_number):
         """
-        get the path of GSAS file stored on archive server
+        get the path of GSAS file stored on archive server.  If not found, just return None
         :param ipts_number:
         :param run_number:
         :return: list of data or None (cannot find)
         """
         # check
-        assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not {1}.' \
-                                             ''.format(ipts_number, type(ipts_number))
-        assert isinstance(run_number, int), 'Run number {0} must be an integer but not {1}.' \
-                                            ''.format(run_number, type(run_number))
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, 99999))
+        datatypeutility.check_int_variable('Run number', run_number, (1, 9999999))
 
         # locate reduced GSAS file name
         gsas_file_name = os.path.join('/SNS/VULCAN/IPTS-%d/shared/binned_data' % ipts_number, '%d.gda' % run_number)
@@ -209,40 +207,36 @@ class DataArchiveManager(object):
 
         return nexus_file_list
 
-    # TODO - TONIGHT - Modernize
-    def locate_event_nexus(self, ipts_number, run_number, check_file_exist):
+    def locate_event_nexus(self, ipts_number, run_number):
         """
         get the raw event NEXUS file from archive
         :param ipts_number:
         :param run_number:
-        :param check_file_exist: if file is not found, raise RuntimeError()
-        :return:
+        :return: File name or None (if proposed path does not exist)
         """
-        # build the path: for the pre-nED NeXus file
-        base_name = 'VULCAN_{0}_event.nxs'.format(run_number)
-        sub_path = os.path.join('IPTS-{0}/0/{1}/NeXus'.format(ipts_number, run_number), base_name)
-        raw_event_file_name = os.path.join(self._archiveRootDirectory, sub_path)
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
 
+        # by default, it shall be nED data: build the path for the nED NeXus file
+        base_name = 'VULCAN_{0}.nxs.h5'.format(run_number)
+        sns_path = os.path.join(self._archiveRootDirectory, 'IPTS-{0}/nexus'.format(ipts_number))
+        raw_event_file_name = os.path.join(sns_path, base_name)
+
+        if not os.path.exists(raw_event_file_name):
+            # might be a pre-nED
+            base_name = 'VULCAN_{0}_event.nxs'.format(run_number)
+            sub_path = os.path.join('IPTS-{0}/0/{1}/NeXus'.format(ipts_number, run_number), base_name)
+            raw_event_file_name = os.path.join(self._archiveRootDirectory, sub_path)
+        # END-IF
+
+        # early return
         if os.path.exists(raw_event_file_name):
-            # return if the NeXus file exists
-            pass
-
+            # add the dictionary
+            self._runIptsDict[run_number] = ipts_number
         else:
-            # build the path for the nED NeXus file
-            base_name = 'VULCAN_{0}.nxs.h5'.format(run_number)
-            sns_path = os.path.join(self._archiveRootDirectory, 'IPTS-{0}/nexus'.format(ipts_number))
-            ned_event_file_name = os.path.join(sns_path, base_name)
-
-            if check_file_exist and not os.path.exists(ned_event_file_name):
-                raise RuntimeError('Event NeXus file {0} or {1} cannot be not found under IPTS-{2}.'
-                                   ''.format(ned_event_file_name, raw_event_file_name, ipts_number))
-            # END-IF (for checking)
-
-            raw_event_file_name = ned_event_file_name
+            # return for nothing
+            raw_event_file_name = None
         # END-IF-ELSE
-
-        # add the dictionary
-        self._runIptsDict[run_number] = ipts_number
 
         return raw_event_file_name
 
@@ -617,9 +611,11 @@ class DataArchiveManager(object):
         # locate file
         for run_number in sorted(run_number_list):
             # form file
-            nexus_file_name = self.locate_event_nexus(ipts_number, run_number, check_file_exist=True)
+            nexus_file_name = self.locate_event_nexus(ipts_number, run_number)
 
-            if os.path.exists(nexus_file_name):
+            if nexus_file_name is None:
+                err_msg += 'Run %d does not exist in IPTS %s\n' % (run_number, ipts_number)
+            else:
                 # create a run information dictionary and put to information-buffering dictionaries
                 run_info = {'run': run_number,
                             'ipts': ipts_number,
@@ -627,8 +623,6 @@ class DataArchiveManager(object):
                             'time': None}
                 self._iptsInfoDict[archive_key][run_number] = run_info
                 self._runIptsDict[run_number] = ipts_number
-            else:
-                err_msg += 'Run %d does not exist in IPTS %s\n' % (run_number, ipts_number)
             # END-IF
         # END-FOR
 

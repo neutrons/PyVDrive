@@ -757,20 +757,20 @@ class VDriveAPI(object):
 
         return sns_dir
 
-    def get_loaded_runs(self, chopped):
+    def get_focused_runs(self, chopped):
         """
-        get the run number (or data key) to the loaded or reduced data in memory
+        get the data keys of focused data that are loaded or reduced data in memory
         :param chopped: if flag is True, then get chopped (reduced data); otherwise, get the single run
         :return: (1) list of integers (for single runs); (2) list of integers (for chopped runs)
         """
         if chopped:
             # chopped runs
             # from archive
-            loaded_runs_list = self._myProject.get_loaded_chopped_reduced_runs()
+            loaded_runs_list = self._myProject.data_loading_manager.get_loaded_chopped_runs()
             print ('[DB...BAT] API: Loaded chopped gsas: {}'.format(loaded_runs_list))
 
             # from memory
-            reduced_runs_list = self._myProject.reduction_manager.get_reduced_runs(chopped=True)
+            reduced_runs_list = self._myProject.reduction_manager.get_reduced_chopped_runs()
             print ('[DB...BAT] API: In-Memory chopped runs: {}'.format(reduced_runs_list))
 
         else:
@@ -778,7 +778,7 @@ class VDriveAPI(object):
             loaded_runs_list = self._myProject.get_loaded_reduced_runs()
 
             # from project
-            reduced_runs_list = self._myProject.reduction_manager.get_reduced_runs(chopped=False)
+            reduced_runs_list = self._myProject.reduction_manager.get_reduced_single_runs()
             print ('[DB...BAT] API: In-Memory reduced single-runs: {}'.format(reduced_runs_list))
 
         # END-IF-ELSE
@@ -1080,9 +1080,9 @@ class VDriveAPI(object):
             if ipts_number is None:
                 # get IPTS number if it is not given
                 ipts_number = self._myProject.get_ipts_number(run_number)
+            # END-IF
 
-            file_name = self._myArchiveManager.locate_event_nexus(ipts_number, run_number, check_file_exist=True)
-            print ('[DB...BAT] Found {} for IPTS-{} Run {}'.format(file_name, ipts_number, run_number))
+            file_name = self._myArchiveManager.locate_event_nexus(ipts_number, run_number=run_number)
         # END-IF
 
         # load file
@@ -1107,7 +1107,8 @@ class VDriveAPI(object):
                 return False, 'Unable to locate default session file %s.' % in_file_name
 
         # check session file
-        assert len(in_file_name) > 0
+        if len(in_file_name) == 0:
+            raise RuntimeError('Input session file name cannot be an empty string.')
 
         status, save_dict = archivemanager.load_from_xml(in_file_name)
         if status is False:
@@ -1465,8 +1466,10 @@ class VDriveAPI(object):
         """
         run_info_dict_list = list()
         for run_number in range(start_run, stop_run+1):
-            event_file_name = self._myArchiveManager.locate_event_nexus(ipts_number, run_number, check_file_exist=False)
-            if os.path.exists(event_file_name):
+            event_file_name = self._myArchiveManager.locate_event_nexus(ipts_number, run_number)
+            if event_file_name is None:
+                continue
+            else:
                 run_info = dict()
                 run_info['run'] = run_number
                 run_info['ipts'] = ipts_number
@@ -1624,7 +1627,9 @@ class VDriveAPI(object):
 
         if van_file_name is None:
             # if vanadium gsas file is not found, reduce it
-            nxs_file = self._myArchiveManager.locate_event_nexus(ipts_number, run_number, check_file_exist=True)
+            nxs_file = self._myArchiveManager.locate_event_nexus(ipts_number, run_number)
+            if nxs_file is None:
+                return False, 'Vanadium file of IPTS {} Run {} does not exist.'.format(ipts_number, run_number)
             self._myProject.add_run(run_number, nxs_file, ipts_number)
             reduced, message = self._myProject.reduce_runs(run_number_list=[run_number],
                                                            output_directory=self._myWorkDir,
@@ -1769,27 +1774,6 @@ class VDriveAPI(object):
 
         return
 
-    def slice_data_segment_period(self, run_number, slicer_id, chop_period, reduce_data,
-                                  vanadium, save_chopped_nexus, output_dir, export_log_type):
-        """
-        slice/chop data with chopping period, i.e.,any two adjacent time segments will have a certain distance (in time)
-        other than time_interval value.
-        :param run_number:
-        :param slicer_id:
-        :param chop_period:
-        :param reduce_data:
-        :param vanadium:
-        :param save_chopped_nexus:
-        :param output_dir:
-        :param export_log_type:
-        :return:
-        """
-        status, message = self._myProject.chop_run_time_segment_period(run_number, slicer_id,
-                                                                       chop_period, reduce_data, vanadium,
-                                                                       save_chopped_nexus, output_dir, export_log_type)
-
-        return status, message
-
     def set_ipts_config(self, ipts_number, data_dir, binned_data_dir):
         """
         Set configuration for a particular IPTS
@@ -1811,28 +1795,6 @@ class VDriveAPI(object):
         self._iptsConfigDict[ipts_number] = [data_dir, binned_data_dir]
 
         return
-
-    # def set_reduction_parameters(self, parameter_dict):
-    #     """ Set parameters used for reducing powder event data
-    #     Purpose:
-    #         Set up the reduction parameters
-    #     Requirements:
-    #         Parameters' value are given via dictionary
-    #     Guarantees:
-    #         ... ...
-    #     :return:
-    #     """
-    #     assert isinstance(parameter_dict, dict)
-    #
-    #     try:
-    #         self._myProject.set_reduction_parameters(parameter_dict)
-    #         status = True
-    #         error_msg = ''
-    #     except RuntimeError as re:
-    #         status = False
-    #         error_msg = 'Unable to set reduction parameters due to %s.' % str(re)
-    #
-    #     return status, error_msg
 
     def set_vanadium_to_runs(self, ipts_number, run_number_list, van_run_number):
         """

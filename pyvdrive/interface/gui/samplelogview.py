@@ -462,14 +462,13 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    # TODO - TONIGHT 1 - clean
     def plot_sample_log(self, vec_x, vec_y, sample_log_name, plot_label, sample_log_name_x='Time'):
-        """ Purpose: plot sample log
-
-        Guarantee: canvas is replot
-        :param vec_x
-        :param vec_y
-        :param sample_log_name:
+        """ plot sample log
+        :param vec_x:
+        :param vec_y:
+        :param sample_log_name: on Y-axis
+        :param plot_label: label of log to plot
+        :param sample_log_name_x: on X-axis
         :return:
         """
         # check

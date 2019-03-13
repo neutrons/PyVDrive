@@ -65,12 +65,13 @@ class SliceFocusVulcan(object):
                                                                                    self._number_threads)
 
     @staticmethod
-    def export_split_logs(split_ws_names, gsas_file_index_start, output_dir):
+    def export_split_logs(split_ws_names, gsas_file_index_start, run_start_time, output_dir):
         """
         Export split sample logs to a series of HDF5
         and also the special mantid log + workspace name
         :param split_ws_names:
         :param gsas_file_index_start:
+        :param run_start_time: numpy.datetime64 as the (original) run start time
         :param output_dir:
         :return:
         """
@@ -82,7 +83,7 @@ class SliceFocusVulcan(object):
             out_file_name = os.path.join(output_dir, '{}.hdf5'.format(index + gsas_file_index_start))
             gda_name = '{}.gda'.format(index + gsas_file_index_start)
             attribute_dict = {'GSAS': gda_name, 'Workspace': ws_name}
-            file_utilities.save_sample_logs(ws_i, log_names, out_file_name, attribute_dict)
+            file_utilities.save_sample_logs(ws_i, log_names, out_file_name, run_start_time, attribute_dict)
             info += '{}  \t{}  \t{}\n'.format(index, out_file_name, gda_name)
         # END-FOR
 
@@ -358,7 +359,9 @@ class SliceFocusVulcan(object):
                            gsas_file_index_start=gsas_file_index_start)
 
         if True:
+            pc_time0 = mantid_helper.get_workspace_property(event_ws_name, 'proton_charge').times[0]
             self.export_split_logs(output_names, gsas_file_index_start=gsas_file_index_start,
+                                   run_start_time=pc_time0,
                                    output_dir=self._output_dir)
 
         # write to logs

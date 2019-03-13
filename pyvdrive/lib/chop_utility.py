@@ -302,17 +302,21 @@ class DataChopper(object):
         # use base name for output workspace
         base_name = os.path.basename(self._myNeXusFileName)
         out_ws_name = base_name.split('.')[0] + '_MetaData'
-
-        # Load sample logs
-        status, ret_obj = mantid_helper.load_nexus(data_file_name=self._myNeXusFileName,
-                                                   output_ws_name=out_ws_name,
-                                                   meta_data_only=True)
-
-        if status is False:
-            err_msg = str(ret_obj)
-            raise RuntimeError(err_msg)
+        if mantid_helper.workspace_does_exist(out_ws_name):
+            # avoid re-load
+            pass
         else:
-            self._mtdWorkspaceName = out_ws_name
+            # Load sample logs
+            status, ret_obj = mantid_helper.load_nexus(data_file_name=self._myNeXusFileName,
+                                                       output_ws_name=out_ws_name,
+                                                       meta_data_only=True)
+
+            if status is False:
+                err_msg = str(ret_obj)
+                raise RuntimeError(err_msg)
+
+        # register
+        self._mtdWorkspaceName = out_ws_name
 
         # Set up log names list
         try:

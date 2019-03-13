@@ -81,7 +81,7 @@ class CalibrationManager(object):
 
         # 3 bank
         self._focus_instrument_dict['L2'][3] = [2., 2., 2.]
-        self._focus_instrument_dict['Polar'][3] = [-90, 90., 155]
+        self._focus_instrument_dict['Polar'][3] = [-90, 90., mantid_helper.HIGH_ANGLE_BANK_2THETA]
         self._focus_instrument_dict['Azimuthal'][3] = [0., 0, 0.]
         self._focus_instrument_dict['SpectrumIDs'][3] = [1, 2, 3]
 
@@ -92,7 +92,7 @@ class CalibrationManager(object):
         self._focus_instrument_dict['L2'][7] = [2.] * 7  # [2., 2., 2.]
         self._focus_instrument_dict['Polar'][7] = [-90.] * 3
         self._focus_instrument_dict['Polar'][7].extend([90.] * 3)
-        self._focus_instrument_dict['Polar'][7].extend([155.])
+        self._focus_instrument_dict['Polar'][7].extend([mantid_helper.HIGH_ANGLE_BANK_2THETA])
         self._focus_instrument_dict['Azimuthal'][7] = [0.] * 7
         self._focus_instrument_dict['SpectrumIDs'][7] = range(1, 8)
 
@@ -108,7 +108,7 @@ class CalibrationManager(object):
         for ws_index in range(9):
             self._focus_instrument_dict['Polar'][27][ws_index] = -90.
             self._focus_instrument_dict['Polar'][27][ws_index + 9] = 90.
-            self._focus_instrument_dict['Polar'][27][ws_index + 18] = 155.
+            self._focus_instrument_dict['Polar'][27][ws_index + 18] = mantid_helper.HIGH_ANGLE_BANK_2THETA
 
         return
 
@@ -576,7 +576,8 @@ class DataReductionTracker(object):
         :return:
         """
         # Check
-        assert isinstance(value, str), 'Input workspace name must be string but not %s.' % str(type(value))
+        datatypeutility.check_string_variable('Input event workspace', value)
+
         # Set
         self._eventWorkspace = value
 
@@ -960,10 +961,7 @@ class ReductionManager(object):
         self._myInstrument = instrument
 
         # reduction tracker: key = run number (integer), value = DataReductionTracker
-        self._reductionTrackDict = dict()
-
-        # simplified reduced workspace manager.  key = run number, value = workspace name
-        # self._runFocusedWorkspaceDict = dict()
+        self._reductionTrackDict = dict()  # [run number] = Tracker or [run number, slicer key] = Tracker
 
         # calibration file and workspaces management
         self._calibrationFileManager = CalibrationManager()   # key = calibration file name
@@ -1054,7 +1052,6 @@ class ReductionManager(object):
         #         Multiply(LHSWorkspace=ws_name, RHSWorkspace=self._det_eff_ws_name, OutputWorkspace=ws_name)
         raise NotImplementedError('ASAP')
 
-    # TODO - TONIGHT 0 - Code quality
     def chop_vulcan_run(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
                         output_directory, reduce_data_flag, save_chopped_nexus, number_banks,
                         tof_correction, user_binning_parameter,
@@ -1072,13 +1069,15 @@ class ReductionManager(object):
         :param reduce_data_flag:
         :param save_chopped_nexus:
         :param number_banks:
-        :param tof_correction:
+        :param tof_correction: TOF correction
         :param van_gda_name: None (for no-correction) or an integer (vanadium run number)
         :param user_binning_parameter:
         :param roi_list:
         :param mask_list:
         :param no_cal_mask:
+        :param bin_overlap_mode: if True, then 'time bins' (time splitters) will have overlapped time
         :param gsas_parm_name:
+        :param gda_file_start: starting order (index) of the chopped and reduced GSAS file name (0.gda or 1.gda)
         :return: 2-tuple (string: regular message, string: error message)
         """
         # Load data
@@ -1134,14 +1133,9 @@ class ReductionManager(object):
         # set calibrated instrument
         chop_reducer.set_focus_virtual_instrument(
             self._calibrationFileManager.get_focused_instrument_parameters(number_banks))
-        error_message = None
         if reduce_data_flag:
             # chop and reduce chopped data to GSAS: NOW, it is Version 2.0 speedup
             reduction_setup.set_calibration_workspaces(calib_ws_name, group_ws_name, mask_ws_name)
-
-            # set tracker
-            tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=None)
-            tracker.is_reduced = False
 
             # initialize tracker
             tracker = self.init_tracker(ipts_number, run_number, slice_key)
@@ -1182,7 +1176,8 @@ class ReductionManager(object):
             tracker.set_reduction_status(status, message, True)
 
             reduced, workspace_name_list = chop_reducer.get_reduced_workspaces(chopped=True)
-            chop_message = 'Output GSAS: 1.gda - {}.gda'.format(len(workspace_name_list))
+            chop_message = 'Output GSAS: {}.gda - {}.gda'.format(gda_file_start,
+                                                                 gda_file_start -1 + len(workspace_name_list))
 
             error_message = self.set_chopped_reduced_workspaces(run_number, slice_key, workspace_name_list, append=True)
             self.set_chopped_reduced_files(run_number, slice_key, chop_reducer.get_reduced_files(), append=True)
@@ -1191,30 +1186,31 @@ class ReductionManager(object):
 
         else:
             # chop data only without reduction
-            status, ret_obj = chop_reducer.chop_data()
-
-            if not status:
-                return False, ('', 'Unable to chop run {0} due to {1}.'.format(run_number, ret_obj))
-
-            # get chopped workspaces' names, saved NeXus file name; check them and store to lists
-            chopped_ws_name_list = list()
-            chopped_file_list = list()
-            for file_name, ws_name in ret_obj:
-                if file_name is not None:
-                    chopped_file_list.append(file_name)
-                if isinstance(ws_name, str) and mantid_helper.workspace_does_exist(ws_name):
-                    chopped_ws_name_list.append(ws_name)
-            # END-FOR
-            chop_message = '{}'.format(chopped_file_list)
-
-            # initialize tracker
-            tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=slice_key)
-            tracker.is_reduced = False
-            tracker.is_chopped = True
-            if len(chopped_ws_name_list) > 0:
-                tracker.set_chopped_workspaces(chopped_ws_name_list, append=True)
-            if len(chopped_file_list) > 0:
-                tracker.set_chopped_nexus_files(chopped_file_list, append=True)
+            raise NotImplementedError('This branch is temporarily disabled')
+            # status, ret_obj = chop_reducer.chop_data()
+            #
+            # if not status:
+            #     return False, ('', 'Unable to chop run {0} due to {1}.'.format(run_number, ret_obj))
+            #
+            # # get chopped workspaces' names, saved NeXus file name; check them and store to lists
+            # chopped_ws_name_list = list()
+            # chopped_file_list = list()
+            # for file_name, ws_name in ret_obj:
+            #     if file_name is not None:
+            #         chopped_file_list.append(file_name)
+            #     if isinstance(ws_name, str) and mantid_helper.workspace_does_exist(ws_name):
+            #         chopped_ws_name_list.append(ws_name)
+            # # END-FOR
+            # chop_message = '{}'.format(chopped_file_list)
+            #
+            # # initialize tracker
+            # tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=slice_key)
+            # tracker.is_reduced = False
+            # tracker.is_chopped = True
+            # if len(chopped_ws_name_list) > 0:
+            #     tracker.set_chopped_workspaces(chopped_ws_name_list, append=True)
+            # if len(chopped_file_list) > 0:
+            #     tracker.set_chopped_nexus_files(chopped_file_list, append=True)
         # END-IF
 
         return True, (chop_message, error_message)
@@ -1275,18 +1271,13 @@ class ReductionManager(object):
 
         return file_name
 
-    def get_reduced_runs(self, with_ipts=False, chopped=False):
+    def get_reduced_single_runs(self):
         """
-        get reduced VULCAN runs with option for single run or chopped run
-        (It is just for information)
-        :param with_ipts:
-        :param chopped:
-        :return: a list of [case 1] run numbers [case 2] (run number, ipts) [case 3] (run number, slice key, ipts)
-                           [case 4] (run number, slice key)
+        :return: a list of [case 1] run numbers [case 2]
         """
         return_list = list()
 
-        print ('[DB...BAT] Reduction track dict: {}'.format(self._reductionTrackDict.keys()))
+        print ('[DB...BAT...Single] Reduction-track dict keys: {}'.format(self._reductionTrackDict.keys()))
 
         # from tracker
         for tracker_key in self._reductionTrackDict.keys():
@@ -1296,30 +1287,45 @@ class ReductionManager(object):
                 continue
 
             # filter out the tracker with key type and flag-chopped
-            if isinstance(tracker_key, tuple):
-                # slicing reduction case
-                if not chopped:
-                    continue
+            if not isinstance(tracker_key, int):
+                print ('[DB...BAT] Chop data keys: {}'.format(tracker_key))
+                continue
 
-                run_number, slice_id = tracker_key
-                if with_ipts:
-                    new_item = run_number, slice_id, tracker.ipts_number
-                else:
-                    new_item = run_number, slice_id
-            else:
-                # single run
-                if chopped:
-                    continue
+            run_number = tracker_key
+            print ('[DB...BAT] Reduced run with {} of type {}'.format(run_number, type(run_number)))
+            return_list.append(run_number)
+        # END-FOR
 
-                run_number = tracker_key
-                if with_ipts:
-                    new_item = run_number, tracker.ipts_number
-                else:
-                    new_item = run_number
-            # END-IF-ELSE
+        return return_list
 
-            print new_item
+    def get_reduced_chopped_runs(self, with_ipts=False, chopped=False):
+        """
+        get reduced VULCAN runs with option for single run or chopped run
+        (It is just for information)
+        :param with_ipts:
+        :param chopped:
+        :return: a list of (run number, slice key)
+        """
+        return_list = list()
 
+        print ('[DB...BAT...Chopped] Reduction-track dict keys: {}'.format(self._reductionTrackDict.keys()))
+
+        # from tracker
+        for tracker_key in self._reductionTrackDict.keys():
+            # get tracker with is_reduced being True
+            tracker = self._reductionTrackDict[tracker_key]
+            if not tracker.is_reduced:
+                continue
+
+            # filter out the tracker with key type and flag-chopped
+            if not isinstance(tracker_key, tuple):
+                if not isinstance(tracker_key, int):
+                    raise RuntimeError('Tracker key {} of type {} is not well defined'
+                                       ''.format(tracker_key, type(tracker_key)))
+                continue
+
+            new_item = tracker_key
+            print ('[DB...BAT] Reduced run with {} of type {}'.format(new_item, type(new_item)))
             return_list.append(new_item)
         # END-FOR
 
@@ -1415,6 +1421,19 @@ class ReductionManager(object):
         has = run_number in self._reductionTrackDict
 
         return has
+
+    def has_run_sliced_reduced(self, chop_data_key):
+        """
+        check whether input 'chopped data key' corresponds to any reduced runs
+        :param chop_data_key:  run number, slicer key
+        :return:
+        """
+        datatypeutility.check_tuple('Chopped data (lookup) key', chop_data_key, 2)
+        run_number, slicer_key = chop_data_key
+        datatypeutility.check_tuple('Run number', run_number, (1, 999999999))
+        datatypeutility.check_string_variable('Slicer key', slicer_key)
+
+        return chop_data_key in self._reductionTrackDict
 
     def init_tracker(self, ipts_number, run_number, slicer_key=None):
         """ Initialize tracker

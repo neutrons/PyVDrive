@@ -60,7 +60,7 @@ def test_chop_van_normalized(tester):
     command_test_setup.set_test_dir(test_dir)
 
     # run command
-    idl_command = 'chop, ipts=20717, runs=170464, dbin=300, loadframe=1, ' \
+    idl_command = 'chop, ipts=20717, runs=170464, dbin=100, loadframe=1, ' \
                   'runv=163021,output="{}"'.format(test_dir)
 
     tester.run_command(idl_command)
@@ -236,20 +236,20 @@ def test_main():
     # basic chopping operation
     test_chop_simple(command_tester)
 
-    # # # chop with vanadium runs
+    # chop with vanadium runs
     test_chop_van_normalized(command_tester)
 
-    # # # chop with mask/ROI
+    # chop with mask/ROI
     test_chop_roi(command_tester)
 
     # # chop with PICKDATA
     test_chop_segment_file(command_tester)
 
-    # chop with DT
-    test_chop_overlap_time(command_tester)
+    # # chop with DT
+    # test_chop_overlap_time(command_tester)
 
     # chop on analysis cluster
-    # test_chop_analysis_cluster(command_tester)
+    test_chop_analysis_cluster(command_tester)
 
     # test_ned_standard(command_tester)
     # test_ned_user_bin(command_tester)

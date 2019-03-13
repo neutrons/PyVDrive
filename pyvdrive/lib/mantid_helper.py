@@ -29,6 +29,8 @@ VULCAN_2BANK_1_POLAR = 90.
 VULCAN_2BANK_2_L2 = 2.009436
 VULCAN_2BANK_2_POLAR = 360. - 90.1120
 
+HIGH_ANGLE_BANK_2THETA = 150.
+
 
 def check_bins_can_align(workspace_name, template_workspace_name):
     """
@@ -1524,7 +1526,7 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
                                          PrimaryFlightPath=43.753999999999998,
                                          SpectrumIDs='1,2,3',
                                          L2='2.0,2.0,2.0',
-                                         Polar='90,270,155')
+                                         Polar='-90,90,{}'.format(HIGH_ANGLE_BANK_2THETA))
     else:
         raise RuntimeError('It is not implemented for GSAS file having more than 3 spectra ({0} now).'
                            ''.format(num_spec))
@@ -1656,10 +1658,14 @@ def load_nexus(data_file_name, output_ws_name, meta_data_only, max_time=None):
     :return: 2-tuple
     """
     try:
-        if max_time is None:
+        if not data_file_name.endswith('.h5'):
             out_ws = mantidapi.Load(Filename=data_file_name,
                                     OutputWorkspace=output_ws_name,
                                     MetaDataOnly=meta_data_only)
+        elif max_time is None:
+            out_ws = mantidapi.LoadEventNexus(Filename=data_file_name,
+                                              OutputWorkspace=output_ws_name,
+                                              MetaDataOnly=meta_data_only)
         else:
             out_ws = mantidapi.LoadEventNexus(Filename=data_file_name,
                                               OutputWorkspace=output_ws_name,
