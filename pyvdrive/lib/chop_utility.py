@@ -119,6 +119,20 @@ class DataChopper(object):
 
         return
 
+    # TODO - TONIGHT 0 - NEW Implement
+    def detector_beam_downtime(self):
+        """
+        :return:
+        """
+        pcharge = meta.run().getProperty('proton_charge')
+
+        new_vec = pvalue[0::30]
+
+        for i in range(1, 30):
+            print (i)
+            vec_i = value_vec[i::30]
+            new_vec += vec_i
+
     # TEST - Implemented in #65
     def delete_splitter_workspace(self, slicer_tag):
         """

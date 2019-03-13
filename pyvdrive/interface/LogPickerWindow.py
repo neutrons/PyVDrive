@@ -1200,6 +1200,10 @@ class WindowLogPicker(QMainWindow):
 
         return plot_x, plot_y
 
+    def set_ipts(self, ipts_number):
+        # TODO - TONIGHT 0 - QA
+        self.ui.lineEdit_iptsNumber.setText('{}'.format(ipts_number))
+
     def set_run(self, run_number):
         """
         Set run

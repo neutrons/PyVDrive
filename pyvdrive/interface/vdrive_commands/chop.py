@@ -609,11 +609,6 @@ class VdriveChop(VDriveCommand):
         """
         time0 = time.time()
 
-        # Go through all the arguments
-        if 'HELP' in self._commandArgsDict:
-            # pop out the window
-            return True, 'pop'
-
         if 'NEXUS' in self._commandArgsDict:
             # set NeXus file name other other IPTS/RUN NUMBER
             self.set_raw_nexus()
@@ -671,6 +666,11 @@ class VdriveChop(VDriveCommand):
         else:
             run_number_list = [-1]
         # END-IF
+
+        # Go through all the arguments
+        if 'HELP' in self._commandArgsDict:
+            # pop out the window
+            return True, 'pop'
 
         # chop
         for run_number in run_number_list:
