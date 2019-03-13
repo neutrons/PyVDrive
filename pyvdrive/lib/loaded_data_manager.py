@@ -88,7 +88,22 @@ class LoadedDataManager(object):
         return sorted(self._chopped_gsas_dict[run_number].keys())
 
     def get_chopped_sequence_info(self, run_number, chop_sequence):
-        # TODO - TONIGHT 0 - QA
+        """
+        get the information of one chopped workspace (gsas and etc) from a series of GSAS file from a chopped run
+        :param run_number:
+        :param chop_sequence:
+        :return: 3-tuple (workspace name, GSAS file, h5 log file)  It is one element from the dictionary
+        """
+        datatypeutility.check_int_variable('Run number (to chop from)', run_number, (1, 99999999))
+        datatypeutility.check_int_variable('Chopped (out) sequence', chop_sequence, (0, None))
+
+        if run_number not in self._chopped_gsas_dict:
+            raise RuntimeError('Run {} is not in "Chopped GSAS Dict".  Existing runs are {}'
+                               ''.format(run_number, self._chopped_gsas_dict.keys()))
+        if chop_sequence not in self._chopped_gsas_dict[run_number]:
+            raise RuntimeError('Chopped (out) sequence {} is not in loaded chapped run.  Existing sequences are {}'
+                               ''.format(chop_sequence, run_number, self._chopped_gsas_dict.keys()))
+
         return self._chopped_gsas_dict[run_number][chop_sequence]
 
     def get_loaded_chopped_runs(self):

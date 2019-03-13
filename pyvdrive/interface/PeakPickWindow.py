@@ -1745,7 +1745,7 @@ class PeakPickerWindow(QMainWindow):
         :return:
         """
         # check inputs
-        assert isinstance(pos_x, float), 'X-position {0} must be a float but not a {1}.'.format(pos_x, type(pos_x))
+        datatypeutility.check_float_variable('Peak boundary', pos_x, (None, None))
 
         # Find out how to expand
         if pos_x < self._currMousePosX:
@@ -1827,16 +1827,13 @@ class PeakPickerWindow(QMainWindow):
         if new_mode_index == 1:
             # process vanadium peaks
             ipts_number, run_number, gsas_file_name = self._data_info_dict[self._currGraphDataKey]
-            # self.reset_plot_session()  # TODO - TONIGHT 0 - Implement by referring to: self.do_reset_vanadium_processing()
-            # plots shall be reset and re-load data
-            self.ui.graphicsView_main.reset_peak_picker_mode(remove_diffraction_data=True)
+            self.reset_plot_session()
             self._subControllerVanadium.set_vanadium_info(ipts_number, run_number)
             self._subControllerVanadium.init_session(self._currGraphDataKey)
             self._subControllerVanadium.plot_raw_dspace(self._currentBankNumber)
         elif new_mode_index == 0:
             # process peaks for single peak fitting (VDRIVE)
             self._subControllerVanadium.reset_processing()
-
 
         return
 
@@ -1875,6 +1872,22 @@ class PeakPickerWindow(QMainWindow):
         :return:
         """
         self._subControllerVanadium.save_vanadium_process_parameters()
+
+    def reset_plot_session(self):
+        """ Reset plot
+        :return:
+        """
+        # plots shall be reset and re-load data
+        self.ui.graphicsView_main.reset_peak_picker_mode(remove_diffraction_data=True)
+        self._peakPickerMode = PeakPickerMode.NoPick
+        self._peakSelectionMode = ''
+
+        print ('[DB...BAT] Reset self._indicatorIDList (\n{}\n) to None'.format(self._indicatorIDList))
+        self._indicatorIDList = None
+        print ('[DB...BAT] Reset self._indicatorPositionList (\n{}\n) to None'.format(self._indicatorPositionList))
+        self._indicatorPositionList = None
+
+        return
 
     # TODO - TONIGHT 3 - Complete rewrite the signal handling methods including plotting data!
     def signal_save_processed_vanadium(self, output_file_name, run_number):

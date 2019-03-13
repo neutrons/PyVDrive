@@ -576,7 +576,8 @@ class DataReductionTracker(object):
         :return:
         """
         # Check
-        assert isinstance(value, str), 'Input workspace name must be string but not %s.' % str(type(value))
+        datatypeutility.check_string_variable('Input event workspace', value)
+
         # Set
         self._eventWorkspace = value
 
@@ -1051,7 +1052,6 @@ class ReductionManager(object):
         #         Multiply(LHSWorkspace=ws_name, RHSWorkspace=self._det_eff_ws_name, OutputWorkspace=ws_name)
         raise NotImplementedError('ASAP')
 
-    # TODO - TONIGHT 0 - Code quality
     def chop_vulcan_run(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
                         output_directory, reduce_data_flag, save_chopped_nexus, number_banks,
                         tof_correction, user_binning_parameter,
@@ -1069,13 +1069,15 @@ class ReductionManager(object):
         :param reduce_data_flag:
         :param save_chopped_nexus:
         :param number_banks:
-        :param tof_correction:
+        :param tof_correction: TOF correction
         :param van_gda_name: None (for no-correction) or an integer (vanadium run number)
         :param user_binning_parameter:
         :param roi_list:
         :param mask_list:
         :param no_cal_mask:
+        :param bin_overlap_mode: if True, then 'time bins' (time splitters) will have overlapped time
         :param gsas_parm_name:
+        :param gda_file_start: starting order (index) of the chopped and reduced GSAS file name (0.gda or 1.gda)
         :return: 2-tuple (string: regular message, string: error message)
         """
         # Load data
@@ -1135,11 +1137,6 @@ class ReductionManager(object):
             # chop and reduce chopped data to GSAS: NOW, it is Version 2.0 speedup
             reduction_setup.set_calibration_workspaces(calib_ws_name, group_ws_name, mask_ws_name)
 
-            # set tracker
-            # FIXME - Remove later - shall not be here
-            # tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=None)
-            # tracker.is_reduced = False
-
             # initialize tracker
             tracker = self.init_tracker(ipts_number, run_number, slice_key)
             tracker.is_reduced = False
@@ -1179,7 +1176,8 @@ class ReductionManager(object):
             tracker.set_reduction_status(status, message, True)
 
             reduced, workspace_name_list = chop_reducer.get_reduced_workspaces(chopped=True)
-            chop_message = 'Output GSAS: 1.gda - {}.gda'.format(len(workspace_name_list))
+            chop_message = 'Output GSAS: {}.gda - {}.gda'.format(gda_file_start,
+                                                                 gda_file_start -1 + len(workspace_name_list))
 
             error_message = self.set_chopped_reduced_workspaces(run_number, slice_key, workspace_name_list, append=True)
             self.set_chopped_reduced_files(run_number, slice_key, chop_reducer.get_reduced_files(), append=True)
@@ -1425,9 +1423,15 @@ class ReductionManager(object):
         return has
 
     def has_run_sliced_reduced(self, chop_data_key):
-        # TODO - TONIGHT 0 - QA
-        # chop data key: run number, slicer key
-        #
+        """
+        check whether input 'chopped data key' corresponds to any reduced runs
+        :param chop_data_key:  run number, slicer key
+        :return:
+        """
+        datatypeutility.check_tuple('Chopped data (lookup) key', chop_data_key, 2)
+        run_number, slicer_key = chop_data_key
+        datatypeutility.check_tuple('Run number', run_number, (1, 999999999))
+        datatypeutility.check_string_variable('Slicer key', slicer_key)
 
         return chop_data_key in self._reductionTrackDict
 

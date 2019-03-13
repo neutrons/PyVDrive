@@ -32,6 +32,20 @@ from pyvdrive.lib import datatypeutility
 import atomic_data_viewers
 from gui.samplelogview import LogGraphicsView
 from pyvdrive.lib import vdrivehelper
+from pyvdrive.lib import reduce_VULCAN
+
+
+def generate_sample_log_list():
+    """
+    generate a list of sample logs for plotting
+    :return:
+    """
+    time_series_sample_logs = list()
+    for item_tup in reduce_VULCAN.RecordBase:
+        if item_tup[2] in ['average', 'sum']:
+            time_series_sample_logs.append(item_tup[1])
+
+    return time_series_sample_logs
 
 
 class GeneralPurposedDataViewWindow(QMainWindow):
@@ -63,6 +77,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._bankIDList = list()  # synchronized with comboBox_spectraList
         self._currBank = 1
         self._currUnit = str(self.ui.comboBox_unit.currentText())
+        self._sample_log_name_list = generate_sample_log_list()  # list of sample logs that are viable to plot
 
         # normalization
         self._curr_pc_norm = False
@@ -385,14 +400,12 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    # NEW - TODO - TODAY - TEST
     # TODO - TONIGHT - Add UI
     def do_load_sliced_logs(self):
         """
         Load sliced sample logs
         :return:
         """
-        from pyvdrive.lib import reduce_VULCAN
 
         try:
             ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
@@ -406,13 +419,14 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # load log
         if self._myController.has_chopped_data(ipts_number, run_number, in_memory=True):
-            # TODO - TONIGHT 0 - need a static method to convert the sample logs list to a list of sample log name
-            sample_log_names = reduce_VULCAN.VulcanSampleLogList
+            # data sliced in memory: simply need workspaces
+            sample_log_names = self._sample_log_name_list
         else:
             try:
                 log_files = self._myController.archive_manager.get_sliced_logs(ipts_number, run_number)
             except RuntimeError as any_err:
-                GuiUtility.pop_dialog_error(self, 'blabla')
+                GuiUtility.pop_dialog_error(self, 'Unable to load log files of IPTS-{} Run-{} due to {}'
+                                                  ''.format(ipts_number, run_number, any_err))
                 return
             whatever = self._myController.load_chopped_logs(log_files)
             sample_log_names = whatever.get_sample_logs()
@@ -1014,25 +1028,29 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    # TODO - TONIGHT 2 - Code Quality
     def get_proton_charge(self, ipts_number, run_number, chop_seq):
+        """ get proton charge (summed) of a run
+        :param ipts_number:
+        :param run_number:
+        :param chop_seq:
+        :return:
+        """
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, 999999))
+        datatypeutility.check_int_variable('Run number', run_number, (1, 99999999))
 
         if chop_seq is None:
             # single run
-            log_data_set = self._sample_log_dict[ipts_number][run_number]
-            pc_vec = log_data_set['ProtonCharge']
-            run_vec = log_data_set['RUN']
-            print (type(run_vec[0]))
-            print (type(run_vec))
-
-            print (numpy.where(run_vec == run_number))
+            try:
+                log_data_set = self._sample_log_dict[ipts_number][run_number]
+                pc_vec = log_data_set['ProtonCharge']
+                run_vec = log_data_set['RUN']
+            except KeyError as key_err:
+                GuiUtility.pop_dialog_error(self, 'Unable to retrieve sample log IPTS-{} Run-{}. FYI: {}'
+                                                  ''.format(ipts_number, run_number, key_err))
+                return
 
             row_index = numpy.where(run_vec == run_number)
-            print (row_index[0][0])
-            print (log_data_set['ProtonCharge'][row_index[0][0]])
             row_index = row_index[0][0]
-
-            print (log_data_set['ProtonCharge'])
 
             total_pc = pc_vec[row_index]
         else:
@@ -1196,6 +1214,20 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return run_number_list
 
+    def get_vanadium_spectrum(self, van_run, bank_id):
+
+        from pyvdrive.lib import mantid_helper
+        print ('[DB...BAT] Vanadium workspace = {}'.format(self._vanadium_dict[van_run]))
+        van_ws_name = self._vanadium_dict[van_run]
+        mantid_helper.mtd_convert_units(van_ws_name, 'dSpacing')
+        van_ws = mantid_helper.retrieve_workspace(van_ws_name, True)
+        if van_ws.id() == 'WorkspaceGroup':
+            van_vec_y = van_ws[bank_id - 1].readY(0)
+        else:
+            van_vec_y = van_ws.readY(bank_id - 1)
+
+        return van_vec_y
+
     def plot_single_run(self, data_key, van_norm, van_run, pc_norm, bank_id=1, main_only=False):
         """
         Plot a single run
@@ -1218,16 +1250,18 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         if pc_norm:
             pc_norm = self.get_proton_charge(self._iptsNumber, self._currRunNumber, None)
         if van_norm:
-            # TODO - TONIGHT 1 - Consider to make this part as a method to call
-            from pyvdrive.lib import mantid_helper
-            print ('[DB...BAT] Vanadium workspace = {}'.format(self._vanadium_dict[van_run]))
-            van_ws_name = self._vanadium_dict[van_run]
-            mantid_helper.mtd_convert_units(van_ws_name, 'dSpacing')
-            van_ws = mantid_helper.retrieve_workspace(van_ws_name, True)
-            if van_ws.id() == 'WorkspaceGroup':
-                van_vec_y = van_ws[bank_id - 1].readY(0)
-            else:
-                van_vec_y = van_ws.readY(bank_id - 1)
+            van_vec_y = self.get_vanadium_spectrum(van_run, bank_id)
+
+            # # TODO - TONIGHT 1 - Consider to make this part as a method to call
+            # from pyvdrive.lib import mantid_helper
+            # print ('[DB...BAT] Vanadium workspace = {}'.format(self._vanadium_dict[van_run]))
+            # van_ws_name = self._vanadium_dict[van_run]
+            # mantid_helper.mtd_convert_units(van_ws_name, 'dSpacing')
+            # van_ws = mantid_helper.retrieve_workspace(van_ws_name, True)
+            # if van_ws.id() == 'WorkspaceGroup':
+            #     van_vec_y = van_ws[bank_id - 1].readY(0)
+            # else:
+            #     van_vec_y = van_ws.readY(bank_id - 1)
 
             vec_y /= van_vec_y
             # END-IF
@@ -1252,16 +1286,17 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 if pc_norm:
                     pc_norm = self.get_proton_charge(self._iptsNumber, self._currRunNumber, None)
                 if van_norm:
-                    # TODO - TONIGHT 1 - Consider to make this part as a method to call
-                    from pyvdrive.lib import mantid_helper
-                    print ('[DB...BAT] Vanadium workspace = {}'.format(self._vanadium_dict[van_run]))
-                    van_ws_name = self._vanadium_dict[van_run]
-                    mantid_helper.mtd_convert_units(van_ws_name, 'dSpacing')
-                    van_ws = mantid_helper.retrieve_workspace(van_ws_name, True)
-                    if van_ws.id() == 'WorkspaceGroup':
-                        van_vec_y = van_ws[bank_id - 1].readY(0)
-                    else:
-                        van_vec_y = van_ws.readY(bank_id - 1)
+                    van_vec_y = self.get_vanadium_spectrum(van_run, bank_id)
+                    # # TODO - TONIGHT 1 - Consider to make this part as a method to call
+                    # from pyvdrive.lib import mantid_helper
+                    # print ('[DB...BAT] Vanadium workspace = {}'.format(self._vanadium_dict[van_run]))
+                    # van_ws_name = self._vanadium_dict[van_run]
+                    # mantid_helper.mtd_convert_units(van_ws_name, 'dSpacing')
+                    # van_ws = mantid_helper.retrieve_workspace(van_ws_name, True)
+                    # if van_ws.id() == 'WorkspaceGroup':
+                    #     van_vec_y = van_ws[bank_id - 1].readY(0)
+                    # else:
+                    #     van_vec_y = van_ws.readY(bank_id - 1)
 
                     vec_y /= van_vec_y
                     # END-IF
@@ -1340,16 +1375,19 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             vec_y /= pc_seq
 
         if van_norm:
+            # vanadium normalization
+            van_vec_y = self.get_vanadium_spectrum(van_run, bank_id)
+
             # TODO - TONIGHT 1 - Consider to make this part as a method to call
-            from pyvdrive.lib import mantid_helper
-            print ('[DB...BAT] Vanadium workspace = {}'.format(self._vanadium_dict[van_run]))
-            van_ws_name = self._vanadium_dict[van_run]
-            mantid_helper.mtd_convert_units(van_ws_name, 'dSpacing')
-            van_ws = mantid_helper.retrieve_workspace(van_ws_name, True)
-            if van_ws.id() == 'WorkspaceGroup':
-                van_vec_y = van_ws[bank_id-1].readY(0)
-            else:
-                van_vec_y = van_ws.readY(bank_id - 1)
+            # from pyvdrive.lib import mantid_helper
+            # print ('[DB...BAT] Vanadium workspace = {}'.format(self._vanadium_dict[van_run]))
+            # van_ws_name = self._vanadium_dict[van_run]
+            # mantid_helper.mtd_convert_units(van_ws_name, 'dSpacing')
+            # van_ws = mantid_helper.retrieve_workspace(van_ws_name, True)
+            # if van_ws.id() == 'WorkspaceGroup':
+            #     van_vec_y = van_ws[bank_id-1].readY(0)
+            # else:
+            #     van_vec_y = van_ws.readY(bank_id - 1)
 
             vec_y /= van_vec_y
         # END-IF

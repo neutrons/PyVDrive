@@ -20,6 +20,9 @@ class PeakPickerWindowChildVanadium(object):
         assert ui_class is not None, 'UI class cannot be None'
 
         self._parent = parent
+
+        # inherit from parent
+        self._myController = parent._myController
         self.ui = ui_class
 
         # init widgets
@@ -27,8 +30,6 @@ class PeakPickerWindowChildVanadium(object):
 
         self._ipts_number = None
         self._run_number = None
-
-        self._myController = parent._myController
 
         # 4 lines that are allowed
         self._no_peak_van_line = None   # d-space
@@ -141,7 +142,22 @@ class PeakPickerWindowChildVanadium(object):
         Reset including all the indicators and etc...
         :return:
         """
-        # TODO - TONIGHT 0 - Implement!
+        # hide indicators
+        self.ui.checkBox_vpeakShowRaw.setChecked(False)
+
+        self._ipts_number = None
+        self._run_number = None
+
+        # remove all the lines
+        self._remove_raw_tof_line()
+        self._remove_raw_dspace_line()
+        self._remove_striped_peaks_line()
+        self._remove_smoothed_line()
+
+        # flag about V-PEAK indicators
+        self._curr_bank = 0
+        self._curr_unit = UNIT['d']     # unit on the figure
+
         return
 
     def save_processing_result(self):
@@ -259,10 +275,13 @@ class PeakPickerWindowChildVanadium(object):
         datatypeutility.check_int_variable('Bank ID', bank_id, (1, 100))
 
         # Note: there is no need to plot runs in the complicated logic as its parent class
-        # Set up class variables
+        # remove previously plot line
+        if self._raw_van_dspace_line:
+            self.ui.graphicsView_main.remove_line(self._raw_van_dspace_line)
+        # draw a new raw vanadium line in dSpacing
         vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_raw_data(bank_id, UNIT['d'])
-        # TODO - TONIGHT 0 - This is a bad call to base class
         self._raw_van_dspace_line = self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='black',
+                                                                          label='Raw Vanadium Bank {}'.format(bank_id),
                                                                           x_label='dSpacing')
         # set unit and bank
         self._curr_unit = UNIT['d']
@@ -280,11 +299,15 @@ class PeakPickerWindowChildVanadium(object):
         datatypeutility.check_int_variable('Bank ID', bank_id, (1, 100))
 
         # Note: there is no need to plot runs in the complicated logic as its parent class
+        # remove the previously plot line for vanadium TOF
+        if self._raw_van_tof_line:
+            self.ui.graphicsView_main.remove_line(self._raw_van_tof_line)
+
         # Set up class variables
         vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_raw_data(bank_id, UNIT['tof'])
         self._raw_van_tof_line = self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='black',
                                                                        x_label='TOF',
-                                                                       label='Bank {} Raw'.format(bank_id))
+                                                                       label='Raw Vanadium Bank {}'.format(bank_id))
         # set unit
         self._curr_unit = UNIT['tof']
         self._curr_bank = bank_id
@@ -435,7 +458,6 @@ class PeakPickerWindowChildVanadium(object):
         remove raw vanadium spectrum plotted in TOF
         :return:
         """
-        print ('[DB...BAT] Removing Raw TOF: {}'.format(self._raw_van_tof_line))
         if self._raw_van_tof_line:
             self.ui.graphicsView_main.remove_line(self._raw_van_tof_line)
             self._raw_van_tof_line = None
