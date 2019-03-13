@@ -95,6 +95,7 @@ class PeakPickerWindowChildVanadium(object):
             # show peaks
             if self._curr_unit != UNIT['d']:
                 GuiUtility.pop_dialog_error(self._parent, 'Vanadium peaks can only been shown when unit is dSpacing')
+                self.ui.checkBox_vpeakShowPeakPos.setChecked(False)
                 return
             else:
                 # show!:
@@ -142,8 +143,9 @@ class PeakPickerWindowChildVanadium(object):
         Reset including all the indicators and etc...
         :return:
         """
-        # hide indicators
+        # hide indicators and raw
         self.ui.checkBox_vpeakShowRaw.setChecked(False)
+        self.ui.checkBox_vpeakShowPeakPos.setChecked(False)
 
         self._ipts_number = None
         self._run_number = None
@@ -262,7 +264,8 @@ class PeakPickerWindowChildVanadium(object):
                                                       ''.format(bank_id, run_err))
             return
 
-        self.plot_smoothed_peak_vanadium(bank_id)
+        self.plot_smoothed_peak_vanadium(bank_id, with_raw=self.ui.checkBox_vpeakShowRaw.isChecked(),
+                                         label='{}: {}/{}'.format(smoother_type, param_n, param_order))
 
         return
 
@@ -355,7 +358,7 @@ class PeakPickerWindowChildVanadium(object):
 
         return
 
-    def plot_smoothed_peak_vanadium(self, bank_id, with_raw=True):
+    def plot_smoothed_peak_vanadium(self, bank_id, with_raw=True, label=''):
         """
         Plot vanadium spectrum after vanadium peak removed and smoothed
         :param bank_id:
@@ -380,7 +383,7 @@ class PeakPickerWindowChildVanadium(object):
             vec_y_list.append(vec_raw_y)
 
         self._smoothed_van_line = self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='red', x_label='TOF',
-                                                                        label='Bank {} Smoothed'.format(bank_id))
+                                                                        label='Bank {} {}'.format(bank_id, label))
 
         #
         # reset X Y limit
@@ -439,6 +442,7 @@ class PeakPickerWindowChildVanadium(object):
         self._remove_raw_tof_line()
         self._remove_raw_dspace_line()
         self.show_hide_v_peaks(False)
+        self.ui.checkBox_vpeakShowRaw.setChecked(False)
 
         return
 
@@ -529,7 +533,9 @@ class PeakPickerWindowChildVanadium(object):
         try:
             # if smoothed then plot smoothed value
             self._myController.project.vanadium_processing_manager.get_peak_smoothed_data(bank_id)
-            self.plot_smoothed_peak_vanadium(bank_id)
+            self.plot_smoothed_peak_vanadium(bank_id, True, 'Smoothed')
+            # show raw
+            self.ui.checkBox_vpeakShowRaw.setChecked(True)  # trigger events handling
             return
         except RuntimeError:
             pass
@@ -538,10 +544,14 @@ class PeakPickerWindowChildVanadium(object):
             # if peak striped
             self._myController.project.vanadium_processing_manager.get_peak_striped_data(bank_id)
             self.plot_strip_peak_vanadium(bank_id)
+            # show raw
+            self.ui.checkBox_vpeakShowRaw.setChecked(True)  # trigger events handling
             return
         except RuntimeError:
             pass
 
+        # show raw
+        self.ui.checkBox_vpeakShowRaw.setChecked(True)  # trigger events handling
         # just plot raw dSpacing
         vec_x, vec_y = self.plot_raw_dspace(bank_id)
         self._reset_figure_range([vec_x], [vec_y])

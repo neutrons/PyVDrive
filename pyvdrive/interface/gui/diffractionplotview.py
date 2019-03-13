@@ -1300,7 +1300,11 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         if title is None:
             title = ''
 
-        pattern_key = self.add_plot_1d(vec_x, vec_y, label=title, color='black', marker='.')
+        pattern_key = self.add_plot_1d(vec_x, vec_y, label=title, color='black', marker='.',
+                                       x_label='dSpacing')
+        if self.get_x_limit()[1] > 50:
+            # reset x range
+            self.setXYLimit(xmin=0, xmax=5.)
 
         # Record the data for future usage
         if key is not None:

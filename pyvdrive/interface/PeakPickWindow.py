@@ -132,8 +132,8 @@ class PeakPickerWindow(QMainWindow):
         self.ui.pushButton_saveVanSettings.clicked.connect(self.do_save_vanadium_settings)
 
         self.ui.checkBox_vpeakShowRaw.toggled.connect(self.event_show_raw_van)
-        self.ui.checkBox_vpeakShowStripped.toggled.connect(self.event_show_peaks_striped_van)
-        self.ui.checkBox_vpeakShowSmoothed.toggled.connect(self.event_show_smoothed_van)
+        # self.ui.checkBox_vpeakShowStripped.toggled.connect(self.event_show_peaks_striped_van)
+        # self.ui.checkBox_vpeakShowSmoothed.toggled.connect(self.event_show_smoothed_van)
         self.ui.checkBox_vpeakShowPeakPos.toggled.connect(self.event_show_vpeaks)
 
         # load files
@@ -1762,7 +1762,7 @@ class PeakPickerWindow(QMainWindow):
 
         # right peak (indicator) to x-position
         right_id = self._indicatorIDList[2]
-        dx = right_bound -  self._indicatorPositionList[2]
+        dx = right_bound - self._indicatorPositionList[2]
         self.ui.graphicsView_main.move_indicator(right_id, dx, 0)
 
         # update
@@ -1821,19 +1821,22 @@ class PeakPickerWindow(QMainWindow):
         for tab_index in range(3):
             self.ui.tabWidget_functionControl.setTabEnabled(tab_index, tab_index == new_mode_index)
 
-        # # TODO - TONIGHT 43 - This is not a good approach to re-load data
-        # self.do_load_data()
-
-        if new_mode_index == 1:
+        if new_mode_index == 0:
+            # process peaks for single peak fitting (VDRIVE)
+            self._subControllerVanadium.reset_processing()
+            # TODO - TONIGHT 1 - Implement a method to plot current data
+        elif new_mode_index == 1:
             # process vanadium peaks
             ipts_number, run_number, gsas_file_name = self._data_info_dict[self._currGraphDataKey]
+            # if previous is 1   FIXME TODO - TOMORROW - If there are more than 2. This is redundant
             self.reset_plot_session()
+            self.ui.checkBox_pickPeak.setChecked(False)
+            #
             self._subControllerVanadium.set_vanadium_info(ipts_number, run_number)
             self._subControllerVanadium.init_session(self._currGraphDataKey)
             self._subControllerVanadium.plot_raw_dspace(self._currentBankNumber)
-        elif new_mode_index == 0:
-            # process peaks for single peak fitting (VDRIVE)
-            self._subControllerVanadium.reset_processing()
+            self.ui.checkBox_vpeakShowPeakPos.setChecked(False)
+        # END-IF-ELSE
 
         return
 
@@ -1929,6 +1932,8 @@ class PeakPickerWindow(QMainWindow):
         """
         # convert smooth_type to string from unicode
         smoother_type = str(smoother_type)
+        print ('[DB...BAT] Signal received: Smooth type = {}, n = {}, order = {}'
+               ''.format(smoother_type, param_n, param_order))
 
         self._subControllerVanadium.smooth_vanadium_peaks(None, smoother_type, param_n,
                                                           param_order)
@@ -1980,12 +1985,6 @@ class PeakPickerWindow(QMainWindow):
         :return:
         """
         self._subControllerVanadium.show_hide_raw_data(self.ui.checkBox_vpeakShowRaw.isChecked())
-
-    # TODO - TONIGHT 4 - Implement these methods!
-    def event_show_peaks_striped_van(self):
-        return
-
-    def event_show_smoothed_van(self):
         return
 
     def event_show_vpeaks(self):
