@@ -921,7 +921,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         else:
             # chopped data
-            self.plot_chopped_run(chop_key=self._curr_chop_data_key, bank_id=self._currBank,
+            curr_chop_name = str(self.ui.comboBox_choppedRunNumber.currentText())
+            chop_data_key = self._chop_combo_data_key_dict[curr_chop_name]
+            self.plot_chopped_run(chop_key=chop_data_key, bank_id=self._currBank,
                                   seq_list=None, main_only=True,
                                   van_norm=None, van_run=None, pc_norm=None, plot3d=False)
 

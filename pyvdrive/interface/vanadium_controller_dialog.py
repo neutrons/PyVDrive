@@ -49,7 +49,7 @@ class VanadiumProcessControlDialog(QDialog):
         self._slidersMutex = False  # mutex for sliders
 
         # class variables
-        self._min_smooth_n = 1  # 1 is the lower boundary for minimum smooth N
+        self._min_smooth_n = 2  # 1 is the lower boundary for minimum smooth N
         self._max_smooth_n = None
         self._min_smooth_order = 1  # 1 is the lower boundary for minimum smooth order
         self._max_smooth_order = None
@@ -123,8 +123,8 @@ class VanadiumProcessControlDialog(QDialog):
         self._inInteractiveMode = self.ui.checkBox_interactiveSmoothing.isChecked()
 
         # set range of the sliders
-        self.ui.horizontalSlider_smoothN.setRange(1, 50)
-        self._min_smooth_n = 1
+        self.ui.horizontalSlider_smoothN.setRange(2, 50)
+        self._min_smooth_n = 2
         self._max_smooth_n = 50
         self.ui.horizontalSlider_smoothOrder.setRange(1, 40)
         self._min_smooth_order = 1
@@ -329,7 +329,7 @@ class VanadiumProcessControlDialog(QDialog):
             return
 
         self.ui.horizontalSlider_smoothN.setRange(min_value, max_value)
-        self._min_smooth_n = min(1, min_value)
+        self._min_smooth_n = min(2, min_value)
         self._max_smooth_n = max_value
 
         return

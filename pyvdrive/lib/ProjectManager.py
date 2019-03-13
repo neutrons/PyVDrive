@@ -756,7 +756,7 @@ class ProjectManager(object):
         :return:
         """
         # check reduced data
-        if self._reductionManager.has_run_sliced_reduced(chop_data_key):
+        if isinstance(chop_data_key, tuple) and self._reductionManager.has_run_sliced_reduced(chop_data_key):
             # reduced runs from memory
             sequence_keys = self._reductionManager.get_sliced_focused_workspaces(chop_data_key[0],
                                                                                  chop_data_key[1])
@@ -782,7 +782,7 @@ class ProjectManager(object):
         datatypeutility.check_int_variable('Bank ID', bank_id, (1, 999))
 
         # check reduced data
-        if self._reductionManager.has_run_sliced_reduced(chop_data_key):
+        if isinstance(chop_data_key, tuple) and self._reductionManager.has_run_sliced_reduced(chop_data_key):
             # reduced runs from memory
             sequence_keys = self._reductionManager.get_sliced_focused_workspaces(chop_data_key[0],
                                                                                  chop_data_key[1])
