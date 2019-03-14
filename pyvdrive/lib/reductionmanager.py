@@ -1056,6 +1056,7 @@ class ReductionManager(object):
                         output_directory, reduce_data_flag, save_chopped_nexus, number_banks,
                         tof_correction, user_binning_parameter,
                         roi_list, mask_list, no_cal_mask, van_gda_name, gsas_parm_name='vulcan.prm',
+                        fullprof=False,
                         bin_overlap_mode=False, gda_file_start=1):
         """
         Latest version: version 3
@@ -1072,6 +1073,7 @@ class ReductionManager(object):
         :param tof_correction: TOF correction
         :param van_gda_name: None (for no-correction) or an integer (vanadium run number)
         :param user_binning_parameter:
+        :param fullprof: Flag to write out Fullprof file format
         :param roi_list:
         :param mask_list:
         :param no_cal_mask:
@@ -1166,6 +1168,7 @@ class ReductionManager(object):
                                                                      group_ws_name=group_ws_name,
                                                                      binning_parameters=binning_param_dict,
                                                                      gsas_info_dict=gsas_info,
+                                                                     fullprof=fullprof,
                                                                      clear_workspaces=True,
                                                                      gsas_writer=self._gsas_writer,
                                                                      num_reduced_banks=number_banks,

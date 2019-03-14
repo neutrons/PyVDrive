@@ -2,6 +2,7 @@
 import os
 import random
 import math
+import numpy
 import mantid_helper
 from mantid.api import ITableWorkspace, MatrixWorkspace
 from mantid.dataobjects import SplittersWorkspace
@@ -105,7 +106,7 @@ class DataChopper(object):
         self._myRunNumber = run_number
 
         # workspace name (might be sample log only)
-        self._mtdWorkspaceName = None
+        self._meta_ws_name = None   # name of (meta) workspace
         self._logNameList = None
         self._runStartTime = None
 
@@ -120,18 +121,26 @@ class DataChopper(object):
         return
 
     # TODO - TONIGHT 0 - NEW Implement
-    def detector_beam_downtime(self):
+    def detector_beam_downtime(self, time_resolution):
         """
         :return:
         """
-        pcharge = meta.run().getProperty('proton_charge')
+        # get workspace and proton charge log
+        proton_charges = mantid_helper.get_workspace_property(self._meta_ws_name, 'proton_charge', False)
+        vec_np_times = proton_charges.times
+        vec_pc_value = proton_charges.value
 
-        new_vec = pvalue[0::30]
+        # get pulse time
+        pulse_time = numpy.average(vec_np_times[1:] - vec_np_times[:-1])
+        num_cycles = int(time_resolution / pulse_time + 0.5)
 
-        for i in range(1, 30):
-            print (i)
-            vec_i = value_vec[i::30]
-            new_vec += vec_i
+        vec_sum_times = vec_np_times[0::num_cycles]
+        vec_sum_value = vec_pc_value[0::num_cycles]
+
+        for icycle in range(1, num_cycles):
+            vec_sum_value += vec_pc_value[icycle::num_cycles]
+
+        return vec_sum_times, vec_sum_value
 
     # TEST - Implemented in #65
     def delete_splitter_workspace(self, slicer_tag):
@@ -200,13 +209,13 @@ class DataChopper(object):
         :return:
         """
         # Check
-        if self._mtdWorkspaceName is None:
+        if self._meta_ws_name is None:
             raise RuntimeError('DataChopper has no data loaded to Mantid workspace.')
 
         info_str = 'Run {0}:\t'.format(self._myRunNumber)
 
         # get proton charge
-        proton_charge_property = mantid_helper.get_sample_log_tsp(self._mtdWorkspaceName, 'proton_charge')
+        proton_charge_property = mantid_helper.get_sample_log_tsp(self._meta_ws_name, 'proton_charge')
         pc_times = proton_charge_property.times
         # these are numpy.datetime64 object.  cannot be add to string like {}.format()
         info_str += 'run start: {0}; run stop:  {1}' \
@@ -222,14 +231,14 @@ class DataChopper(object):
         :return: List of sample logs
         """
         # Check
-        if self._mtdWorkspaceName is None:
+        if self._meta_ws_name is None:
             raise RuntimeError('DataChopper has no data loaded to Mantid workspace.')
 
         # Easy return
         if not with_info:
             return self._logNameList[:]
 
-        return mantid_helper.get_sample_log_names(self._mtdWorkspaceName, smart=True)
+        return mantid_helper.get_sample_log_names(self._meta_ws_name, smart=True)
 
     def get_sample_data(self, sample_log_name, start_time, stop_time, relative):
         """
@@ -248,7 +257,7 @@ class DataChopper(object):
             raise RuntimeError('Sample log name %s is not a FloatSeries.' % sample_log_name)
 
         # Get property
-        vec_times, vec_value = mantid_helper.get_sample_log_value(src_workspace=self._mtdWorkspaceName,
+        vec_times, vec_value = mantid_helper.get_sample_log_value(src_workspace=self._meta_ws_name,
                                                                   sample_log_name=sample_log_name,
                                                                   start_time=start_time,
                                                                   stop_time=stop_time,
@@ -293,7 +302,7 @@ class DataChopper(object):
 
         # relative time?
         if relative_time:
-            run_start_time = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='second')
+            run_start_time = mantid_helper.get_run_start(self._meta_ws_name, time_unit='second')
         else:
             run_start_time = None
         print '[INFO] Run start time = ', run_start_time, 'of type ', type(run_start_time)
@@ -330,17 +339,17 @@ class DataChopper(object):
                 raise RuntimeError(err_msg)
 
         # register
-        self._mtdWorkspaceName = out_ws_name
+        self._meta_ws_name = out_ws_name
 
         # Set up log names list
         try:
-            self._logNameList = mantid_helper.get_sample_log_names(self._mtdWorkspaceName)
+            self._logNameList = mantid_helper.get_sample_log_names(self._meta_ws_name)
             assert isinstance(self._logNameList, list)
         except RuntimeError as err:
             return False, 'Unable to retrieve series log due to %s.' % str(err)
 
         # Set up run start time
-        self._runStartTime = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='nanosecond')
+        self._runStartTime = mantid_helper.get_run_start(self._meta_ws_name, time_unit='nanosecond')
 
         return out_ws_name
 
@@ -388,7 +397,7 @@ class DataChopper(object):
         splitter_ws_name = tag
         info_ws_name = '%s_Info' % tag
 
-        mantid_helper.generate_event_filters_by_log(self._mtdWorkspaceName, splitter_ws_name, info_ws_name,
+        mantid_helper.generate_event_filters_by_log(self._meta_ws_name, splitter_ws_name, info_ws_name,
                                                     min_time, max_time, log_name, min_log_value, max_log_value,
                                                     log_value_step, direction)
 
@@ -440,7 +449,7 @@ class DataChopper(object):
         if start_time is None:
             start_time = 0
         if stop_time is None:
-            stop_time = mantid_helper.get_run_stop(self._mtdWorkspaceName, 'second', is_relative=True)
+            stop_time = mantid_helper.get_run_stop(self._meta_ws_name, 'second', is_relative=True)
         print ('[DB...BAT] Run stop = {}'.format(stop_time))
 
         split_list = list()
@@ -459,20 +468,20 @@ class DataChopper(object):
 
         # Determine tag
         if splitter_tag is None:
-            splitter_tag = get_standard_manual_tag(self._mtdWorkspaceName)
+            splitter_tag = get_standard_manual_tag(self._meta_ws_name)
 
         # Generate split workspaces
         splitter_tag_list = list()
         for i_split, split_tup in enumerate(split_list):
             splitter_tag_i = splitter_tag + '_{:05}'.format(i_split)
             splitter_info_i = splitter_tag_i + '_info'
-            status, message = mantid_helper.generate_event_filters_by_time(self._mtdWorkspaceName,
-                                                                             splitter_tag_i,
-                                                                             splitter_info_i,
-                                                                             split_tup[0],
-                                                                             split_tup[1],
-                                                                             delta_time=None,
-                                                                             time_unit='second')
+            status, message = mantid_helper.generate_event_filters_by_time(self._meta_ws_name,
+                                                                           splitter_tag_i,
+                                                                           splitter_info_i,
+                                                                           split_tup[0],
+                                                                           split_tup[1],
+                                                                           delta_time=None,
+                                                                           time_unit='second')
 
             if not status:
                 return False, message
@@ -510,8 +519,8 @@ class DataChopper(object):
         splitter_ws_name = tag
         info_ws_name = tag + '_Info'
 
-        assert self._mtdWorkspaceName is not None, 'Mantid workspace has not been loaded yet.'
-        status, message = mantid_helper.generate_event_filters_by_time(self._mtdWorkspaceName,
+        assert self._meta_ws_name is not None, 'Mantid workspace has not been loaded yet.'
+        status, message = mantid_helper.generate_event_filters_by_time(self._meta_ws_name,
                                                                        splitter_ws_name, info_ws_name,
                                                                        start_time, stop_time,
                                                                        time_step, 'Seconds')

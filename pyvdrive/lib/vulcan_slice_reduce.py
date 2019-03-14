@@ -227,7 +227,8 @@ class SliceFocusVulcan(object):
     def slice_focus_event_workspace(self, event_ws_name, geometry_calib_ws_name, group_ws_name,
                                     split_ws_name, info_ws_name,
                                     output_ws_base, binning_parameters, chop_overlap_mode,
-                                    gsas_info_dict, gsas_writer, gsas_file_index_start):
+                                    gsas_info_dict, gsas_writer, gsas_file_index_start,
+                                    fullprof):
         """ Slice and diffraction focus event workspace with option to write the reduced data to GSAS file with
         SaveGSS().
         Each workspace is
@@ -245,6 +246,7 @@ class SliceFocusVulcan(object):
         :param gsas_info_dict: required for writing GSAS files keys (IPTS, 'parm file' = 'vulcan.prm', 'vanadium')
         :param gsas_writer: GSASWriter instance to export to VULCAN GSAS file
         :param gsas_file_index_start: starting index of GSAS file (1.gda, 2.gda.. whether 0.gda?)
+        :param fullprof: Flag to write reduced data to Fullprof (along with GSAS)
         :return: tuple: [1] slicing information, [2] output workspace names
         """
         # check inputs
@@ -358,6 +360,10 @@ class SliceFocusVulcan(object):
                            gsas_writer=gsas_writer, run_start_date=run_date_time,  # ref_tof_sets=binning_parameters,
                            gsas_file_index_start=gsas_file_index_start)
 
+        if fullprof:
+            output_dir = gsas_writer.get_output_directory()
+            self.write_to_fullprof_files(output_names, output_dir)
+
         if True:
             pc_time0 = mantid_helper.get_workspace_property(event_ws_name, 'proton_charge').times[0]
             self.export_split_logs(output_names, gsas_file_index_start=gsas_file_index_start,
@@ -433,6 +439,23 @@ class SliceFocusVulcan(object):
                                            gsas_param_file_name=parm_file_name, align_vdrive_bin=True,
                                            van_ws_name=van_ws_name, is_chopped_run=True, write_to_file=False)
             self._gsas_buffer_dict[ws_name] = text_buffer
+
+        return
+
+    def write_to_fullprof_files(self, workspace_name_list, van_ws_name, output_dir):
+        """
+        Export to Fullprof format
+        :param workspace_name_list:
+        :param van_ws_name:
+        :param output_dir:
+        :return:
+        """
+        for index_ws, ws_name in enumerate(workspace_name_list):
+            if ws_name == '':
+                continue
+            if van_ws_name is not None:
+                mantid_helper.workspace_divide(ws_name, van_ws_name)
+            mantid_helper.export_fullprof(ws_name, os.path.join(output_dir, '{}.dat'.format(index_ws + 1)))
 
         return
 

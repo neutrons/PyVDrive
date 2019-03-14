@@ -335,7 +335,7 @@ class ProjectManager(object):
         return status, error_message, available_runs
 
     # TODO - TONIGHT 0 - Better codes
-    def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus,
+    def chop_run(self, run_number, slicer_key, reduce_flag, fullprof, vanadium, save_chopped_nexus,
                  number_banks, tof_correction, output_directory,
                  user_bin_parameter, roi_list, mask_list, nexus_file_name=None,
                  gsas_iparm_file='vulcan.prm',
@@ -352,6 +352,7 @@ class ProjectManager(object):
         :param run_number:
         :param slicer_key:
         :param reduce_flag:
+        :param fullprof: Flag to export reduced data to Fullprof
         :param vanadium:
         :param save_chopped_nexus: flag for saving chopped data to NeXus
         :param tof_correction:
@@ -427,6 +428,7 @@ class ProjectManager(object):
                                                                       mask_list=mask_list,
                                                                       van_gda_name=van_gsas_name,
                                                                       gsas_parm_name=iparam_file_name,
+                                                                      fullprof=fullprof,
                                                                       no_cal_mask=False,
                                                                       bin_overlap_mode=overlap_mode,
                                                                       gda_file_start=gda_start)

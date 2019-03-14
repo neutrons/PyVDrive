@@ -392,6 +392,18 @@ def delete_workspace(workspace):
     return
 
 
+def export_fullprof(ws_name, file_name):
+    """
+    Export a workspace to Fullprof file
+    :param ws_name:
+    :param file_name:
+    :return:
+    """
+    mantidapi.SaveFocusedXYE(ws_name, file_name, SplitFiles=False, IncludeHeader=True, Format='XYE')
+
+    return
+
+
 def extract_spectrum(input_workspace, output_workspace, workspace_index):
     """
     extract a spectrum from a workspace
@@ -721,7 +733,8 @@ def get_run_start(workspace, time_unit):
                 start_date = workspace.run().getProperty('run_start').value
             except RuntimeError as run_err:
                 raise RuntimeError('Workspace {} has neither proton_charge nor run_start in sample log.'
-                                   'Unable to get run start from it'.format(str(workspace)))
+                                   'Unable to get run start from it due to {}'.format(str(workspace),
+                                                                                      run_err))
         # END-IF
 
         # example: '2018-05-28T15:04:33.540623666-0400' or 2018-05-28T19:04:33.540623666'
@@ -734,7 +747,6 @@ def get_run_start(workspace, time_unit):
     elif pcharge_log:
         # convert to seconds or nanoseconds
         # Get first value in proton charge's time as run start
-        print ('[DB...BAT...mantid_helper] About to get pcharge.firstTime()')
         pcharge_time0 = pcharge_log.firstTime()
         run_start_ns = pcharge_time0.totalNanoseconds()
 
@@ -1260,10 +1272,8 @@ def get_workspace_property(workspace_name, property_name, value_in_str=False):
     :return: a string (value of property) or an instance of property
     """
     # check
-    assert isinstance(workspace_name, str), 'Workspace name {0} must be an integer but not a {1}.' \
-                                            ''.format(workspace_name, type(workspace_name))
-    assert isinstance(property_name, str), 'Property name {0} must be an integer but not a {1}.' \
-                                           ''.format(property_name, type(property_name))
+    datatypeutility.check_string_variable('Workspace name', workspace_name)
+    datatypeutility.check_string_variable('Property name', property_name)
 
     workspace = retrieve_workspace(workspace_name)
 
@@ -1629,7 +1639,7 @@ def load_mask_xml(data_ws_name, mask_file_name, mask_ws_name=None):
     load Mantid compatible masking file in XML format
     :param data_ws_name:
     :param mask_file_name:
-    :param mask workspace name:
+    :param mask_ws_name:
     :return:
     """
     datatypeutility.check_file_name(mask_file_name, check_exist=True, note='ROI XML file')
@@ -2077,16 +2087,6 @@ def normalize_by_vanadium(data_ws_name, van_ws_name):
     return
 
 
-def parse_mask_roi_xml(xml_file_name):
-    """
-    parse the Mask/ROI XML file to a list of masked/ROI detectors' IDs
-    :param xml_file_name:
-    :return: is_roi, det_id_list
-    """
-
-    return is_roi, det_id_list
-
-
 def rebin(workspace_name, params, preserve, output_ws_name=None):
     """
     rebin the workspace
@@ -2512,4 +2512,3 @@ def workspace_does_exist(workspace_name):
     does_exist = ADS.doesExist(workspace_name)
 
     return does_exist
-

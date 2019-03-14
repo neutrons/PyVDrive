@@ -1248,23 +1248,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # entry_key = data_key, bank_id, self._currUnit
         vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=data_key, bank_id=bank_id,
                                                          unit=self._currUnit)
-        # TODO - TONIGHT - Put to a method (1)
         if pc_norm:
+            # proton charge normalization
             pc_norm = self.get_proton_charge(self._iptsNumber, self._currRunNumber, None)
+            vec_y /= pc_norm
         if van_norm:
+            # vanadium spectrum normalization
             van_vec_y = self.get_vanadium_spectrum(van_run, bank_id)
-
-            # # TODO - TONIGHT 1 - Consider to make this part as a method to call
-            # from pyvdrive.lib import mantid_helper
-            # print ('[DB...BAT] Vanadium workspace = {}'.format(self._vanadium_dict[van_run]))
-            # van_ws_name = self._vanadium_dict[van_run]
-            # mantid_helper.mtd_convert_units(van_ws_name, 'dSpacing')
-            # van_ws = mantid_helper.retrieve_workspace(van_ws_name, True)
-            # if van_ws.id() == 'WorkspaceGroup':
-            #     van_vec_y = van_ws[bank_id - 1].readY(0)
-            # else:
-            #     van_vec_y = van_ws.readY(bank_id - 1)
-
             vec_y /= van_vec_y
             # END-IF
 
@@ -1284,22 +1274,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 child_window = self.launch_single_run_view()
                 vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=data_key, bank_id=bank_id,
                                                                  unit=self._currUnit)
-                # TODO - TONIGHT - Put to a method (1)
                 if pc_norm:
+                    # proton charge normalization
                     pc_norm = self.get_proton_charge(self._iptsNumber, self._currRunNumber, None)
+                    vec_y /= pc_norm
                 if van_norm:
+                    # vanadium normalization
                     van_vec_y = self.get_vanadium_spectrum(van_run, bank_id)
-                    # # TODO - TONIGHT 1 - Consider to make this part as a method to call
-                    # from pyvdrive.lib import mantid_helper
-                    # print ('[DB...BAT] Vanadium workspace = {}'.format(self._vanadium_dict[van_run]))
-                    # van_ws_name = self._vanadium_dict[van_run]
-                    # mantid_helper.mtd_convert_units(van_ws_name, 'dSpacing')
-                    # van_ws = mantid_helper.retrieve_workspace(van_ws_name, True)
-                    # if van_ws.id() == 'WorkspaceGroup':
-                    #     van_vec_y = van_ws[bank_id - 1].readY(0)
-                    # else:
-                    #     van_vec_y = van_ws.readY(bank_id - 1)
-
                     vec_y /= van_vec_y
                     # END-IF
                 child_window.plot_data(vec_x, vec_y, data_key, self._currUnit, bank_id)
@@ -1320,7 +1301,16 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param main_only:
         :return:
         """
-        def construct_chopped_data(chop_data_key, chop_sequences, bank_index, pc_norm):
+        def construct_chopped_data(chop_data_key, chop_sequences, bank_index, do_pc_norm,
+                                   do_van_norm, vanadium_vector):
+            """
+            construct the chopped data to plot
+            :param chop_data_key:
+            :param chop_sequences:
+            :param bank_index:
+            :param do_pc_norm:
+            :return: 2-tuple: chopped sequence list and data set list
+            """
             # construct input for contour plot
             data_sets = list()
             new_seq_list = list()
@@ -1331,11 +1321,14 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                                                 bank_index)
                     vec_x_i, vec_y_i = data
 
-                    # TODO - TONIGHT - Put to a method (1)
                     # normalize by proton charge
-                    if pc_norm:
+                    if do_pc_norm:
                         p_charge_i = self.get_proton_charge(self._iptsNumber, self._currRunNumber, chop_seq_i)
                         vec_y_i /= p_charge_i
+                    # normalize by vanadium spectrum
+                    if do_van_norm:
+                        vec_y_i /= vanadium_vector
+
                     data_sets.append((vec_x_i, vec_y_i))
                     new_seq_list.append(chop_seq_i)
                 except (RuntimeError, KeyError) as run_err_i:
@@ -1367,34 +1360,21 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             curr_seq = self.ui.comboBox_chopSeq.currentIndex()
         vec_x, vec_y = self._myController.project.get_chopped_sequence_data(chop_key, curr_seq, bank_id)
 
-        # normalize by proton charge
-        # TODO - TONIGHT - Put to a method (1)
+        # normalization
         if pc_norm:
-            print ('[DB...BAT] Current Seq = {}'.format(curr_seq))
+            # normalize by proton charge
             pc_seq = self.get_proton_charge(self._iptsNumber, self._currRunNumber, curr_seq)
-            print (type(pc_seq), pc_seq)
-            print (type(vec_y))
             vec_y /= pc_seq
 
         if van_norm:
             # vanadium normalization
             van_vec_y = self.get_vanadium_spectrum(van_run, bank_id)
-
-            # TODO - TONIGHT 1 - Consider to make this part as a method to call
-            # from pyvdrive.lib import mantid_helper
-            # print ('[DB...BAT] Vanadium workspace = {}'.format(self._vanadium_dict[van_run]))
-            # van_ws_name = self._vanadium_dict[van_run]
-            # mantid_helper.mtd_convert_units(van_ws_name, 'dSpacing')
-            # van_ws = mantid_helper.retrieve_workspace(van_ws_name, True)
-            # if van_ws.id() == 'WorkspaceGroup':
-            #     van_vec_y = van_ws[bank_id-1].readY(0)
-            # else:
-            #     van_vec_y = van_ws.readY(bank_id - 1)
-
             vec_y /= van_vec_y
+        else:
+            van_vec_y = None
         # END-IF
 
-        # plot
+        # plot 1D chopped data
         self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit=self._currUnit,
                                                             over_plot=True,
                                                             run_id=chop_key, bank_id=bank_id,
@@ -1406,13 +1386,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # set sequence
             if seq_list is None:
                 seq_list = self._myController.project.get_chopped_sequence(chop_key)
-            print ('[DB..........BAT] Seq: {}'.format(seq_list))
 
             # launch windows for contour plots and 3D line plots
             for bank_id in range(1, 4):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
                 # data sets
                 try:
-                    seq_list, data_set_list = construct_chopped_data(chop_key, seq_list, bank_id, pc_norm)
+                    seq_list, data_set_list = construct_chopped_data(chop_key, seq_list, bank_id, pc_norm,
+                                                                     van_norm, van_vec_y)
                 except RuntimeError as run_err:
                     GuiUtility.pop_dialog_error(self, 'Unable to plot chopped data due to {}'.format(run_err))
                     return

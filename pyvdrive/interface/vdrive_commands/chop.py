@@ -22,7 +22,7 @@ class VdriveChop(VDriveCommand):
     SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'DBIN', 'LOADFRAME', 'FURNACE', 'BIN', 'PICKDATA', 'OUTPUT',
                      'BINFOLDER','MYTOFMIN', 'MYTOFMAX', 'BINW',
                      'PULSETIME', 'DT', 'RUNV', 'ROI', 'MASK', 'NEXUS', 'STARTTIME', 'STOPTIME',
-                     'NUMBANKS', 'SAVECHOPPED2NEXUS', 'IPARM', 'DRYRUN']
+                     'NUMBANKS', 'SAVECHOPPED2NEXUS', 'IPARM', 'DRYRUN', 'FULLPROF']
 
     reduceSignal = QtCore.pyqtSignal(str)  # signal to send out
 
@@ -36,6 +36,7 @@ class VdriveChop(VDriveCommand):
         'LOADFRAME': 'Chop LoadFrame log (MTSLoadFrame) along with',
         'FURNACE': 'Chop Furnace log (MTSFurnace) along with',
         'BIN': 'If bin=1, chopped data will be reduced to GSAS files',
+        'FULLPROF': 'If FullProf = 1, then chopped data will be written to Fullprof data format',
         'BANKS': 'Number of banks in the output GSAS file',
         'MYTOFMIN': 'User defined TOF min in binning parameter. It must be used with MYTOFMAX and BINW',
         'MYTOFMAX': 'User defined TOF max in binning parameter. It must be used with MYTOFMIN and BINW',
@@ -79,6 +80,9 @@ class VdriveChop(VDriveCommand):
             self._iptsNumber = ipts_number
         if isinstance(run_number_list, list) and len(run_number_list) > 0:
             self._runNumberList = run_number_list[:]
+
+        # others
+        self._write_to_fullprof = False
 
         # define signal
         # TODO - NIGHT - Do this one step by one step: Long exec separate thread
@@ -220,7 +224,9 @@ class VdriveChop(VDriveCommand):
         print ('[DB...BAT...UND] Slicer key = {}'.format(slicer_key))
         status, message = self._controller.project.chop_run(run_number, slicer_key,
                                                             reduce_flag=reduce_flag,
-                                                            vanadium=vanadium, save_chopped_nexus=save_to_nexus,
+                                                            fullprof=self._write_to_fullprof,
+                                                            vanadium=vanadium,
+                                                            save_chopped_nexus=save_to_nexus,
                                                             number_banks=num_banks,
                                                             tof_correction=False,
                                                             output_directory=output_dir,
@@ -284,6 +290,7 @@ class VdriveChop(VDriveCommand):
         for i_slice, slice_key in enumerate(slice_key_list):
             status, message = self._controller.project.chop_run(run_number, slice_key,
                                                                 reduce_flag=reduce_flag,
+                                                                fullprof=self._write_to_fullprof,
                                                                 vanadium=vanadium, save_chopped_nexus=save_to_nexus,
                                                                 number_banks=num_banks,
                                                                 tof_correction=False,
@@ -359,7 +366,9 @@ class VdriveChop(VDriveCommand):
         # chop and reduce
         status, message = self._controller.project.chop_run(run_number, slicer_key,
                                                             reduce_flag=reduce_flag,
-                                                            vanadium=vanadium, save_chopped_nexus=save_to_nexus,
+                                                            fullprof=self._write_to_fullprof,
+                                                            vanadium=vanadium,
+                                                            save_chopped_nexus=save_to_nexus,
                                                             number_banks=num_banks,
                                                             tof_correction=False,
                                                             output_directory=output_dir,
@@ -580,27 +589,6 @@ class VdriveChop(VDriveCommand):
 
         return run_start, run_end
 
-    def _process_binning_setup(self):
-        """ Processing diffraction focus and save to GSAS related setup
-        :return: bool (bin chopped data), int (number of banks)
-        """
-        if 'BIN' in self._commandArgsDict:
-            bin_run = convert_string_to(self._commandArgsDict['BIN'], int) > 0
-        else:
-            # default is True
-            bin_run = True
-
-        # number of banks in output GSAS file
-        if 'BANKS' in self._commandArgsDict:
-            num_banks = convert_string_to(self._commandArgsDict['BANKS'], int)
-            if num_banks <= 0:
-                raise RuntimeError('Banks number cannot be zero or less')
-        else:
-            # default is 3
-            num_banks = 3
-
-        return bin_run, num_banks
-
     def exec_cmd(self):
         """
         Execute input command (override)
@@ -629,12 +617,16 @@ class VdriveChop(VDriveCommand):
             roi_file_names, mask_file_names = self._get_mask_or_roi()
 
             # GSAS binning section
-            output_to_gsas, num_banks = self._process_binning_setup()
+            output_to_gsas, num_banks, _write_to_fullprof = self.process_binning_setup()
             # binning parameters
             use_default_binning, binning_parameters = self.parse_binning()
             # vanadium calibration
             van_run_number = self._get_van_run()
             iparm_name = self._get_gsas_iparm_name()
+
+            # extra check
+            # if _write_to_fullprof and van_run_number is None:
+            #     raise RuntimeError('Vanadium run must be specified if Fullprof is to be written')
 
             # extra sample log information
             chop_load_frame, chop_furnace_log = self._get_chop_log_setup()
