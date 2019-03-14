@@ -823,6 +823,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                                                     log_name=curr_x_log_name,
                                                                                     start_time=None, stop_time=None,
                                                                                     relative=True)
+                # TODO - TONIGHT 0 - merge_2_logs shall be a static in the utility and called by plot_sample_log()!
                 vec_log_x, vec_log_y = vdrivehelper.merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
             # END-IF-ELSE
         else:

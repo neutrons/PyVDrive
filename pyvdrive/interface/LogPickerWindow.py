@@ -83,6 +83,7 @@ class WindowLogPicker(QMainWindow):
         self.ui.radioButton_manualSlicer.toggled.connect(self.evt_switch_slicer_method)
         self.ui.pushButton_slicer.clicked.connect(self.do_chop)
         self.ui.pushButton_viewReduced.clicked.connect(self.do_view_reduced_data)
+        self.ui.pushButton_setXAxis.clicked.connect(self.do_plot_sample_logs)
 
         # Further operation
         # self.ui.pushButton_highlight.clicked.connect()
@@ -699,6 +700,19 @@ class WindowLogPicker(QMainWindow):
 
         return
 
+    def do_plot_sample_logs(self):
+        """
+        Plot sample logs
+        :return:
+        """
+        log_name_x = str(self.ui.comboBox_logNamesX.currentText())
+        log_name_y = str(self.ui.comboBox_logNames.currentText())
+
+        self.plot_nexus_log(log_name_y, log_name_x)
+        # self.plot_mts_log(log_name=log_name_y, reset_canvas=True, x_axis_log=log_name_x)
+
+        return
+
     def do_scan_log_file(self):
         """
         Purpose: read MTS log file by launching an MTS log file parsing window
@@ -980,7 +994,11 @@ class WindowLogPicker(QMainWindow):
         self._mutexLockLogNameComboBox = True
 
         # clear box
+        self.ui.comboBox_logNamesX.clear()
         self.ui.comboBox_logNames.clear()
+
+        # add Time for X
+        self.ui.comboBox_logNamesX.addItem('Time (second)')
 
         # add sample logs to combo box
         for log_name in self._logNameList:
@@ -990,8 +1008,10 @@ class WindowLogPicker(QMainWindow):
                 if log_size == 1:
                     continue
             # add log
+            self.ui.comboBox_logNamesX.addItem(log_name.split()[0])
             self.ui.comboBox_logNames.addItem(str(log_name))
         # END-FOR
+        self.ui.comboBox_logNamesX.setCurrentIndex(0)
         self.ui.comboBox_logNames.setCurrentIndex(0)
 
         # release
@@ -1060,9 +1080,8 @@ class WindowLogPicker(QMainWindow):
 
         return
 
-    def plot_mts_log(self, log_name, reset_canvas, extra_message=None):
+    def plot_mts_log(self, log_name, reset_canvas, x_axis_log='Time', extra_message=None):
         """
-
         :param log_name:
         :param reset_canvas:
         :param extra_message:
@@ -1073,15 +1092,23 @@ class WindowLogPicker(QMainWindow):
             self.ui.label_logFileLoadInfo.setText(extra_message)
 
         # check
+        datatypeutility.check_string_variable('Log name (X)', x_axis_log)
+        datatypeutility.check_string_variable('Log name (Y)', log_name)
+
+        # further process
+        x_axis_log = x_axis_log.split()[0]
+        log_name = log_name.split()[0]
+
         assert isinstance(log_name, str), 'Log name %s must be a string but not %s.' \
                                           '' % (str(log_name), str(type(log_name)))
 
         mts_data_set = self._myParent.get_controller().get_mts_log_data(log_file_name=None,
-                                                                        header_list=['Time', log_name])
+                                                                        header_list=[x_axis_log, log_name])
         # plot a numpy series'
         try:
-            vec_x = mts_data_set['Time']
+            vec_x = mts_data_set[x_axis_log]
             vec_y = mts_data_set[log_name]
+            print (vec_x.shape, vec_y.shape)
             assert isinstance(vec_x, numpy.ndarray)
             assert isinstance(vec_y, numpy.ndarray)
         except KeyError as key_err:
@@ -1096,7 +1123,7 @@ class WindowLogPicker(QMainWindow):
 
         return
 
-    def plot_nexus_log(self, log_name):
+    def plot_nexus_log(self, log_name, x_axis_log='Time'):
         """
         Plot log from NEXUX file
         Requirement:
@@ -1105,42 +1132,58 @@ class WindowLogPicker(QMainWindow):
         :param log_name:
         :return:
         """
-        # get resolution
-        use_time_res = self.ui.radioButton_useTimeResolution.isChecked()
-        use_num_res = self.ui.radioButton_useMaxPointResolution.isChecked()
-        if use_time_res:
-            resolution = GuiUtility.parse_float(self.ui.lineEdit_timeResolution)
-        elif use_num_res:
-            resolution = GuiUtility.parse_float(self.ui.lineEdit_resolutionMaxPoints)
-        else:
-            GuiUtility.pop_dialog_error(self, 'Either time or number resolution should be selected.')
-            return
+        # check
+        datatypeutility.check_string_variable('Log name (X)', x_axis_log)
+        datatypeutility.check_string_variable('Log name (Y)', log_name)
 
-        # get the sample log data
-        if log_name in self._sampleLogDict[self._currRunNumber]:
-            # get sample log value from previous stored
-            vec_x, vec_y = self._sampleLogDict[self._currRunNumber][log_name]
+        # further process
+        x_axis_log = x_axis_log.split()[0]
+        log_name = log_name.split()[0]
+
+        if x_axis_log == 'Time':
+            # get resolution
+            use_time_res = self.ui.radioButton_useTimeResolution.isChecked()
+            use_num_res = self.ui.radioButton_useMaxPointResolution.isChecked()
+            if use_time_res:
+                resolution = GuiUtility.parse_float(self.ui.lineEdit_timeResolution)
+            elif use_num_res:
+                resolution = GuiUtility.parse_float(self.ui.lineEdit_resolutionMaxPoints)
+            else:
+                GuiUtility.pop_dialog_error(self, 'Either time or number resolution should be selected.')
+                return
+
+            # get the sample log data
+            if log_name in self._sampleLogDict[self._currRunNumber]:
+                # get sample log value from previous stored
+                vec_x, vec_y = self._sampleLogDict[self._currRunNumber][log_name]
+            else:
+                # get sample log data from driver
+                vec_x, vec_y = self._myParent.get_sample_log_value(self._currRunNumber, log_name, relative=True)
+                self._sampleLogDict[self._currRunNumber][log_name] = vec_x, vec_y
+            # END-IF
+
+            # get range of the data
+            new_min_x = GuiUtility.parse_float(self.ui.lineEdit_minX)
+            new_max_x = GuiUtility.parse_float(self.ui.lineEdit_maxX)
+
+            # adjust the resolution
+            plot_x, plot_y = self.process_data(vec_x, vec_y, use_num_res, use_time_res, resolution,
+                                               new_min_x, new_max_x)
+
+            # overlay?
+            if self.ui.checkBox_overlay.isChecked() is False:
+                # clear all previous lines
+                self.ui.graphicsView_main.reset()
+
+            # plot
+            self.ui.graphicsView_main.plot_sample_log(plot_x, plot_y, log_name, '', 'Time (s)')
+
         else:
-            # get sample log data from driver
-            vec_x, vec_y = self._myParent.get_sample_log_value(self._currRunNumber, log_name, relative=True)
-            self._sampleLogDict[self._currRunNumber][log_name] = vec_x, vec_y
+            # other solution
+            vec_times_x, vec_log_x = self._myParent.get_sample_log_value(self._currRunNumber, x_axis_log, relative=True)
+            vec_times_y, vec_log_y = self._myParent.get_sample_log_value(self._currRunNumber, log_name, relative=True)
+            self.ui.graphicsView_main.plot_sample_log()
         # END-IF
-
-        # get range of the data
-        new_min_x = GuiUtility.parse_float(self.ui.lineEdit_minX)
-        new_max_x = GuiUtility.parse_float(self.ui.lineEdit_maxX)
-
-        # adjust the resolution
-        plot_x, plot_y = self.process_data(vec_x, vec_y, use_num_res, use_time_res, resolution,
-                                           new_min_x, new_max_x)
-
-        # overlay?
-        if self.ui.checkBox_overlay.isChecked() is False:
-            # clear all previous lines
-            self.ui.graphicsView_main.reset()
-
-        # plot
-        self.ui.graphicsView_main.plot_sample_log(plot_x, plot_y, log_name, '', 'Time (s)')
 
         return
 

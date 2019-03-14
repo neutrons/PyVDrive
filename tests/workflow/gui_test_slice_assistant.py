@@ -57,8 +57,12 @@ class EventFilteringAssistantTestEnvironment(object):
         # self._slice_window.ui.lineEdit_iptsNumber.setText('{}'.format(22126))
         # self._slice_window.ui.lineEdit_runNumber.setText('{}'.format(171898))
 
-        self._slice_window.ui.lineEdit_iptsNumber.setText('{}'.format(22126))
-        self._slice_window.ui.lineEdit_runNumber.setText('{}'.format(171899))
+        if False:
+            self._slice_window.ui.lineEdit_iptsNumber.setText('{}'.format(22126))
+            self._slice_window.ui.lineEdit_runNumber.setText('{}'.format(171899))
+        else:
+            self._slice_window.ui.lineEdit_iptsNumber.setText('{}'.format(20391))
+            self._slice_window.ui.lineEdit_runNumber.setText('{}'.format(172373))
 
         self._slice_window.do_load_run()
 
@@ -71,7 +75,11 @@ def test_main():
     """
     slice_ui_tester = EventFilteringAssistantTestEnvironment()
     slice_ui_tester.set_ipts_run(None, None)
-    slice_ui_tester.chop_by_time()
+
+    if False:
+        slice_ui_tester.chop_by_time()
+    else:
+        pass
 
     return slice_ui_tester.main_window
 
