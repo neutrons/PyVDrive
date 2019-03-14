@@ -111,7 +111,7 @@ class VDriveCommand(QObject):
             bin_run = True
 
         if 'FULLPROF' in self._commandArgsDict:
-            write_fp = convert_string_to(self._commandArgsDict['BIN'], int) > 0
+            write_fp = convert_string_to(self._commandArgsDict['FULLPROF'], int) > 0
         else:
             # default is False
             write_fp = False

@@ -617,7 +617,7 @@ class VdriveChop(VDriveCommand):
             roi_file_names, mask_file_names = self._get_mask_or_roi()
 
             # GSAS binning section
-            output_to_gsas, num_banks, _write_to_fullprof = self.process_binning_setup()
+            output_to_gsas, num_banks, self._write_to_fullprof = self.process_binning_setup()
             # binning parameters
             use_default_binning, binning_parameters = self.parse_binning()
             # vanadium calibration

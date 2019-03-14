@@ -758,15 +758,17 @@ class ProjectManager(object):
         :return:
         """
         # check reduced data
-        if isinstance(chop_data_key, tuple) and self._reductionManager.has_run_sliced_reduced(chop_data_key):
-            # reduced runs from memory
-            sequence_keys = self._reductionManager.get_sliced_focused_workspaces(chop_data_key[0],
-                                                                                 chop_data_key[1])
-
+        if isinstance(chop_data_key, tuple):
+            if self._reductionManager.has_run_sliced_reduced(chop_data_key):
+                # reduced runs from memory
+                sequence_keys = self._reductionManager.get_sliced_focused_workspaces(chop_data_key[0],
+                                                                                     chop_data_key[1])
+            else:
+                # cannot be found
+                sequence_keys = None
         else:
             # loaded from GSAS files
             sequence_keys = self._loadedDataManager.get_chopped_sequences(chop_data_key)
-            print ('[UND] sequence keys: {}'.format(sequence_keys))
         # END-IF-ELSE
 
         return sequence_keys

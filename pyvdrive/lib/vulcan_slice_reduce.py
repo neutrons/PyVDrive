@@ -361,8 +361,9 @@ class SliceFocusVulcan(object):
                            gsas_file_index_start=gsas_file_index_start)
 
         if fullprof:
-            output_dir = gsas_writer.get_output_directory()
-            self.write_to_fullprof_files(output_names, output_dir)
+            output_dir = self._output_dir
+            # FIXME TODO - TOMORROW 0 - Vanadium workspace for Fullprof?
+            self.write_to_fullprof_files(output_names, None, output_dir)
 
         if True:
             pc_time0 = mantid_helper.get_workspace_property(event_ws_name, 'proton_charge').times[0]
@@ -379,7 +380,7 @@ class SliceFocusVulcan(object):
                        ''.format(event_ws_name, tf - t0, len(output_names))
         process_info += 'Details for thread = {4}:\n\tLoading  = {0}\n\tChopping = {1}\n\tFocusing = {2}\n\t' \
                         'SaveGSS = {3}'.format(t1 - t0, t2 - t1, t3 - t2, tf - t3, self._number_threads)
-        print (process_info)
+        print ('[INFO] {}'.format(process_info))
 
         # FIXME - FUTURE - Whether this for-loop is useful?
         end_sliced_ws_index = 0
@@ -455,7 +456,10 @@ class SliceFocusVulcan(object):
                 continue
             if van_ws_name is not None:
                 mantid_helper.workspace_divide(ws_name, van_ws_name)
-            mantid_helper.export_fullprof(ws_name, os.path.join(output_dir, '{}.dat'.format(index_ws + 1)))
+
+            fp_file_name = os.path.join(output_dir, '{}.dat'.format(index_ws + 1))
+            print ('Export {} to {}'.format(ws_name, fp_file_name))
+            mantid_helper.export_fullprof(ws_name, fp_file_name)
 
         return
 

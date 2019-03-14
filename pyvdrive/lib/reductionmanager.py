@@ -1433,7 +1433,7 @@ class ReductionManager(object):
         """
         datatypeutility.check_tuple('Chopped data (lookup) key', chop_data_key, 2)
         run_number, slicer_key = chop_data_key
-        datatypeutility.check_tuple('Run number', run_number, (1, 999999999))
+        datatypeutility.check_int_variable('Run number', run_number, (1, 999999999))
         datatypeutility.check_string_variable('Slicer key', slicer_key)
 
         return chop_data_key in self._reductionTrackDict
