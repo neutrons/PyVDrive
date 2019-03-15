@@ -280,7 +280,7 @@ def getLogsList(vandbfile):
     return titlelist, examples
 
 
-def import_vulcan_log(log_file_name):
+def import_vulcan_log(log_file_name, header=0):
     """
     Import VULCAN's standard log file in CSV format
     :param log_file_name:
@@ -294,7 +294,7 @@ def import_vulcan_log(log_file_name):
     # use pandas to load the file
 
     # import
-    log_set = pd.read_csv(log_file_name, sep='\t', header=0)
+    log_set = pd.read_csv(log_file_name, sep='\t', header=header)
 
     # check
     assert len(log_set) > 1, 'Separation is not tab for VULCAN record file %s.' % log_file_name

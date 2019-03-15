@@ -240,6 +240,12 @@ class DataChopper(object):
 
         return mantid_helper.get_sample_log_names(self._meta_ws_name, smart=True)
 
+    def map_sample_logs(self, log_name_x, log_name_y, start_time, stop_time):
+        # return with relative time
+        vec_times, vec_log_x, vec_log_y = mantid_helper.map_sample_logs(self._meta_ws_name, log_name_x, log_name_y)
+
+        return vec_times, vec_log_x, vec_log_y
+
     def get_sample_data(self, sample_log_name, start_time, stop_time, relative):
         """
         Get sample log's data as 2 vectors for time (unit of second) and log value
@@ -569,6 +575,7 @@ def parse_data_slicer_file(file_name):
     return slicer_list
 
 
+# TODO - TONIGHT 0 - Whether there is a similar method in chop/PICKDATA?
 def parse_time_segments(file_name):
     """
     Parse the standard time segments file serving for event slicers

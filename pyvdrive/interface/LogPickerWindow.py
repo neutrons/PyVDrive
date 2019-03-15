@@ -404,13 +404,14 @@ class WindowLogPicker(QMainWindow):
             return
 
         # import slicers from a file: True, (ref_run, run_start, segment_list)
-        status, ret_obj = self.get_controller().import_data_slicers(slicer_file_name)
-        if status:
-            ref_run, run_start, slicer_list = ret_obj
-        else:
-            err_msg = str(ret_obj)
-            GuiUtility.pop_dialog_error(self, err_msg)
-            return
+        # TODO - TONIGHT 0 - Use try-catch!
+        ref_run, run_start_time, slicer_list = self.get_controller().import_data_slicers(slicer_file_name)
+        # if status:
+        #     ref_run, run_start, slicer_list = ret_obj
+        # else:
+        #     err_msg = str(ret_obj)
+        #     GuiUtility.pop_dialog_error(self, err_msg)
+        #     return
 
         # check
         if len(slicer_list) == 0:
@@ -421,7 +422,10 @@ class WindowLogPicker(QMainWindow):
             slicer_list.sort()
 
         # get run start time in second
-        slicer_start_time = slicer_list[0][0]
+        # TODO - TONIGHT 0 - Fix this: TypeError: 'TimeSegment' object does not support indexing
+        slicer_start_time = slicer_list[0][0]   # Error:  TypeError: 'TimeSegment' object does not support indexing
+        # Error above line
+
         if slicer_start_time > 3600 * 24 * 365:
             # larger than 1 year. then must be an absolute time
             run_start_s = int(self.ui.label_runStartEpoch.text())
@@ -438,6 +442,10 @@ class WindowLogPicker(QMainWindow):
             self.ui.graphicsView_main.add_picker(stop_time - run_start_s)
             prev_stop_time = stop_time
 
+        return
+
+    # TODO - TONIGHT 0 - Color the segment from different target workspaces
+    def do_apply_manual_slicer(self):
         return
 
     def do_load_mts_log(self):
@@ -1181,13 +1189,15 @@ class WindowLogPicker(QMainWindow):
         else:
             # other solution
             # TODO - TODAY 0 - Make this correct!
-            plot_x, plot_y = self._myParent.get_controller().get_2_sample_log_values(data_key=self._curr_ws_name,
+            plot_x, plot_y = self._myParent.get_controller().get_2_sample_log_values(data_key=self._currRunNumber,
                                                                                      log_name_x=x_axis_log,
                                                                                      log_name_y=log_name,
                                                                                      start_time=None,
                                                                                      stop_time=None)
 
-            self.ui.graphicsView_main.plot_sample_log(plot_x, plot_y)
+            self.ui.graphicsView_main.plot_sample_log(plot_x, plot_y, plot_label='Along with time',
+                                                      sample_log_name=log_name,
+                                                      sample_log_name_x=x_axis_log)
         # END-IF
 
         return

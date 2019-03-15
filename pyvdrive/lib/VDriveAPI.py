@@ -987,14 +987,20 @@ class VDriveAPI(object):
 
         return return_list
 
-    # TODO - TODAY - ASAP
     def get_2_sample_log_values(self, data_key, log_name_x, log_name_y, start_time, stop_time):
         # get 2 sample logs and merge them along stamp time and return the sample log values
 
+        # check input
+        assert data_key is not None, 'Data key cannot be None.'
+        print ('Data Key / current run number = {}'.format(data_key))
+
         # 2 cases: run_number is workspace or run_number is run number
         if isinstance(data_key, str) and mantid_helper.workspace_does_exist(data_key):
+            # TODO - TONIGHT 0 - Make this work as part 2
             # input (run number) is workspace's name
             ws_name = data_key
+
+            print ('DATA KEY : {}'.format(ws_name))
 
             # export log to CSV file
             mantidsimple.ExportSampleLogsToCSVFile(InputWorkspace=self._dataWorkspaceName,
@@ -1008,13 +1014,16 @@ class VDriveAPI(object):
             # get chopper for (integer) run number
             chopper = self._myProject.get_chopper(data_key)
 
-            # get log values
-            vec_times, vec_value = chopper.get_sample_data(sample_log_name=log_name,
-                                                           start_time=start_time, stop_time=stop_time,
-                                                           relative=relative)
+            vec_times, vec_log_x, vec_log_y = chopper.map_sample_logs(log_name_x=log_name_x, log_name_y=log_name_y,
+                                                                      start_time=start_time, stop_time=stop_time)
+            #
+            # # get log values
+            # vec_times, vec_value = chopper.get_sample_data(sample_log_name=log_name,
+            #                                                start_time=start_time, stop_time=stop_time,
+            #                                                relative=relative)
         # END-IF
 
-        vec_log_x, vec_log_y = vdrivehelper.merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
+        # vec_log_x, vec_log_y = vdrivehelper.merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
 
         return vec_log_x, vec_log_y
 
@@ -1086,6 +1095,7 @@ class VDriveAPI(object):
         """
         return self._myProject.reduction_manager.has_run_reduced(run_number)
 
+    # TODO - TONIGHT 0 - Clean it out!
     @staticmethod
     def import_data_slicers(file_name):
         """ import slicers from a text file

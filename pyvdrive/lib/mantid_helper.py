@@ -1932,6 +1932,22 @@ def merge_runs(ws_name_list, out_ws_name):
     return
 
 
+# TODO - TONIGHT 0 - Clean up!
+def map_sample_logs(meta_ws_name, log_name_x, log_name_y):
+    mantidapi.ExportSampleLogsToCSVFile(InputWorkspace=meta_ws_name,
+                                           OutputFilename='/tmp/test.dat',
+                                           SampleLogNames=[log_name_x, log_name_y],
+                                           WriteHeaderFile=False,
+                                           TimeZone='UTC',
+                                           Header='')
+
+    import vulcan_util
+
+    log_set = vulcan_util.import_vulcan_log('/tmp/test.dat', header=None)  # no header
+
+    return log_set[1].values, log_set[2].values, log_set[3].values
+
+
 def mtd_compress_events(event_ws_name, tolerance=0.01):
     """ Call Mantid's CompressEvents algorithm
     :param event_ws_name:

@@ -785,9 +785,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
+    # TODO - TONIGHT 0 - Refactor with
     def do_plot_sample_logs(self):
-        """
-        plot selected sample logs
+        """ Plot selected sample logs:
+        Workflow:
+        1. get log X and Y;
+        2. if single: ...
+        3. if chopped: (1) plot original (2) plot the selected section
         :return:
         """
         # get sample logs: from display name to log name in workspace.run()
