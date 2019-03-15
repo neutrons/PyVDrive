@@ -811,20 +811,25 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         if self.ui.radioButton_chooseSingleRun.isChecked() or self.ui.checkBox_plotallChoppedLog.isChecked():
             # case for single run or source of chopped runs
-            vec_times, vec_value_y = self._myController.get_sample_log_values(data_key=self._log_data_key,
-                                                                              log_name=curr_y_log_name,
-                                                                              start_time=None, stop_time=None,
-                                                                              relative=True)
             if curr_x_log_name == 'Time':
-                vec_log_x = vec_times
-                vec_log_y = vec_value_y
+                # get vec times (i.e., vec_log_x)
+                vec_log_x, vec_log_y = self._myController.get_sample_log_values(data_key=self._log_data_key,
+                                                                                log_name=curr_y_log_name,
+                                                                                start_time=None, stop_time=None,
+                                                                                relative=True)
             else:
-                vec_times_x, vec_value_x = self._myController.get_sample_log_values(data_key=self._log_data_key,
-                                                                                    log_name=curr_x_log_name,
-                                                                                    start_time=None, stop_time=None,
-                                                                                    relative=True)
-                # TODO - TONIGHT 0 - merge_2_logs shall be a static in the utility and called by plot_sample_log()!
-                vec_log_x, vec_log_y = vdrivehelper.merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
+                vec_log_x, vec_log_y = self._myController.get_2_sample_log_values(data_key=self._log_data_key,
+                                                                                  log_name_x=curr_x_log_name,
+                                                                                  log_name_y=curr_y_log_name,
+                                                                                  start_time=None,
+                                                                                  stop_time=None)
+                #
+                # vec_times_x, vec_value_x = self._myController.get_sample_log_values(data_key=self._log_data_key,
+                #                                                                     log_name=curr_x_log_name,
+                #                                                                     start_time=None, stop_time=None,
+                #                                                                     relative=True)
+                # # TODO - TONIGHT 0 - merge_2_logs shall be a static in the utility and called by plot_sample_log()!
+                # vec_log_x, vec_log_y = vdrivehelper.merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
             # END-IF-ELSE
         else:
             # single chopped runs

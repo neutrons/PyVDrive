@@ -1180,9 +1180,14 @@ class WindowLogPicker(QMainWindow):
 
         else:
             # other solution
-            vec_times_x, vec_log_x = self._myParent.get_sample_log_value(self._currRunNumber, x_axis_log, relative=True)
-            vec_times_y, vec_log_y = self._myParent.get_sample_log_value(self._currRunNumber, log_name, relative=True)
-            self.ui.graphicsView_main.plot_sample_log()
+            # TODO - TODAY 0 - Make this correct!
+            plot_x, plot_y = self._myParent.get_controller().get_2_sample_log_values(data_key=self._curr_ws_name,
+                                                                                     log_name_x=x_axis_log,
+                                                                                     log_name_y=log_name,
+                                                                                     start_time=None,
+                                                                                     stop_time=None)
+
+            self.ui.graphicsView_main.plot_sample_log(plot_x, plot_y)
         # END-IF
 
         return

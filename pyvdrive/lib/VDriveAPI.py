@@ -987,6 +987,37 @@ class VDriveAPI(object):
 
         return return_list
 
+    # TODO - TODAY - ASAP
+    def get_2_sample_log_values(self, data_key, log_name_x, log_name_y, start_time, stop_time):
+        # get 2 sample logs and merge them along stamp time and return the sample log values
+
+        # 2 cases: run_number is workspace or run_number is run number
+        if isinstance(data_key, str) and mantid_helper.workspace_does_exist(data_key):
+            # input (run number) is workspace's name
+            ws_name = data_key
+
+            # export log to CSV file
+            mantidsimple.ExportSampleLogsToCSVFile(InputWorkspace=self._dataWorkspaceName,
+                                                   OutputFilename=log_file_name,
+                                                   SampleLogNames=sample_log_names,
+                                                   WriteHeaderFile=True,
+                                                   TimeZone=TIMEZONE2,
+                                                   Header=header)
+
+        else:
+            # get chopper for (integer) run number
+            chopper = self._myProject.get_chopper(data_key)
+
+            # get log values
+            vec_times, vec_value = chopper.get_sample_data(sample_log_name=log_name,
+                                                           start_time=start_time, stop_time=stop_time,
+                                                           relative=relative)
+        # END-IF
+
+        vec_log_x, vec_log_y = vdrivehelper.merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
+
+        return vec_log_x, vec_log_y
+
     def get_sample_log_values(self, data_key, log_name, start_time=None, stop_time=None, relative=True):
         """
         Get time and value of a sample log in vector
