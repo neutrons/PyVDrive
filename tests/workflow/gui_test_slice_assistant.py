@@ -54,10 +54,10 @@ class EventFilteringAssistantTestEnvironment(object):
         :param run_number:
         :return:
         """
-        # self._slice_window.ui.lineEdit_iptsNumber.setText('{}'.format(22126))
-        # self._slice_window.ui.lineEdit_runNumber.setText('{}'.format(171898))
-
-        if False:
+        if ipts_number is not None and run_number is not None:
+            self._slice_window.ui.lineEdit_iptsNumber.setText('{}'.format(ipts_number))
+            self._slice_window.ui.lineEdit_runNumber.setText('{}'.format(run_number))
+        elif False:
             self._slice_window.ui.lineEdit_iptsNumber.setText('{}'.format(22126))
             self._slice_window.ui.lineEdit_runNumber.setText('{}'.format(171899))
         else:
@@ -68,18 +68,36 @@ class EventFilteringAssistantTestEnvironment(object):
 
         return
 
+    def test_issue_164(self):
+        """
+        plot strain vs stress
+        :return:
+        """
+        # TODO - TONIGHT 0 (#164)
+        # 1. search log names and set index to
+        #    loadframe.strain, loadframe.stress
+        #    in GuiUtility: AllItems = [QComboBoxName.itemText(i) for i in range(QComboBoxName.count())]
+        # 2. 'push' button: pushButton_setXAxis()
+
+        return
+
 
 def test_main():
     """
     test main
     """
     slice_ui_tester = EventFilteringAssistantTestEnvironment()
-    slice_ui_tester.set_ipts_run(None, None)
 
-    if False:
-        slice_ui_tester.chop_by_time()
+    if True:
+        # strain/stress chop
+        slice_ui_tester.set_ipts_run(21381, 163411)  # ISSUE 164
+        slice_ui_tester.test_issue_164()
+
     else:
-        pass
+        # regular
+        slice_ui_tester.set_ipts_run(None, None)
+        slice_ui_tester.chop_by_time()
+
 
     return slice_ui_tester.main_window
 

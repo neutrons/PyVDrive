@@ -409,17 +409,9 @@ class WindowLogPicker(QMainWindow):
         try:
             ref_run, run_start_time, slicer_list = file_utilities.parse_data_slicer_file(slicer_file_name)
             self.get_controller().import_data_slicers(slicer_file_name)
-        except
-
-        # import slicers from a file: True, (ref_run, run_start, segment_list)
-        # TODO - TONIGHT 0 - Use try-catch!
-
-        # if status:
-        #     ref_run, run_start, slicer_list = ret_obj
-        # else:
-        #     err_msg = str(ret_obj)
-        #     GuiUtility.pop_dialog_error(self, err_msg)
-        #     return
+        except RuntimeError as run_err:
+            GuiUtility.pop_dialog_error(self, '{}'.format(run_err))
+            return
 
         # check
         if len(slicer_list) == 0:

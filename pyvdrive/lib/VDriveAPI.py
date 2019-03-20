@@ -1023,6 +1023,11 @@ class VDriveAPI(object):
             #                                                relative=relative)
         # END-IF
 
+        # TODO - TONIGHT 0 (ISSUE 164) - Add a place to store vec_times, vec_log_x, vec_log_y (external method in chopper?)
+        # TODO - UI - (1) add a section for line integral (2) option: section length, smooth, plot
+        # TODO - Lib - (1) algorithm to smooth (X intact) (2) trace back from X/Y to time (using vec T, vecX, vecY)
+        # TODO - UI - Table to show the result
+
         # vec_log_x, vec_log_y = vdrivehelper.merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
 
         return vec_log_x, vec_log_y
