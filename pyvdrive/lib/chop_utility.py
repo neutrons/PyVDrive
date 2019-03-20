@@ -142,7 +142,6 @@ class DataChopper(object):
 
         return vec_sum_times, vec_sum_value
 
-    # TEST - Implemented in #65
     def delete_splitter_workspace(self, slicer_tag):
         """
         delete a splitter workspace by its tag
@@ -542,117 +541,6 @@ class DataChopper(object):
         slicer_key = tag
 
         return True, slicer_key
-
-
-# TODO/NEXT - If parse_time_segmenets works for data slicer file too, then remove parse_data_slicer_file()
-def parse_data_slicer_file(file_name):
-    """
-    parse data slicer file
-    :param file_name:
-    :return:
-    """
-    slicer_file = open(file_name, 'r')
-    raw_lines = slicer_file.readlines()
-    slicer_file.close()
-
-    slicer_list = list()
-    for line in raw_lines:
-        # print '[DB...BAT] Line: {0}'.format(line)
-        line = line.strip()
-        if len(line) == 0 or line[0] == '#':
-            continue
-
-        terms = line.split()
-        # print '[DB...BAT] Line split to {0}'.format(terms)
-        if len(terms) < 3:
-            continue
-        start_time = float(terms[0])
-        stop_time = float(terms[1])
-        target_ws = str(terms[2])
-        slicer_list.append((start_time, stop_time, target_ws))
-    # END-FOR
-
-    return slicer_list
-
-
-# TODO - TONIGHT 0 - Whether there is a similar method in chop/PICKDATA?
-def parse_time_segments(file_name):
-    """
-    Parse the standard time segments file serving for event slicers
-    :param file_name:
-    :return: 2-tuple as (boolean, object): (True, (reference run, start time, segment list))
-            (False, error message)
-    """
-    # Check
-    datatypeutility.check_file_name(file_name, check_exist=True, note='Time segmentation file')
-
-    # Read file
-    try:
-        in_file = open(file_name, 'r')
-        raw_lines = in_file.readlines()
-        in_file.close()
-    except IOError as e:
-        raise RuntimeError('Failed to read time segment file {} due to {}'.format(file_name, e))
-
-    ref_run = None
-    run_start = None
-    segment_list = list()
-
-    i_target = 1
-
-    for raw_line in raw_lines:
-        line = raw_line.strip()
-
-        # Skip empty line
-        if len(line) == 0:
-            continue
-
-        # Comment line
-        if line.startswith('#') is True:
-            # remove all spaces
-            line = line.replace(' ', '')
-            terms = line.split('=')
-            if len(terms) == 1:
-                continue
-            if terms[0].lower().startswith('referencerunnumber'):
-                # reference run number
-                ref_run_str = terms[1]
-                if ref_run_str.isdigit():
-                    ref_run = int(ref_run_str)
-                else:
-                    ref_run = ref_run_str
-            elif terms[0].lower().startswith('runstarttime'):
-                # run start time
-                run_start_str = terms[1]
-                try:
-                    run_start = float(run_start_str)
-                except ValueError:
-                    print '[Warning] Unable to convert run start time %s to float' % run_start_str
-        else:
-            # remove all tab
-            line = line.replace('\t', '')
-            terms = line.split()
-            if len(terms) < 2:
-                print '[Warning] Line "%s" is of wrong format.' % line
-                continue
-
-            try:
-                start_time = float(terms[0])
-                stop_time = float(terms[1])
-                if len(terms) < 3:
-                    target_id = i_target
-                    i_target += 1
-                else:
-                    target_id = terms[2]
-                new_segment = TimeSegment(start_time, stop_time, target_id)
-                segment_list.append(new_segment)
-            except ValueError as e:
-                print '[Warning] Line "{0}" has wrong type of value for start/stop. FYI {1}.'.format(line, e)
-                continue
-        # END-IF (#)
-    # END-FOR
-
-    return ref_run, run_start, segment_list
 
 
 def get_standard_manual_tag(run_number):

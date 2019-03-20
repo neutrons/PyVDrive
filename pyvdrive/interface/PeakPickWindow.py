@@ -1637,8 +1637,6 @@ class PeakPickerWindow(QMainWindow):
         Launch terminal window
         :return:
         """
-        print ('[DB...BAT] Parent window: {}'.format(self._myParent))
-
         self._myParent.menu_workspaces_view()
 
         return

@@ -113,10 +113,10 @@ class WindowLogPicker(QMainWindow):
         # menu actions
         self.ui.actionExit.triggered.connect(self.evt_quit_no_save)
 
-        # TODO - TONIGHT - URGENT: pushButton_cyclic_helper
-        # TODO - TONIGHT - URGENT: actionOpenH5Log
+        # TODO - TONIGHT 1: pushButton_cyclic_helper
 
-        # TODO - TONIGHT 0 - Urgent: actionIPython_Command_Console: launch terminal view
+        self.ui.actionOpenH5Log.triggered.connect(self.do_load_h5_log)
+        self.ui.actionIPython_Command_Console.triggered.connect(self.do_launch_console_view)
 
         # # Event handling for pickers
         self._mtsFileLoaderWindow = None
@@ -395,17 +395,25 @@ class WindowLogPicker(QMainWindow):
         The format will be a 3 column file as run start (in second), run stop(in second) and target workspace
         :return:
         """
+        from pyvdrive.lib import file_utilities
+
         # get file
-        default_dir = os.getcwd()
-        slicer_file_name = str(QFileDialog.getOpenFileName(self, 'Read Slicer File', default_dir,
-                                                           'All Files (*.*)'))
+        default_dir = self._myParent.get_controller().get_working_dir()
+        slicer_file_name = GuiUtility.get_load_file_by_dialog(self, 'Read Slicer File', default_dir,
+                                                              'Data File (*.dat);;Text (*.txt)')
+
         if len(slicer_file_name) == 0:
             # return if operation is cancelled
             return
 
+        try:
+            ref_run, run_start_time, slicer_list = file_utilities.parse_data_slicer_file(slicer_file_name)
+            self.get_controller().import_data_slicers(slicer_file_name)
+        except
+
         # import slicers from a file: True, (ref_run, run_start, segment_list)
         # TODO - TONIGHT 0 - Use try-catch!
-        ref_run, run_start_time, slicer_list = self.get_controller().import_data_slicers(slicer_file_name)
+
         # if status:
         #     ref_run, run_start, slicer_list = ret_obj
         # else:
@@ -444,8 +452,34 @@ class WindowLogPicker(QMainWindow):
 
         return
 
-    # TODO - TONIGHT 0 - Color the segment from different target workspaces
-    def do_apply_manual_slicer(self):
+    def do_show_manual_slicers(self):
+        """ Color the segment from different target workspaces
+        :return:
+        """
+        return
+
+    def do_launch_console_view(self):
+        """ Launch IPython console view
+        :return:
+        """
+        self._myParent.menu_workspaces_view()
+
+        return
+
+    def do_load_h5_log(self):
+        """ Load sample log file in HDF5 format
+        :return:
+        """
+        from pyvdrive.lib import file_utilities
+
+        h5_log_name = GuiUtility.get_load_file_by_dialog(self, title='Sample log file in HDF5 format',
+                                                         default_dir=self.get_controller().working_dir(),
+                                                         file_filter='HDF5 (*.hdf5);;HDF5 (*.hdf)')
+
+        sample_log_dict = file_utilities.load_sample_logs_h5(log_h5_name=h5_log_name)
+
+        # TODO - TODAY - Need to find out what is the next step after loading sample logs
+
         return
 
     def do_load_mts_log(self):
@@ -1259,8 +1293,14 @@ class WindowLogPicker(QMainWindow):
         return plot_x, plot_y
 
     def set_ipts(self, ipts_number):
-        # TODO - TONIGHT 0 - QA
+        """ Set IPTS number to text
+        :param ipts_number:
+        :return:
+        """
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, 9999999))
         self.ui.lineEdit_iptsNumber.setText('{}'.format(ipts_number))
+
+        return
 
     def set_run(self, run_number):
         """
