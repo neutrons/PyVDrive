@@ -400,11 +400,12 @@ def pop_dialog_information(parent, message):
     return
 
 
-def set_combobox_current_item(combo_box, item_name):
+def set_combobox_current_item(combo_box, item_name, match_beginning):
     """
     set the current (index/item) of a combo box by name
     :param combo_box:
     :param item_name:
+    :param match_beginning: if True, only need to match beginning but not all
     :return:
     """
     # check
@@ -415,11 +416,25 @@ def set_combobox_current_item(combo_box, item_name):
     # get the list of items' names
     item_name_list = [str(combo_box.itemText(i)).strip() for i in range(combo_box.count())]  # string and no space
 
-    if item_name not in item_name_list:
-        raise RuntimeError('Combo box does not have item {}.  Available names are {}'
-                           ''.format(item_name, item_name_list))
+    if match_beginning:
+        # match beginning
+        item_index = None
+        for index_i, item_name_i in enumerate(item_name_list):
+            if item_name_i.startswith(item_name):
+                item_index = index_i
+                break
+        if item_index is None:
+            raise RuntimeError('Combo box does not have item {}.  Available names are {}'
+                               ''.format(item_name, item_name_list))
+    else:
+        # match all
+        if item_name not in item_name_list:
+            raise RuntimeError('Combo box does not have item {}.  Available names are {}'
+                               ''.format(item_name, item_name_list))
+        item_index = item_name_list.index(item_name)
+    # END-IF-ELSE
 
-    item_index = item_name_list.index(item_name)
+    # set current index
     combo_box.setCurrentIndex(item_index)
 
     return

@@ -596,6 +596,13 @@ class CurveSlicerGenerator(object):
         """
         datatypeutility.check_string_variable('Smooth algorithm', method, ['fft', 'nearest'])
 
+        import h5py
+        temp_h5 = h5py.File('smooth_prototype.h5', 'w')
+        curve_group = temp_h5.create_group('curve')
+        curve_group.create_dataset('x', data=self._vec_x)
+        curve_group.create_dataset('y', data=self._vec_y)
+        temp_h5.close()
+
         if method == 'fft':
             self._smooth_vec_y = mantid_helper.fft_smooth(self._vec_x, self._vec_y, params)
         elif method == 'nearest':

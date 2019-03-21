@@ -1339,3 +1339,8 @@ class WindowLogPicker(QMainWindow):
             self.ui.comboBox_blockList.addItems(str(block_index))
 
         return
+
+    def smooth_sample_log_curve(self):
+        print (self._curr_curve_slicer)
+
+        self._curr_curve_slicer.smooth_curve('nearest', 1)

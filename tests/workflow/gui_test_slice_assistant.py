@@ -75,14 +75,16 @@ class EventFilteringAssistantTestEnvironment(object):
         :return:
         """
         # set x and y sample logs
-        GuiUtility.set_combobox_current_item(self._slice_window.ui.comboBox_logNamesX, 'loadframe.strain')
-        GuiUtility.set_combobox_current_item(self._slice_window.ui.comboBox_logNamesY, 'loadframe.stress')
+        GuiUtility.set_combobox_current_item(self._slice_window.ui.comboBox_logNamesX, 'loadframe.strain',
+                                             match_beginning=True)
+        GuiUtility.set_combobox_current_item(self._slice_window.ui.comboBox_logNames, 'loadframe.stress',
+                                             match_beginning=True)
 
         # plot
         self._slice_window.do_plot_sample_logs()  # 'push' button: pushButton_setXAxis()
 
         # smooth
-        self._slice_window.do_smooth_sample_log_curve()
+        self._slice_window.smooth_sample_log_curve()
 
         # select the chopping method
         self._slice_window.ui.radioButton_curveSlicer.setChecked(True)

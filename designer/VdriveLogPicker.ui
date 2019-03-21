@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1432</width>
-    <height>971</height>
+    <height>1054</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -578,76 +578,46 @@
           </widget>
          </item>
          <item>
-          <widget class="QGroupBox" name="groupBox_curveSlicerSetup">
-           <property name="title">
-            <string>Curver Slicer Setup</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_3">
-           <property name="font">
-            <font>
-             <pointsize>9</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Smooth</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_4">
-           <property name="font">
-            <font>
-             <pointsize>9</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Interpolate</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLineEdit" name="lineEdit_curveLengths">
-           <property name="font">
-            <font>
-             <pointsize>9</pointsize>
-            </font>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_2">
-           <property name="font">
-            <font>
-             <pointsize>9</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Set Curve Slicer</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton">
-           <property name="font">
-            <font>
-             <pointsize>9</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Show Table</string>
-           </property>
-          </widget>
-         </item>
-         <item>
           <spacer name="verticalSpacer_4">
            <property name="orientation">
             <enum>Qt::Vertical</enum>
            </property>
            <property name="sizeType">
             <enum>QSizePolicy::Preferred</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="groupBox_curveSlicerSetup">
+           <property name="title">
+            <string>Curver Slicer Setup</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_10">
+            <item row="0" column="0">
+             <widget class="QPushButton" name="pushButton">
+              <property name="font">
+               <font>
+                <pointsize>9</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>Lauch Curve Slicing Table</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <spacer name="verticalSpacer_6">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
            </property>
            <property name="sizeHint" stdset="0">
             <size>
@@ -1262,7 +1232,7 @@
      <x>0</x>
      <y>0</y>
      <width>1432</width>
-     <height>22</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuTest">
