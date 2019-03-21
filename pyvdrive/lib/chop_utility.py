@@ -543,6 +543,86 @@ class DataChopper(object):
         return True, slicer_key
 
 
+class CurveSlicerGenerator(object):
+    """
+    A slicer generator for slicing data along a curve
+    """
+    def __init__(self, vec_times, vec_x, vec_y):
+        """
+        initialization
+        :param vec_times:
+        :param vec_x:
+        :param vec_y:
+        """
+        datatypeutility.check_numpy_arrays('Vector of times, X and Y', [vec_times, vec_x, vec_y],
+                                           dimension=1, check_same_shape=True)
+
+        self._vec_times = vec_times
+        self._vec_x = vec_x
+        self._vec_y = vec_y
+        self._smooth_vec_y = None
+        self._interpolated_y = None
+
+        self._slicers = dict()  #
+
+        return
+
+    def get_raw(self):
+        """
+
+        :return:
+        """
+        return self._vec_x, self._vec_y
+
+    def get_smoothed(self):
+        """
+
+        :return:
+        """
+        return self._vec_x, self._smooth_vec_y
+
+    def get_interpolated(self):
+        """
+
+        :return:
+        """
+        return self._vec_x, self._interpolated_y
+
+    def smooth_curve(self, method, params):
+        """
+        smooth curve
+        :param method: FFTSmooth, NearestNeighbor
+        :return:
+        """
+        datatypeutility.check_string_variable('Smooth algorithm', method, ['fft', 'nearest'])
+
+        if method == 'fft':
+            self._smooth_vec_y = mantid_helper.fft_smooth(self._vec_x, self._vec_y, params)
+        elif method == 'nearest':
+            self._smooth_vec_y = mantid_helper.nearest_neighbor_smooth(self._vec_x, self._vec_y, params)
+
+        return
+
+    def interpolate_curve(self, order, resolution):
+        """ interpolate curve
+        :param order:
+        :param resolution:
+        :return:
+        """
+        # TODO - TODAY 0 - Find the right solution
+
+    def integrate_curve(self, is_smoothed, is_interpolated, start_x, end_x):
+        """ integrate curve
+        :param is_smoothed:
+        :param start_x:
+        :param end_x:
+        :return:
+        """
+        # TODO - TODAY 0 - Find the right solution (numpy/scipy)
+
+        return
+# END-CLASS
+
 def get_standard_manual_tag(run_number):
     """
     if the tag for a manual splicer is not given, then it will be named under a routine

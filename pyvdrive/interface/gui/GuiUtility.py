@@ -400,6 +400,31 @@ def pop_dialog_information(parent, message):
     return
 
 
+def set_combobox_current_item(combo_box, item_name):
+    """
+    set the current (index/item) of a combo box by name
+    :param combo_box:
+    :param item_name:
+    :return:
+    """
+    # check
+    assert isinstance(combo_box, QComboBox), 'Input widget {} must be a QComboBox instance but not a ' \
+                                             '{}'.format(combo_box, type(combo_box))
+    datatypeutility.check_string_variable('Combo box item name', item_name)
+
+    # get the list of items' names
+    item_name_list = [str(combo_box.itemText(i)).strip() for i in range(combo_box.count())]  # string and no space
+
+    if item_name not in item_name_list:
+        raise RuntimeError('Combo box does not have item {}.  Available names are {}'
+                           ''.format(item_name, item_name_list))
+
+    item_index = item_name_list.index(item_name)
+    combo_box.setCurrentIndex(item_index)
+
+    return
+
+
 def set_combobox_items(combo_box, items):
     """ set the items to a combo Box (QComboBox) and by default set the current index to 0
     :param combo_box:

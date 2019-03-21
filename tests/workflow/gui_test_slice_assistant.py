@@ -3,6 +3,7 @@
 import os
 import sys
 from pyvdrive.interface.VDrivePlot import VdriveMainWindow
+from pyvdrive.interface.gui import GuiUtility
 try:
     from PyQt5.QtWidgets import QApplication
 except (ImportError, RuntimeError) as import_error:
@@ -73,11 +74,21 @@ class EventFilteringAssistantTestEnvironment(object):
         plot strain vs stress
         :return:
         """
-        # TODO - TONIGHT 0 (#164)
-        # 1. search log names and set index to
-        #    loadframe.strain, loadframe.stress
-        #    in GuiUtility: AllItems = [QComboBoxName.itemText(i) for i in range(QComboBoxName.count())]
-        # 2. 'push' button: pushButton_setXAxis()
+        # set x and y sample logs
+        GuiUtility.set_combobox_current_item(self._slice_window.ui.comboBox_logNamesX, 'loadframe.strain')
+        GuiUtility.set_combobox_current_item(self._slice_window.ui.comboBox_logNamesY, 'loadframe.stress')
+
+        # plot
+        self._slice_window.do_plot_sample_logs()  # 'push' button: pushButton_setXAxis()
+
+        # smooth
+        self._slice_window.do_smooth_sample_log_curve()
+
+        # select the chopping method
+        self._slice_window.ui.radioButton_curveSlicer.setChecked(True)
+        self._slice_window.ui.lineEdit_curveLength.setText('10.')
+        self._slice_window.do_set_curve_slicers()
+        self._slice_window.do_show_curve_slicers()
 
         return
 
@@ -97,7 +108,6 @@ def test_main():
         # regular
         slice_ui_tester.set_ipts_run(None, None)
         slice_ui_tester.chop_by_time()
-
 
     return slice_ui_tester.main_window
 

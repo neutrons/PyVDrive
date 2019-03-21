@@ -1023,6 +1023,8 @@ class VDriveAPI(object):
             #                                                relative=relative)
         # END-IF
 
+
+
         # TODO - TONIGHT 0 (ISSUE 164) - Add a place to store vec_times, vec_log_x, vec_log_y (external method in chopper?)
         # TODO - UI - (1) add a section for line integral (2) option: section length, smooth, plot
         # TODO - Lib - (1) algorithm to smooth (X intact) (2) trace back from X/Y to time (using vec T, vecX, vecY)
@@ -1030,7 +1032,17 @@ class VDriveAPI(object):
 
         # vec_log_x, vec_log_y = vdrivehelper.merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
 
-        return vec_log_x, vec_log_y
+        return vec_times, vec_log_x, vec_log_y
+
+    @staticmethod
+    def create_curve_slicer_generator(vec_times, plot_x, plot_y):
+        """ create an CurveSlicerGenerator instance
+        :param vec_times
+        :param plot_x:
+        :param plot_y:
+        :return:
+        """
+        return chop_utility.CurveSlicerGenerator(vec_times, plot_x, plot_y)
 
     def get_sample_log_values(self, data_key, log_name, start_time=None, stop_time=None, relative=True):
         """
@@ -1798,7 +1810,7 @@ class VDriveAPI(object):
         :return:
         """
         # get chopper
-        assert isinstance(run_number, int), 'Run number must be an integer.'
+        datatypeutility.check_int_variable('Run number', run_number, (1, 99999999))
         chopper = self._myProject.get_chopper(run_number)
 
         chopper.save_splitter_ws_text(slicer_tag, file_name)
@@ -1829,8 +1841,7 @@ class VDriveAPI(object):
         :return:
         """
         # check
-        assert isinstance(ipts_number, int), 'IPTS number %s must be an integer but not %s.' \
-                                             '' % (str(ipts_number), type(ipts_number))
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, 9999999))
         assert isinstance(data_dir, str) and os.path.exists(data_dir), \
             'Data directory %s of type (%s) must be a string and exists.' % (str(data_dir), type(data_dir))
         assert isinstance(binned_data_dir, str) and os.path.exists(binned_data_dir), \

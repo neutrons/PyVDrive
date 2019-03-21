@@ -310,8 +310,8 @@
              </layout>
             </item>
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_2">
-              <item>
+             <layout class="QGridLayout" name="gridLayout_7">
+              <item row="0" column="0">
                <widget class="QRadioButton" name="radioButton_timeSlicer">
                 <property name="font">
                  <font>
@@ -323,19 +323,7 @@
                 </property>
                </widget>
               </item>
-              <item>
-               <widget class="QRadioButton" name="radioButton_logValueSlicer">
-                <property name="font">
-                 <font>
-                  <pointsize>9</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>log value</string>
-                </property>
-               </widget>
-              </item>
-              <item>
+              <item row="1" column="0">
                <widget class="QRadioButton" name="radioButton_manualSlicer">
                 <property name="font">
                  <font>
@@ -344,6 +332,30 @@
                 </property>
                 <property name="text">
                  <string>manual</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QRadioButton" name="radioButton_curveSlicer">
+                <property name="font">
+                 <font>
+                  <pointsize>9</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>curve</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QRadioButton" name="radioButton_logValueSlicer">
+                <property name="font">
+                 <font>
+                  <pointsize>9</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>log value</string>
                 </property>
                </widget>
               </item>
@@ -563,6 +575,70 @@
              </widget>
             </item>
            </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="groupBox_curveSlicerSetup">
+           <property name="title">
+            <string>Curver Slicer Setup</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_3">
+           <property name="font">
+            <font>
+             <pointsize>9</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Smooth</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_4">
+           <property name="font">
+            <font>
+             <pointsize>9</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Interpolate</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="lineEdit_curveLengths">
+           <property name="font">
+            <font>
+             <pointsize>9</pointsize>
+            </font>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_2">
+           <property name="font">
+            <font>
+             <pointsize>9</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Set Curve Slicer</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton">
+           <property name="font">
+            <font>
+             <pointsize>9</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Show Table</string>
+           </property>
           </widget>
          </item>
          <item>
@@ -1186,7 +1262,7 @@
      <x>0</x>
      <y>0</y>
      <width>1432</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuTest">

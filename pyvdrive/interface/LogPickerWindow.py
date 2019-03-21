@@ -57,6 +57,9 @@ class WindowLogPicker(QMainWindow):
         self._myParent = parent
         self._mutexLockSwitchSliceMethod = False
 
+        # special slicer helper
+        self._curr_curve_slicer = None
+
         # set up UI
         ui_path = os.path.join(os.path.dirname(__file__), "gui/VdriveLogPicker.ui")
         self.ui = load_ui(ui_path, baseinstance=self)
@@ -1215,15 +1218,19 @@ class WindowLogPicker(QMainWindow):
         else:
             # other solution
             # TODO - TODAY 0 - Make this correct!
-            plot_x, plot_y = self._myParent.get_controller().get_2_sample_log_values(data_key=self._currRunNumber,
-                                                                                     log_name_x=x_axis_log,
-                                                                                     log_name_y=log_name,
-                                                                                     start_time=None,
-                                                                                     stop_time=None)
+            controller = self._myParent.get_controller()
+            vec_times, plot_x, plot_y = controller.get_2_sample_log_values(data_key=self._currRunNumber,
+                                                                           log_name_x=x_axis_log,
+                                                                           log_name_y=log_name,
+                                                                           start_time=None,
+                                                                           stop_time=None)
 
             self.ui.graphicsView_main.plot_sample_log(plot_x, plot_y, plot_label='Along with time',
                                                       sample_log_name=log_name,
                                                       sample_log_name_x=x_axis_log)
+
+            self._curr_curve_slicer = controller.create_curve_slicer_generator(vec_times, plot_x, plot_y)
+
         # END-IF
 
         return
