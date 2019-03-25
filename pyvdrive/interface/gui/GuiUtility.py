@@ -211,7 +211,7 @@ def get_load_file_by_dialog(parent, title, default_dir, file_filter):
     datatypeutility.check_string_variable('Title (to load file)', title)
     datatypeutility.check_string_variable('Default directory to load file', default_dir)
     datatypeutility.check_file_name(default_dir, True, False, True, 'Default directory to load file')
-    datatypeutility.check_file_name('File filter', file_filter)
+    datatypeutility.check_string_variable('File filter', file_filter)
 
     # append "All files:
     if file_filter.count('*.*') == 0:
@@ -240,7 +240,7 @@ def get_save_file_by_dialog(parent, title, default_dir, file_filter):
     # convert to string
     out_file_name = str(out_file_name).strip()
 
-    return  out_file_name
+    return out_file_name
 
 
 def parse_integer(line_edit, allow_blank=True):

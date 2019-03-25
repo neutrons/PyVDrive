@@ -563,7 +563,7 @@
              </widget>
             </item>
             <item row="2" column="0">
-             <widget class="QPushButton" name="pushButton_showManualSlicer">
+             <widget class="QPushButton" name="pushButton_plotManualSlicer">
               <property name="font">
                <font>
                 <pointsize>10</pointsize>
@@ -607,7 +607,7 @@
                </font>
               </property>
               <property name="text">
-               <string>Lauch Curve Slicing Table</string>
+               <string>Launch Curve Slicing Table</string>
               </property>
              </widget>
             </item>

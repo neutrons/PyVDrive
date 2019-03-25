@@ -101,7 +101,7 @@ def test_main():
     """
     slice_ui_tester = EventFilteringAssistantTestEnvironment()
 
-    if True:
+    if False:
         # strain/stress chop
         slice_ui_tester.set_ipts_run(21381, 163411)  # ISSUE 164
         slice_ui_tester.test_issue_164()

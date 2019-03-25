@@ -86,6 +86,9 @@ class AtomicReduction2DViewer(QMainWindow):
         self.ui = load_ui(ui_path, baseinstance=self)
         self._promote_widgets()
 
+        # TODO - TONIGHT 0 - Implement ASAP
+        # self.ui.pushButton_setXrange:  set image X range
+
         return
 
     def _promote_widgets(self):

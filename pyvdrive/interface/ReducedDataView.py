@@ -662,7 +662,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         curr_min_x, curr_max_x = self.ui.graphicsView_mainPlot.getXLimit()
         new_min_x, new_max_x = self._get_plot_x_range_(curr_min_x, curr_max_x)
 
-        if new_min_x <= new_max_x:
+        if new_min_x >= new_max_x:
             GuiUtility.pop_dialog_error(self, 'Minimum X %f is equal to or larger than maximum X %f!'
                                               '' % (new_min_x, new_max_x))
         else:
@@ -1277,6 +1277,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # deal with Y axis
         self.ui.graphicsView_mainPlot.auto_rescale()
+        # about X
+        self.do_set_x_range()
 
         # pop the child atomic window
         if not main_only:
@@ -1293,6 +1295,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                     van_vec_y = self.get_vanadium_spectrum(van_run, bank_id)
                     vec_y /= van_vec_y
                     # END-IF
+                # TODO - TONIGHT 0 - Implement: child_window.set_x_range()
                 child_window.plot_data(vec_x, vec_y, data_key, self._currUnit, bank_id)
             # END-FOR
         # END-IF
@@ -1385,6 +1388,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # END-IF
 
         # plot 1D chopped data
+        # TODO - TONIGHT - Need to manage the plotted data (plot ID) to
+        # TODO - ... ... - (1) clear the previously plotted data
+        # TODO - ... ... - (2) reset range for different units
         self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit=self._currUnit,
                                                             over_plot=True,
                                                             run_id=chop_key, bank_id=bank_id,
@@ -1392,6 +1398,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                             label='Bank {}'.format(bank_id),
                                                             line_color='black')
 
+        # rescale
+        self.do_set_x_range()
+
+        # Plot 2D and/or 3D
         if not main_only:
             # set sequence
             if seq_list is None:
@@ -1409,6 +1419,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
                 # 2D Contours
                 child_2d_window = self.launch_contour_view()
+                # TODO - TONIGHT 0 - Implement: child_2d_window.set_x_range(blabla)
                 child_2d_window.plot_contour(seq_list, data_set_list)
 
                 # 3D Line

@@ -99,6 +99,8 @@ class WindowLogPicker(QMainWindow):
         # manual slicer picker
         self.ui.pushButton_showManualSlicerTable.clicked.connect(self.do_show_manual_slicer_table)
         self.ui.pushButton_loadSlicerFile.clicked.connect(self.do_import_slicer_file)
+        # TODO - TONIGHT 0 - Implement: pushButton_plotManualSlicer show slicers set up manually
+        # TODO - ... ...   - refer to evt_show_slicer()
 
         # Slicer table
         # Canvas
@@ -680,8 +682,7 @@ class WindowLogPicker(QMainWindow):
         return
 
     def do_show_manual_slicer_table(self):
-        """
-
+        """ Create (if not initialized) and show the manual slice UI (table and controls)
         :return:
         """
         import ManualSlicerSetupDialog

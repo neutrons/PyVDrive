@@ -9,6 +9,14 @@
 import h5py
 import numpy
 
+# TODO - TONIGHT 0 - Clean and be applied
+def detector_view(workspace):
+
+    vec_counts = workspace.readY(0)[6468:]
+    vec_counts.reshpace((72, 256))
+    vec_counts.transpose()
+    plt.imshow(matrix, origin='lower', interpolation='none')
+
 norm_h5_name = 'vanadium_172254_norm.hdf5'
 norm_file = h5py.File(norm_h5_name)
 
