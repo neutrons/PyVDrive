@@ -160,6 +160,60 @@ def parse_data_slicer_file(file_name):
     return slicer_list
 
 
+def parse_multi_run_slicer_file(file_name):
+    """
+    Parse the ASCII file to set up event filtering on several runs
+
+    File format:
+    # comments
+    # starting of a block
+    [RUN] 123456
+    # start_time    end_time   target_workspace_name/index
+    0     -1     1     #  from relative 0 to end of run, target is 12345_1, NO CHOPPING
+    [RUN] 123457
+    0     200    1     #  from relative 0 to 200, target is 123457_1
+    200   420    2
+    [RUN] 123458
+    0     100    123456_1    # from relative 0 to 100, target will be combined with RUN-123456's WS-1
+    :param file_name:
+    :return:
+    """
+    # read files
+    datatypeutility.check_file_name(file_name, True, False, False, 'Multiple run slicing file')
+    try:
+        slice_file = open(file_name, 'r')
+    except IOError as io_err:
+        raise RuntimeError('Unable to read file {} due to {}'.format(file_name, io_err))
+    raw_lines = slice_file.readlines()
+    slice_file.close()
+
+    slicer_dict = dict()
+
+    for line in raw_lines:
+        line = line.strip()
+        if line == '' or line.startswith('#'):
+            # empty line or comment
+            continue
+
+        # detect start of run
+        if line.startswith('[RUN]'):
+            # yes. start of a new block
+            try:
+                curr_run_number = int(line.split('[RUN]')[1].strip().split()[0])
+            except ValueError as value_err:
+                raise RuntimeError('Starting block line: "{}" is not valid to parse run number'.format(line))
+
+            slicer_dict[curr_run_number] = list()
+
+        else:
+            # slicer line
+            blabla
+            # TODO - TONIGHT 0 - [ASAP] continue from here!
+
+
+
+
+
 # TODO - TONIGHT 0 - Whether there is a similar method in chop/PICKDATA?
 def parse_time_segments(file_name):
     """
