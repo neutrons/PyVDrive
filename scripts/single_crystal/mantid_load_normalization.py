@@ -6,20 +6,22 @@
 # * smooth bank 3 vanadium in wavelength-space [FIXME with or without] background removed
 # * normalized by count on each pixel
 # * normalized by total PC
+import h5py
+import numpy
 
-norm_h5_name = ''
+norm_h5_name = 'vanadium_172254_norm.hdf5'
 norm_file = h5py.File(norm_h5_name)
 
 smooth_group = norm_file['smoothed spectrum']
-vec_d = smooth_group['d'].value
+vec_wavelength = smooth_group['tof'].value
 vec_van = smooth_group['intensity'].value
 vec_e = smooth_group['error'].value
 
 # smoothed vanadium
-smoothed_vanadium = CreateWorkspace(DataX=vec_d, DataY=vec_van, DataE=vec_e, NSpec=1, OutputWorkspace='SmoothedVanadium')
+smoothed_vanadium = CreateWorkspace(DataX=vec_wavelength, DataY=vec_van, DataE=vec_e, NSpec=1, OutputWorkspace='SmoothedVanadium', UnitX='Wavelength')
 smoothed_van_name = smoothed_vanadium.name()
-EditInstrument(InputWorkspace=smoothed_van_name, SpectraList='0', L1=instrument_group['L1'].value,
-               L2=instrument_group['L2'].value, Polar=blabla)
+EditInstrumentGeometry(Workspace=smoothed_van_name, SpectrumIDs='1', PrimaryFlightPath=42.,
+                                        L2='2', Polar='150.', Azimuthal='0.', DetectorIDs='1', InstrumentName='Vulcan_High_Angle')
 
 # counts (no background)
 count_group = norm_file['counts']
@@ -27,7 +29,7 @@ counts_vec = count_group['counts']
 vec_x = numpy.arange(counts_vec.shape[0])
 counts_van_name = 'VanadiumCounts'
 counts_ws = CreateWorkspace(DataX=vec_x, DataY=counts_vec, NSpec=1, OutputWorkspace=counts_van_name)
-counts_ws = Transpose(counts_ws)
+counts_ws = Transpose(counts_ws, OutputWorkspace=counts_van_name)
 
 norm_file.close()
 
