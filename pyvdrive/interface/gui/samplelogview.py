@@ -510,7 +510,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # update
         self._currPlotID = plot_id
 
-        return
+        return plot_id
 
     def remove_slicers(self):
         """

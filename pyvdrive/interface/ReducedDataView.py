@@ -380,6 +380,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             meta_data_key = self._myController.load_meta_data(ipts_number=ipts_number, run_number=run_number,
                                                               file_name=None)
             self._log_data_key = meta_data_key
+            # TODO - TONIGHT 0 - Record IPTS and run for future lookup
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self, 'Unable to load Meta data due to {}'.format(run_err))
             return
@@ -827,8 +828,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.graphicsView_mainPlot.reset_1d_plots()
 
         # TODO - 2 THINGS - TONIGHT 0 - plot original + select runs
+        # TODO - TONIGHT 000 - New idea (1) plot original anyway...
+        #                               (2) plot chopped as center of time bin w/ HDF5
+        #                               (3) plot detailed w/ HDF5
 
-        if self.ui.radioButton_chooseSingleRun.isChecked() or self.ui.checkBox_plotallChoppedLog.isChecked():
+        if self.ui.radioButton_chooseSingleRun.isChecked():
             # case for single run or source of chopped runs
             if curr_x_log_name == 'Time':
                 # get vec times (i.e., vec_log_x)
@@ -866,6 +870,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                      plot_label='{} {}'.format(self._iptsNumber, self._currRunNumber),
                                                      sample_log_name_x=curr_x_log_name,
                                                      sample_log_name=curr_y_log_name)
+
+        # TODO - TONIGHT 0 - Retrieve the chopped sample logs
+        # trace: self._log_data_key
 
         # for workspace_key in workspace_key_list:
         #     # get the name of the workspace containing sample logs
