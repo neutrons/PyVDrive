@@ -91,6 +91,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # chopped runs: chop run combo boxes items and other information
         self._chop_combo_data_key_dict = dict()  # [chop run combo box name] = run number, slicer key; sync with combo
         self._chop_combo_name_list = list()  # chop run combo box names with orders sync with combo box0
+
+        # TODO - TONIGHT 0 - Set dictionary for single runs similar to chopped run: self.ui.comboBox_runs
         # self._curr_chop_data_key = None   # run number of sliced case
 
         # self._loadedChoppedRunList = list()   # synchronized with comboBox_choppedRunNumber
@@ -108,6 +110,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # Controlling data structure on lines that are plotted on graph
         self._currentPlotDataKeyDict = dict()  # (UI-key): tuple (data key, bank ID, unit); value: value = vec x, vec y
+        self._currentPlotID = None   # ID of current plot
         # this is a temporary storage of reduced data loaded and cached
 
         # mutexes to control the event handling for changes in widgets
@@ -153,8 +156,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # data processing
         self.ui.pushButton_apply_x_range.clicked.connect(self.do_set_x_range)
         self.ui.pushButton_apply_y_range.clicked.connect(self.do_apply_y_range)
-        self.ui.comboBox_spectraList.currentIndexChanged.connect(self.evt_bank_id_changed)
-        self.ui.comboBox_unit.currentIndexChanged.connect(self.evt_unit_changed)
+        self.ui.comboBox_spectraList.currentIndexChanged.connect(self.evt_change_bank)
+        self.ui.comboBox_unit.currentIndexChanged.connect(self.evt_change_unit)
 
         self.ui.pushButton_cancel.clicked.connect(self.do_close)
 
@@ -710,15 +713,27 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         self.close()
 
-    # TESTME - Shall find out how this breaks
     def do_plot_diffraction_data(self, main_only):
         """
         Launch N (number of banks) plot window for each bank of the single run
         :param main_only: If true, only plot current at main only
         :return:
         """
-        # TODO - TONIGHT - Implement!
-        raise RuntimeError('Refer to VIEW ... process_vcommand.process_view()')
+        # reset
+        self.ui.graphicsView_mainPlot.reset_1d_plots()
+        self._currentPlotID = None
+
+        # plot
+        data_key = str(self.ui.comboBox_runs.currentText())
+        bank_id = int(self.ui.comboBox_spectraList.currentText())
+        try:
+            self.plot_single_run(data_key, van_norm=False, van_run=None, pc_norm=False, bank_id=bank_id,
+                                 main_only=True)
+        except RuntimeError as run_err:
+            GuiUtility.pop_dialog_error(self, 'Unable to plot {} (bank {}) due to {}'
+                                              ''.format(data_key, bank_id, run_err))
+
+        return
 
     def do_plot_next_single_run(self):
         """
@@ -911,7 +926,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def evt_bank_id_changed(self):
+    # TODO - TONIGHT 0 - For previously plotted runs, options such as van run, pc norm shall be remembered
+    def evt_change_bank(self):
         """
         Handling the event that the bank ID is changed: the figure should be re-plot.
         It should be avoided to plot the same data twice against evt_select_new_run_number
@@ -922,20 +938,65 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             return
 
         # new bank ID
-        self._currBank = int(self.ui.comboBox_spectraList.currentText())
+        next_bank = int(self.ui.comboBox_spectraList.currentText())
+        plot_data_key = 'NOT SET'
 
+        try:
+            if self.ui.radioButton_chooseSingleRun.isChecked():
+                # plot single run: as it is a change of bank. no need to re-process data
+                plot_data_key = self._curr_data_key
+                self.plot_single_run(data_key=plot_data_key, bank_id=next_bank,
+                                     van_norm=None, van_run=None, pc_norm=None, main_only=True)
+
+            else:
+                # chopped data
+                curr_chop_name = str(self.ui.comboBox_choppedRunNumber.currentText())
+                plot_data_key = self._chop_combo_data_key_dict[curr_chop_name]
+                self.plot_chopped_run(chop_key=plot_data_key, bank_id=next_bank,
+                                      seq_list=None, main_only=True,
+                                      van_norm=None, van_run=None, pc_norm=None, plot3d=False)
+            # END-IF-ELSE
+        except RuntimeError as run_err:
+            # reset to previous state
+            self._mutexBankIDList = True
+            GuiUtility.set_combobox_current_item(self.ui.comboBox_spectraList, '{}'.format(self._currBank),
+                                                 False)
+            self._mutexBankIDList = False
+            GuiUtility.pop_dialog_error(self, 'Unable to switch to bank {1} (data key {0} exists) due to {2}'
+                                              ''.format(plot_data_key, next_bank, run_err))
+            return
+
+        # successful and set current bank to new/next bank
+        self._currBank = next_bank
+
+        return
+
+    # TODO - TONIGHT 0 - For previously plotted runs, options such as van run, pc norm shall be remembered
+    # TODO - TONIGHT 0 - Need to memorize the setup of X range for different UNIT
+    def evt_change_unit(self):
+        """
+        Purpose: Re-plot the current plots with new unit in Main graphics view
+        :return:
+        """
+        # # Clear previous image and re-plot
+        # self.ui.graphicsView_mainPlot.reset_1d_plots()
+
+        # set unit
+        self._currUnit = str(self.ui.comboBox_unit.currentText())
+
+        # plot
         if self.ui.radioButton_chooseSingleRun.isChecked():
-            # plot single run: as it is a change of bank. no need to re-process data
-            self.plot_single_run(data_key=self._curr_data_key, bank_id=self._currBank,
-                                 van_norm=None, van_run=None, pc_norm=None, main_only=True)
-
+            # single run
+            self.plot_single_run(self._curr_data_key, van_norm=False, van_run=None,
+                                 pc_norm=False, bank_id=self._currBank, main_only=False)
         else:
             # chopped data
             curr_chop_name = str(self.ui.comboBox_choppedRunNumber.currentText())
-            chop_data_key = self._chop_combo_data_key_dict[curr_chop_name]
-            self.plot_chopped_run(chop_key=chop_data_key, bank_id=self._currBank,
+            plot_data_key = self._chop_combo_data_key_dict[curr_chop_name]
+            self.plot_chopped_run(chop_key=plot_data_key, bank_id=self._currBank,
                                   seq_list=None, main_only=True,
                                   van_norm=None, van_run=None, pc_norm=None, plot3d=False)
+            # END-IF-ELSE
 
         return
 
@@ -980,7 +1041,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             return
 
         # plot diffraction data same as
-        self.do_plot_diffraction_data()
+        self.do_plot_diffraction_data(True)
 
         return
 
@@ -1022,22 +1083,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.plot_chopped_run(chop_key=chop_data_key, bank_id=self._currBank,
                               seq_list=None, main_only=True,
                               van_norm=None, van_run=None, pc_norm=None, plot3d=False)
-        return
-
-    def evt_unit_changed(self):
-        """
-        Purpose: Re-plot the current plots with new unit
-        :return:
-        """
-        # Clear previous image and re-plot
-        self.ui.graphicsView_mainPlot.clear_all_lines()
-
-        # set unit
-        self._currUnit = str(self.ui.comboBox_unit.currentText())
-
-        # plot
-        # TODO - FIXME - TONIGHT - This shall be locked and fixed: self.do_plot_diffraction_data(True)
-
         return
 
     def get_proton_charge(self, ipts_number, run_number, chop_seq):
@@ -1144,7 +1189,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         print ('[DB...BAT] ReductionDataView: About to retrieve data from API with Data key = {}'
                ' of Bank {}'.format(data_key, bank_id))
 
-        data_set = self._myController.get_reduced_data(run_id=data_key, target_unit=unit, bank_id=bank_id)
+        try:
+            data_set = self._myController.get_reduced_data(run_id=data_key, target_unit=unit, bank_id=bank_id)
+        except RuntimeError as run_err:
+            raise run_err
         # convert to 2 vectors
         print ('DB...BAT Data Set keys: {}'.format(data_set.keys()))
         vec_x = data_set[bank_id][0]
@@ -1268,12 +1316,18 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             vec_y /= van_vec_y
             # END-IF
 
+        # clear existing line
+        if self._currentPlotID:
+            self.ui.graphicsView_mainPlot.remove_line(self._currentPlotID)
+            self._currentPlotID = None
+
         line_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit=self._currUnit,
                                                                       over_plot=False,
                                                                       run_id=data_key, bank_id=bank_id,
                                                                       chop_tag=None,
                                                                       label='{}, {}'.format(data_key, bank_id))
         self.ui.graphicsView_mainPlot.set_title(title='{}'.format(data_key))
+        self._currentPlotID = line_id
 
         # deal with Y axis
         self.ui.graphicsView_mainPlot.auto_rescale()
@@ -1282,7 +1336,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # pop the child atomic window
         if not main_only:
-            for bank_id in range(1, 4):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
+            status, bank_ids = self._myController.get_reduced_run_info(run_number=None, data_key=data_key)
+            if not status:
+                raise NotImplementedError('It is not possible to unable to get reduced run info!')
+            print ('[DB...BAT] Bank IDs: {}'.format(bank_ids))
+            for bank_id in sorted(bank_ids):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
                 child_window = self.launch_single_run_view()
                 vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=data_key, bank_id=bank_id,
                                                                  unit=self._currUnit)
@@ -1387,16 +1445,22 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             van_vec_y = None
         # END-IF
 
+        # clear
+        if self._currentPlotID:
+            self.ui.graphicsView_mainPlot.remove_line(self._currentPlotID)
+            self._currentPlotID = None
+
         # plot 1D chopped data
         # TODO - TONIGHT - Need to manage the plotted data (plot ID) to
         # TODO - ... ... - (1) clear the previously plotted data
         # TODO - ... ... - (2) reset range for different units
-        self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit=self._currUnit,
+        plot_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit=self._currUnit,
                                                             over_plot=True,
                                                             run_id=chop_key, bank_id=bank_id,
                                                             chop_tag='{}'.format(curr_seq),
-                                                            label='Bank {}'.format(bank_id),
+                                                            label='',
                                                             line_color='black')
+        self._currentPlotID = plot_id
 
         # rescale
         self.do_set_x_range()

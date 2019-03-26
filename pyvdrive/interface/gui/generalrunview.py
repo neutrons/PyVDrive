@@ -126,7 +126,10 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         vec_y = vec_xy_set[1]
 
         # take are of label
-        line_label = "{} Run {} Bank {}".format(label, run_id, bank_id)
+        if label is None or label == '':
+            line_label = "{} Run {} Bank {}".format(label, run_id, bank_id)
+        else:
+            line_label = label
 
         # process the current image
         if not over_plot:

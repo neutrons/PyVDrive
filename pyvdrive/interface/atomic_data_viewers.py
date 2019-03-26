@@ -87,7 +87,7 @@ class AtomicReduction2DViewer(QMainWindow):
         self._promote_widgets()
 
         # TODO - TONIGHT 0 - Implement ASAP
-        # self.ui.pushButton_setXrange:  set image X range
+        self.ui.pushButton_setXrange.clicked.connect(self.do_set_x_range)
 
         return
 
@@ -100,6 +100,17 @@ class AtomicReduction2DViewer(QMainWindow):
         self.ui.frame_mainPlot.setLayout(graphicsView_mainPlot_layout)
         self.ui.graphicsView_mainPlot = ContourPlotView(self)
         graphicsView_mainPlot_layout.addWidget(self.ui.graphicsView_mainPlot)
+
+        return
+
+    def do_set_x_range(self):
+        """ Set image X range from line edits
+        :return:
+        """
+        x_min = GuiUtility.parse_float(self.ui.lineEdit_xMin, True, 0.)
+        x_max = GuiUtility.parse_float(self.ui.lineEdit_xMax, True, 5.)
+
+        self.ui.graphicsView_mainPlot.setXYLimit(xmin=x_min, xmax=x_max)
 
         return
 

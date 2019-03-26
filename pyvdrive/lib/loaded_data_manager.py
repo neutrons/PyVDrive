@@ -243,6 +243,8 @@ class LoadedDataManager(object):
 
         # register by adding to data management dictionary
         self._workspaceDict[data_key] = data_ws_name
+        # TODO - TONIGHT 0 - Add an option to the method such that single run data will go to singleGSASDict
+        # TODO - ... ...   - chopped run will NOT to be recorded .. self._loadedGSSDict[] = ...maybe
         self._singleGSASDict[data_key] = data_file_name
 
         return data_key
@@ -259,7 +261,7 @@ class LoadedDataManager(object):
 
         return chop_info_file
 
-    # TODO - TONIGHT 4 - Clean up!
+    # TODO - TONIGHT 0 - Clean up!
     def load_chopped_binned_data(self, run_number, chopped_data_dir, chop_sequences=None, file_format='gsas'):
         """
         load chopped and binned data (in GSAS format) for a directory.

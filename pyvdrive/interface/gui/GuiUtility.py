@@ -347,20 +347,22 @@ def parse_integer_list(line_edit, size=None, check_order=False, remove_duplicate
     return integer_list
 
 
-def parse_float(line_edit, allow_blank=True):
+def parse_float(line_edit, allow_blank=True, default=None):
     """
     Parse a line edit as a float number
     :param line_edit:
     :param allow_blank: if true, then return None if there is no string written in the LineEdit
-    :return: float or None
+    :return: float or None (or blank)
     """
+    # TODO - TONIGHT 0 - CHECK and clean
     # Check input
     assert(isinstance(line_edit, QLineEdit))
 
     str_value = str(line_edit.text()).strip()
     if len(str_value) == 0:
         if allow_blank:
-            return None
+            line_edit.setText('{}'.format(default))
+            return default
         else:
             raise RuntimeError('Blank editor')
 
