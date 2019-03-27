@@ -119,12 +119,21 @@ class LoadedDataManager(object):
     def get_loaded_runs(self):
         """
         get the run numbers or data keys of the loaded data
-        :return:
+        :return: a list of 2-tuples: data file name, workspace name
         """
-        loaded_single_runs = self._singleGSASDict.keys()
-        loaded_single_runs.sort()
+        loaded_ws_list = self._singleGSASDict.keys()
+        if len(loaded_ws_list) > 0:
+            run_ws_list = list()
+            for ws_name in loaded_ws_list:
+                gda_name = self._singleGSASDict[ws_name]
+                gda_name = os.path.basename(gda_name)
+                run_ws_list.append((gda_name, ws_name))
+            # END-FOR
+            run_ws_list.sort()
+        else:
+            run_ws_list = list()
 
-        return loaded_single_runs
+        return run_ws_list
 
     def get_workspace_name(self, data_key):
         """

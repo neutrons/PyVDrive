@@ -99,7 +99,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # self._curr_chop_data_key = None   # run number of sliced case
 
         # record of X value range
-        self._xrange_dict = {'TOF': (None, None),
+        self._xrange_dict = {'TOF': (1000, 70000),
                              'dSpacing': (None, None)}
 
         # self._loadedChoppedRunList = list()   # synchronized with comboBox_choppedRunNumber
@@ -655,7 +655,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
             # re-focus to the previous one
             if current_single_run_name != '' and current_single_run_name in self._single_combo_name_list:
-                combo_index = self._single_run_list.index(current_single_run_name)
+                combo_index = self._single_combo_name_list.index(current_single_run_name)
                 self.ui.comboBox_runs.setCurrentIndex(combo_index)
         # END-IF-ELSE
 
@@ -915,7 +915,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def do_refresh_existing_runs(self, set_to=None, is_chopped=False):
+    def do_refresh_existing_runs(self, set_to=None, is_chopped=False, is_data_key=True):
         """ refresh the existing runs in the combo box
         :param set_to:
         :param is_chopped: Flag whether it is good to set to chopped data
@@ -941,6 +941,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # need to update to the
             self.ui.radioButton_chooseSingleRun.setChecked(True)
             # self.set_plot_mode(single_run=True, plot=False)
+            if is_data_key:
+                for combo_name in self._single_combo_data_key_dict.keys():
+                    if self._single_combo_data_key_dict[combo_name] == set_to:
+                        set_to = combo_name
+                        break
             new_single_index = self._single_combo_name_list.index(set_to)
             self.ui.comboBox_runs.setCurrentIndex(new_single_index)  # this will trigger the event to plot!
 
@@ -1031,7 +1036,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # about X range: save current X range setup
         curr_x_min = GuiUtility.parse_float(self.ui.lineEdit_minX, True)
-        curr_x_max = GuiUtility.parse_float(self.ui.lineEdit_maxY, True)
+        curr_x_max = GuiUtility.parse_float(self.ui.lineEdit_maxX, True)
         self._xrange_dict[self._currUnit] = curr_x_min, curr_x_max
 
         # set new unit and X range of new unit
@@ -1393,6 +1398,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         # check inputs
         datatypeutility.check_int_variable('Bank ID', bank_id, (1, 99))
+
+        # set current data key
+        self._curr_data_key = data_key
 
         # get the entry index for the data
         # entry_key = data_key, bank_id, self._currUnit
