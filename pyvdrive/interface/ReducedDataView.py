@@ -19,7 +19,6 @@ except ImportError:
     from PyQt4.uic import loadUi as load_ui
     from PyQt4 import QtCore
 import gui.GuiUtility as GuiUtility
-from pyvdrive.lib import vulcan_util
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
@@ -31,7 +30,6 @@ import pyvdrive.lib.datatypeutility
 from pyvdrive.lib import datatypeutility
 import atomic_data_viewers
 from gui.samplelogview import LogGraphicsView
-from pyvdrive.lib import vdrivehelper
 from pyvdrive.lib import reduce_VULCAN
 
 
@@ -77,23 +75,32 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._bankIDList = list()  # synchronized with comboBox_spectraList
         self._currBank = 1
         self._currUnit = str(self.ui.comboBox_unit.currentText())
+
+        # sample logs
         self._sample_log_name_list = generate_sample_log_list()  # list of sample logs that are viable to plot
+        self._log_data_dict = dict()  # [meta_data_key] = ipts, run number
 
         # normalization
         self._curr_pc_norm = False
         self._vanadium_dict = dict()
 
         # single runs
-        self._single_run_list = list()  # single run number list: synchronized with comboBox_runs
         self._curr_data_key = None  # current (last loaded) workspace name as data key
         self._currRunNumber = None   # run number of single run reduced
+        # single runs: single run combo box items and other information
+        self._single_combo_data_key_dict = dict()  # [single run combo box name] = run number (aka data key)
+        self._single_combo_name_list = list()  # single run combo box name list with orders sync with combo box
+        self._single_run_plot_option = dict()  # [data key] = dict() such as van_norm, van_run, pc_norm...
 
-        # chopped runs: chop run combo boxes items and other information
+        # chopped runs: chop run combo box items and other information
         self._chop_combo_data_key_dict = dict()  # [chop run combo box name] = run number, slicer key; sync with combo
-        self._chop_combo_name_list = list()  # chop run combo box names with orders sync with combo box0
-
-        # TODO - TONIGHT 0 - Set dictionary for single runs similar to chopped run: self.ui.comboBox_runs
+        self._chop_combo_name_list = list()  # chop run combo box names with orders sync with combo box
+        self._chop_run_plot_option = dict()  # [chop key] = dict() such as van_norm, van_run, pc_norm...
         # self._curr_chop_data_key = None   # run number of sliced case
+
+        # record of X value range
+        self._xrange_dict = {'TOF': (None, None),
+                             'dSpacing': (None, None)}
 
         # self._loadedChoppedRunList = list()   # synchronized with comboBox_choppedRunNumber
         # chopped run number (parent-data-key) list:
@@ -380,7 +387,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             meta_data_key = self._myController.load_meta_data(ipts_number=ipts_number, run_number=run_number,
                                                               file_name=None)
             self._log_data_key = meta_data_key
-            # TODO - TONIGHT 0 - Record IPTS and run for future lookup
+            self._log_data_dict[meta_data_key] = ipts_number, run_number
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self, 'Unable to load Meta data due to {}'.format(run_err))
             return
@@ -612,7 +619,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :return:
         """
         single_runs_list = self._myController.get_focused_runs(chopped=False)
-        self._single_run_list = list()
+        self._single_combo_name_list = list()
 
         self._mutexRunNumberList = True  # set on the mutex
 
@@ -622,17 +629,18 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         else:
             # current selection
-            current_single_run = str(self.ui.comboBox_runs.currentText()).strip()
-            if current_single_run == '':
-                current_single_run = None
+            current_single_run_name = str(self.ui.comboBox_runs.currentText()).strip()
+            if current_single_run_name == '':
+                current_single_run_name = None
 
             # single runs
             single_runs_list.sort()
 
             # update
             self.ui.comboBox_runs.clear()
-            for run_number in single_runs_list:
-                print ('[INFO] Add loaded run {} ({})'.format(run_number, type(run_number)))
+            for run_number, data_key in single_runs_list:
+                print ('[INFO] Add loaded run {} (type = {}) data key = {}'
+                       ''.format(run_number, type(run_number), data_key))
 
                 # come up an entry name
                 # convert run  number from integer to string as the standard
@@ -641,12 +649,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
                 # add to combo box as the data key that can be used to refer
                 self.ui.comboBox_runs.addItem(run_number)
-                self._single_run_list.append(run_number)  # synchronize single_run_list with combo box
+                self._single_combo_name_list.append(run_number)  # synchronize single_run_list with combo box
+                self._single_combo_data_key_dict[run_number] = data_key
             # END-FOR
 
             # re-focus to the previous one
-            if current_single_run != '' and current_single_run in self._single_run_list:
-                combo_index = self._single_run_list.index(current_single_run)
+            if current_single_run_name != '' and current_single_run_name in self._single_combo_name_list:
+                combo_index = self._single_run_list.index(current_single_run_name)
                 self.ui.comboBox_runs.setCurrentIndex(combo_index)
         # END-IF-ELSE
 
@@ -669,11 +678,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         if new_min_x >= new_max_x:
             GuiUtility.pop_dialog_error(self, 'Minimum X %f is equal to or larger than maximum X %f!'
                                               '' % (new_min_x, new_max_x))
+            new_min_x = curr_min_x
+            new_max_x = curr_max_x
         else:
             # Set new X range
             self.ui.graphicsView_mainPlot.setXYLimit(xmin=new_min_x, xmax=new_max_x)
 
-        return
+        return new_min_x, new_max_x
 
     def do_apply_y_range(self):
         """ Apply new data range to the plots on graph
@@ -725,10 +736,21 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._currentPlotID = None
 
         # plot
-        data_key = str(self.ui.comboBox_runs.currentText())
+        run_number = str(self.ui.comboBox_runs.currentText())
+        data_key = self._single_combo_data_key_dict[run_number]
         bank_id = int(self.ui.comboBox_spectraList.currentText())
+
+        # get the previous setup for vanadium and proton charge normalization or default
+        if data_key in self._single_run_plot_option:
+            van_run = self._single_run_plot_option[data_key]['van_run']
+            van_norm = self._single_run_plot_option[data_key]['van_norm']
+            pc_norm = self._single_run_plot_option[data_key]['pc_norm']
+        else:
+            van_run = None
+            van_norm = pc_norm = False
+
         try:
-            self.plot_single_run(data_key, van_norm=False, van_run=None, pc_norm=False, bank_id=bank_id,
+            self.plot_single_run(data_key, van_norm=van_norm, van_run=van_run, pc_norm=pc_norm, bank_id=bank_id,
                                  main_only=True)
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self, 'Unable to plot {} (bank {}) due to {}'
@@ -919,7 +941,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # need to update to the
             self.ui.radioButton_chooseSingleRun.setChecked(True)
             # self.set_plot_mode(single_run=True, plot=False)
-            new_single_index = self._single_run_list.index(set_to)
+            new_single_index = self._single_combo_name_list.index(set_to)
             self.ui.comboBox_runs.setCurrentIndex(new_single_index)  # this will trigger the event to plot!
 
         elif set_to is not None and is_chopped:
@@ -933,7 +955,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    # TODO - TONIGHT 0 - For previously plotted runs, options such as van run, pc norm shall be remembered
     def evt_change_bank(self):
         """
         Handling the event that the bank ID is changed: the figure should be re-plot.
@@ -952,16 +973,38 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             if self.ui.radioButton_chooseSingleRun.isChecked():
                 # plot single run: as it is a change of bank. no need to re-process data
                 plot_data_key = self._curr_data_key
+                if plot_data_key in self._single_combo_data_key_dict:
+                    pass
+
+                # get the previous setup for vanadium and proton charge normalization or default
+                if plot_data_key in self._single_run_plot_option:
+                    van_run = self._single_run_plot_option[plot_data_key]['van_run']
+                    van_norm = self._single_run_plot_option[plot_data_key]['van_norm']
+                    pc_norm = self._single_run_plot_option[plot_data_key]['pc_norm']
+                else:
+                    van_run = None
+                    van_norm = pc_norm = False
+
                 self.plot_single_run(data_key=plot_data_key, bank_id=next_bank,
-                                     van_norm=None, van_run=None, pc_norm=None, main_only=True)
+                                     van_norm=van_norm, van_run=van_run, pc_norm=pc_norm, main_only=True)
 
             else:
                 # chopped data
                 curr_chop_name = str(self.ui.comboBox_choppedRunNumber.currentText())
                 plot_data_key = self._chop_combo_data_key_dict[curr_chop_name]
+
+                # retrieve previous setup
+                if plot_data_key in self._chop_run_plot_option:
+                    pc_norm = self._chop_run_plot_option[plot_data_key]['pc_norm']
+                    van_norm = self._chop_run_plot_option[plot_data_key]['norm_van']
+                    van_run = self._chop_run_plot_option[plot_data_key]['van_run']
+                else:
+                    pc_norm = van_norm = van_run = None
+
+                # plot
                 self.plot_chopped_run(chop_key=plot_data_key, bank_id=next_bank,
                                       seq_list=None, main_only=True,
-                                      van_norm=None, van_run=None, pc_norm=None, plot3d=False)
+                                      van_norm=van_norm, van_run=van_run, pc_norm=pc_norm, plot3d=False)
             # END-IF-ELSE
         except RuntimeError as run_err:
             # reset to previous state
@@ -978,8 +1021,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    # TODO - TONIGHT 0 - For previously plotted runs, options such as van run, pc norm shall be remembered
-    # TODO - TONIGHT 0 - Need to memorize the setup of X range for different UNIT
     def evt_change_unit(self):
         """
         Purpose: Re-plot the current plots with new unit in Main graphics view
@@ -988,21 +1029,57 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # # Clear previous image and re-plot
         # self.ui.graphicsView_mainPlot.reset_1d_plots()
 
-        # set unit
+        # about X range: save current X range setup
+        curr_x_min = GuiUtility.parse_float(self.ui.lineEdit_minX, True)
+        curr_x_max = GuiUtility.parse_float(self.ui.lineEdit_maxY, True)
+        self._xrange_dict[self._currUnit] = curr_x_min, curr_x_max
+
+        # set new unit and X range of new unit
         self._currUnit = str(self.ui.comboBox_unit.currentText())
+        if self._currUnit in self._xrange_dict:
+            next_x_min, next_x_max = self._xrange_dict[self._currUnit]
+        else:
+            next_x_min = next_x_max = None
+
+        if next_x_min:
+            self.ui.lineEdit_minX.setText('{}'.format(next_x_min))
+        else:
+            self.ui.lineEdit_minX.setText('')
+
+        if next_x_max:
+            self.ui.lineEdit_maxX.setText('{}'.format(next_x_max))
+        else:
+            self.ui.lineEdit_maxX.setText('')
 
         # plot
         if self.ui.radioButton_chooseSingleRun.isChecked():
             # single run
-            self.plot_single_run(self._curr_data_key, van_norm=False, van_run=None,
-                                 pc_norm=False, bank_id=self._currBank, main_only=False)
+            # get the previous setup for vanadium and proton charge normalization or default
+            if self._curr_data_key in self._single_run_plot_option:
+                van_run = self._single_run_plot_option[self._curr_data_key]['van_run']
+                van_norm = self._single_run_plot_option[self._curr_data_key]['van_norm']
+                pc_norm = self._single_run_plot_option[self._curr_data_key]['pc_norm']
+            else:
+                van_run = None
+                van_norm = pc_norm = False
+
+            self.plot_single_run(self._curr_data_key, van_norm=van_norm, van_run=van_run,
+                                 pc_norm=pc_norm, bank_id=self._currBank, main_only=False)
         else:
             # chopped data
             curr_chop_name = str(self.ui.comboBox_choppedRunNumber.currentText())
             plot_data_key = self._chop_combo_data_key_dict[curr_chop_name]
+            # retrieve previous setup
+            if plot_data_key in self._chop_run_plot_option:
+                pc_norm = self._chop_run_plot_option[plot_data_key]['pc_norm']
+                van_norm = self._chop_run_plot_option[plot_data_key]['norm_van']
+                van_run = self._chop_run_plot_option[plot_data_key]['van_run']
+            else:
+                pc_norm = van_norm = van_run = None
+
             self.plot_chopped_run(chop_key=plot_data_key, bank_id=self._currBank,
                                   seq_list=None, main_only=True,
-                                  van_norm=None, van_run=None, pc_norm=None, plot3d=False)
+                                  van_norm=van_norm, van_run=van_run, pc_norm=pc_norm, plot3d=False)
             # END-IF-ELSE
 
         return
@@ -1087,9 +1164,17 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # chopped data
         curr_chop_name = str(self.ui.comboBox_choppedRunNumber.currentText())
         chop_data_key = self._chop_combo_data_key_dict[curr_chop_name]
+        # retrieve previous setup
+        if chop_data_key in self._chop_run_plot_option:
+            pc_norm = self._chop_run_plot_option[chop_data_key]['pc_norm']
+            van_norm = self._chop_run_plot_option[chop_data_key]['norm_van']
+            van_run = self._chop_run_plot_option[chop_data_key]['van_run']
+        else:
+            pc_norm = van_norm = van_run = None
+
         self.plot_chopped_run(chop_key=chop_data_key, bank_id=self._currBank,
                               seq_list=None, main_only=True,
-                              van_norm=None, van_run=None, pc_norm=None, plot3d=False)
+                              van_norm=van_norm, van_run=van_run, pc_norm=pc_norm, plot3d=False)
         return
 
     def get_proton_charge(self, ipts_number, run_number, chop_seq):
@@ -1323,6 +1408,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             vec_y /= van_vec_y
             # END-IF
 
+        self._single_run_plot_option[data_key] = {'pc_norm': pc_norm,
+                                                  'van_run': van_run,
+                                                  'van_norm': van_norm}
+
         # clear existing line
         if self._currentPlotID:
             self.ui.graphicsView_mainPlot.remove_line(self._currentPlotID)
@@ -1387,6 +1476,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             :param chop_sequences:
             :param bank_index:
             :param do_pc_norm:
+            :param do_van_norm:
+            :param vanadium_vector:
             :return: 2-tuple: chopped sequence list and data set list
             """
             # construct input for contour plot
@@ -1429,6 +1520,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             datatypeutility.check_bool_variable('Normalize by proton charge', pc_norm)
             self._curr_pc_norm = pc_norm
 
+        # record option
+        self._chop_run_plot_option[chop_key] = {'pc_norm': pc_norm,
+                                                'norm_van': van_norm,
+                                                'van_run': van_run}
+
         # plot main figure
         try:
             # loaded GSAS file... possible non-consecutive integers
@@ -1458,19 +1554,17 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             self._currentPlotID = None
 
         # plot 1D chopped data
-        # TODO - TONIGHT - Need to manage the plotted data (plot ID) to
-        # TODO - ... ... - (1) clear the previously plotted data
-        # TODO - ... ... - (2) reset range for different units
         plot_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit=self._currUnit,
-                                                            over_plot=True,
-                                                            run_id=chop_key, bank_id=bank_id,
-                                                            chop_tag='{}'.format(curr_seq),
-                                                            label='',
-                                                            line_color='black')
+                                                                      over_plot=True,
+                                                                      run_id=chop_key,
+                                                                      bank_id=bank_id,
+                                                                      chop_tag='{}'.format(curr_seq),
+                                                                      label='Run {} Bank {}'.format(chop_key, bank_id),
+                                                                      line_color='black')
         self._currentPlotID = plot_id
 
         # rescale
-        self.do_set_x_range()
+        min_x, max_x = self.do_set_x_range()
 
         # Plot 2D and/or 3D
         if not main_only:
@@ -1490,7 +1584,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
                 # 2D Contours
                 child_2d_window = self.launch_contour_view()
-                # TODO - TONIGHT 0 - Implement: child_2d_window.set_x_range(blabla)
+                child_2d_window.set_x_range(min_x, max_x)
                 child_2d_window.plot_contour(seq_list, data_set_list)
 
                 # 3D Line
@@ -1503,6 +1597,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     def set_logs(self, ipts_number, run_number, log_set):
+        """
+        set log set (list of log names) to IPTS/RUN
+        :param ipts_number:
+        :param run_number:
+        :param log_set:
+        :return:
+        """
         if ipts_number not in self._sample_log_dict:
             self._sample_log_dict[ipts_number] = dict()
         self._sample_log_dict[ipts_number][run_number] = log_set  # with head included
