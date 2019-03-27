@@ -512,6 +512,10 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         return plot_id
 
+    # TODO - TONIGHT 0 - Implement!
+    def plot_chopped_log(self, vec_x, vec_y, blabla):
+        return
+
     def remove_slicers(self):
         """
         remove slicers

@@ -76,10 +76,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._currBank = 1
         self._currUnit = str(self.ui.comboBox_unit.currentText())
 
-        # sample logs
-        self._sample_log_name_list = generate_sample_log_list()  # list of sample logs that are viable to plot
-        self._log_data_dict = dict()  # [meta_data_key] = ipts, run number
-
         # normalization
         self._curr_pc_norm = False
         self._vanadium_dict = dict()
@@ -108,10 +104,12 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # self._choppedRunDict = dict()  # [chop run ID *][seq_number**] = chopped/reduced workspace name
         # * chop run ID in _loadedChoppedRunList  ** seq_number in ...
 
-        # sample log runs
+        # sample log runs and logs
         self._log_data_key = None
         self._log_display_name_dict = dict()   # [log display name] = log full name (to look up)
-        self._sample_log_dict = dict()
+        self._sample_log_dict = dict()  # [IPTS][RUN] = {'start': ..., 'mean': ..., 'end': ...}
+        self._sample_log_name_list = generate_sample_log_list()  # list of sample logs that are viable to plot
+        self._sample_log_info_dict = dict()  # [meta_data_key] = ipts, run number
 
         # FIND OUT: self._choppedSampleDict = dict()  # key: data workspace name. value: sample (NeXus) workspace name
 
@@ -387,7 +385,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             meta_data_key = self._myController.load_meta_data(ipts_number=ipts_number, run_number=run_number,
                                                               file_name=None)
             self._log_data_key = meta_data_key
-            self._log_data_dict[meta_data_key] = ipts_number, run_number
+            self._sample_log_info_dict[meta_data_key] = ipts_number, run_number
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self, 'Unable to load Meta data due to {}'.format(run_err))
             return
@@ -408,6 +406,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # update
         self.update_sample_log_list(sorted(self._log_display_name_dict.keys()), reset_plot=True)
+        self.ui.label_loadedSampleLogRun.setText('Currently Loaded: IPTS = {}, Run = {} (Log data ID: {}'
+                                                 ''.format(ipts_number, run_number, self._sample_log_info_dict))
 
         return
 
@@ -823,7 +823,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    # TODO - TONIGHT 0 - Refactor with
+    # TODO - TONIGHT 0000 0000 - Working on NOW
     def do_plot_sample_logs(self):
         """ Plot selected sample logs:
         Workflow:
@@ -846,72 +846,84 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         display_name_y = str(self.ui.comboBox_sampleLogsList_y.currentText()).strip()
         curr_y_log_name = self._log_display_name_dict[display_name_y]
 
-        # reset
-        self.ui.graphicsView_mainPlot.reset_1d_plots()
-
-        # TODO - 2 THINGS - TONIGHT 0 - plot original + select runs
-        # TODO - TONIGHT 000 - New idea (1) plot original anyway...
-        #                               (2) plot chopped as center of time bin w/ HDF5
-        #                               (3) plot detailed w/ HDF5
-
-        if self.ui.radioButton_chooseSingleRun.isChecked():
-            # case for single run or source of chopped runs
-            if curr_x_log_name == 'Time':
-                # get vec times (i.e., vec_log_x)
-                vec_log_x, vec_log_y = self._myController.get_sample_log_values(data_key=self._log_data_key,
-                                                                                log_name=curr_y_log_name,
-                                                                                start_time=None, stop_time=None,
-                                                                                relative=True)
-            else:
-                vec_log_x, vec_log_y = self._myController.get_2_sample_log_values(data_key=self._log_data_key,
-                                                                                  log_name_x=curr_x_log_name,
-                                                                                  log_name_y=curr_y_log_name,
-                                                                                  start_time=None,
-                                                                                  stop_time=None)
-                #
-                # vec_times_x, vec_value_x = self._myController.get_sample_log_values(data_key=self._log_data_key,
-                #                                                                     log_name=curr_x_log_name,
-                #                                                                     start_time=None, stop_time=None,
-                #                                                                     relative=True)
-                # # TODO - TONIGHT 0 - merge_2_logs shall be a static in the utility and called by plot_sample_log()!
-                # vec_log_x, vec_log_y = vdrivehelper.merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
-            # END-IF-ELSE
+        # case for single run or original of chopped runs
+        if curr_x_log_name == 'Time':
+            # get vec times (i.e., vec_log_x)
+            vec_log_x, vec_log_y = self._myController.get_sample_log_values(data_key=self._log_data_key,
+                                                                            log_name=curr_y_log_name,
+                                                                            start_time=None, stop_time=None,
+                                                                            relative=True)
         else:
-            # single chopped runs
-            workspace_key = str(self.ui.comboBox_chopSeq.currentText())
-            workspace_key_list = [workspace_key]
-            raise NotImplementedError('Need use case to plot sample logs of a single chopped run but not all')
-
+            vec_log_x, vec_log_y = self._myController.get_2_sample_log_values(data_key=self._log_data_key,
+                                                                              log_name_x=curr_x_log_name,
+                                                                              log_name_y=curr_y_log_name,
+                                                                              start_time=None,
+                                                                              stop_time=None)
         # END-IF-ELSE
 
-        # reset plot
-        self.ui.graphicsView_mainPlot.reset_1d_plots()
-
         # plot
-        self.ui.graphicsView_logPlot.plot_sample_log(vec_log_x, vec_log_y,
-                                                     plot_label='{} {}'.format(self._iptsNumber, self._currRunNumber),
-                                                     sample_log_name_x=curr_x_log_name,
-                                                     sample_log_name=curr_y_log_name)
+        single_plot_id = self.ui.graphicsView_logPlot.plot_sample_log(vec_log_x, vec_log_y,
+                                                                      plot_label='{} {}'
+                                                                                 ''.format(self._iptsNumber,
+                                                                                           self._currRunNumber),
+                                                                      sample_log_name_x=curr_x_log_name,
+                                                                      sample_log_name=curr_y_log_name)
 
-        # TODO - TONIGHT 0 - Retrieve the chopped sample logs
-        # trace: self._log_data_key
+        # For sliced sample logs
+        if self.ui.checkBox_plotSlicedRun.isChecked() and True:
+            # for sliced data from archive
+            # TODO - TONIGHT 0000 - Clean up this section!
 
-        # for workspace_key in workspace_key_list:
-        #     # get the name of the workspace containing sample logs
-        #     if workspace_key in self._choppedSampleDict:
-        #         # this is for loaded GSAS and NeXus file
-        #         sample_key = self._choppedSampleDict[workspace_key]
-        #     else:
-        #         # just reduced workspace
-        #         sample_key = workspace_key
-        #
-        #     # get the sample log time and value
-        #     vec_times, vec_value = self._myController.get_sample_log_values(sample_key, sample_name, relative=True)
-        #
-        #     # plot
-        #     self.ui.graphicsView_mainPlot.plot_sample_data(vec_times, vec_value, workspace_key, sample_name)
-        # # END-FOR
-        #
+            try:
+                # use IPTS and run to locate the loaded sample logs
+                ipts_number, run_number = self._sample_log_info_dict[self._log_data_key]
+                print (ipts_number in self._sample_log_dict)
+                if ipts_number in self._sample_log_dict:
+                    print (run_number in self._sample_log_dict[ipts_number])
+                else:
+                    print (False)
+                print (self._sample_log_dict[ipts_number][run_number]['start'])
+                print (type(self._sample_log_dict[ipts_number][run_number]['start']))
+                print (self._sample_log_dict[ipts_number][run_number].keys())
+                print (self._sample_log_dict[ipts_number][run_number]['start'][0])
+                print (self._sample_log_dict[ipts_number][run_number]['start'][1]['TimeStamp'])
+                print (type(self._sample_log_dict[ipts_number][run_number]['start'][1]['TimeStamp']))
+
+                vec_times = self._sample_log_dict[ipts_number][run_number]['start'][1]['Time [sec]'].values
+                # TODO - TONIGHT 000 - Using MTS1 is cheating!
+                vec_log_value = self._sample_log_dict[ipts_number][run_number]['start'][1]['MTS1'].values
+
+                # TODO - TONIGHT 0000 - use plot_chopped_log() instead... marker but not line!
+                single_plot_id = self.ui.graphicsView_logPlot.plot_chopped_log(vec_times, vec_log_value,
+                                                                              plot_label='{} {}: chopped'
+                                                                                         ''.format(self._iptsNumber,
+                                                                                                   self._currRunNumber),
+                                                                              sample_log_name_x='Time',
+                                                                              sample_log_name=curr_y_log_name)
+            except KeyError as key_err:
+                GuiUtility.pop_dialog_error(self, '{}'.format(key_err))
+
+        elif self.ui.checkBox_plotSlicedRun.isChecked() and False:
+            # for sliced data from memory
+            workspace_key = str(self.ui.comboBox_chopSeq.currentText())
+            workspace_key_list = [workspace_key]
+
+            for workspace_key in workspace_key_list:
+                # get the name of the workspace containing sample logs
+                if workspace_key in self._choppedSampleDict:
+                    # this is for loaded GSAS and NeXus file
+                    sample_key = self._choppedSampleDict[workspace_key]
+                else:
+                    # just reduced workspace
+                    sample_key = workspace_key
+
+                # get the sample log time and value
+                vec_times, vec_value = self._myController.get_sample_log_values(sample_key, sample_name, relative=True)
+
+                # plot
+                self.ui.graphicsView_mainPlot.plot_sample_data(vec_times, vec_value, workspace_key, sample_name)
+                # END-FOR
+        # END-FOPR
 
         return
 

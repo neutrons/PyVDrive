@@ -149,6 +149,11 @@ class AtomicReduction2DViewer(QMainWindow):
 
         return
 
+    def set_x_range(self, min_x, max_x):
+        self.ui.lineEdit_xMin.setText('{}'.format(min_x))
+        self.ui.lineEdit_xMin.setText('{}'.format(max_x))
+
+
 
 class AtomicReduction3DViewer(QMainWindow):
     """ Class for 2D reduced data viewer

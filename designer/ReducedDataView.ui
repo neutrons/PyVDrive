@@ -810,6 +810,13 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_5">
         <item>
+         <widget class="QLabel" name="label_loadedSampleLogRun">
+          <property name="text">
+           <string>Loaded Run:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QFrame" name="frame_graphicsView_sampleLogs">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -870,6 +877,13 @@
             </property>
             <property name="text">
              <string>Plot</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="4">
+           <widget class="QCheckBox" name="checkBox_plotSlicedRun">
+            <property name="text">
+             <string>Chopped Logs</string>
             </property>
            </widget>
           </item>

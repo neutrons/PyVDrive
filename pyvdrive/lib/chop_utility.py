@@ -242,6 +242,8 @@ class DataChopper(object):
     def map_sample_logs(self, log_name_x, log_name_y, start_time, stop_time):
         # return with relative time
         vec_times, vec_log_x, vec_log_y = mantid_helper.map_sample_logs(self._meta_ws_name, log_name_x, log_name_y)
+        # # TODO - TONIGHT 0 - compare with merge_2_logs shall be a static in the utility and called by plot_sample_log()!
+        # vec_log_x, vec_log_y = vdrivehelper.merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
 
         return vec_times, vec_log_x, vec_log_y
 
