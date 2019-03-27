@@ -6,6 +6,8 @@ import math
 import numpy
 import mantid_helper
 import datatypeutility
+import pandas as pd
+import reduce_VULCAN
 
 
 START_PIXEL_ID = {1: {1: 0, 2: 1, 3: (6468, 62500)},
@@ -318,11 +320,8 @@ def import_sample_log_record(ipts_number, run_number, is_chopped, record_type='s
     :param run_number:
     :param is_chopped:
     :param record_type:
-    :return:
+    :return: 2-tuple (header, Pandas series)
     """
-    import pandas as pd
-    import reduce_VULCAN
-
     if is_chopped:
         sample_log_name = '/SNS/VULCAN/IPTS-{0}/shared/binned_data/{1}/{1}sampleenv_chopped_{2}.txt' \
                           ''.format(ipts_number, run_number, record_type)
@@ -355,6 +354,8 @@ def import_sample_log_record(ipts_number, run_number, is_chopped, record_type='s
 
     mts_series = pd.read_csv(sample_log_name, skiprows=row0,
                              names=header, sep='\t')
+
+    # TODO - TONIGHT 00 - Need a header-dictionary to map from NeXus log name to MTS name
 
     # print (type(mts_series))
     # print (mts_series['chopseq'])
