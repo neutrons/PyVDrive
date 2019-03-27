@@ -22,7 +22,12 @@ def detector_view(workspace, file_name):
         vec_counts = workspace.readY(0)[6468:]
     elif len(workspace.readY(0)) == 1:
         # single Y value counts workspace: transpose
-        temp_count_ws = Transpose(workspace)
+        print (workspace.name())
+        if workspace.id() == 'EventWorkspace':
+            temp_count_ws = ConvertToMatrixWorkspace(workspace)
+            temp_count_ws = Transpose(temp_count_ws)
+        else:
+            temp_count_ws = Transpose(workspace)
         vec_counts = temp_count_ws.readY(0) [6468:]
     else:
         # regular multiple spectrum workspace: integrate for each
@@ -33,12 +38,15 @@ def detector_view(workspace, file_name):
     # END-IF
 
     # plot
-    pixel_matrix = vec_counts.reshpace((72, 256))
-    pixel_matrix.transpose()
+    pixel_matrix = vec_counts.reshape((72, 256))
+    pixel_matrix = pixel_matrix.transpose()
     plt.imshow(pixel_matrix, origin='lower', interpolation='none')
     plt.savefig(file_name)
+    
+    # statistic
+    print ('Workspace {} counts : min = {}, max = {}, average = {}'.format(workspace.name(), vec_counts.min(), vec_counts.max(), numpy.average(vec_counts)))
 
-    return
+    return vec_counts
 # END-DEF-FUNCTION
 
 
@@ -79,7 +87,11 @@ if True:
 
     # Load vanadium & create detector view
     van_nexus = '/SNS/VULCAN/IPTS-{}/nexus/VULCAN_{}.nxs.h5'.format(vanadium_ipts_number, vanadium_run_number)
-    raw_van_ws = LoadEventNexus(Filename=van_nexus, OutputWorkspace='VAN_{}'.format(vanadium_run_number))
+    raw_van_ws_name = 'VAN_{}'.format(vanadium_run_number)
+    if not mtd.doesExist(raw_van_ws_name) or True:
+        raw_van_ws = LoadEventNexus(Filename=van_nexus, OutputWorkspace=raw_van_ws_name)
+    else:
+        raw_van_ws = mtd[raw_van_ws_name]
     detector_view(raw_van_ws, '{}_raw.png'.format(vanadium_run_number))
     print ('[INFO] Raw vanadium workspace: # events = {}'.format(raw_van_ws.getNumberEvents()))
 
@@ -92,14 +104,16 @@ if True:
     bkgd_pc = background_ws.run().getProperty('proton_charge').value.sum()
 
     # examine the counts
-    raw_van_count_ws = ConvertToMatrix(raw_van_ws)
-    bkgd_count_ws = ConvertToMatrix(background_ws)
-    raw_van_ws -= bkgd_count_ws * van_pc / bkgd_pc
+    raw_van_count_ws = ConvertToMatrixWorkspace(raw_van_ws)
+    bkgd_count_ws = ConvertToMatrixWorkspace(background_ws)
+    raw_van_count_ws -= bkgd_count_ws * van_pc / bkgd_pc
     detector_view(raw_van_ws, '{}-{}_count.png'.format(vanadium_run_number, background_run_number))
 
     # now normalize by imported count workspace
     raw_van_count_ws /= counts_ws
-    detector_view(raw_van_count_ws, '{}-{}_norm_count.png'.format(vanadium_run_number, background_run_number))
+    norm_count_vec = detector_view(raw_van_count_ws, '{}-{}_norm_count.png'.format(vanadium_run_number, background_run_number))
+    vec_c_x = numpy.arange(norm_count_vec.shape[0])
+    CreateWorkspace(DataX=vec_c_x, DataY=norm_count_vec, NSpec=1, OutputWorkspace='NormalizedCountsHighAngle')
 
     # remove background
     # normalize
@@ -118,7 +132,9 @@ if True:
     ConvertUnits(InputWorkspace=norm_ws_name, OutputWorkspace=norm_ws_name, Target='dSpacing')
     # Divide by counts per pixels
     final = Divide(LHSWorkspace=norm_ws_name, RHSWorkspace=counts_van_name, OutputWorkspace=norm_ws_name)
-
-    detector_view(final, 'Final_Shall_Be_Uniform.png')
+    vec_counts = detector_view(final, 'Final_Shall_Be_Uniform.png')
+    print vec_counts
+    vec_c_x = numpy.arange(vec_counts.shape[0])
+    CreateWorkspace(DataX=vec_c_x, DataY=vec_counts, NSpec=1, OutputWorkspace='TakeALook')
 
 
