@@ -307,7 +307,8 @@ def import_vulcan_log(log_file_name, header=0):
 # TODO - TONIGHT - QA
 def import_auto_record(ipts_number, run_number):
     log_file_name = '/SNS/VULCAN/IPTS-{}/shared/AutoRecord.txt'.format(ipts_number)
-    assert os.path.exists(log_file_name), log_file_name
+    if not os.path.exists(log_file_name):
+        raise RuntimeError('Not existing {}'.format(log_file_name))
 
     log_data_set = import_vulcan_log(log_file_name)
 
@@ -327,7 +328,8 @@ def import_sample_log_record(ipts_number, run_number, is_chopped, record_type='s
                           ''.format(ipts_number, run_number, record_type)
         # sample_header_name = '/SNS/VULCAN/IPTS-{0}/shared/binned_data/{1}/IPTS-{0}-MTSLoadFrame-{1}.txt' \
         #                      ''.format(ipts_number, run_number)
-        assert os.path.exists(sample_log_name), sample_log_name
+        if not os.path.exists(sample_log_name):
+            raise RuntimeError('Sample log record file {} does not exist'.format(sample_log_name))
         # assert os.path.exists(sample_header_name), sample_header_name
 
     else:

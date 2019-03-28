@@ -304,6 +304,7 @@ class VdriveCommandProcessor(object):
 
         return status, message
 
+    # TODO - TONIGHT 00 - clean
     def _process_view(self, arg_dict):
         """
         process command VIEW or VDRIVEVIEW
@@ -344,11 +345,18 @@ class VdriveCommandProcessor(object):
             from pyvdrive.lib import vulcan_util
             run_number, ipts_number = processor.get_run_tuple_list()[0]
             if processor.is_chopped_run:
-                log_header, log_set = vulcan_util.import_sample_log_record(ipts_number, run_number, is_chopped=True,
-                                                                            record_type='start')
+                try:
+                    log_header, log_set = vulcan_util.import_sample_log_record(ipts_number, run_number, is_chopped=True,
+                                                                               record_type='start')
+                except RuntimeError as run_err:
+                    return False, 'Unable to import sample log record: {}'.format(run_err)
                 view_window.set_chopped_logs(ipts_number, run_number, log_header, log_set, 'start')
             else:
-                log_set = vulcan_util.import_auto_record(ipts_number, run_number)
+                try:
+                    log_set = vulcan_util.import_auto_record(ipts_number, run_number)
+                except RuntimeError as run_err:
+                    #  TODO - TONIGHT 0 - NICER
+                    return False, 'blalba {}'.format(run_err)
                 view_window.set_logs(ipts_number, run_number, log_set)
 
         # vanadium
@@ -413,11 +421,17 @@ class VdriveCommandProcessor(object):
             # else:
             #     van_run_number = None
             data_key = view_window.do_load_single_run(ipts_number, run_number, False)
-            view_window.do_refresh_existing_runs(set_to=data_key)
-            view_window.plot_single_run(data_key,
-                                        van_norm=processor.do_vanadium_normalization,
-                                        van_run=van_run_number,
-                                        pc_norm=processor.do_proton_charge_normalization)
+            if data_key:
+                view_window.do_refresh_existing_runs(set_to=data_key)
+                view_window.plot_single_run(data_key,
+                                            van_norm=processor.do_vanadium_normalization,
+                                            van_run=van_run_number,
+                                            pc_norm=processor.do_proton_charge_normalization)
+                status = True
+                message = ''
+            else:
+                status = False
+                message = 'Unable to load GSAS file of IPTS-{} Run-{}'.format(ipts_number, run_number)
         else:
             # multiple but none chopped run
             raise NotImplementedError('ASAP')

@@ -121,7 +121,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # sample log runs and logs
         self._log_data_key = None
         self._log_display_name_dict = dict()   # [log display name] = log full name (to look up)
-        self._sample_log_dict = dict()  # [IPTS][RUN] = {'start': ..., 'mean': ..., 'end': ...}
+        self._sample_log_dict = dict()  # [IPTS][RUN] = {'ProtonCharge': xxx, 'MTS': xxx, ...}
+        self._sliced_log_dict = dict()  # [IPTS][RUN] = {'start': ..., 'mean': ..., 'end': ...}
         self._sample_log_name_list = generate_sample_log_list()  # list of sample logs that are viable to plot
         self._sample_log_info_dict = dict()  # [meta_data_key] = ipts, run number
 
@@ -278,6 +279,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
+    # TODO - TONIGHT 0 - Shall mimic what _process_view() does!
     def do_load_chopped_runs(self, ipts_number=None, run_number=None, chopped_seq_list=None):
         """ Load a series chopped and reduced data to reduced data view
         :param ipts_number:
@@ -286,11 +288,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :return: chopped data key (run number as integer)
         """
         # read from input for IPTS and run number
-        if ipts_number is None:
+        if ipts_number is None or ipts_number is False:
             ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
         else:
             self.ui.lineEdit_iptsNumber.setText('{}'.format(ipts_number))
-        if run_number is None:
+        if run_number is None or ipts_number is False:
             run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
         else:
             self.ui.lineEdit_run.setText('{}'.format(run_number))
@@ -323,26 +325,32 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :return:
         """
         # read from input for IPTS and run number
-        if ipts_number is None:
+        if ipts_number is None or ipts_number is False:
             ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
         else:
             self.ui.lineEdit_iptsNumber.setText('{}'.format(ipts_number))
-        if run_number is None:
+        if run_number is None or run_number is False:
             run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
         else:
             self.ui.lineEdit_run.setText('{}'.format(run_number))
 
+        # loaded reduced data or set in-memory reduced workspaces
         if run_number is not None and self._is_run_in_memory(run_number):
             # load from memory
             self._curr_data_key = self._myController.project.reduction_manager.get_reduced_workspace(run_number)
         elif ipts_number is not None and run_number is not None:
             # load data from archive
-            reduced_file_name = self._myController.archive_manager.get_gsas_file(ipts_number, run_number,
-                                                                                 check_exist=True)
-            file_type = 'gsas'
-            self._curr_data_key = self._myController.project.data_loading_manager.load_binned_data(reduced_file_name,
-                                                                                                   file_type,
-                                                                                                   max_int=99999)
+            try:
+                reduced_file_name = self._myController.archive_manager.get_gsas_file(ipts_number, run_number,
+                                                                                     check_exist=True)
+                file_type = 'gsas'
+                self._curr_data_key = \
+                    self._myController.project.data_loading_manager.load_binned_data(reduced_file_name,
+                                                                                     file_type,
+                                                                                     max_int=99999)
+            except RuntimeError as run_err:
+                GuiUtility.pop_dialog_error(self, 'Unable to find GSAS: {}'.format(run_err))
+
         else:
             # load from disk by users' choice
             if ipts_number is not None:
@@ -902,7 +910,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 return
 
             try:
-                if ipts_number not in self._sample_log_dict or run_number in self._sample_log_dict[ipts_number]:
+                if ipts_number not in self._sliced_log_dict or run_number in self._sliced_log_dict[ipts_number]:
                     from pyvdrive.lib import vulcan_util
                     # load sample log file
                     log_header, log_set = vulcan_util.import_sample_log_record(ipts_number, run_number, is_chopped=True,
@@ -914,13 +922,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 # print (type(self._sample_log_dict[ipts_number][run_number]))
 
                 if curr_x_log_name == 'Time':
-                    start_vec_x = self._sample_log_dict[ipts_number][run_number]['start'][1]['Time [sec]'].values
+                    start_vec_x = self._sliced_log_dict[ipts_number][run_number]['start'][1]['Time [sec]'].values
                 else:
                     mts_log_name_x = self._nexus_mtd_log_name_map[curr_x_log_name]
-                    start_vec_x = self._sample_log_dict[ipts_number][run_number]['start'][1][mts_log_name_x].values
+                    start_vec_x = self._sliced_log_dict[ipts_number][run_number]['start'][1][mts_log_name_x].values
 
                 mts_log_name_y = self._nexus_mtd_log_name_map[curr_y_log_name]
-                start_vec_y = self._sample_log_dict[ipts_number][run_number]['start'][1][mts_log_name_y].values
+                start_vec_y = self._sliced_log_dict[ipts_number][run_number]['start'][1][mts_log_name_y].values
 
                 self._chopped_start_log_id = self.ui.graphicsView_logPlot.plot_chopped_log(start_vec_x, start_vec_y,
                                                                                            curr_x_log_name,
@@ -929,7 +937,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             except RuntimeError as key_err:
                 GuiUtility.pop_dialog_error(self, 'Unable to find {} for IPTS {} Run {}: Available keys are'
                                                   '{}'.format(key_err, ipts_number, run_number,
-                                                              self._sample_log_dict[ipts_number][run_number].keys()))
+                                                              self._sliced_log_dict[ipts_number][run_number].keys()))
 
         elif self.ui.checkBox_plotSlicedRun.isChecked() and False:
             # for sliced data from memory
@@ -1099,33 +1107,37 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # plot
         if self.ui.radioButton_chooseSingleRun.isChecked():
             # single run
-            # get the previous setup for vanadium and proton charge normalization or default
-            if self._curr_data_key in self._single_run_plot_option:
-                van_run = self._single_run_plot_option[self._curr_data_key]['van_run']
-                van_norm = self._single_run_plot_option[self._curr_data_key]['van_norm']
-                pc_norm = self._single_run_plot_option[self._curr_data_key]['pc_norm']
-            else:
-                van_run = None
-                van_norm = pc_norm = False
+            if self._curr_data_key:
+                # get the previous setup for vanadium and proton charge normalization or default
+                if self._curr_data_key in self._single_run_plot_option:
+                    van_run = self._single_run_plot_option[self._curr_data_key]['van_run']
+                    van_norm = self._single_run_plot_option[self._curr_data_key]['van_norm']
+                    pc_norm = self._single_run_plot_option[self._curr_data_key]['pc_norm']
+                else:
+                    van_run = None
+                    van_norm = pc_norm = False
 
-            self.plot_single_run(self._curr_data_key, van_norm=van_norm, van_run=van_run,
-                                 pc_norm=pc_norm, bank_id=self._currBank, main_only=False)
+                self.plot_single_run(self._curr_data_key, van_norm=van_norm, van_run=van_run,
+                                     pc_norm=pc_norm, bank_id=self._currBank, main_only=False)
+
         else:
             # chopped data
             curr_chop_name = str(self.ui.comboBox_choppedRunNumber.currentText())
-            plot_data_key = self._chop_combo_data_key_dict[curr_chop_name]
-            # retrieve previous setup
-            if plot_data_key in self._chop_run_plot_option:
-                pc_norm = self._chop_run_plot_option[plot_data_key]['pc_norm']
-                van_norm = self._chop_run_plot_option[plot_data_key]['norm_van']
-                van_run = self._chop_run_plot_option[plot_data_key]['van_run']
-            else:
-                pc_norm = van_norm = van_run = None
+            if curr_chop_name != '':
+                plot_data_key = self._chop_combo_data_key_dict[curr_chop_name]
+                # retrieve previous setup
+                if plot_data_key in self._chop_run_plot_option:
+                    pc_norm = self._chop_run_plot_option[plot_data_key]['pc_norm']
+                    van_norm = self._chop_run_plot_option[plot_data_key]['norm_van']
+                    van_run = self._chop_run_plot_option[plot_data_key]['van_run']
+                else:
+                    pc_norm = van_norm = van_run = None
 
-            self.plot_chopped_run(chop_key=plot_data_key, bank_id=self._currBank,
-                                  seq_list=None, main_only=True,
-                                  van_norm=van_norm, van_run=van_run, pc_norm=pc_norm, plot3d=False)
-            # END-IF-ELSE
+                self.plot_chopped_run(chop_key=plot_data_key, bank_id=self._currBank,
+                                      seq_list=None, main_only=True,
+                                      van_norm=van_norm, van_run=van_run, pc_norm=pc_norm, plot3d=False)
+                # END-IF-ELSE
+        # END-IF-ELSE
 
         return
 
@@ -1249,7 +1261,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             total_pc = pc_vec[row_index]
         else:
             chop_index = chop_seq - 1
-            total_pc = self._sample_log_dict[ipts_number][run_number]['start'][1]['ProtonCharge'][chop_index]
+            total_pc = self._sliced_log_dict[ipts_number][run_number]['start'][1]['ProtonCharge'][chop_index]
 
         return total_pc
 
@@ -1322,6 +1334,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param unit:
         :return:
         """
+        assert data_key is not None, 'Data key must be initialized'
+
         try:
             data_set = self._myController.get_reduced_data(run_id=data_key, target_unit=unit, bank_id=bank_id)
         except RuntimeError as run_err:
@@ -1655,11 +1669,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     def set_chopped_logs(self, ipts_number, run_number, log_header, log_set, log_id='start'):
-        if ipts_number not in self._sample_log_dict:
-            self._sample_log_dict[ipts_number] = dict()
-        if run_number not in self._sample_log_dict[ipts_number]:
-            self._sample_log_dict[ipts_number][run_number] = {'start': None, 'mean': None, 'end': None}
-        self._sample_log_dict[ipts_number][run_number][log_id] = log_header, log_set
+        if ipts_number not in self._sliced_log_dict:
+            self._sliced_log_dict[ipts_number] = dict()
+        if run_number not in self._sliced_log_dict[ipts_number]:
+            self._sliced_log_dict[ipts_number][run_number] = {'start': None, 'mean': None, 'end': None}
+        self._sliced_log_dict[ipts_number][run_number][log_id] = log_header, log_set
 
         return
 
