@@ -46,6 +46,20 @@ def generate_sample_log_list():
     return time_series_sample_logs
 
 
+def generate_log_names_map():
+    """ Generate a map (dictionary) to map from NeXus sample log name to MTS log name (in RECORD file)
+    :return:
+    """
+    nexus_mts_map = dict()
+
+    for mts_name, nexus_name in reduce_VULCAN.MTS_Header_List:
+        if nexus_name.strip() == '':
+            continue
+        nexus_mts_map[nexus_name.strip()] = mts_name.strip()
+
+    return nexus_mts_map
+
+
 class GeneralPurposedDataViewWindow(QMainWindow):
     """ Class for general-purposed plot window to view reduced data
     """
@@ -110,6 +124,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._sample_log_dict = dict()  # [IPTS][RUN] = {'start': ..., 'mean': ..., 'end': ...}
         self._sample_log_name_list = generate_sample_log_list()  # list of sample logs that are viable to plot
         self._sample_log_info_dict = dict()  # [meta_data_key] = ipts, run number
+
+        self._main_log_plot_id = None
+        self._chopped_start_log_id = None
+        self._nexus_mtd_log_name_map = generate_log_names_map()
 
         # FIND OUT: self._choppedSampleDict = dict()  # key: data workspace name. value: sample (NeXus) workspace name
 
@@ -823,7 +841,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    # TODO - TONIGHT 0000 0000 - Working on NOW
+    # TODO - TODAY - TEST!
     def do_plot_sample_logs(self):
         """ Plot selected sample logs:
         Workflow:
@@ -862,44 +880,41 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # END-IF-ELSE
 
         # plot
-        single_plot_id = self.ui.graphicsView_logPlot.plot_sample_log(vec_log_x, vec_log_y,
-                                                                      plot_label='{} {}'
-                                                                                 ''.format(self._iptsNumber,
-                                                                                           self._currRunNumber),
-                                                                      sample_log_name_x=curr_x_log_name,
-                                                                      sample_log_name=curr_y_log_name)
+        plot_label = '{} {}'.format(self._iptsNumber, self._currRunNumber)
+        self._main_log_plot_id = self.ui.graphicsView_logPlot.plot_sample_log(vec_log_x, vec_log_y,
+                                                                              plot_label=plot_label,
+                                                                              sample_log_name_x=curr_x_log_name,
+                                                                              sample_log_name=curr_y_log_name)
 
         # For sliced sample logs
+        # TODO - TODAY 0 - Need a flag to find out whether the current meta data and chopped data is from
+        # TODO - ... ... - memory or GSAS
         if self.ui.checkBox_plotSlicedRun.isChecked() and True:
             # for sliced data from archive
-            # TODO - TONIGHT 0000 - Clean up this section!
-
             try:
                 # use IPTS and run to locate the loaded sample logs
                 ipts_number, run_number = self._sample_log_info_dict[self._log_data_key]
-                print (ipts_number in self._sample_log_dict)
-                if ipts_number in self._sample_log_dict:
-                    print (run_number in self._sample_log_dict[ipts_number])
+
+                if ipts_number not in self._sample_log_dict or run_number in self._sample_log_dict[ipts_number]:
+                    from pyvdrive.lib import vulcan_util
+                    # load sample log file
+                    log_set = vulcan_util.import_auto_record(ipts_number, run_number)
+                    self.set_logs(ipts_number, run_number, log_set)
+
+                # start_log_set = self._sample_log_dict[ipts_number][run_number]['start']
+                if curr_x_log_name == 'Time':
+                    start_vec_x = self._sample_log_dict[ipts_number][run_number]['start'][1]['Time [sec]'].values
                 else:
-                    print (False)
-                print (self._sample_log_dict[ipts_number][run_number]['start'])
-                print (type(self._sample_log_dict[ipts_number][run_number]['start']))
-                print (self._sample_log_dict[ipts_number][run_number].keys())
-                print (self._sample_log_dict[ipts_number][run_number]['start'][0])
-                print (self._sample_log_dict[ipts_number][run_number]['start'][1]['TimeStamp'])
-                print (type(self._sample_log_dict[ipts_number][run_number]['start'][1]['TimeStamp']))
+                    mts_log_name_x = self._nexus_mtd_log_name_map[curr_x_log_name]
+                    start_vec_x = self._sample_log_dict[ipts_number][run_number]['start'][1][mts_log_name_x].values
 
-                vec_times = self._sample_log_dict[ipts_number][run_number]['start'][1]['Time [sec]'].values
-                # TODO - TONIGHT 000 - Using MTS1 is cheating!
-                vec_log_value = self._sample_log_dict[ipts_number][run_number]['start'][1]['MTS1'].values
+                mts_log_name_y = self._nexus_mtd_log_name_map[curr_y_log_name]
+                start_vec_y = self._sample_log_dict[ipts_number][run_number]['start'][1][mts_log_name_y].values
 
-                # TODO - TONIGHT 0000 - use plot_chopped_log() instead... marker but not line!
-                single_plot_id = self.ui.graphicsView_logPlot.plot_chopped_log(vec_times, vec_log_value,
-                                                                              plot_label='{} {}: chopped'
-                                                                                         ''.format(self._iptsNumber,
-                                                                                                   self._currRunNumber),
-                                                                              sample_log_name_x='Time',
-                                                                              sample_log_name=curr_y_log_name)
+                self._chopped_start_log_id = self.ui.graphicsView_logPlot.plot_chopped_log(start_vec_x, start_vec_y,
+                                                                                           curr_x_log_name,
+                                                                                           curr_y_log_name,
+                                                                                           plot_label)
             except KeyError as key_err:
                 GuiUtility.pop_dialog_error(self, '{}'.format(key_err))
 
@@ -1448,7 +1463,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # deal with Y axis
         self.ui.graphicsView_mainPlot.auto_rescale()
         # about X
-        self.do_set_x_range()
+        curr_min_x, curr_max_x = self.do_set_x_range()
 
         # pop the child atomic window
         if not main_only:
@@ -1469,7 +1484,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                     van_vec_y = self.get_vanadium_spectrum(van_run, bank_id)
                     vec_y /= van_vec_y
                     # END-IF
-                # TODO - TONIGHT 0 - Implement: child_window.set_x_range()
+
+                child_window.set_x_range(curr_min_x, curr_max_x)
                 child_window.plot_data(vec_x, vec_y, data_key, self._currUnit, bank_id)
             # END-FOR
         # END-IF
@@ -1739,7 +1755,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    # TODO - TONIGHT - Shall be applied to VIEW
     def set_x_range(self, min_x, max_x):
         """
         set the range of X values

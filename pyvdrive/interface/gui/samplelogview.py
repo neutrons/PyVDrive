@@ -512,9 +512,52 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         return plot_id
 
-    # TODO - TONIGHT 0 - Implement!
-    def plot_chopped_log(self, vec_x, vec_y, blabla):
-        return
+    def plot_chopped_log(self, vec_x, vec_y, sample_log_name_x, sample_log_name_y, plot_label):
+        """
+        Plot chopped sample log from archive (just points)
+        :param vec_x:
+        :param vec_y:
+        :param sample_log_name_x:
+        :param sample_log_name_y:
+        :param plot_label:
+        :return:
+        """
+        # check
+        datatypeutility.check_numpy_arrays('Vector X and Y', [vec_x, vec_y], 1, True)
+        datatypeutility.check_string_variable('Sample log name on Y-axis', sample_log_name_y)
+        datatypeutility.check_string_variable('Sample log name on X-axis', sample_log_name_x)
+        datatypeutility.check_string_variable('Plot label', plot_label)
+
+        # set label
+        if plot_label == '':
+            try:
+                plot_label = '%s Y (%f, %f)' % (sample_log_name_x, min(vec_y), max(vec_y))
+            except TypeError as type_err:
+                err_msg = 'Unable to generate log with %s and %s: %s' % (
+                    str(min(vec_y)), str(max(vec_y)), str(type_err))
+                raise TypeError(err_msg)
+        # END-IF
+
+        plot_id = self.add_plot_1d(vec_x, vec_y, x_label=sample_log_name_x,
+                                   y_label=sample_log_name_y,
+                                   label=plot_label, marker='o', color='blue', show_legend=True,
+                                   line_style='')
+        self._sizeRegister[plot_id] = (min(vec_x), max(vec_x), min(vec_y), max(vec_y))
+
+        # No need to auto resize
+        # self.resize_canvas(margin=0.05)
+        # re-scale
+        if sample_log_name_x.startswith('Time'):
+            self.setXYLimit(xmin=0.)
+        else:
+            min_x = vec_x.min()
+            max_x = vec_x.max()
+            self.setXYLimit(xmin=min_x, xmax=max_x)
+
+        # update
+        self._currPlotID = plot_id
+
+        return plot_id
 
     def remove_slicers(self):
         """

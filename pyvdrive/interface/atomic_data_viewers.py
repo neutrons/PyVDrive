@@ -42,6 +42,11 @@ class AtomicReduced1DViewer(QMainWindow):
         self.ui = load_ui(ui_path, baseinstance=self)
         self._promote_widgets()
 
+        # set X
+        # TODO - TODAY - Find out the request of methods to develop
+
+        return
+
     def _promote_widgets(self):
         """
         promote widgets
@@ -51,6 +56,17 @@ class AtomicReduced1DViewer(QMainWindow):
         self.ui.frame_mainPlot.setLayout(graphicsView_mainPlot_layout)
         self.ui.graphicsView_mainPlot = GeneralRunView(self)
         graphicsView_mainPlot_layout.addWidget(self.ui.graphicsView_mainPlot)
+
+        return
+
+    def do_set_x_range(self):
+        """ Set image X range from line edits
+        :return:
+        """
+        x_min = GuiUtility.parse_float(self.ui.lineEdit_xMin, True, 0.)
+        x_max = GuiUtility.parse_float(self.ui.lineEdit_xMax, True, 5.)
+
+        self.ui.graphicsView_mainPlot.setXYLimit(xmin=x_min, xmax=x_max)
 
         return
 
@@ -67,6 +83,21 @@ class AtomicReduced1DViewer(QMainWindow):
                                                             unit=unit, over_plot=False,
                                                             run_id=data_key, bank_id=bank_id,
                                                             chop_tag=None, label='{} {}'.format(data_key, bank_id))
+
+        # set X
+        self.do_set_x_range()
+
+        return
+
+    def set_x_range(self, min_x, max_x):
+        """
+        set range on X-axis
+        :param min_x:
+        :param max_x:
+        :return:
+        """
+        self.ui.lineEdit_xMin.setText('{}'.format(min_x))
+        self.ui.lineEdit_xMin.setText('{}'.format(max_x))
 
         return
 
@@ -86,7 +117,6 @@ class AtomicReduction2DViewer(QMainWindow):
         self.ui = load_ui(ui_path, baseinstance=self)
         self._promote_widgets()
 
-        # TODO - TONIGHT 0 - Implement ASAP
         self.ui.pushButton_setXrange.clicked.connect(self.do_set_x_range)
 
         return
@@ -150,9 +180,16 @@ class AtomicReduction2DViewer(QMainWindow):
         return
 
     def set_x_range(self, min_x, max_x):
+        """
+        Set X range
+        :param min_x:
+        :param max_x:
+        :return:
+        """
         self.ui.lineEdit_xMin.setText('{}'.format(min_x))
         self.ui.lineEdit_xMin.setText('{}'.format(max_x))
 
+        return
 
 
 class AtomicReduction3DViewer(QMainWindow):
@@ -207,7 +244,7 @@ class AtomicReduction3DViewer(QMainWindow):
             sequence_matrix[i] = sequence_vec[i]
             vec_x_matrix[i] = data_set_list[i][0]
             vec_y_matrix[i] = data_set_list[i][1]
-        #
+        # END-FOR(i)
 
         flatten_vec_seq = sequence_matrix.flatten()
         flatten_vec_x = vec_x_matrix.flatten()
