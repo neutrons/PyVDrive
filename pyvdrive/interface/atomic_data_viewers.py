@@ -42,8 +42,9 @@ class AtomicReduced1DViewer(QMainWindow):
         self.ui = load_ui(ui_path, baseinstance=self)
         self._promote_widgets()
 
-        # set X
-        # TODO - TODAY - Find out the request of methods to develop
+        # set X: no line edits for X range
+        self._x_min = None
+        self._x_max = None
 
         return
 
@@ -63,10 +64,7 @@ class AtomicReduced1DViewer(QMainWindow):
         """ Set image X range from line edits
         :return:
         """
-        x_min = GuiUtility.parse_float(self.ui.lineEdit_xMin, True, 0.)
-        x_max = GuiUtility.parse_float(self.ui.lineEdit_xMax, True, 5.)
-
-        self.ui.graphicsView_mainPlot.setXYLimit(xmin=x_min, xmax=x_max)
+        self.ui.graphicsView_mainPlot.setXYLimit(xmin=self._x_min, xmax=self._x_max)
 
         return
 
@@ -96,8 +94,11 @@ class AtomicReduced1DViewer(QMainWindow):
         :param max_x:
         :return:
         """
-        self.ui.lineEdit_xMin.setText('{}'.format(min_x))
-        self.ui.lineEdit_xMin.setText('{}'.format(max_x))
+        self._x_min = min_x
+        self._x_max = max_x
+
+        # self.ui.lineEdit_xMin.setText('{}'.format(min_x))
+        # self.ui.lineEdit_xMin.setText('{}'.format(max_x))
 
         return
 

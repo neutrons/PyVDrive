@@ -540,7 +540,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         plot_id = self.add_plot_1d(vec_x, vec_y, x_label=sample_log_name_x,
                                    y_label=sample_log_name_y,
-                                   label=plot_label, marker='o', color='blue', show_legend=True,
+                                   label=plot_label, marker='o', color='red', show_legend=True,
                                    line_style='')
         self._sizeRegister[plot_id] = (min(vec_x), max(vec_x), min(vec_y), max(vec_y))
 
@@ -554,8 +554,8 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
             max_x = vec_x.max()
             self.setXYLimit(xmin=min_x, xmax=max_x)
 
-        # update
-        self._currPlotID = plot_id
+        # # update
+        # self._currPlotID = plot_id
 
         return plot_id
 

@@ -894,14 +894,23 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             try:
                 # use IPTS and run to locate the loaded sample logs
                 ipts_number, run_number = self._sample_log_info_dict[self._log_data_key]
+            except KeyError as key_err:
+                GuiUtility.pop_dialog_error(self, '{} is not loaded (sample log info dict)'
+                                                  ''.format(self._log_data_key))
+                return
 
+            try:
                 if ipts_number not in self._sample_log_dict or run_number in self._sample_log_dict[ipts_number]:
                     from pyvdrive.lib import vulcan_util
                     # load sample log file
-                    log_set = vulcan_util.import_auto_record(ipts_number, run_number)
-                    self.set_logs(ipts_number, run_number, log_set)
+                    log_header, log_set = vulcan_util.import_sample_log_record(ipts_number, run_number, is_chopped=True,
+                                                                               record_type='start')
+                    self.set_chopped_logs(ipts_number, run_number, log_header, log_set, 'start')
 
                 # start_log_set = self._sample_log_dict[ipts_number][run_number]['start']
+                # print (self._sample_log_dict[ipts_number][run_number])
+                # print (type(self._sample_log_dict[ipts_number][run_number]))
+
                 if curr_x_log_name == 'Time':
                     start_vec_x = self._sample_log_dict[ipts_number][run_number]['start'][1]['Time [sec]'].values
                 else:
@@ -915,8 +924,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                                                            curr_x_log_name,
                                                                                            curr_y_log_name,
                                                                                            plot_label)
-            except KeyError as key_err:
-                GuiUtility.pop_dialog_error(self, '{}'.format(key_err))
+            except RuntimeError as key_err:
+                GuiUtility.pop_dialog_error(self, 'Unable to find {} for IPTS {} Run {}: Available keys are'
+                                                  '{}'.format(key_err, ipts_number, run_number,
+                                                              self._sample_log_dict[ipts_number][run_number].keys()))
 
         elif self.ui.checkBox_plotSlicedRun.isChecked() and False:
             # for sliced data from memory
