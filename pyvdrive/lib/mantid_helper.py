@@ -12,8 +12,6 @@ import vdrivehelper
 import datatypeutility
 import datetime
 
-from reduce_VULCAN import align_bins
-
 EVENT_WORKSPACE_ID = "EventWorkspace"
 WORKSPACE_2D_ID = 'Workspace2D'
 MASK_WORKSPACE_ID = 'MaskWorkspace'
@@ -1504,6 +1502,8 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     :param standard_bin_workspace: binning template workspace. It can be None for not aligning
     :return: output workspace name
     """
+    import reduce_VULCAN
+
     # TEST/ISSUE/NOW - Implement feature with standard_bin_workspace...
     # Check
     datatypeutility.check_file_name(gss_file_name, True, False, False, 'GSAS file')
@@ -1549,7 +1549,7 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
         assert isinstance(standard_bin_workspace, str) or standard_bin_workspace is None, \
             'Standard binning workspace {0} must be either a string or None but not a {1}.' \
             ''.format(standard_bin_workspace, type(standard_bin_workspace))
-        align_bins(out_ws_name, standard_bin_workspace)
+        reduce_VULCAN.align_bins(out_ws_name, standard_bin_workspace)
         mantidapi.ConvertUnits(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name,
                                Target='dSpacing')
     # END-IF

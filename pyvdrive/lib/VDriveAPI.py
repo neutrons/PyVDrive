@@ -996,19 +996,10 @@ class VDriveAPI(object):
 
         # 2 cases: run_number is workspace or run_number is run number
         if isinstance(data_key, str) and mantid_helper.workspace_does_exist(data_key):
-            # TODO - TONIGHT 0 - Make this work as part 2
             # input (run number) is workspace's name
             ws_name = data_key
 
-            print ('DATA KEY : {}'.format(ws_name))
-
-            # export log to CSV file
-            mantidsimple.ExportSampleLogsToCSVFile(InputWorkspace=self._dataWorkspaceName,
-                                                   OutputFilename=log_file_name,
-                                                   SampleLogNames=sample_log_names,
-                                                   WriteHeaderFile=True,
-                                                   TimeZone=TIMEZONE2,
-                                                   Header=header)
+            vec_times, vec_log_x, vec_log_y = mantid_helper.map_sample_logs(ws_name, log_name_x, log_name_y)
 
         else:
             # get chopper for (integer) run number
@@ -1022,7 +1013,6 @@ class VDriveAPI(object):
             #                                                start_time=start_time, stop_time=stop_time,
             #                                                relative=relative)
         # END-IF
-
 
 
         # TODO - TONIGHT 0 (ISSUE 164) - Add a place to store vec_times, vec_log_x, vec_log_y (external method in chopper?)

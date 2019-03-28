@@ -274,6 +274,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :return:
         """
         self.ui.graphicsView_mainPlot.reset_1d_plots()
+        self._currentPlotID = None
 
         return
 
@@ -573,6 +574,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         if len(chopped_run_list) == 0:
             # no chopped run: reset image
             self.ui.graphicsView_mainPlot.reset_1d_plots()
+            self._currentPlotID = None
             self.ui.graphicsView_logPlot.reset()
         else:
             # add chop runs to combo box
@@ -872,11 +874,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                                             start_time=None, stop_time=None,
                                                                             relative=True)
         else:
-            vec_log_x, vec_log_y = self._myController.get_2_sample_log_values(data_key=self._log_data_key,
-                                                                              log_name_x=curr_x_log_name,
-                                                                              log_name_y=curr_y_log_name,
-                                                                              start_time=None,
-                                                                              stop_time=None)
+            vec_times, vec_log_x, vec_log_y = self._myController.get_2_sample_log_values(data_key=self._log_data_key,
+                                                                                         log_name_x=curr_x_log_name,
+                                                                                         log_name_y=curr_y_log_name,
+                                                                                         start_time=None,
+                                                                                         stop_time=None)
         # END-IF-ELSE
 
         # plot
@@ -1311,7 +1313,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    # FIXME - 20180822 - 2 calls of this method does not handle things correctly
     def retrieve_loaded_reduced_data(self, data_key, bank_id, unit):
         """
         Retrieve reduced data from workspace (via run number) to _reducedDataDict.
@@ -1321,15 +1322,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param unit:
         :return:
         """
-        print ('[DB...BAT] ReductionDataView: About to retrieve data from API with Data key = {}'
-               ' of Bank {}'.format(data_key, bank_id))
-
         try:
             data_set = self._myController.get_reduced_data(run_id=data_key, target_unit=unit, bank_id=bank_id)
         except RuntimeError as run_err:
             raise run_err
         # convert to 2 vectors
-        print ('DB...BAT Data Set keys: {}'.format(data_set.keys()))
         vec_x = data_set[bank_id][0]
         vec_y = data_set[bank_id][1]
 
