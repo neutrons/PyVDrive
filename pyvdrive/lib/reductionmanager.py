@@ -1296,6 +1296,7 @@ class ReductionManager(object):
 
             run_number = tracker_key
             print ('[DB...BAT] Reduced run with {} of type {}'.format(run_number, type(run_number)))
+            # TODO - TONIGHT 191 - run number, tracker_key...
             return_list.append(run_number)
         # END-FOR
 
