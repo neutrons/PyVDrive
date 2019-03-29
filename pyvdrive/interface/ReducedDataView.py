@@ -1633,9 +1633,15 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # launch windows for contour plots and 3D line plots
             for bank_id in range(1, 4):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
                 # data sets
+                if van_norm:
+                    # vanadium normalization
+                    van_vec_y_i = self.get_vanadium_spectrum(van_run, bank_id)
+                else:
+                    van_vec_y_i = None
+                # END-IF
                 try:
                     seq_list, data_set_list = construct_chopped_data(chop_key, seq_list, bank_id, pc_norm,
-                                                                     van_norm, van_vec_y)
+                                                                     van_norm, van_vec_y_i)
                 except RuntimeError as run_err:
                     GuiUtility.pop_dialog_error(self, 'Unable to plot chopped data due to {}'.format(run_err))
                     return

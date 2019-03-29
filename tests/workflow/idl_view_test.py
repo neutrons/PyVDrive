@@ -114,12 +114,12 @@ def test_main():
     if Now:
         test_case_archive_chopped_pc(command_tester)
         test_archive_single_run(command_tester)
-
-    if Passed:
-        # no need to test now
         test_case_archive_chopped(command_tester)
         test_case_archive_chopped_van(command_tester)
         test_case_archive_single_normalize(command_tester)
+
+    if Passed:
+        # no need to test now
 
         pass
 

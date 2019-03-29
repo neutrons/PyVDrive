@@ -236,21 +236,20 @@ def test_main():
     # basic chopping operation
     test_chop_simple(command_tester)
 
-    # # chop with vanadium runs
-    # test_chop_van_normalized(command_tester)
-    #
-    # # chop with mask/ROI
-    # test_chop_roi(command_tester)
-    #
-    # # # chop with PICKDATA
-    # test_chop_segment_file(command_tester)
-    #
-    # # # chop with DT
-    # # test_chop_overlap_time(command_tester)
-    #
-    # # chop on analysis cluster
-    # test_chop_analysis_cluster(command_tester)
+    # chop with vanadium runs
+    test_chop_van_normalized(command_tester)
+    
+    # chop with mask/ROI
+    test_chop_roi(command_tester)
+    
+    # chop with PICKDATA
+    test_chop_segment_file(command_tester)
+    # chop on analysis cluster
+    test_chop_analysis_cluster(command_tester)
 
+    # chop with DT
+    test_chop_overlap_time(command_tester)
+    
     # test_ned_standard(command_tester)
     # test_ned_user_bin(command_tester)
     # test_ned_multi_banks(command_tester)
