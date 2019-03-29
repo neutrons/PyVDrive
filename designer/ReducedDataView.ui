@@ -645,7 +645,7 @@
            </spacer>
           </item>
           <item row="1" column="4">
-           <widget class="QLineEdit" name="lineEdit">
+           <widget class="QLineEdit" name="lineEdit_minY">
             <property name="maximumSize">
              <size>
               <width>120</width>
@@ -678,7 +678,7 @@
            </widget>
           </item>
           <item row="1" column="5">
-           <widget class="QLineEdit" name="lineEdit_2">
+           <widget class="QLineEdit" name="lineEdit_maxY">
             <property name="maximumSize">
              <size>
               <width>120</width>
@@ -810,6 +810,13 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_5">
         <item>
+         <widget class="QLabel" name="label_loadedSampleLogRun">
+          <property name="text">
+           <string>Loaded Run:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QFrame" name="frame_graphicsView_sampleLogs">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -827,6 +834,23 @@
         </item>
         <item>
          <layout class="QGridLayout" name="gridLayout_7">
+          <item row="0" column="1">
+           <widget class="QComboBox" name="comboBox_sampleLogsList_x">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QPushButton" name="pushButton_loadLogs">
+            <property name="text">
+             <string>Load Logs</string>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="2">
            <widget class="QComboBox" name="comboBox_sampleLogsList_y">
             <property name="sizePolicy">
@@ -857,40 +881,9 @@
            </widget>
           </item>
           <item row="0" column="4">
-           <widget class="QCheckBox" name="checkBox_plotallChoppedLog">
-            <property name="maximumSize">
-             <size>
-              <width>240</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
+           <widget class="QCheckBox" name="checkBox_plotSlicedRun">
             <property name="text">
-             <string>all chopped</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QComboBox" name="comboBox_sampleLogsList_x">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QPushButton" name="pushButton_loadLogs">
-            <property name="text">
-             <string>Load Logs</string>
+             <string>Chopped Logs</string>
             </property>
            </widget>
           </item>

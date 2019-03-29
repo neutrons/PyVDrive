@@ -6,6 +6,8 @@ import math
 import numpy
 import mantid_helper
 import datatypeutility
+import pandas as pd
+import reduce_VULCAN
 
 
 START_PIXEL_ID = {1: {1: 0, 2: 1, 3: (6468, 62500)},
@@ -280,7 +282,7 @@ def getLogsList(vandbfile):
     return titlelist, examples
 
 
-def import_vulcan_log(log_file_name):
+def import_vulcan_log(log_file_name, header=0):
     """
     Import VULCAN's standard log file in CSV format
     :param log_file_name:
@@ -294,7 +296,7 @@ def import_vulcan_log(log_file_name):
     # use pandas to load the file
 
     # import
-    log_set = pd.read_csv(log_file_name, sep='\t', header=0)
+    log_set = pd.read_csv(log_file_name, sep='\t', header=header)
 
     # check
     assert len(log_set) > 1, 'Separation is not tab for VULCAN record file %s.' % log_file_name
@@ -305,7 +307,8 @@ def import_vulcan_log(log_file_name):
 # TODO - TONIGHT - QA
 def import_auto_record(ipts_number, run_number):
     log_file_name = '/SNS/VULCAN/IPTS-{}/shared/AutoRecord.txt'.format(ipts_number)
-    assert os.path.exists(log_file_name), log_file_name
+    if not os.path.exists(log_file_name):
+        raise RuntimeError('Not existing {}'.format(log_file_name))
 
     log_data_set = import_vulcan_log(log_file_name)
 
@@ -318,17 +321,15 @@ def import_sample_log_record(ipts_number, run_number, is_chopped, record_type='s
     :param run_number:
     :param is_chopped:
     :param record_type:
-    :return:
+    :return: 2-tuple (header, Pandas series)
     """
-    import pandas as pd
-    import reduce_VULCAN
-
     if is_chopped:
         sample_log_name = '/SNS/VULCAN/IPTS-{0}/shared/binned_data/{1}/{1}sampleenv_chopped_{2}.txt' \
                           ''.format(ipts_number, run_number, record_type)
         # sample_header_name = '/SNS/VULCAN/IPTS-{0}/shared/binned_data/{1}/IPTS-{0}-MTSLoadFrame-{1}.txt' \
         #                      ''.format(ipts_number, run_number)
-        assert os.path.exists(sample_log_name), sample_log_name
+        if not os.path.exists(sample_log_name):
+            raise RuntimeError('Sample log record file {} does not exist'.format(sample_log_name))
         # assert os.path.exists(sample_header_name), sample_header_name
 
     else:
@@ -355,6 +356,8 @@ def import_sample_log_record(ipts_number, run_number, is_chopped, record_type='s
 
     mts_series = pd.read_csv(sample_log_name, skiprows=row0,
                              names=header, sep='\t')
+
+    # TODO - TONIGHT 00 - Need a header-dictionary to map from NeXus log name to MTS name
 
     # print (type(mts_series))
     # print (mts_series['chopseq'])

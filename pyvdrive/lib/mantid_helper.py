@@ -12,8 +12,6 @@ import vdrivehelper
 import datatypeutility
 import datetime
 
-from reduce_VULCAN import align_bins
-
 EVENT_WORKSPACE_ID = "EventWorkspace"
 WORKSPACE_2D_ID = 'Workspace2D'
 MASK_WORKSPACE_ID = 'MaskWorkspace'
@@ -392,6 +390,18 @@ def delete_workspace(workspace):
     return
 
 
+def export_fullprof(ws_name, file_name):
+    """
+    Export a workspace to Fullprof file
+    :param ws_name:
+    :param file_name:
+    :return:
+    """
+    mantidapi.SaveFocusedXYE(ws_name, file_name, SplitFiles=False, IncludeHeader=True, Format='XYE')
+
+    return
+
+
 def extract_spectrum(input_workspace, output_workspace, workspace_index):
     """
     extract a spectrum from a workspace
@@ -721,7 +731,8 @@ def get_run_start(workspace, time_unit):
                 start_date = workspace.run().getProperty('run_start').value
             except RuntimeError as run_err:
                 raise RuntimeError('Workspace {} has neither proton_charge nor run_start in sample log.'
-                                   'Unable to get run start from it'.format(str(workspace)))
+                                   'Unable to get run start from it due to {}'.format(str(workspace),
+                                                                                      run_err))
         # END-IF
 
         # example: '2018-05-28T15:04:33.540623666-0400' or 2018-05-28T19:04:33.540623666'
@@ -734,7 +745,6 @@ def get_run_start(workspace, time_unit):
     elif pcharge_log:
         # convert to seconds or nanoseconds
         # Get first value in proton charge's time as run start
-        print ('[DB...BAT...mantid_helper] About to get pcharge.firstTime()')
         pcharge_time0 = pcharge_log.firstTime()
         run_start_ns = pcharge_time0.totalNanoseconds()
 
@@ -1260,10 +1270,8 @@ def get_workspace_property(workspace_name, property_name, value_in_str=False):
     :return: a string (value of property) or an instance of property
     """
     # check
-    assert isinstance(workspace_name, str), 'Workspace name {0} must be an integer but not a {1}.' \
-                                            ''.format(workspace_name, type(workspace_name))
-    assert isinstance(property_name, str), 'Property name {0} must be an integer but not a {1}.' \
-                                           ''.format(property_name, type(property_name))
+    datatypeutility.check_string_variable('Workspace name', workspace_name)
+    datatypeutility.check_string_variable('Property name', property_name)
 
     workspace = retrieve_workspace(workspace_name)
 
@@ -1494,6 +1502,8 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     :param standard_bin_workspace: binning template workspace. It can be None for not aligning
     :return: output workspace name
     """
+    import reduce_VULCAN
+
     # TEST/ISSUE/NOW - Implement feature with standard_bin_workspace...
     # Check
     datatypeutility.check_file_name(gss_file_name, True, False, False, 'GSAS file')
@@ -1539,7 +1549,7 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
         assert isinstance(standard_bin_workspace, str) or standard_bin_workspace is None, \
             'Standard binning workspace {0} must be either a string or None but not a {1}.' \
             ''.format(standard_bin_workspace, type(standard_bin_workspace))
-        align_bins(out_ws_name, standard_bin_workspace)
+        reduce_VULCAN.align_bins(out_ws_name, standard_bin_workspace)
         mantidapi.ConvertUnits(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name,
                                Target='dSpacing')
     # END-IF
@@ -1629,7 +1639,7 @@ def load_mask_xml(data_ws_name, mask_file_name, mask_ws_name=None):
     load Mantid compatible masking file in XML format
     :param data_ws_name:
     :param mask_file_name:
-    :param mask workspace name:
+    :param mask_ws_name:
     :return:
     """
     datatypeutility.check_file_name(mask_file_name, check_exist=True, note='ROI XML file')
@@ -1922,6 +1932,22 @@ def merge_runs(ws_name_list, out_ws_name):
     return
 
 
+# TODO - TONIGHT 0 - Clean up!
+def map_sample_logs(meta_ws_name, log_name_x, log_name_y):
+    mantidapi.ExportSampleLogsToCSVFile(InputWorkspace=meta_ws_name,
+                                           OutputFilename='/tmp/test.dat',
+                                           SampleLogNames=[log_name_x, log_name_y],
+                                           WriteHeaderFile=False,
+                                           TimeZone='UTC',
+                                           Header='')
+
+    import vulcan_util
+
+    log_set = vulcan_util.import_vulcan_log('/tmp/test.dat', header=None)  # no header
+
+    return log_set[1].values, log_set[2].values, log_set[3].values
+
+
 def mtd_compress_events(event_ws_name, tolerance=0.01):
     """ Call Mantid's CompressEvents algorithm
     :param event_ws_name:
@@ -2075,16 +2101,6 @@ def normalize_by_vanadium(data_ws_name, van_ws_name):
                      WarnOnZeroDivide=True)
 
     return
-
-
-def parse_mask_roi_xml(xml_file_name):
-    """
-    parse the Mask/ROI XML file to a list of masked/ROI detectors' IDs
-    :param xml_file_name:
-    :return: is_roi, det_id_list
-    """
-
-    return is_roi, det_id_list
 
 
 def rebin(workspace_name, params, preserve, output_ws_name=None):
@@ -2512,4 +2528,3 @@ def workspace_does_exist(workspace_name):
     does_exist = ADS.doesExist(workspace_name)
 
     return does_exist
-

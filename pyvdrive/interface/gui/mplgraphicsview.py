@@ -1212,12 +1212,17 @@ class Qt4MplCanvas(FigureCanvas):
             line_style = '-'
 
         # color must be RGBA (4-tuple)
+        if marker == 'o':
+            marker_size = 3
+        else:
+            marker_size = 1
         if plot_error is False:
             # return: list of matplotlib.lines.Line2D object
-            r = self.axes.plot(vec_x, vec_y, color=color, marker=marker, markersize=1, linestyle=line_style,
+            r = self.axes.plot(vec_x, vec_y, color=color, marker=marker, markersize=marker_size, linestyle=line_style,
                                label=label, linewidth=line_width)
         else:
-            r = self.axes.errorbar(vec_x, vec_y, yerr=y_err, color=color, marker=marker, linestyle=line_style,
+            r = self.axes.errorbar(vec_x, vec_y, yerr=y_err, color=color, marker=marker, markersize=marker_size,
+                                   linestyle=line_style,
                                    label=label, linewidth=line_width)
 
         self.axes.set_aspect('auto')

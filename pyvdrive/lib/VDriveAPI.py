@@ -987,6 +987,53 @@ class VDriveAPI(object):
 
         return return_list
 
+    def get_2_sample_log_values(self, data_key, log_name_x, log_name_y, start_time, stop_time):
+        # get 2 sample logs and merge them along stamp time and return the sample log values
+
+        # check input
+        assert data_key is not None, 'Data key cannot be None.'
+        print ('Data Key / current run number = {}'.format(data_key))
+
+        # 2 cases: run_number is workspace or run_number is run number
+        if isinstance(data_key, str) and mantid_helper.workspace_does_exist(data_key):
+            # input (run number) is workspace's name
+            ws_name = data_key
+
+            vec_times, vec_log_x, vec_log_y = mantid_helper.map_sample_logs(ws_name, log_name_x, log_name_y)
+
+        else:
+            # get chopper for (integer) run number
+            chopper = self._myProject.get_chopper(data_key)
+
+            vec_times, vec_log_x, vec_log_y = chopper.map_sample_logs(log_name_x=log_name_x, log_name_y=log_name_y,
+                                                                      start_time=start_time, stop_time=stop_time)
+            #
+            # # get log values
+            # vec_times, vec_value = chopper.get_sample_data(sample_log_name=log_name,
+            #                                                start_time=start_time, stop_time=stop_time,
+            #                                                relative=relative)
+        # END-IF
+
+
+        # TODO - TONIGHT 0 (ISSUE 164) - Add a place to store vec_times, vec_log_x, vec_log_y (external method in chopper?)
+        # TODO - UI - (1) add a section for line integral (2) option: section length, smooth, plot
+        # TODO - Lib - (1) algorithm to smooth (X intact) (2) trace back from X/Y to time (using vec T, vecX, vecY)
+        # TODO - UI - Table to show the result
+
+        # vec_log_x, vec_log_y = vdrivehelper.merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
+
+        return vec_times, vec_log_x, vec_log_y
+
+    @staticmethod
+    def create_curve_slicer_generator(vec_times, plot_x, plot_y):
+        """ create an CurveSlicerGenerator instance
+        :param vec_times
+        :param plot_x:
+        :param plot_y:
+        :return:
+        """
+        return chop_utility.CurveSlicerGenerator(vec_times, plot_x, plot_y)
+
     def get_sample_log_values(self, data_key, log_name, start_time=None, stop_time=None, relative=True):
         """
         Get time and value of a sample log in vector
@@ -1055,6 +1102,7 @@ class VDriveAPI(object):
         """
         return self._myProject.reduction_manager.has_run_reduced(run_number)
 
+    # TODO - TONIGHT 0 - Clean it out!
     @staticmethod
     def import_data_slicers(file_name):
         """ import slicers from a text file
@@ -1752,7 +1800,7 @@ class VDriveAPI(object):
         :return:
         """
         # get chopper
-        assert isinstance(run_number, int), 'Run number must be an integer.'
+        datatypeutility.check_int_variable('Run number', run_number, (1, 99999999))
         chopper = self._myProject.get_chopper(run_number)
 
         chopper.save_splitter_ws_text(slicer_tag, file_name)
@@ -1783,8 +1831,7 @@ class VDriveAPI(object):
         :return:
         """
         # check
-        assert isinstance(ipts_number, int), 'IPTS number %s must be an integer but not %s.' \
-                                             '' % (str(ipts_number), type(ipts_number))
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, 9999999))
         assert isinstance(data_dir, str) and os.path.exists(data_dir), \
             'Data directory %s of type (%s) must be a string and exists.' % (str(data_dir), type(data_dir))
         assert isinstance(binned_data_dir, str) and os.path.exists(binned_data_dir), \

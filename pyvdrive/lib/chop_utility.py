@@ -2,6 +2,7 @@
 import os
 import random
 import math
+import numpy
 import mantid_helper
 from mantid.api import ITableWorkspace, MatrixWorkspace
 from mantid.dataobjects import SplittersWorkspace
@@ -105,7 +106,7 @@ class DataChopper(object):
         self._myRunNumber = run_number
 
         # workspace name (might be sample log only)
-        self._mtdWorkspaceName = None
+        self._meta_ws_name = None   # name of (meta) workspace
         self._logNameList = None
         self._runStartTime = None
 
@@ -119,7 +120,28 @@ class DataChopper(object):
 
         return
 
-    # TEST - Implemented in #65
+    # TODO - TONIGHT 0 - NEW Implement
+    def detector_beam_downtime(self, time_resolution):
+        """
+        :return:
+        """
+        # get workspace and proton charge log
+        proton_charges = mantid_helper.get_workspace_property(self._meta_ws_name, 'proton_charge', False)
+        vec_np_times = proton_charges.times
+        vec_pc_value = proton_charges.value
+
+        # get pulse time
+        pulse_time = numpy.average(vec_np_times[1:] - vec_np_times[:-1])
+        num_cycles = int(time_resolution / pulse_time + 0.5)
+
+        vec_sum_times = vec_np_times[0::num_cycles]
+        vec_sum_value = vec_pc_value[0::num_cycles]
+
+        for icycle in range(1, num_cycles):
+            vec_sum_value += vec_pc_value[icycle::num_cycles]
+
+        return vec_sum_times, vec_sum_value
+
     def delete_splitter_workspace(self, slicer_tag):
         """
         delete a splitter workspace by its tag
@@ -186,13 +208,13 @@ class DataChopper(object):
         :return:
         """
         # Check
-        if self._mtdWorkspaceName is None:
+        if self._meta_ws_name is None:
             raise RuntimeError('DataChopper has no data loaded to Mantid workspace.')
 
         info_str = 'Run {0}:\t'.format(self._myRunNumber)
 
         # get proton charge
-        proton_charge_property = mantid_helper.get_sample_log_tsp(self._mtdWorkspaceName, 'proton_charge')
+        proton_charge_property = mantid_helper.get_sample_log_tsp(self._meta_ws_name, 'proton_charge')
         pc_times = proton_charge_property.times
         # these are numpy.datetime64 object.  cannot be add to string like {}.format()
         info_str += 'run start: {0}; run stop:  {1}' \
@@ -208,14 +230,22 @@ class DataChopper(object):
         :return: List of sample logs
         """
         # Check
-        if self._mtdWorkspaceName is None:
+        if self._meta_ws_name is None:
             raise RuntimeError('DataChopper has no data loaded to Mantid workspace.')
 
         # Easy return
         if not with_info:
             return self._logNameList[:]
 
-        return mantid_helper.get_sample_log_names(self._mtdWorkspaceName, smart=True)
+        return mantid_helper.get_sample_log_names(self._meta_ws_name, smart=True)
+
+    def map_sample_logs(self, log_name_x, log_name_y, start_time, stop_time):
+        # return with relative time
+        vec_times, vec_log_x, vec_log_y = mantid_helper.map_sample_logs(self._meta_ws_name, log_name_x, log_name_y)
+        # # TODO - TONIGHT 0 - compare with merge_2_logs shall be a static in the utility and called by plot_sample_log()!
+        # vec_log_x, vec_log_y = vdrivehelper.merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
+
+        return vec_times, vec_log_x, vec_log_y
 
     def get_sample_data(self, sample_log_name, start_time, stop_time, relative):
         """
@@ -234,7 +264,7 @@ class DataChopper(object):
             raise RuntimeError('Sample log name %s is not a FloatSeries.' % sample_log_name)
 
         # Get property
-        vec_times, vec_value = mantid_helper.get_sample_log_value(src_workspace=self._mtdWorkspaceName,
+        vec_times, vec_value = mantid_helper.get_sample_log_value(src_workspace=self._meta_ws_name,
                                                                   sample_log_name=sample_log_name,
                                                                   start_time=start_time,
                                                                   stop_time=stop_time,
@@ -279,7 +309,7 @@ class DataChopper(object):
 
         # relative time?
         if relative_time:
-            run_start_time = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='second')
+            run_start_time = mantid_helper.get_run_start(self._meta_ws_name, time_unit='second')
         else:
             run_start_time = None
         print '[INFO] Run start time = ', run_start_time, 'of type ', type(run_start_time)
@@ -316,17 +346,17 @@ class DataChopper(object):
                 raise RuntimeError(err_msg)
 
         # register
-        self._mtdWorkspaceName = out_ws_name
+        self._meta_ws_name = out_ws_name
 
         # Set up log names list
         try:
-            self._logNameList = mantid_helper.get_sample_log_names(self._mtdWorkspaceName)
+            self._logNameList = mantid_helper.get_sample_log_names(self._meta_ws_name)
             assert isinstance(self._logNameList, list)
         except RuntimeError as err:
             return False, 'Unable to retrieve series log due to %s.' % str(err)
 
         # Set up run start time
-        self._runStartTime = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='nanosecond')
+        self._runStartTime = mantid_helper.get_run_start(self._meta_ws_name, time_unit='nanosecond')
 
         return out_ws_name
 
@@ -374,7 +404,7 @@ class DataChopper(object):
         splitter_ws_name = tag
         info_ws_name = '%s_Info' % tag
 
-        mantid_helper.generate_event_filters_by_log(self._mtdWorkspaceName, splitter_ws_name, info_ws_name,
+        mantid_helper.generate_event_filters_by_log(self._meta_ws_name, splitter_ws_name, info_ws_name,
                                                     min_time, max_time, log_name, min_log_value, max_log_value,
                                                     log_value_step, direction)
 
@@ -426,7 +456,7 @@ class DataChopper(object):
         if start_time is None:
             start_time = 0
         if stop_time is None:
-            stop_time = mantid_helper.get_run_stop(self._mtdWorkspaceName, 'second', is_relative=True)
+            stop_time = mantid_helper.get_run_stop(self._meta_ws_name, 'second', is_relative=True)
         print ('[DB...BAT] Run stop = {}'.format(stop_time))
 
         split_list = list()
@@ -445,20 +475,20 @@ class DataChopper(object):
 
         # Determine tag
         if splitter_tag is None:
-            splitter_tag = get_standard_manual_tag(self._mtdWorkspaceName)
+            splitter_tag = get_standard_manual_tag(self._meta_ws_name)
 
         # Generate split workspaces
         splitter_tag_list = list()
         for i_split, split_tup in enumerate(split_list):
             splitter_tag_i = splitter_tag + '_{:05}'.format(i_split)
             splitter_info_i = splitter_tag_i + '_info'
-            status, message = mantid_helper.generate_event_filters_by_time(self._mtdWorkspaceName,
-                                                                             splitter_tag_i,
-                                                                             splitter_info_i,
-                                                                             split_tup[0],
-                                                                             split_tup[1],
-                                                                             delta_time=None,
-                                                                             time_unit='second')
+            status, message = mantid_helper.generate_event_filters_by_time(self._meta_ws_name,
+                                                                           splitter_tag_i,
+                                                                           splitter_info_i,
+                                                                           split_tup[0],
+                                                                           split_tup[1],
+                                                                           delta_time=None,
+                                                                           time_unit='second')
 
             if not status:
                 return False, message
@@ -496,8 +526,8 @@ class DataChopper(object):
         splitter_ws_name = tag
         info_ws_name = tag + '_Info'
 
-        assert self._mtdWorkspaceName is not None, 'Mantid workspace has not been loaded yet.'
-        status, message = mantid_helper.generate_event_filters_by_time(self._mtdWorkspaceName,
+        assert self._meta_ws_name is not None, 'Mantid workspace has not been loaded yet.'
+        status, message = mantid_helper.generate_event_filters_by_time(self._meta_ws_name,
                                                                        splitter_ws_name, info_ws_name,
                                                                        start_time, stop_time,
                                                                        time_step, 'Seconds')
@@ -515,115 +545,92 @@ class DataChopper(object):
         return True, slicer_key
 
 
-# TODO/NEXT - If parse_time_segmenets works for data slicer file too, then remove parse_data_slicer_file()
-def parse_data_slicer_file(file_name):
+class CurveSlicerGenerator(object):
     """
-    parse data slicer file
-    :param file_name:
-    :return:
+    A slicer generator for slicing data along a curve
     """
-    slicer_file = open(file_name, 'r')
-    raw_lines = slicer_file.readlines()
-    slicer_file.close()
+    def __init__(self, vec_times, vec_x, vec_y):
+        """
+        initialization
+        :param vec_times:
+        :param vec_x:
+        :param vec_y:
+        """
+        datatypeutility.check_numpy_arrays('Vector of times, X and Y', [vec_times, vec_x, vec_y],
+                                           dimension=1, check_same_shape=True)
 
-    slicer_list = list()
-    for line in raw_lines:
-        # print '[DB...BAT] Line: {0}'.format(line)
-        line = line.strip()
-        if len(line) == 0 or line[0] == '#':
-            continue
+        self._vec_times = vec_times
+        self._vec_x = vec_x
+        self._vec_y = vec_y
+        self._smooth_vec_y = None
+        self._interpolated_y = None
 
-        terms = line.split()
-        # print '[DB...BAT] Line split to {0}'.format(terms)
-        if len(terms) < 3:
-            continue
-        start_time = float(terms[0])
-        stop_time = float(terms[1])
-        target_ws = str(terms[2])
-        slicer_list.append((start_time, stop_time, target_ws))
-    # END-FOR
+        self._slicers = dict()  #
 
-    return slicer_list
+        return
 
+    def get_raw(self):
+        """
 
-def parse_time_segments(file_name):
-    """
-    Parse the standard time segments file serving for event slicers
-    :param file_name:
-    :return: 2-tuple as (boolean, object): (True, (reference run, start time, segment list))
-            (False, error message)
-    """
-    # Check
-    datatypeutility.check_file_name(file_name, check_exist=True, note='Time segmentation file')
+        :return:
+        """
+        return self._vec_x, self._vec_y
 
-    # Read file
-    try:
-        in_file = open(file_name, 'r')
-        raw_lines = in_file.readlines()
-        in_file.close()
-    except IOError as e:
-        raise RuntimeError('Failed to read time segment file {} due to {}'.format(file_name, e))
+    def get_smoothed(self):
+        """
 
-    ref_run = None
-    run_start = None
-    segment_list = list()
+        :return:
+        """
+        return self._vec_x, self._smooth_vec_y
 
-    i_target = 1
+    def get_interpolated(self):
+        """
 
-    for raw_line in raw_lines:
-        line = raw_line.strip()
+        :return:
+        """
+        return self._vec_x, self._interpolated_y
 
-        # Skip empty line
-        if len(line) == 0:
-            continue
+    def smooth_curve(self, method, params):
+        """
+        smooth curve
+        :param method: FFTSmooth, NearestNeighbor
+        :return:
+        """
+        datatypeutility.check_string_variable('Smooth algorithm', method, ['fft', 'nearest'])
 
-        # Comment line
-        if line.startswith('#') is True:
-            # remove all spaces
-            line = line.replace(' ', '')
-            terms = line.split('=')
-            if len(terms) == 1:
-                continue
-            if terms[0].lower().startswith('referencerunnumber'):
-                # reference run number
-                ref_run_str = terms[1]
-                if ref_run_str.isdigit():
-                    ref_run = int(ref_run_str)
-                else:
-                    ref_run = ref_run_str
-            elif terms[0].lower().startswith('runstarttime'):
-                # run start time
-                run_start_str = terms[1]
-                try:
-                    run_start = float(run_start_str)
-                except ValueError:
-                    print '[Warning] Unable to convert run start time %s to float' % run_start_str
-        else:
-            # remove all tab
-            line = line.replace('\t', '')
-            terms = line.split()
-            if len(terms) < 2:
-                print '[Warning] Line "%s" is of wrong format.' % line
-                continue
+        import h5py
+        temp_h5 = h5py.File('smooth_prototype.h5', 'w')
+        curve_group = temp_h5.create_group('curve')
+        curve_group.create_dataset('x', data=self._vec_x)
+        curve_group.create_dataset('y', data=self._vec_y)
+        temp_h5.close()
 
-            try:
-                start_time = float(terms[0])
-                stop_time = float(terms[1])
-                if len(terms) < 3:
-                    target_id = i_target
-                    i_target += 1
-                else:
-                    target_id = terms[2]
-                new_segment = TimeSegment(start_time, stop_time, target_id)
-                segment_list.append(new_segment)
-            except ValueError as e:
-                print '[Warning] Line "{0}" has wrong type of value for start/stop. FYI {1}.'.format(line, e)
-                continue
-        # END-IF (#)
-    # END-FOR
+        if method == 'fft':
+            self._smooth_vec_y = mantid_helper.fft_smooth(self._vec_x, self._vec_y, params)
+        elif method == 'nearest':
+            self._smooth_vec_y = mantid_helper.nearest_neighbor_smooth(self._vec_x, self._vec_y, params)
 
-    return ref_run, run_start, segment_list
+        return
 
+    def interpolate_curve(self, order, resolution):
+        """ interpolate curve
+        :param order:
+        :param resolution:
+        :return:
+        """
+        # TODO - TODAY 0 - Find the right solution
+
+    def integrate_curve(self, is_smoothed, is_interpolated, start_x, end_x):
+        """ integrate curve
+        :param is_smoothed:
+        :param start_x:
+        :param end_x:
+        :return:
+        """
+        # TODO - TODAY 0 - Find the right solution (numpy/scipy)
+
+        return
+# END-CLASS
 
 def get_standard_manual_tag(run_number):
     """

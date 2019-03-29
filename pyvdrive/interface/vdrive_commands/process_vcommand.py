@@ -100,6 +100,33 @@ class VDriveCommand(QObject):
 
         return
 
+    def process_binning_setup(self):
+        """ Processing diffraction focus and save to GSAS related setup
+        :return: bool (bin chopped data), int (number of banks)
+        """
+        if 'BIN' in self._commandArgsDict:
+            bin_run = convert_string_to(self._commandArgsDict['BIN'], int) > 0
+        else:
+            # default is True
+            bin_run = True
+
+        if 'FULLPROF' in self._commandArgsDict:
+            write_fp = convert_string_to(self._commandArgsDict['FULLPROF'], int) > 0
+        else:
+            # default is False
+            write_fp = False
+
+        # number of banks in output GSAS file
+        if 'BANKS' in self._commandArgsDict:
+            num_banks = convert_string_to(self._commandArgsDict['BANKS'], int)
+            if num_banks <= 0:
+                raise RuntimeError('Banks number cannot be zero or less')
+        else:
+            # default is 3
+            num_banks = 3
+
+        return bin_run, num_banks, write_fp
+
     def exec_cmd(self):
         """ Execute VDRIVE command
         """

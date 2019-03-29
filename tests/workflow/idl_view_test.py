@@ -31,16 +31,18 @@ def test_case_archive_chopped(command_tester):
 
     return
 
+
 def test_case_archive_chopped_pc(command_tester):
     """
     test viewing data from archive with chopped and focused run
     :param command_tester:
     :return:
     """
-    command_line = 'view,IPTS=22126,choprun=171899, runs=1, rune=15, norm=1,minv=0.5,maxv=2.0'
+    command_line = 'view,IPTS=22126,choprun=171899,runs=1,rune=15,norm=1,minv=1.0,maxv=2.0'
     command_tester.run_command(command_line)
 
     return
+
 
 def test_case_archive_chopped_van(command_tester):
     """
@@ -111,13 +113,14 @@ def test_main():
 
     if Now:
         test_case_archive_chopped_pc(command_tester)
-
-    if Passed:
-        # no need to test now
         test_archive_single_run(command_tester)
         test_case_archive_chopped(command_tester)
         test_case_archive_chopped_van(command_tester)
         test_case_archive_single_normalize(command_tester)
+
+    if Passed:
+        # no need to test now
+
         pass
 
     if Next:

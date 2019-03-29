@@ -211,7 +211,7 @@ def get_load_file_by_dialog(parent, title, default_dir, file_filter):
     datatypeutility.check_string_variable('Title (to load file)', title)
     datatypeutility.check_string_variable('Default directory to load file', default_dir)
     datatypeutility.check_file_name(default_dir, True, False, True, 'Default directory to load file')
-    datatypeutility.check_file_name('File filter', file_filter)
+    datatypeutility.check_string_variable('File filter', file_filter)
 
     # append "All files:
     if file_filter.count('*.*') == 0:
@@ -240,7 +240,7 @@ def get_save_file_by_dialog(parent, title, default_dir, file_filter):
     # convert to string
     out_file_name = str(out_file_name).strip()
 
-    return  out_file_name
+    return out_file_name
 
 
 def parse_integer(line_edit, allow_blank=True):
@@ -347,20 +347,22 @@ def parse_integer_list(line_edit, size=None, check_order=False, remove_duplicate
     return integer_list
 
 
-def parse_float(line_edit, allow_blank=True):
+def parse_float(line_edit, allow_blank=True, default=None):
     """
     Parse a line edit as a float number
     :param line_edit:
     :param allow_blank: if true, then return None if there is no string written in the LineEdit
-    :return: float or None
+    :return: float or None (or blank)
     """
+    # TODO - TONIGHT 0 - CHECK and clean
     # Check input
     assert(isinstance(line_edit, QLineEdit))
 
     str_value = str(line_edit.text()).strip()
     if len(str_value) == 0:
         if allow_blank:
-            return None
+            line_edit.setText('{}'.format(default))
+            return default
         else:
             raise RuntimeError('Blank editor')
 
@@ -396,6 +398,46 @@ def pop_dialog_information(parent, message):
                                      ''.format(message, type(message))
 
     QMessageBox.information(parent, 'Information', message)
+
+    return
+
+
+def set_combobox_current_item(combo_box, item_name, match_beginning):
+    """
+    set the current (index/item) of a combo box by name
+    :param combo_box:
+    :param item_name:
+    :param match_beginning: if True, only need to match beginning but not all
+    :return:
+    """
+    # check
+    assert isinstance(combo_box, QComboBox), 'Input widget {} must be a QComboBox instance but not a ' \
+                                             '{}'.format(combo_box, type(combo_box))
+    datatypeutility.check_string_variable('Combo box item name', item_name)
+
+    # get the list of items' names
+    item_name_list = [str(combo_box.itemText(i)).strip() for i in range(combo_box.count())]  # string and no space
+
+    if match_beginning:
+        # match beginning
+        item_index = None
+        for index_i, item_name_i in enumerate(item_name_list):
+            if item_name_i.startswith(item_name):
+                item_index = index_i
+                break
+        if item_index is None:
+            raise RuntimeError('Combo box does not have item {}.  Available names are {}'
+                               ''.format(item_name, item_name_list))
+    else:
+        # match all
+        if item_name not in item_name_list:
+            raise RuntimeError('Combo box does not have item {}.  Available names are {}'
+                               ''.format(item_name, item_name_list))
+        item_index = item_name_list.index(item_name)
+    # END-IF-ELSE
+
+    # set current index
+    combo_box.setCurrentIndex(item_index)
 
     return
 

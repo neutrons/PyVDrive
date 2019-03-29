@@ -3,6 +3,7 @@
 import os
 import sys
 from pyvdrive.interface.VDrivePlot import VdriveMainWindow
+from pyvdrive.interface.gui import GuiUtility
 try:
     from PyQt5.QtWidgets import QApplication
 except (ImportError, RuntimeError) as import_error:
@@ -54,13 +55,42 @@ class EventFilteringAssistantTestEnvironment(object):
         :param run_number:
         :return:
         """
-        # self._slice_window.ui.lineEdit_iptsNumber.setText('{}'.format(22126))
-        # self._slice_window.ui.lineEdit_runNumber.setText('{}'.format(171898))
-
-        self._slice_window.ui.lineEdit_iptsNumber.setText('{}'.format(22126))
-        self._slice_window.ui.lineEdit_runNumber.setText('{}'.format(171899))
+        if ipts_number is not None and run_number is not None:
+            self._slice_window.ui.lineEdit_iptsNumber.setText('{}'.format(ipts_number))
+            self._slice_window.ui.lineEdit_runNumber.setText('{}'.format(run_number))
+        elif False:
+            self._slice_window.ui.lineEdit_iptsNumber.setText('{}'.format(22126))
+            self._slice_window.ui.lineEdit_runNumber.setText('{}'.format(171899))
+        else:
+            self._slice_window.ui.lineEdit_iptsNumber.setText('{}'.format(20391))
+            self._slice_window.ui.lineEdit_runNumber.setText('{}'.format(172373))
 
         self._slice_window.do_load_run()
+
+        return
+
+    def test_issue_164(self):
+        """
+        plot strain vs stress
+        :return:
+        """
+        # set x and y sample logs
+        GuiUtility.set_combobox_current_item(self._slice_window.ui.comboBox_logNamesX, 'loadframe.strain',
+                                             match_beginning=True)
+        GuiUtility.set_combobox_current_item(self._slice_window.ui.comboBox_logNames, 'loadframe.stress',
+                                             match_beginning=True)
+
+        # plot
+        self._slice_window.do_plot_sample_logs()  # 'push' button: pushButton_setXAxis()
+
+        # smooth
+        self._slice_window.smooth_sample_log_curve()
+
+        # select the chopping method
+        self._slice_window.ui.radioButton_curveSlicer.setChecked(True)
+        self._slice_window.ui.lineEdit_curveLength.setText('10.')
+        self._slice_window.do_set_curve_slicers()
+        self._slice_window.do_show_curve_slicers()
 
         return
 
@@ -70,8 +100,16 @@ def test_main():
     test main
     """
     slice_ui_tester = EventFilteringAssistantTestEnvironment()
-    slice_ui_tester.set_ipts_run(None, None)
-    slice_ui_tester.chop_by_time()
+
+    if False:
+        # strain/stress chop
+        slice_ui_tester.set_ipts_run(21381, 163411)  # ISSUE 164
+        slice_ui_tester.test_issue_164()
+
+    else:
+        # regular
+        slice_ui_tester.set_ipts_run(None, None)
+        slice_ui_tester.chop_by_time()
 
     return slice_ui_tester.main_window
 

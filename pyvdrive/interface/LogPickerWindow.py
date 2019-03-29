@@ -57,6 +57,9 @@ class WindowLogPicker(QMainWindow):
         self._myParent = parent
         self._mutexLockSwitchSliceMethod = False
 
+        # special slicer helper
+        self._curr_curve_slicer = None
+
         # set up UI
         ui_path = os.path.join(os.path.dirname(__file__), "gui/VdriveLogPicker.ui")
         self.ui = load_ui(ui_path, baseinstance=self)
@@ -83,6 +86,7 @@ class WindowLogPicker(QMainWindow):
         self.ui.radioButton_manualSlicer.toggled.connect(self.evt_switch_slicer_method)
         self.ui.pushButton_slicer.clicked.connect(self.do_chop)
         self.ui.pushButton_viewReduced.clicked.connect(self.do_view_reduced_data)
+        self.ui.pushButton_setXAxis.clicked.connect(self.do_plot_sample_logs)
 
         # Further operation
         # self.ui.pushButton_highlight.clicked.connect()
@@ -95,6 +99,8 @@ class WindowLogPicker(QMainWindow):
         # manual slicer picker
         self.ui.pushButton_showManualSlicerTable.clicked.connect(self.do_show_manual_slicer_table)
         self.ui.pushButton_loadSlicerFile.clicked.connect(self.do_import_slicer_file)
+        # TODO - TONIGHT 0 - Implement: pushButton_plotManualSlicer show slicers set up manually
+        # TODO - ... ...   - refer to evt_show_slicer()
 
         # Slicer table
         # Canvas
@@ -112,10 +118,10 @@ class WindowLogPicker(QMainWindow):
         # menu actions
         self.ui.actionExit.triggered.connect(self.evt_quit_no_save)
 
-        # TODO - TONIGHT - URGENT: pushButton_cyclic_helper
-        # TODO - TONIGHT - URGENT: actionOpenH5Log
+        # TODO - TONIGHT 1: pushButton_cyclic_helper
 
-        # TODO - TONIGHT 0 - Urgent: actionIPython_Command_Console: launch terminal view
+        self.ui.actionOpenH5Log.triggered.connect(self.do_load_h5_log)
+        self.ui.actionIPython_Command_Console.triggered.connect(self.do_launch_console_view)
 
         # # Event handling for pickers
         self._mtsFileLoaderWindow = None
@@ -370,6 +376,7 @@ class WindowLogPicker(QMainWindow):
         # slice data
         status, message = self.get_controller().project.chop_run(run_number, self._currSlicerKey,
                                                                  reduce_flag=to_reduce_gsas,
+                                                                 fullprof=False,
                                                                  vanadium=None,
                                                                  save_chopped_nexus=to_save_nexus,
                                                                  number_banks=3,  # TODO - NIGHT - Shall be settable
@@ -394,21 +401,22 @@ class WindowLogPicker(QMainWindow):
         The format will be a 3 column file as run start (in second), run stop(in second) and target workspace
         :return:
         """
+        from pyvdrive.lib import file_utilities
+
         # get file
-        default_dir = os.getcwd()
-        slicer_file_name = str(QFileDialog.getOpenFileName(self, 'Read Slicer File', default_dir,
-                                                           'All Files (*.*)'))
+        default_dir = self._myParent.get_controller().get_working_dir()
+        slicer_file_name = GuiUtility.get_load_file_by_dialog(self, 'Read Slicer File', default_dir,
+                                                              'Data File (*.dat);;Text (*.txt)')
+
         if len(slicer_file_name) == 0:
             # return if operation is cancelled
             return
 
-        # import slicers from a file: True, (ref_run, run_start, segment_list)
-        status, ret_obj = self.get_controller().import_data_slicers(slicer_file_name)
-        if status:
-            ref_run, run_start, slicer_list = ret_obj
-        else:
-            err_msg = str(ret_obj)
-            GuiUtility.pop_dialog_error(self, err_msg)
+        try:
+            ref_run, run_start_time, slicer_list = file_utilities.parse_data_slicer_file(slicer_file_name)
+            self.get_controller().import_data_slicers(slicer_file_name)
+        except RuntimeError as run_err:
+            GuiUtility.pop_dialog_error(self, '{}'.format(run_err))
             return
 
         # check
@@ -420,7 +428,10 @@ class WindowLogPicker(QMainWindow):
             slicer_list.sort()
 
         # get run start time in second
-        slicer_start_time = slicer_list[0][0]
+        # TODO - TONIGHT 0 - Fix this: TypeError: 'TimeSegment' object does not support indexing
+        slicer_start_time = slicer_list[0][0]   # Error:  TypeError: 'TimeSegment' object does not support indexing
+        # Error above line
+
         if slicer_start_time > 3600 * 24 * 365:
             # larger than 1 year. then must be an absolute time
             run_start_s = int(self.ui.label_runStartEpoch.text())
@@ -436,6 +447,36 @@ class WindowLogPicker(QMainWindow):
                 self.ui.graphicsView_main.add_picker(start_time - run_start_s)
             self.ui.graphicsView_main.add_picker(stop_time - run_start_s)
             prev_stop_time = stop_time
+
+        return
+
+    def do_show_manual_slicers(self):
+        """ Color the segment from different target workspaces
+        :return:
+        """
+        return
+
+    def do_launch_console_view(self):
+        """ Launch IPython console view
+        :return:
+        """
+        self._myParent.menu_workspaces_view()
+
+        return
+
+    def do_load_h5_log(self):
+        """ Load sample log file in HDF5 format
+        :return:
+        """
+        from pyvdrive.lib import file_utilities
+
+        h5_log_name = GuiUtility.get_load_file_by_dialog(self, title='Sample log file in HDF5 format',
+                                                         default_dir=self.get_controller().working_dir(),
+                                                         file_filter='HDF5 (*.hdf5);;HDF5 (*.hdf)')
+
+        sample_log_dict = file_utilities.load_sample_logs_h5(log_h5_name=h5_log_name)
+
+        # TODO - TODAY - Need to find out what is the next step after loading sample logs
 
         return
 
@@ -642,8 +683,7 @@ class WindowLogPicker(QMainWindow):
         return
 
     def do_show_manual_slicer_table(self):
-        """
-
+        """ Create (if not initialized) and show the manual slice UI (table and controls)
         :return:
         """
         import ManualSlicerSetupDialog
@@ -696,6 +736,19 @@ class WindowLogPicker(QMainWindow):
             error_msg = 'Unable to get chopped and reduced workspaces. for run {0} with slicer {1} due to {2}.' \
                         ''.format(self._currRunNumber, self._currSlicerKey, run_err)
             GuiUtility.pop_dialog_error(self, error_msg)
+
+        return
+
+    def do_plot_sample_logs(self):
+        """
+        Plot sample logs
+        :return:
+        """
+        log_name_x = str(self.ui.comboBox_logNamesX.currentText())
+        log_name_y = str(self.ui.comboBox_logNames.currentText())
+
+        self.plot_nexus_log(log_name_y, log_name_x)
+        # self.plot_mts_log(log_name=log_name_y, reset_canvas=True, x_axis_log=log_name_x)
 
         return
 
@@ -980,7 +1033,11 @@ class WindowLogPicker(QMainWindow):
         self._mutexLockLogNameComboBox = True
 
         # clear box
+        self.ui.comboBox_logNamesX.clear()
         self.ui.comboBox_logNames.clear()
+
+        # add Time for X
+        self.ui.comboBox_logNamesX.addItem('Time (second)')
 
         # add sample logs to combo box
         for log_name in self._logNameList:
@@ -990,8 +1047,10 @@ class WindowLogPicker(QMainWindow):
                 if log_size == 1:
                     continue
             # add log
+            self.ui.comboBox_logNamesX.addItem(log_name.split()[0])
             self.ui.comboBox_logNames.addItem(str(log_name))
         # END-FOR
+        self.ui.comboBox_logNamesX.setCurrentIndex(0)
         self.ui.comboBox_logNames.setCurrentIndex(0)
 
         # release
@@ -1060,9 +1119,8 @@ class WindowLogPicker(QMainWindow):
 
         return
 
-    def plot_mts_log(self, log_name, reset_canvas, extra_message=None):
+    def plot_mts_log(self, log_name, reset_canvas, x_axis_log='Time', extra_message=None):
         """
-
         :param log_name:
         :param reset_canvas:
         :param extra_message:
@@ -1073,15 +1131,23 @@ class WindowLogPicker(QMainWindow):
             self.ui.label_logFileLoadInfo.setText(extra_message)
 
         # check
+        datatypeutility.check_string_variable('Log name (X)', x_axis_log)
+        datatypeutility.check_string_variable('Log name (Y)', log_name)
+
+        # further process
+        x_axis_log = x_axis_log.split()[0]
+        log_name = log_name.split()[0]
+
         assert isinstance(log_name, str), 'Log name %s must be a string but not %s.' \
                                           '' % (str(log_name), str(type(log_name)))
 
         mts_data_set = self._myParent.get_controller().get_mts_log_data(log_file_name=None,
-                                                                        header_list=['Time', log_name])
+                                                                        header_list=[x_axis_log, log_name])
         # plot a numpy series'
         try:
-            vec_x = mts_data_set['Time']
+            vec_x = mts_data_set[x_axis_log]
             vec_y = mts_data_set[log_name]
+            print (vec_x.shape, vec_y.shape)
             assert isinstance(vec_x, numpy.ndarray)
             assert isinstance(vec_y, numpy.ndarray)
         except KeyError as key_err:
@@ -1096,7 +1162,7 @@ class WindowLogPicker(QMainWindow):
 
         return
 
-    def plot_nexus_log(self, log_name):
+    def plot_nexus_log(self, log_name, x_axis_log='Time'):
         """
         Plot log from NEXUX file
         Requirement:
@@ -1105,42 +1171,69 @@ class WindowLogPicker(QMainWindow):
         :param log_name:
         :return:
         """
-        # get resolution
-        use_time_res = self.ui.radioButton_useTimeResolution.isChecked()
-        use_num_res = self.ui.radioButton_useMaxPointResolution.isChecked()
-        if use_time_res:
-            resolution = GuiUtility.parse_float(self.ui.lineEdit_timeResolution)
-        elif use_num_res:
-            resolution = GuiUtility.parse_float(self.ui.lineEdit_resolutionMaxPoints)
-        else:
-            GuiUtility.pop_dialog_error(self, 'Either time or number resolution should be selected.')
-            return
+        # check
+        datatypeutility.check_string_variable('Log name (X)', x_axis_log)
+        datatypeutility.check_string_variable('Log name (Y)', log_name)
 
-        # get the sample log data
-        if log_name in self._sampleLogDict[self._currRunNumber]:
-            # get sample log value from previous stored
-            vec_x, vec_y = self._sampleLogDict[self._currRunNumber][log_name]
+        # further process
+        x_axis_log = x_axis_log.split()[0]
+        log_name = log_name.split()[0]
+
+        if x_axis_log == 'Time':
+            # get resolution
+            use_time_res = self.ui.radioButton_useTimeResolution.isChecked()
+            use_num_res = self.ui.radioButton_useMaxPointResolution.isChecked()
+            if use_time_res:
+                resolution = GuiUtility.parse_float(self.ui.lineEdit_timeResolution)
+            elif use_num_res:
+                resolution = GuiUtility.parse_float(self.ui.lineEdit_resolutionMaxPoints)
+            else:
+                GuiUtility.pop_dialog_error(self, 'Either time or number resolution should be selected.')
+                return
+
+            # get the sample log data
+            if log_name in self._sampleLogDict[self._currRunNumber]:
+                # get sample log value from previous stored
+                vec_x, vec_y = self._sampleLogDict[self._currRunNumber][log_name]
+            else:
+                # get sample log data from driver
+                vec_x, vec_y = self._myParent.get_sample_log_value(self._currRunNumber, log_name, relative=True)
+                self._sampleLogDict[self._currRunNumber][log_name] = vec_x, vec_y
+            # END-IF
+
+            # get range of the data
+            new_min_x = GuiUtility.parse_float(self.ui.lineEdit_minX)
+            new_max_x = GuiUtility.parse_float(self.ui.lineEdit_maxX)
+
+            # adjust the resolution
+            plot_x, plot_y = self.process_data(vec_x, vec_y, use_num_res, use_time_res, resolution,
+                                               new_min_x, new_max_x)
+
+            # overlay?
+            if self.ui.checkBox_overlay.isChecked() is False:
+                # clear all previous lines
+                self.ui.graphicsView_main.reset()
+
+            # plot
+            self.ui.graphicsView_main.plot_sample_log(plot_x, plot_y, log_name, '', 'Time (s)')
+
         else:
-            # get sample log data from driver
-            vec_x, vec_y = self._myParent.get_sample_log_value(self._currRunNumber, log_name, relative=True)
-            self._sampleLogDict[self._currRunNumber][log_name] = vec_x, vec_y
+            # other solution
+            # TODO - TODAY 0 - Make this correct!
+            controller = self._myParent.get_controller()
+            vec_times, plot_x, plot_y = controller.get_2_sample_log_values(data_key=self._currRunNumber,
+                                                                           log_name_x=x_axis_log,
+                                                                           log_name_y=log_name,
+                                                                           start_time=None,
+                                                                           stop_time=None)
+
+            self.ui.graphicsView_main.plot_sample_log(plot_x, plot_y, plot_label='Along with time',
+                                                      sample_log_name=log_name,
+                                                      sample_log_name_x=x_axis_log)
+
+            self._curr_curve_slicer = controller.create_curve_slicer_generator(vec_times, plot_x, plot_y)
+
         # END-IF
-
-        # get range of the data
-        new_min_x = GuiUtility.parse_float(self.ui.lineEdit_minX)
-        new_max_x = GuiUtility.parse_float(self.ui.lineEdit_maxX)
-
-        # adjust the resolution
-        plot_x, plot_y = self.process_data(vec_x, vec_y, use_num_res, use_time_res, resolution,
-                                           new_min_x, new_max_x)
-
-        # overlay?
-        if self.ui.checkBox_overlay.isChecked() is False:
-            # clear all previous lines
-            self.ui.graphicsView_main.reset()
-
-        # plot
-        self.ui.graphicsView_main.plot_sample_log(plot_x, plot_y, log_name, '', 'Time (s)')
 
         return
 
@@ -1200,6 +1293,16 @@ class WindowLogPicker(QMainWindow):
 
         return plot_x, plot_y
 
+    def set_ipts(self, ipts_number):
+        """ Set IPTS number to text
+        :param ipts_number:
+        :return:
+        """
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, 9999999))
+        self.ui.lineEdit_iptsNumber.setText('{}'.format(ipts_number))
+
+        return
+
     def set_run(self, run_number):
         """
         Set run
@@ -1238,3 +1341,8 @@ class WindowLogPicker(QMainWindow):
             self.ui.comboBox_blockList.addItems(str(block_index))
 
         return
+
+    def smooth_sample_log_curve(self):
+        print (self._curr_curve_slicer)
+
+        self._curr_curve_slicer.smooth_curve('nearest', 1)

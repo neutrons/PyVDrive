@@ -20,7 +20,9 @@ def test_ned_simple(tester):
     command_test_setup.set_test_dir(test_dir)
 
     # run command
+    # idl_command = "VBIN,IPTS=20280,RUNS=169186,version=2,fullprof=1,output=\'{}\'".format(test_dir)
     idl_command = "VBIN,IPTS=20280,RUNS=169186,version=2,output=\'{}\'".format(test_dir)
+
     tester.run_command(idl_command)
 
     # output summary
@@ -284,25 +286,25 @@ def test_main():
 
     # test with user defined binning of 1 run
     test_ned_user_bin(command_tester)
-
+    
     # test with multiple runs
     test_ned_multiple_runs(command_tester)
-
+    
     # test with various grouping
     test_ned_multi_banks(command_tester)
-
+    
     # test single mask
     test_ned_single_mask(command_tester)
-
+    
     # test multiple (2) masks
     test_ned_multiple_masks(command_tester)
-
+    
     # test multiple (2) ROI
     test_ned_multi_roi(command_tester)
-
+    
     # test RUNV
     test_ned_runv(command_tester)
-
+    
     # test for standard material (Si, C, ...)
     test_ned_standard(command_tester)
 

@@ -251,9 +251,21 @@ class VdriveCommandProcessor(object):
         # process for special case: log-pick-helper
         if message == 'pop':
             log_window = self._mainWindow.do_launch_log_picker_window()
+            ipts_number, run_numbers = processor.get_ipts_runs()
+            if ipts_number:
+                log_window.set_ipts(ipts_number)
+            if len(run_numbers) > 0:
+                log_window.set_run(run_numbers[0])
+
+            # TODO - TONIGHT 0 - clean after testing
+            print ('[DB] self._chopRunNumberList: {} of type {}'
+                   ''.format(self._chopRunNumberList, type(self._chopRunNumberList)))
+
             if isinstance(self._chopRunNumberList, list) and len(self._chopRunNumberList) > 0:
                 log_window.load_run(self._chopRunNumberList[0])
                 log_window.setWindowTitle('IPTS {0} Run {1}'.format(self._chopIPTSNumber, self._chopRunNumberList[0]))
+            else:
+                log_window.load_run()
         # END-IF
 
         return status, message
@@ -292,6 +304,7 @@ class VdriveCommandProcessor(object):
 
         return status, message
 
+    # TODO - TONIGHT 00 - clean
     def _process_view(self, arg_dict):
         """
         process command VIEW or VDRIVEVIEW
@@ -332,11 +345,18 @@ class VdriveCommandProcessor(object):
             from pyvdrive.lib import vulcan_util
             run_number, ipts_number = processor.get_run_tuple_list()[0]
             if processor.is_chopped_run:
-                log_header, log_set = vulcan_util.import_sample_log_record(ipts_number, run_number, is_chopped=True,
-                                                                            record_type='start')
+                try:
+                    log_header, log_set = vulcan_util.import_sample_log_record(ipts_number, run_number, is_chopped=True,
+                                                                               record_type='start')
+                except RuntimeError as run_err:
+                    return False, 'Unable to import sample log record: {}'.format(run_err)
                 view_window.set_chopped_logs(ipts_number, run_number, log_header, log_set, 'start')
             else:
-                log_set = vulcan_util.import_auto_record(ipts_number, run_number)
+                try:
+                    log_set = vulcan_util.import_auto_record(ipts_number, run_number)
+                except RuntimeError as run_err:
+                    #  TODO - TONIGHT 0 - NICER
+                    return False, 'blalba {}'.format(run_err)
                 view_window.set_logs(ipts_number, run_number, log_set)
 
         # vanadium
@@ -401,11 +421,17 @@ class VdriveCommandProcessor(object):
             # else:
             #     van_run_number = None
             data_key = view_window.do_load_single_run(ipts_number, run_number, False)
-            view_window.do_refresh_existing_runs(set_to=data_key)
-            view_window.plot_single_run(data_key,
-                                        van_norm=processor.do_vanadium_normalization,
-                                        van_run=van_run_number,
-                                        pc_norm=processor.do_proton_charge_normalization)
+            if data_key:
+                view_window.do_refresh_existing_runs(set_to=data_key)
+                view_window.plot_single_run(data_key,
+                                            van_norm=processor.do_vanadium_normalization,
+                                            van_run=van_run_number,
+                                            pc_norm=processor.do_proton_charge_normalization)
+                status = True
+                message = ''
+            else:
+                status = False
+                message = 'Unable to load GSAS file of IPTS-{} Run-{}'.format(ipts_number, run_number)
         else:
             # multiple but none chopped run
             raise NotImplementedError('ASAP')

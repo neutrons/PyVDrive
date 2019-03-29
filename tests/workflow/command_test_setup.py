@@ -53,8 +53,9 @@ class PyVdriveCommandTestEnvironment(object):
         return self._command_process_window
 
     def run_command(self, vdrive_command):
-        """
-        execute a command
+        """ Execute a VDRIVE IDL command
+        BY calling vcommand_processor.process_command()
+        It WON'T leave any history on IPython console
         :param vdrive_command:
         :return:
         """

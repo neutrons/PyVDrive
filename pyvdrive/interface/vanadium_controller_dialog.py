@@ -3,11 +3,13 @@ import os
 try:
     import qtconsole.inprocess
     from PyQt5 import QtCore
+    from PyQt5.Qt import QVariant
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QDialog, QFileDialog
 except ImportError:
     from PyQt4 import QtCore
+    from PyQt4.Qt import QVariant
     from PyQt4.QtGui import QVBoxLayout
     from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QDialog, QFileDialog
@@ -19,6 +21,7 @@ except AttributeError:
     _fromUtf8 = lambda s: s
 
 import gui.GuiUtility as gutil
+from pyvdrive.lib import datatypeutility
 
 
 class VanadiumProcessControlDialog(QDialog):
@@ -645,18 +648,22 @@ def load_setting_integer(qsettings, param_name, default_value):
     # check
     assert isinstance(qsettings, QtCore.QSettings), 'Input settings must be a QSetting instance but not {0}.' \
                                                     ''.format(type(qsettings))
+    datatypeutility.check_int_variable('Default integer setting', default_value, (None, None))
 
-    # TODO FIXME - TONIGHT 1 - qsettings.value can be (1) QVariant or (2) Unicode
-    # int_value = qsettings.value(param_name, default_value).toInt()
-    int_value = default_value
+    int_value_str = qsettings.value(param_name, default_value)
+    if isinstance(int_value_str, QVariant):
+        int_value = int_value_str.toInt()
+    else:
+        # case as Unicode
+        print ('[DB...BAT] QSetting {}: {} is of type {}'.format(param_name, int_value_str, type(int_value_str)))
+        try:
+            int_value = int(str(int_value_str))
+        except (TypeError, ValueError):
+            int_value = None
 
-    print ('DB...BAT] From QVariant: {}'.format(int_value))
-
-    # try:
-    #     int_value = int(str(value_str))
-    # except (TypeError, ValueError):
-    #     print ('[ERROR] QSetting cannot cast {0} with value {1} to integer.'.format(param_name, value_str))
-    #     int_value = default_value
+    # use default
+    if int_value is None:
+        int_value = default_value
 
     return int_value
 
@@ -672,15 +679,22 @@ def load_setting_float(qsettings, param_name, default_value):
     # check
     assert isinstance(qsettings, QtCore.QSettings), 'Input settings must be a QSetting instance but not {0}.' \
                                                     ''.format(type(qsettings))
+    datatypeutility.check_float_variable('Default float setting', default_value, (None, None))
 
-    # TODO FIXME - TONIGHT 2 - qsettings.value can be (1) QVariant or (2) Unicode
-    # float_value = qsettings.value(param_name, default_value).toFloat()
-    float_value = default_value
+    float_value_str = qsettings.value(param_name, default_value)
+    if isinstance(float_value_str, QVariant):
+        float_value = float_value_str.toFloat()
+    else:
+        # case as Unicode
+        print ('[DB...BAT] QSetting {}: {} is of type {}'.format(param_name, float_value_str, type(float_value_str)))
+        try:
+            float_value = int(str(float_value_str))
+        except (TypeError, ValueError):
+            float_value = None
 
-    # try:
-    #     float_value = float(str(value_str))
-    # except (TypeError, ValueError):
-    #     raise RuntimeError('QSetting cannot cast {0} with value {1} to a float.'.format(param_name, value_str))
+    # use default
+    if float_value is None:
+        float_value = default_value
 
     return float_value
 

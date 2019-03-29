@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1432</width>
-    <height>971</height>
+    <height>1054</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -310,8 +310,8 @@
              </layout>
             </item>
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_2">
-              <item>
+             <layout class="QGridLayout" name="gridLayout_7">
+              <item row="0" column="0">
                <widget class="QRadioButton" name="radioButton_timeSlicer">
                 <property name="font">
                  <font>
@@ -323,19 +323,7 @@
                 </property>
                </widget>
               </item>
-              <item>
-               <widget class="QRadioButton" name="radioButton_logValueSlicer">
-                <property name="font">
-                 <font>
-                  <pointsize>9</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>log value</string>
-                </property>
-               </widget>
-              </item>
-              <item>
+              <item row="1" column="0">
                <widget class="QRadioButton" name="radioButton_manualSlicer">
                 <property name="font">
                  <font>
@@ -344,6 +332,30 @@
                 </property>
                 <property name="text">
                  <string>manual</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QRadioButton" name="radioButton_curveSlicer">
+                <property name="font">
+                 <font>
+                  <pointsize>9</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>curve</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QRadioButton" name="radioButton_logValueSlicer">
+                <property name="font">
+                 <font>
+                  <pointsize>9</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>log value</string>
                 </property>
                </widget>
               </item>
@@ -551,7 +563,7 @@
              </widget>
             </item>
             <item row="2" column="0">
-             <widget class="QPushButton" name="pushButton_showManualSlicer">
+             <widget class="QPushButton" name="pushButton_plotManualSlicer">
               <property name="font">
                <font>
                 <pointsize>10</pointsize>
@@ -572,6 +584,40 @@
            </property>
            <property name="sizeType">
             <enum>QSizePolicy::Preferred</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="groupBox_curveSlicerSetup">
+           <property name="title">
+            <string>Curver Slicer Setup</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_10">
+            <item row="0" column="0">
+             <widget class="QPushButton" name="pushButton">
+              <property name="font">
+               <font>
+                <pointsize>9</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>Launch Curve Slicing Table</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <spacer name="verticalSpacer_6">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
            </property>
            <property name="sizeHint" stdset="0">
             <size>
@@ -778,6 +824,9 @@
          <layout class="QHBoxLayout" name="horizontalLayout_8">
           <item>
            <widget class="QPushButton" name="pushButton_prevLog">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -808,6 +857,33 @@
            </widget>
           </item>
           <item>
+           <widget class="QComboBox" name="comboBox_logNamesX">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButton_setXAxis">
+            <property name="font">
+             <font>
+              <pointsize>9</pointsize>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;It is required for user to push this button to change logs/time to plot on X-axis.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Set X</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QComboBox" name="comboBox_logNames">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -830,6 +906,9 @@
           </item>
           <item>
            <widget class="QPushButton" name="pushButton_nextLog">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="sizePolicy">
              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
               <horstretch>0</horstretch>
