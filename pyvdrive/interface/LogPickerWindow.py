@@ -376,6 +376,7 @@ class WindowLogPicker(QMainWindow):
         # slice data
         status, message = self.get_controller().project.chop_run(run_number, self._currSlicerKey,
                                                                  reduce_flag=to_reduce_gsas,
+                                                                 fullprof=False,
                                                                  vanadium=None,
                                                                  save_chopped_nexus=to_save_nexus,
                                                                  number_banks=3,  # TODO - NIGHT - Shall be settable
