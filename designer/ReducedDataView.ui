@@ -645,7 +645,7 @@
            </spacer>
           </item>
           <item row="1" column="4">
-           <widget class="QLineEdit" name="lineEdit">
+           <widget class="QLineEdit" name="lineEdit_minY">
             <property name="maximumSize">
              <size>
               <width>120</width>
@@ -678,7 +678,7 @@
            </widget>
           </item>
           <item row="1" column="5">
-           <widget class="QLineEdit" name="lineEdit_2">
+           <widget class="QLineEdit" name="lineEdit_maxY">
             <property name="maximumSize">
              <size>
               <width>120</width>
