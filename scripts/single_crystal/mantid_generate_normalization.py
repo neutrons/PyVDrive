@@ -8,6 +8,7 @@
 # * normalized by total PC
 #
 # NOTE: All workspaces generated in this script will be started with 'CAL_'
+import numpy as np
 
 # -- Section for user to set up
 # vanadium
@@ -50,7 +51,7 @@ van_count_clean_name = 'VAN_CLEAN_{}-{}'.format(vanadium_run_number, background_
 van_count_clean = Minus(van_count, bkgd_count, OutputWorkspace=van_count_clean_name)
 # FORCE the minimum count be 1 for normalization
 num_zero_neg = 0
-for iws in van_count_clean.getNumberHistograms():
+for iws in range(van_count_clean.getNumberHistograms()):
     if van_count_clean.readY(iws)[0] < 1.:
         van_count_clean.dataY(iws)[0] = 1.
         if iws >= 6468:
@@ -77,12 +78,85 @@ raw_van_ws = Rebin(InputWorkspace=raw_van_ws_name, OutputWorkspace=raw_van_ws_na
 raw_van_focus_bank3 = 'CAL_VAN_{}_BANK3_FOCUS'.format(vanadium_run_number)
 raw_van_bank3 = SumSpectra(InputWorkspace=raw_van_ws_name,
                            OutputWorkspace=raw_van_focus_bank3,
-                           StartWorkspaceIndex=6467)
+                           StartWorkspaceIndex=6468)
+van_bkgd_ws = ConvertUnits(InputWorkspace=van_bkgd_ws, OutputWorkspace=van_bkgd_ws_name, Target='Wavelength')
+van_bkgd_ws = Rebin(InputWorkspace=van_bkgd_ws, OutputWorkspace=van_bkgd_ws_name, Params='-0.001')
+
+
+# sum over front and back
+front_tubes_indexes = list()
+back_tubes_indexes = list()
+for itube in range(72):
+    start_ws_index = 6468 + itube * 256
+    end_ws_index = start_ws_index + 256
+    ws_indexes_i = range(start_ws_index, end_ws_index)
+
+    if itube % 2 == 0:
+        # front
+        front_tubes_indexes.extend(ws_indexes_i)
+    else:
+        # back
+        back_tubes_indexes.extend(ws_indexes_i)
+# END-FOR
+
+for name, ws_indexes_i in [('Front', front_tubes_indexes), ('Back', back_tubes_indexes)]:
+    ws_index_array = np.array(ws_indexes_i)
+
+    # vanadium
+    van_tube_i_name = 'CAL_VAN_{}_Tubes_{}'.format(vanadium_run_number, name)
+    van_tube_i_ws = SumSpectra(InputWorkspace=raw_van_ws_name,
+                               OutputWorkspace=van_tube_i_name,
+                               ListOfWorkspaceIndices=ws_index_array)
+
+    # background
+    bkgd_tube_i_name = 'CAL_BKGD_{}_Tubes_{}'.format(background_run_number, name)
+    bkgd_tube_i_ws = SumSpectra(InputWorkspace=van_bkgd_ws_name,
+                                OutputWorkspace=bkgd_tube_i_name,
+                                ListOfWorkspaceIndices=ws_index_array)
+
+    # remove background
+    van_tube_i_ws -= bkgd_tube_i_ws * van_pc_sum / bkgd_pc_sum
+
+    # smooth
+    smoothed_tubes = FFTSmooth(InputWorkspace=van_tube_i_ws,
+                               OutputWorkspace='CAL_{}-{}_{}_Tubes_Smoothed'
+                                               ''.format(vanadium_run_number, background_run_number, name),
+                               Filter='Butterworth', Params='5,10', IgnoreXBins=True)
+
+
+
+# per tube
+for itube in []:  # disabled [0, 1, 18, 19, 35, 36, 70, 71]:  # shall be 72
+    start_ws_index = 6468 + itube * 256
+    end_ws_index = start_ws_index + 256 - 1
+
+    # vanadium
+    van_tube_i_name = 'CAL_VAN_{}_Tube_{}'.format(vanadium_run_number, itube)
+    print ('Sum from {} to {}'.format(start_ws_index, end_ws_index))
+    van_tube_i_ws = SumSpectra(InputWorkspace=raw_van_ws_name,
+                               OutputWorkspace=van_tube_i_name,
+                               StartWorkspaceIndex=start_ws_index,
+                               EndWorkspaceIndex=end_ws_index)
+
+    # background
+    bkgd_tube_i_name = 'CAL_BKGD_{}_Tube_{}'.format(background_run_number, itube)
+    bkgd_tube_i_ws = SumSpectra(InputWorkspace=van_bkgd_ws_name,
+                                OutputWorkspace=bkgd_tube_i_name,
+                                StartWorkspaceIndex=start_ws_index,
+                                EndWorkspaceIndex=end_ws_index)
+
+    # remove background
+    van_tube_i_ws -= bkgd_tube_i_ws * van_pc_sum / bkgd_pc_sum
+
+    # smooth
+    smooth_van_bank3 = FFTSmooth(InputWorkspace=van_tube_i_ws,
+                                 OutputWorkspace='CAL_{}-{}_Tube{:02}_Smoothed'
+                                                 ''.format(vanadium_run_number, background_run_number, itube),
+                                 Filter='Butterworth', Params='5,10', IgnoreXBins=True)
+
 
 # background workspace
 if True:
-    van_bkgd_ws = ConvertUnits(InputWorkspace=van_bkgd_ws, OutputWorkspace=van_bkgd_ws_name, Target='Wavelength')
-    van_bkgd_ws = Rebin(InputWorkspace=van_bkgd_ws, OutputWorkspace=van_bkgd_ws_name, Params='-0.001')
     bkgd_focus_bank3_name = 'CAL_Background_{}_Bank3_Focus'.format(background_run_number)
     van_bkgd_bank3 = SumSpectra(InputWorkspace=van_bkgd_ws_name,
                                 OutputWorkspace=bkgd_focus_bank3_name,
