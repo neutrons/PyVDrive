@@ -101,11 +101,14 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._single_combo_data_key_dict = dict()  # [single run combo box name] = run number (aka data key)
         self._single_combo_name_list = list()  # single run combo box name list with orders sync with combo box
         self._single_run_plot_option = dict()  # [data key] = dict() such as van_norm, van_run, pc_norm...
+        self._single_run_data_dict = dict()  # [run number/reduced file name] = data key
+        self._data_key_run_seq = dict()  # [data key] = run number, chop-seq
 
         # chopped runs: chop run combo box items and other information
         self._chop_combo_data_key_dict = dict()  # [chop run combo box name] = run number, slicer key; sync with combo
         self._chop_combo_name_list = list()  # chop run combo box names with orders sync with combo box
         self._chop_run_plot_option = dict()  # [chop key] = dict() such as van_norm, van_run, pc_norm...
+        self._chopped_run_data_dict = dict()  # [run number][chop index] = data key
         # self._curr_chop_data_key = None   # run number of sliced case
 
         # record of X value range
@@ -337,20 +340,23 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # loaded reduced data or set in-memory reduced workspaces
         if run_number is not None and self._is_run_in_memory(run_number):
             # load from memory
-            self._curr_data_key = self._myController.project.reduction_manager.get_reduced_workspace(run_number)
+            data_key = self._myController.project.reduction_manager.get_reduced_workspace(run_number)
+            self._single_run_data_dict[run_number] = data_key
+            self._data_key_run_seq[data_key] = run_number, None
         elif ipts_number is not None and run_number is not None:
             # load data from archive
             try:
                 reduced_file_name = self._myController.archive_manager.get_gsas_file(ipts_number, run_number,
                                                                                      check_exist=True)
                 file_type = 'gsas'
-                self._curr_data_key = \
-                    self._myController.project.data_loading_manager.load_binned_data(reduced_file_name,
-                                                                                     file_type,
-                                                                                     max_int=99999)
+                data_key = self._myController.project.data_loading_manager.load_binned_data(reduced_file_name,
+                                                                                            file_type,
+                                                                                            max_int=99999)
+                self._single_run_data_dict[run_number] = data_key
+                self._data_key_run_seq[data_key] = run_number, None
             except RuntimeError as run_err:
                 GuiUtility.pop_dialog_error(self, 'Unable to find GSAS: {}'.format(run_err))
-
+                return
         else:
             # load from disk by users' choice
             if ipts_number is not None:
@@ -368,29 +374,29 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             if reduced_data_file is None or reduced_data_file == '':
                 return
 
-            if reduced_data_file.lower().endswith('nxs'):
-                # processed NeXus
-                try:
-                    self._curr_data_key = self._myController.load_meta_data(reduced_data_file)
-                except RuntimeError as run_err:
-                    GuiUtility.pop_dialog_error(self, 'Unable to load {} due to {}'.format(reduced_data_file, run_err))
-                    return
-            else:
-                # gsas file
-                reduced_file_name = self._myController.archive_manager.get_gsas_file(ipts_number, run_number,
-                                                                                     check_exist=True)
-                file_type = 'gsas'
-                self._curr_data_key = self._myController.project.data_load_manager.load_binned_data(reduced_file_name,
-                                                                                                    file_type)
-
+            try:
+                if reduced_data_file.lower().endswith('nxs'):
+                    # processed NeXus
+                    data_key = self._myController.load_meta_data(reduced_data_file)
+                else:
+                    # gsas file
+                    file_type = 'gsas'
+                    data_key = self._myController.project.data_load_manager.load_binned_data(reduced_data_file,
+                                                                                             file_type)
+                # END-IF-ELSE
+                self._single_run_data_dict[reduced_data_file] = data_key
+                self._data_key_run_seq[data_key] = reduced_data_file, None
+            except RuntimeError as run_err:
+                GuiUtility.pop_dialog_error(self, 'Unable to load {} due to {}'.format(reduced_data_file, run_err))
+                return
         # END-IF-ELSE
 
         # next step
         if plot:
             # refresh
-            self.do_refresh_existing_runs(set_to=self._curr_data_key, is_chopped=False)
+            self.do_refresh_existing_runs(set_to=data_key, is_chopped=False)
 
-        return self._curr_data_key
+        return data_key
 
     def do_load_sample_log(self):
         """
@@ -1235,6 +1241,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                               van_norm=van_norm, van_run=van_run, pc_norm=pc_norm, plot3d=False)
         return
 
+    def get_data_key(self, run_number, chop_seq):
+        # TODO - TONIGHT 0 - Doc it!
+        if chop_seq is None:
+            return self._single_run_data_dict[run_number]
+
+        return self._chopped_run_data_dict[run_number][chop_seq]
+
     def get_proton_charge(self, ipts_number, run_number, chop_seq):
         """ get proton charge (summed) of a run
         :param ipts_number:
@@ -1294,6 +1307,15 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             run_number = None
 
         return run_number
+
+    def has_data_loaded(self, run_number, chop_seq_index):
+        # TODO - TONIGHT 0 - Doc it
+        if chop_seq_index is None:
+            return run_number in self._single_run_data_dict
+        elif run_number not in self._chopped_run_data_dict:
+            return False
+
+        return chop_seq_index in self._chopped_run_data_dict[run_number]
 
     def init_setup(self, controller):
         """ Set up the GUI from controller, and add reduced runs to SELF automatically
@@ -1493,6 +1515,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             status, bank_ids = self._myController.get_reduced_run_info(run_number=None, data_key=data_key)
             if not status:
                 raise NotImplementedError('It is not possible to unable to get reduced run info!')
+            run_number, none = self._data_key_run_seq[data_key]
             print ('[DB...BAT] Bank IDs: {}'.format(bank_ids))
             for bank_id in sorted(bank_ids):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
                 child_window = self.launch_single_run_view()
@@ -1509,7 +1532,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                     # END-IF
 
                 child_window.set_x_range(curr_min_x, curr_max_x)
-                child_window.plot_data(vec_x, vec_y, data_key, self._currUnit, bank_id)
+                child_window.plot_data(vec_x, vec_y, data_key, self._currUnit, bank_id, run_number, None)
             # END-FOR
         # END-IF
 
@@ -1518,7 +1541,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
     def plot_chopped_run(self, chop_key, bank_id, seq_list, van_norm, van_run, pc_norm, main_only, plot3d):
         """
         plot chopped runs
-        :param chop_key:
+        :param chop_key: (1) integer for loaded run  (2) 2-tuple for in-memory
         :param bank_id: only used for plotting main UI
         :param seq_list:
         :param van_norm:
@@ -1527,9 +1550,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param main_only:
         :return:
         """
-        # check input
-        datatypeutility.check_tuple('Chop data key', chop_key, 2)
-
         def construct_chopped_data(chop_data_key, chop_sequences, bank_index, do_pc_norm,
                                    do_van_norm, vanadium_vector):
             """
@@ -1675,9 +1695,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # Plot 1D, 2D and/or 3D
         if not main_only:
             # plot 1Ds
-            for bank_id in range(3):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
+            for bank_id in range(1, 4):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
                 child_window = self.launch_single_run_view()
-                child_window.set_title('Run {} Chop-index {} Bank {}')
                 vec_x, vec_y = get_single_bank_data(chop_run_key=chop_key,
                                                     curr_seq_index=curr_seq,
                                                     bank_id_i=bank_id,
@@ -1686,8 +1705,14 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                     do_van_norm=van_norm,
                                                     van_vector_bank_i=van_vec_y_dict[bank_id])
 
+                # run number
+                if isinstance(chop_key, tuple):
+                    run_number = chop_key[0]
+                else:
+                    run_number = chop_key
+                child_window.set_title('Run {} Chop-index {} Bank {}'.format(run_number, curr_seq, bank_id))
                 child_window.set_x_range(min_x, max_x)
-                child_window.plot_data(vec_x, vec_y, chop_key, self._currUnit, bank_id, run_number=chop_key[0],
+                child_window.plot_data(vec_x, vec_y, chop_key, self._currUnit, bank_id, run_number=run_number,
                                        chop_seq_index=curr_seq)
             # END-FOR
 

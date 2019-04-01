@@ -36,6 +36,7 @@ class AtomicReduced1DViewer(QMainWindow):
         """
         # base class initialization
         super(AtomicReduced1DViewer, self).__init__(parent)
+        self._parent = parent
 
         # set up UI
         ui_path = os.path.join(os.path.dirname(__file__), "gui/SimpleReducedDataView.ui")
@@ -49,8 +50,8 @@ class AtomicReduced1DViewer(QMainWindow):
         # set X
         self.ui.pushButton_setXRange.clicked.connect(self.do_set_x_range)
         self.ui.pushButton_setYRange.clicked.connect(self.do_set_y_range)
-        self.ui.pushButton_RemoveLine.clicked.connect(self.do_remove_line)
-        self.ui.pushButton_AddLine.clicked.connect(self.do_add_line)
+        self.ui.pushButton_removeLine.clicked.connect(self.do_remove_line)
+        self.ui.pushButton_addLine.clicked.connect(self.do_add_line)
 
         # list of plot IDs for add/remove
         self._plot_id_dict = dict()  # [run, (chop-sq)] = plot ID
@@ -118,17 +119,19 @@ class AtomicReduced1DViewer(QMainWindow):
                         chop_note = 'original GSAS'
                     else:
                         chop_note = ' chopped runs '
-                    GuiUtility.pop_dialog_error(self, 'Unable to load {} of IPTS {} Run {}'
-                                                      ''.format(chop_note, ipts_number, run_number))
+                    GuiUtility.pop_dialog_error(self, 'Unable to load {} of IPTS {} Run {}: '
+                                                      ''.format(chop_note, ipts_number, run_number,
+                                                                run_err))
                     return
             # END-IF-ELSE (IPTS)
         # END-IF (load data)
 
         try:
-            vec_x, vec_y = self._parent.get_data(run_number, bank_id)
+            data_key = self._parent.get_data_key(run_number, chop_seq_index)
+            vec_x, vec_y = self._parent.retrieve_loaded_reduced_data(data_key, bank_id, unit='dSpacing')
         except RuntimeError as run_err:
-            GuiUtility.pop_dialog_error('Unable to retrieve data from Run {} Bank {} due to {}'
-                                        ''.format(run_number, bank_id, run_err))
+            GuiUtility.pop_dialog_error(self, 'Unable to retrieve data from Run {} Bank {} due to {}'
+                                              ''.format(run_number, bank_id, run_err))
             return
 
         # plot
@@ -203,7 +206,7 @@ class AtomicReduced1DViewer(QMainWindow):
 
         return
 
-    def plot_data(self, vec_x, vec_y, data_key, unit, bank_id, run_number=None, chop_seq_index=None):
+    def plot_data(self, vec_x, vec_y, data_key, unit, bank_id, run_number, chop_seq_index):
         """ Plot 1D diffraction data
         :param vec_x:
         :param vec_y:
@@ -212,16 +215,14 @@ class AtomicReduced1DViewer(QMainWindow):
         :param bank_id: bank ID (just as information)
         :return:
         """
-        if run_number:
-            line_label = 'Run {}'.format(run_number)
-            if chop_seq_index:
-                line_label += ' Chop-index {}'.format(chop_seq_index)
-        else:
-            line_label = '{}'.format(data_key)
+        line_label = 'Run {}'.format(run_number)
+        if chop_seq_index:
+            line_label += ' Chop-index {}'.format(chop_seq_index)
+
         line_label += ' Bank {}'.format(bank_id)
 
         plot_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y),
-                                                                      unit=unit, over_plot=False,
+                                                                      unit=unit, over_plot=True,
                                                                       run_id=data_key, bank_id=bank_id,
                                                                       chop_tag=None,
                                                                       label=line_label)
@@ -232,6 +233,8 @@ class AtomicReduced1DViewer(QMainWindow):
             self._plot_id_dict[run_number, bank_id] = plot_id
         else:
             self._plot_id_dict[run_number, chop_seq_index, bank_id] = plot_id
+
+        self.ui.lineEdit_runNumber.setText('{}'.format(run_number))
 
         # set X
         self.do_set_x_range()
@@ -255,9 +258,13 @@ class AtomicReduced1DViewer(QMainWindow):
         self._x_max = max_x
 
         self.ui.lineEdit_xMin.setText('{}'.format(min_x))
-        self.ui.lineEdit_xMin.setText('{}'.format(max_x))
+        self.ui.lineEdit_xMax.setText('{}'.format(max_x))
 
         return
+
+    def set_title(self, title):
+        # TODO - TONIGHT - Doc it!
+        self.label_title.setText(title)
 
 
 class AtomicReduction2DViewer(QMainWindow):

@@ -339,6 +339,7 @@ class VdriveCommandProcessor(object):
         view_window.set_x_range(processor.x_min, processor.x_max)
         view_window.set_unit(processor.unit)
 
+        # proton charge normalization: complicated
         if processor.do_proton_charge_normalization:
             from pyvdrive.lib import vulcan_util
             run_number, ipts_number = processor.get_run_tuple_list()[0]
