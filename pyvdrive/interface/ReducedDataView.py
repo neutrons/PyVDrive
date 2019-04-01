@@ -905,8 +905,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 # use IPTS and run to locate the loaded sample logs
                 ipts_number, run_number = self._sample_log_info_dict[self._log_data_key]
             except KeyError as key_err:
-                GuiUtility.pop_dialog_error(self, '{} is not loaded (sample log info dict)'
-                                                  ''.format(self._log_data_key))
+                GuiUtility.pop_dialog_error(self, '{} is not loaded (sample log info dict): {}'
+                                                  ''.format(self._log_data_key, key_err))
                 return
 
             try:
@@ -940,6 +940,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                               self._sliced_log_dict[ipts_number][run_number].keys()))
 
         elif self.ui.checkBox_plotSlicedRun.isChecked() and False:
+            # TODO - TODAY 191 - Need to develop!
             # for sliced data from memory
             workspace_key = str(self.ui.comboBox_chopSeq.currentText())
             workspace_key_list = [workspace_key]
@@ -957,9 +958,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 vec_times, vec_value = self._myController.get_sample_log_values(sample_key, sample_name, relative=True)
 
                 # plot
-                self.ui.graphicsView_mainPlot.plot_sample_data(vec_times, vec_value, workspace_key, sample_name)
+                self.ui.graphicsView_logPlot.plot_sample_data(vec_times, vec_value, workspace_key, sample_name)
                 # END-FOR
-        # END-FOPR
+        # END-FOR
 
         return
 
@@ -1518,7 +1519,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         plot chopped runs
         :param chop_key:
-        :param bank_id:
+        :param bank_id: only used for plotting main UI
         :param seq_list:
         :param van_norm:
         :param van_run:
@@ -1526,6 +1527,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param main_only:
         :return:
         """
+        # check input
+        datatypeutility.check_tuple('Chop data key', chop_key, 2)
+
         def construct_chopped_data(chop_data_key, chop_sequences, bank_index, do_pc_norm,
                                    do_van_norm, vanadium_vector):
             """
@@ -1569,6 +1573,26 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
             return new_seq_list, data_sets
 
+        def get_single_bank_data(chop_run_key, curr_seq_index, bank_id_i, do_pc_norm, proton_charge,
+                                 do_van_norm, van_vector_bank_i):
+            """ retrieve data for a single bank
+            :return:
+            """
+            vec_data_x, vec_data_y = self._myController.project.get_chopped_sequence_data(chop_run_key,
+                                                                                          curr_seq_index,
+                                                                                          bank_id_i)
+
+            # normalization
+            if do_pc_norm:
+                # normalize by proton charge
+                vec_data_y /= proton_charge
+
+            if do_van_norm:
+                # vanadium normalization
+                vec_data_x /= van_vector_bank_i
+
+            return vec_data_x, vec_data_y
+
         # check inputs
         datatypeutility.check_int_variable('Bank ID', bank_id, (None, None))
         if pc_norm is None:
@@ -1590,21 +1614,45 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         except ValueError:
             # just-reduced run
             curr_seq = self.ui.comboBox_chopSeq.currentIndex()
-        vec_x, vec_y = self._myController.project.get_chopped_sequence_data(chop_key, curr_seq, bank_id)
+        # END-IF-ELSE
 
-        # normalization
+        # vanadium or PC
         if pc_norm:
-            # normalize by proton charge
             pc_seq = self.get_proton_charge(self._iptsNumber, self._currRunNumber, curr_seq)
-            vec_y /= pc_seq
+        else:
+            pc_seq = 1
 
+        van_vec_y_dict = {1: None, 2: None, 3:None}
         if van_norm:
             # vanadium normalization
-            van_vec_y = self.get_vanadium_spectrum(van_run, bank_id)
-            vec_y /= van_vec_y
-        else:
-            van_vec_y = None
-        # END-IF
+            for bank_id in range(3):
+                van_vec_y = self.get_vanadium_spectrum(van_run, bank_id)
+                van_vec_y_dict[bank_id] = van_vec_y
+        # END-IF-ELSE
+
+        vec_x, vec_y = get_single_bank_data(chop_run_key=chop_key,
+                                            curr_seq_index=curr_seq,
+                                            bank_id_i=bank_id,
+                                            do_pc_norm=pc_norm,
+                                            proton_charge=pc_seq,
+                                            do_van_norm=van_norm,
+                                            van_vector_bank_i=van_vec_y_dict[bank_id])
+
+        # vec_x, vec_y = self._myController.project.get_chopped_sequence_data(chop_key, curr_seq, bank_id)
+        #
+        # # normalization
+        # if pc_norm:
+        #     # normalize by proton charge
+        #
+        #     vec_y /= pc_seq
+        #
+        # if van_norm:
+        #     # vanadium normalization
+        #     van_vec_y = self.get_vanadium_spectrum(van_run, bank_id)
+        #     vec_y /= van_vec_y
+        # else:
+        #     van_vec_y = None
+        # # END-IF
 
         # clear
         if self._currentPlotID:
@@ -1624,12 +1672,29 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # rescale
         min_x, max_x = self.do_set_x_range()
 
-        # Plot 2D and/or 3D
+        # Plot 1D, 2D and/or 3D
         if not main_only:
-            # set sequence
-            if seq_list is None:
-                seq_list = self._myController.project.get_chopped_sequence(chop_key)
+            # plot 1Ds
+            for bank_id in range(3):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
+                child_window = self.launch_single_run_view()
+                child_window.set_title('Run {} Chop-index {} Bank {}')
+                vec_x, vec_y = get_single_bank_data(chop_run_key=chop_key,
+                                                    curr_seq_index=curr_seq,
+                                                    bank_id_i=bank_id,
+                                                    do_pc_norm=pc_norm,
+                                                    proton_charge=pc_seq,
+                                                    do_van_norm=van_norm,
+                                                    van_vector_bank_i=van_vec_y_dict[bank_id])
 
+                child_window.set_x_range(min_x, max_x)
+                child_window.plot_data(vec_x, vec_y, chop_key, self._currUnit, bank_id, run_number=chop_key[0],
+                                       chop_seq_index=curr_seq)
+            # END-FOR
+
+        # set sequence
+        if seq_list is None:
+            seq_list = self._myController.project.get_chopped_sequence(chop_key)
+        if not main_only and len(seq_list) > 1:
             # launch windows for contour plots and 3D line plots
             for bank_id in range(1, 4):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
                 # data sets

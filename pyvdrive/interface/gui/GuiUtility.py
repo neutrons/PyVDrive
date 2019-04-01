@@ -352,24 +352,40 @@ def parse_float(line_edit, allow_blank=True, default=None):
     Parse a line edit as a float number
     :param line_edit:
     :param allow_blank: if true, then return None if there is no string written in the LineEdit
+    :param default: default value.  If None, then set as blank still
     :return: float or None (or blank)
     """
-    # TODO - TONIGHT 0 - CHECK and clean
     # Check input
-    assert(isinstance(line_edit, QLineEdit))
+    assert(isinstance(line_edit, QLineEdit)), 'Input shall be a QLineEdit instance but not a {}'.format(type(line_edit))
 
     str_value = str(line_edit.text()).strip()
-    if len(str_value) == 0:
-        if allow_blank:
-            line_edit.setText('{}'.format(default))
-            return default
-        else:
-            raise RuntimeError('Blank editor')
 
-    try:
-        float_value = float(str_value)
-    except ValueError as e:
-        raise e
+    input_invalid = False
+    float_value = None
+    error_msg = 'Logic error'
+
+    if len(str_value) == 0:
+        input_invalid = True
+        error_msg = 'Blank editor'
+    else:
+        try:
+            float_value = float(str_value)
+        except ValueError as e:
+            input_invalid = True
+            error_msg = '{} cannot be converted to float: {}'.format(str_value, e)
+    # END-IF
+
+    # if input is not valid
+    if input_invalid and allow_blank:
+        if default is not None:
+            datatypeutility.check_float_variable('Default value of QLineEdit', default, (None, None))
+            line_edit.setText('{}'.format(default))
+            float_value = default
+        else:
+            float_value = None
+    elif input_invalid:
+        # raise Error!
+        raise RuntimeError(error_msg)
 
     return float_value
 

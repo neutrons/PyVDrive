@@ -1289,15 +1289,13 @@ class ReductionManager(object):
             if not tracker.is_reduced:
                 continue
 
-            # filter out the tracker with key type and flag-chopped
+            # filter out the tracker with key of type, tuple, which are for chopped runs
             if not isinstance(tracker_key, int):
-                print ('[DB...BAT] Chop data keys: {}'.format(tracker_key))
                 continue
 
-            run_number = tracker_key
-            print ('[DB...BAT] Reduced run with {} of type {}'.format(run_number, type(run_number)))
-            # TODO - TONIGHT 191 - run number, tracker_key...
-            return_list.append(run_number)
+            # using run number (for name) and tracker key (for accessing the specific workspace)
+            run_number = tracker.run_number
+            return_list.append((run_number, tracker_key))
         # END-FOR
 
         return return_list
@@ -1311,8 +1309,6 @@ class ReductionManager(object):
         :return: a list of (run number, slice key)
         """
         return_list = list()
-
-        print ('[DB...BAT...Chopped] Reduction-track dict keys: {}'.format(self._reductionTrackDict.keys()))
 
         # from tracker
         for tracker_key in self._reductionTrackDict.keys():

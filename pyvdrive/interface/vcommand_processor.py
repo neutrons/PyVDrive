@@ -304,7 +304,6 @@ class VdriveCommandProcessor(object):
 
         return status, message
 
-    # TODO - TONIGHT 00 - clean
     def _process_view(self, arg_dict):
         """
         process command VIEW or VDRIVEVIEW
@@ -338,7 +337,6 @@ class VdriveCommandProcessor(object):
         # set IPTS
         view_window.set_ipts_number(ipts_number)
         view_window.set_x_range(processor.x_min, processor.x_max)
-        print ('[DB...BAT] Processor.Unit = {}'.format(processor.unit))
         view_window.set_unit(processor.unit)
 
         if processor.do_proton_charge_normalization:
@@ -358,6 +356,7 @@ class VdriveCommandProcessor(object):
                     #  TODO - TONIGHT 0 - NICER
                     return False, 'blalba {}'.format(run_err)
                 view_window.set_logs(ipts_number, run_number, log_set)
+        # END-IF (proton charge normalization)
 
         # vanadium
         run_number, ipts_number = processor.get_run_tuple_list()[0]
@@ -374,26 +373,13 @@ class VdriveCommandProcessor(object):
         # about run number
         if processor.is_chopped_run:
             # chopped run
-            # run_number, ipts_number = processor.get_run_tuple_list()[0]
             view_window.set_run_number(run_number)
 
-            # if processor.do_vanadium_normalization:
-            #     van_run_number = processor.get_vanadium_number(run_number)
-            #     # load vanadium to workspace workspace and get calculation prm file
-            #     van_gsas_name, iparam_file_name = \
-            #         self._myController.archive_manager.locate_process_vanadium(van_run_number)
-            #     van_ws_name = self._myController.project.reduction_manager.gsas_writer.import_vanadium(van_gsas_name)
-            #     view_window.set_vanadium_ws(van_run_number, van_ws_name)
-            # else:
-            #     van_run_number = None
-
             chop_seq_list = processor.get_chopped_sequence_range()
-            chop_key_dict = view_window.do_load_chopped_runs(ipts_number, run_number,
-                                                             chop_seq_list)
+            view_window.do_load_chopped_runs(ipts_number, run_number, chop_seq_list)
 
-            chop_name = '{}: GSAS'.format(run_number)  # TODO - FIXME - TOMORROW - This is a risky hand shaking protocol
+            chop_name = '{}: GSAS'.format(run_number)
             chop_key = run_number
-            print ('[DB...BAT] chop_key: {} seq list: {}'.format(chop_key, chop_seq_list))
 
             # refresh list and set to chop run
             view_window.do_refresh_existing_runs(set_to=chop_name, is_chopped=True)

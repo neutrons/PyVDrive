@@ -1169,6 +1169,7 @@ class WindowLogPicker(QMainWindow):
         1. sample log name is valid;
         2. resolution is set up (time or maximum number of points)
         :param log_name:
+        :param x_axis_log: log name of X-axis
         :return:
         """
         # check
@@ -1201,9 +1202,13 @@ class WindowLogPicker(QMainWindow):
                 self._sampleLogDict[self._currRunNumber][log_name] = vec_x, vec_y
             # END-IF
 
-            # get range of the data
-            new_min_x = GuiUtility.parse_float(self.ui.lineEdit_minX)
-            new_max_x = GuiUtility.parse_float(self.ui.lineEdit_maxX)
+            # get range of the data: allow not being, using default
+            try:
+                new_min_x = GuiUtility.parse_float(self.ui.lineEdit_minX, False, None)
+                new_max_x = GuiUtility.parse_float(self.ui.lineEdit_maxX, False, None)
+            except RuntimeError as err:
+                GuiUtility.pop_dialog_error(self, 'Starting time or stopping time must be specified')
+                return
 
             # adjust the resolution
             plot_x, plot_y = self.process_data(vec_x, vec_y, use_num_res, use_time_res, resolution,

@@ -133,6 +133,35 @@ def format_float_number(value, significant_digits):
     return format_str
 
 
+def generate_chopped_log_dir(original_dir, make_dir):
+    """
+    generate the chopped sample log dir
+    :param original_dir:
+    :param make_dir: Flag to make directory if it does not exist
+    :return:
+    """
+    datatypeutility.check_string_variable('Original chopped data directory', original_dir)
+
+    if original_dir.count('shared') == 0:
+        raise RuntimeError('Chopped log directory must be a shared directory in /SNS/VULCAN/IPTS-xxxx/shared/')
+
+    if original_dir.endswith('/'):
+        original_dir = original_dir[:-1]
+    run_str = original_dir.split('/')[-1]
+
+    base_dir = os.path.join(original_dir.split('shared')[0], 'shared')
+    pyvdrive_chopped_dir = os.path.join(base_dir, 'pyvdrive_only')
+    if not os.path.exists(pyvdrive_chopped_dir) and make_dir:
+        os.mkdir(pyvdrive_chopped_dir)
+    chopped_log_dir = os.path.join(pyvdrive_chopped_dir, run_str)
+    if not os.path.exists(chopped_log_dir) and make_dir:
+        os.mkdir(chopped_log_dir)
+
+    print ('[DB...BAT] PyVDrive chopped sample log dir: {}'.format(original_dir))
+
+    return chopped_log_dir
+
+
 def get_default_binned_directory(ipts_number, check_write_and_throw=False, merge_flag=False, run_number=None):
     """
     get VDRIVE default directory for binned data

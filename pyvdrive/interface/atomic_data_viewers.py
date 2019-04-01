@@ -46,6 +46,16 @@ class AtomicReduced1DViewer(QMainWindow):
         self._x_min = None
         self._x_max = None
 
+        # set X
+        self.ui.pushButton_setXRange.clicked.connect(self.do_set_x_range)
+        self.ui.pushButton_setYRange.clicked.connect(self.do_set_y_range)
+        self.ui.pushButton_RemoveLine.clicked.connect(self.do_remove_line)
+        self.ui.pushButton_AddLine.clicked.connect(self.do_add_line)
+
+        # list of plot IDs for add/remove
+        self._plot_id_dict = dict()  # [run, (chop-sq)] = plot ID
+        self._plot_id_list = list()  # for any non-registered plot
+
         return
 
     def _promote_widgets(self):
@@ -60,15 +70,140 @@ class AtomicReduced1DViewer(QMainWindow):
 
         return
 
+    # TODO - TODAY 191 - Test new feature
+    def do_add_line(self):
+        """ Add a line
+        :return:
+        """
+        # get value
+        ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, True)
+        run_number = GuiUtility.parse_integer(self.ui.lineEdit_runNumber, True)
+        chop_seq_index = GuiUtility.parse_integer(self.ui.lineEdit_chopSeqIndex, True)
+        bank_id = GuiUtility.parse_integer(self.ui.lineEdit_bankNumber, True)
+
+        # check
+        if run_number is None or run_number < 1:
+            GuiUtility.pop_dialog_error(self, 'Run number must be specified as a positive integer')
+            return
+        if bank_id is None or bank_id < 1:
+            GuiUtility.pop_dialog_error(self, 'Bank ID must be specified as a positive integer')
+            return
+
+        # check
+        if chop_seq_index is None:
+            plot_key = run_number, bank_id
+        else:
+            plot_key = run_number, chop_seq_index, bank_id
+
+        # if exists, then give a notice
+        if plot_key in self._plot_id_dict:
+            GuiUtility.pop_dialog_information(self, 'Run {} Chop-seq {} has been plotted'
+                                                    ''.format(run_number, chop_seq_index))
+            return
+
+        # get data
+        if not self._parent.has_data_loaded(run_number, chop_seq_index):
+            # load data explicitly
+            if ipts_number is None:
+                # information not adequet
+                GuiUtility.pop_dialog_error(self, 'Run {} has not been loaded; Specify IPTS'
+                                                  ''.format(run_number))
+                return
+            else:
+                # load data via parent window
+                try:
+                    self._parent.load_data(ipts_number, run_number, chop_seq_index is None)
+                except RuntimeError as run_err:
+                    if chop_seq_index is None:
+                        chop_note = 'original GSAS'
+                    else:
+                        chop_note = ' chopped runs '
+                    GuiUtility.pop_dialog_error(self, 'Unable to load {} of IPTS {} Run {}'
+                                                      ''.format(chop_note, ipts_number, run_number))
+                    return
+            # END-IF-ELSE (IPTS)
+        # END-IF (load data)
+
+        try:
+            vec_x, vec_y = self._parent.get_data(run_number, bank_id)
+        except RuntimeError as run_err:
+            GuiUtility.pop_dialog_error('Unable to retrieve data from Run {} Bank {} due to {}'
+                                        ''.format(run_number, bank_id, run_err))
+            return
+
+        # plot
+        self.plot_data(vec_x, vec_y, 'data key', unit=None, bank_id=bank_id,
+                       run_number=run_number, chop_seq_index=chop_seq_index)
+
+        return
+
+    # TODO - TODAY 191 - Test new feature
+    def do_remove_line(self):
+        """ Remove a line
+        :return:
+        """
+        # get value
+        run_number = GuiUtility.parse_integer(self.ui.lineEdit_runNumber, True)
+        chop_seq_index = GuiUtility.parse_integer(self.ui.lineEdit_chopSeqIndex, True)
+        bank_id = GuiUtility.parse_integer(self.ui.lineEdit_bankNumber, True)
+
+        # check
+        if run_number is None or run_number < 1:
+            GuiUtility.pop_dialog_error(self, 'Run number must be specified as a positive integer')
+            return
+        if bank_id is None or bank_id < 1:
+            GuiUtility.pop_dialog_error(self, 'Bank ID must be specified as a positive integer')
+            return
+
+        # check
+        if chop_seq_index is None:
+            plot_key = run_number, bank_id
+        else:
+            plot_key = run_number, chop_seq_index, bank_id
+
+        # remove the line
+        if plot_key in self._plot_id_dict:
+            self.ui.graphicsView_mainPlot.remove_1d_plot(self._plot_id_dict[plot_key])
+            del self._plot_id_dict[plot_key]
+        else:
+            GuiUtility.pop_dialog_error(self, 'Run {} Chop-Seq {} is not in figure to delete'
+                                              ''.format(run_number, chop_seq_index))
+
+        return
+
     def do_set_x_range(self):
         """ Set image X range from line edits
         :return:
         """
+        min_x = GuiUtility.parse_float(self.ui.lineEdit_xMin, True, 0.)
+        max_x = GuiUtility.parse_float(self.ui.lineEdit_xMax, True, 3.5)
+        if min_x >= max_x:
+            GuiUtility.pop_dialog_error(self, 'Lower X limit {} cannot be equal to or larger than upper X limit {}'
+                                              ''.format(min_x, max_x))
+            return
+
+        self._x_min = min_x
+        self._x_max = max_x
         self.ui.graphicsView_mainPlot.setXYLimit(xmin=self._x_min, xmax=self._x_max)
 
         return
 
-    def plot_data(self, vec_x, vec_y, data_key, unit, bank_id):
+    def do_set_y_range(self):
+        """ Set image X range from line edits
+        :return:
+        """
+        y_min = GuiUtility.parse_float(self.ui.lineEdit_yMin, True, 0.)
+        y_max = GuiUtility.parse_float(self.ui.lineEdit_yMax, True, None)
+        if y_min >= y_max:
+            GuiUtility.pop_dialog_error(self, 'Lower Y limit {} cannot be equal to or larger than upper Y limit {}'
+                                              ''.format(y_min, y_max))
+            return
+
+        self.ui.graphicsView_mainPlot.setXYLimit(ymin=y_min, ymax=y_max)
+
+        return
+
+    def plot_data(self, vec_x, vec_y, data_key, unit, bank_id, run_number=None, chop_seq_index=None):
         """ Plot 1D diffraction data
         :param vec_x:
         :param vec_y:
@@ -77,10 +212,26 @@ class AtomicReduced1DViewer(QMainWindow):
         :param bank_id: bank ID (just as information)
         :return:
         """
-        self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y),
-                                                            unit=unit, over_plot=False,
-                                                            run_id=data_key, bank_id=bank_id,
-                                                            chop_tag=None, label='{} {}'.format(data_key, bank_id))
+        if run_number:
+            line_label = 'Run {}'.format(run_number)
+            if chop_seq_index:
+                line_label += ' Chop-index {}'.format(chop_seq_index)
+        else:
+            line_label = '{}'.format(data_key)
+        line_label += ' Bank {}'.format(bank_id)
+
+        plot_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y),
+                                                                      unit=unit, over_plot=False,
+                                                                      run_id=data_key, bank_id=bank_id,
+                                                                      chop_tag=None,
+                                                                      label=line_label)
+        # register
+        if run_number is None:
+            self._plot_id_list.append(plot_id)
+        elif chop_seq_index is None:
+            self._plot_id_dict[run_number, bank_id] = plot_id
+        else:
+            self._plot_id_dict[run_number, chop_seq_index, bank_id] = plot_id
 
         # set X
         self.do_set_x_range()
@@ -94,11 +245,17 @@ class AtomicReduced1DViewer(QMainWindow):
         :param max_x:
         :return:
         """
+        datatypeutility.check_float_variable('Lower limit of X for plot', min_x, (None, None))
+        datatypeutility.check_float_variable('Upper limit of X for plot', max_x, (None, None))
+        if min_x >= max_x:
+            raise RuntimeError('Lower X limit {} cannot be equal to or larger than upper X limit {}'
+                               ''.format(min_x, max_x))
+
         self._x_min = min_x
         self._x_max = max_x
 
-        # self.ui.lineEdit_xMin.setText('{}'.format(min_x))
-        # self.ui.lineEdit_xMin.setText('{}'.format(max_x))
+        self.ui.lineEdit_xMin.setText('{}'.format(min_x))
+        self.ui.lineEdit_xMin.setText('{}'.format(max_x))
 
         return
 
