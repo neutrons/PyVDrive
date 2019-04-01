@@ -500,12 +500,9 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         self.resize_canvas(margin=0.05)
         # re-scale
         # TODO - TONIGHT 3 - FIXME - No self._maxX  self.auto_rescale()
-        if sample_log_name_x.startswith('Time'):
-            self.setXYLimit(xmin=0.)
-        else:
-            min_x = vec_x.min()
-            max_x = vec_x.max()
-            self.setXYLimit(xmin=min_x, xmax=max_x)
+        min_x = vec_x.min()
+        max_x = vec_x.max()
+        self.setXYLimit(xmin=min_x, xmax=max_x)
 
         # update
         self._currPlotID = plot_id

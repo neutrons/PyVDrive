@@ -1705,6 +1705,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 child_window.plot_data(vec_x, vec_y, chop_key, self._currUnit, bank_id, run_number=run_number,
                                        chop_seq_index=curr_seq)
             # END-FOR
+        # END-IF-NOT (main)
 
         # set sequence
         if seq_list is None:

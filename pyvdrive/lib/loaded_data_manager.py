@@ -345,6 +345,7 @@ class LoadedDataManager(object):
         # END-FOR
 
         # register for chopped data dictionary
+        # TODO - TONIGHT - Urgent! If run exists, then merge 2 dictionary!
         self._chopped_gsas_dict[run_number] = loaded_gsas_dict
 
         return loaded_gsas_dict

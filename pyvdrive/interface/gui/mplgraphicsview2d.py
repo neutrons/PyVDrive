@@ -550,7 +550,6 @@ class Qt4Mpl2DCanvas(FigureCanvas):
             else:
                 self._colorBar.update_bruteforce(contour_plot)
 
-
         # Flush...
         self._flush()
 
