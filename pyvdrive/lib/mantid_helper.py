@@ -1597,7 +1597,7 @@ def load_calibration_file(calib_file_name, output_name, ref_ws_name, load_cal=Fa
         if load_cal:
             offset_cal_file = diff_cal_file.replace('.h5', '.cal')
             if not os.path.exists(offset_cal_file):
-                raise RuntimeError('User intends to load {1} alogn with {0}.  But {1} cannot be found.'
+                raise RuntimeError('User intends to load {1} along with {0}.  But {1} cannot be found.'
                                    ''.format(diff_cal_file, offset_cal_file))
         # END-IF
     elif calib_file_name.endswith('.cal'):
@@ -1609,8 +1609,9 @@ def load_calibration_file(calib_file_name, output_name, ref_ws_name, load_cal=Fa
     # Load files
     if offset_cal_file:
         # old style calibration file
-        outputs_cal = mantidapi.LoadCalFile(Filename=offset_cal_file,
-                                            Output=output_name)
+        outputs_cal = mantidapi.LoadCalFile(CalFilename=offset_cal_file,
+                                            InstrumentName='VULCAN',
+                                            WorkspaceName=output_name)
     else:
         outputs_cal = None
 

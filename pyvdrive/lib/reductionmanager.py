@@ -1731,7 +1731,7 @@ class ReductionManager(object):
 
         return calib_ws_name, group_ws_name, mask_ws_name
 
-    # TODO | Code Quality - 20180713 - Find out how to reuse codes from vulcan_slice_reduce.SliceFocusVulcan
+    # TODO - TONIGHT 0 - Code Quality - 20180713 - Find out how to reuse codes from vulcan_slice_reduce.SliceFocusVulcan
     def reduce_event_nexus(self, ipts_number, run_number, event_nexus_name, target_unit, binning_parameters,
                            num_banks, roi_list, mask_list, no_cal_mask):
         """ Reduce event workspace including load and diffraction focus. V2

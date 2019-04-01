@@ -371,7 +371,7 @@ class SliceFocusVulcan(object):
             # user does not want to HDF5 in same directory.  Need to write to a special directory
             if self._output_dir.startswith('/SNS/VULCAN/IPTS-'):
                 # on the SNS server, do it in a different way
-                output_dir = vulcan_util.generate_chopped_log_dir(self._output_dir)
+                output_dir = vulcan_util.generate_chopped_log_dir(self._output_dir, True)
             else:
                 output_dir = self._output_dir
             self.export_split_logs(output_names, gsas_file_index_start=gsas_file_index_start,

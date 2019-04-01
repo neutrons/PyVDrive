@@ -1373,6 +1373,9 @@ class ProjectManager(object):
                 error_messages.append('[INFO] For {}: {}'.format(run_number, msg))
         # END-FOR
 
+        if len(reduced_run_numbers) == 0:
+            return reduced_run_numbers, error_messages
+
         # process reduced data
         if gsas and vanadium_run is not None:
             # load vanadium to workspace workspace and get calculation prm file
