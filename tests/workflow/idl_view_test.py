@@ -102,6 +102,15 @@ def test_case_chop_focus_view(command_tester):
     return
 
 
+def test_case_performance(command_tester):
+    # TODO - TONIGHT 0 - Docs
+    # TODO - TONIGHT 00 - runv IS NOT right!
+    command_line = 'view, ipts=22753, choprun=172271, runs=1,rune=500'  #, runv=171869'
+    command_tester.run_command(command_line)
+
+    return
+
+
 def test_main():
     """
     test main for command VIEW
@@ -113,11 +122,12 @@ def test_main():
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
     if Now:
-        test_case_archive_chopped(command_tester)
+        test_case_performance(command_tester)
 
     if Passed:
         # no need to test now
         test_archive_single_run(command_tester)
+        test_case_archive_chopped(command_tester)
         test_case_archive_chopped_pc(command_tester)
         test_case_archive_chopped_van(command_tester)
         test_case_archive_single_normalize(command_tester)

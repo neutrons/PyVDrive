@@ -1591,6 +1591,12 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             if error_msg != '':
                 GuiUtility.pop_dialog_error(self, error_msg)
 
+            # check ... FIXME TODO - TONIGHT 0 - delete this session after debugging/problem being fixed
+            for data_set in data_sets:
+                print ('min = {} @ {},  max = {} @ {}'
+                       ''.format(data_set[1].min(), numpy.argmin(data_set[1]),
+                                 data_set[1].max(), numpy.argmax(data_set[1])))
+
             return new_seq_list, data_sets
 
         def get_single_bank_data(chop_run_key, curr_seq_index, bank_id_i, do_pc_norm, proton_charge,
@@ -1642,10 +1648,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         else:
             pc_seq = 1
 
-        van_vec_y_dict = {1: None, 2: None, 3:None}
+        van_vec_y_dict = {1: None, 2: None, 3: None}
         if van_norm:
             # vanadium normalization
-            for bank_id in range(3):
+            for bank_id in range(1, 3+1):
                 van_vec_y = self.get_vanadium_spectrum(van_run, bank_id)
                 van_vec_y_dict[bank_id] = van_vec_y
         # END-IF-ELSE
@@ -1657,22 +1663,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                             proton_charge=pc_seq,
                                             do_van_norm=van_norm,
                                             van_vector_bank_i=van_vec_y_dict[bank_id])
-
-        # vec_x, vec_y = self._myController.project.get_chopped_sequence_data(chop_key, curr_seq, bank_id)
-        #
-        # # normalization
-        # if pc_norm:
-        #     # normalize by proton charge
-        #
-        #     vec_y /= pc_seq
-        #
-        # if van_norm:
-        #     # vanadium normalization
-        #     van_vec_y = self.get_vanadium_spectrum(van_run, bank_id)
-        #     vec_y /= van_vec_y
-        # else:
-        #     van_vec_y = None
-        # # END-IF
 
         # clear
         if self._currentPlotID:

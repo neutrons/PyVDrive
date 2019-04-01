@@ -333,7 +333,7 @@ class AtomicReduction2DViewer(QMainWindow):
 
         matrix_y = np.ndarray(grid_x.shape, dtype='float')
         for i in range(len(y_indexes)):
-            matrix_y[:i] = data_set_list[i][1]
+            matrix_y[i] = data_set_list[i][1]
 
         n = len(y_indexes)
         vec_y = np.ndarray(shape=(n,), dtype='int')
