@@ -302,8 +302,8 @@ class AtomicReduction2DViewer(QMainWindow):
         """ Set image X range from line edits
         :return:
         """
-        x_min = GuiUtility.parse_float(self.ui.lineEdit_xMin, True, 0.)
-        x_max = GuiUtility.parse_float(self.ui.lineEdit_xMax, True, 5.)
+        x_min = GuiUtility.parse_float(self.ui.lineEdit_xMin, True, 0.25)
+        x_max = GuiUtility.parse_float(self.ui.lineEdit_xMax, True, 3.50)
 
         self.ui.graphicsView_mainPlot.setXYLimit(xmin=x_min, xmax=x_max)
 
@@ -351,8 +351,10 @@ class AtomicReduction2DViewer(QMainWindow):
         :param max_x:
         :return:
         """
-        self.ui.lineEdit_xMin.setText('{}'.format(min_x))
-        self.ui.lineEdit_xMin.setText('{}'.format(max_x))
+        if min_x is not None:
+            self.ui.lineEdit_xMin.setText('{}'.format(min_x))
+        if max_x is not None:
+            self.ui.lineEdit_xMax.setText('{}'.format(max_x))
 
         return
 

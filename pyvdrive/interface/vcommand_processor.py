@@ -383,7 +383,7 @@ class VdriveCommandProcessor(object):
             chop_key = run_number
 
             # refresh list and set to chop run
-            view_window.do_refresh_existing_runs(set_to=chop_name, is_chopped=True)
+            view_window.do_refresh_existing_runs(set_to=chop_name, set_to_seq=chop_seq_list[0], is_chopped=True)
 
             view_window.plot_chopped_run(chop_key, bank_id=1,
                                          seq_list=chop_seq_list,

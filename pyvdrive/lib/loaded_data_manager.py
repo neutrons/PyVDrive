@@ -344,9 +344,12 @@ class LoadedDataManager(object):
             # FIXME TODO - TONIGHT 1 - None shall be replaced by x.hdf5
         # END-FOR
 
-        # register for chopped data dictionary
-        # TODO - TONIGHT - Urgent! If run exists, then merge 2 dictionary!
-        self._chopped_gsas_dict[run_number] = loaded_gsas_dict
+        # register for chopped data dictionary: if run exists, then merge 2 dictionary!
+        if run_number in self._chopped_gsas_dict:
+            # run already exists, merge 2 dictionary
+            self._chopped_gsas_dict[run_number].update(loaded_gsas_dict)
+        else:
+            self._chopped_gsas_dict[run_number] = loaded_gsas_dict
 
         return loaded_gsas_dict
 

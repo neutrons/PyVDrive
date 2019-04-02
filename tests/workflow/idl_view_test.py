@@ -104,8 +104,7 @@ def test_case_chop_focus_view(command_tester):
 
 def test_case_performance(command_tester):
     # TODO - TONIGHT 0 - Docs
-    # TODO - TONIGHT 00 - runv IS NOT right!
-    command_line = 'view, ipts=22753, choprun=172271, runs=1,rune=500'  #, runv=171869'
+    command_line = 'view, ipts=22753, choprun=172271, runs=1,rune=500, runv=171869'
     command_tester.run_command(command_line)
 
     return
