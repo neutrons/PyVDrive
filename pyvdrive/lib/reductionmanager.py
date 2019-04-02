@@ -1071,7 +1071,7 @@ class ReductionManager(object):
         :param save_chopped_nexus:
         :param number_banks:
         :param tof_correction: TOF correction
-        :param van_gda_name: None (for no-correction) or an integer (vanadium run number)
+        :param van_gda_name: None (for no-correction) or GSAS file name of smoothed vanadium
         :param user_binning_parameter:
         :param fullprof: Flag to write out Fullprof file format
         :param roi_list:

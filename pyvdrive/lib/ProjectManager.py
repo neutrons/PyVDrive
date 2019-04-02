@@ -426,7 +426,7 @@ class ProjectManager(object):
                                                                       user_binning_parameter=user_bin_parameter,
                                                                       roi_list=roi_list,
                                                                       mask_list=mask_list,
-                                                                      van_gda_name=van_gsas_name,
+                                                                      van_gda_name=van_gsas_name,  # GSAS file name
                                                                       gsas_parm_name=iparam_file_name,
                                                                       fullprof=fullprof,
                                                                       no_cal_mask=False,

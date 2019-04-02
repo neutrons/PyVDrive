@@ -456,6 +456,16 @@ class SaveVulcanGSS(object):
             mantid_helper.convert_to_point_data(van_gsas_ws_name)
         self._van_ws_names[vanadium_gsas_file] = van_gsas_ws_name
 
+        # force minimum Y to 1
+        van_ws = mantid_helper.retrieve_workspace(van_gsas_ws_name)
+        assert van_ws.id() == 'WorkspaceGroup', 'Vanadium workspaces (from GSAS) must be grouped'
+        for ws_index in range(len(van_ws)):
+            for iy in range(len(van_ws[ws_index].readY(0))):
+                if van_ws[ws_index].readY(0)[iy] < 1.:
+                    van_ws[ws_index].dataY(0)[iy] = 1.
+            # END-FOR
+        # END-FOR
+
         return van_gsas_ws_name
 
     def save_vanadium(self, diff_ws_name, gsas_file_name,
