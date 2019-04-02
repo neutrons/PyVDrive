@@ -1081,6 +1081,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                     pc_norm = van_norm = van_run = None
 
                 # plot
+                # TODO - FIXME - TONIGHT - Nothing changed!
                 self.plot_chopped_run(chop_key=plot_data_key, bank_id=next_bank,
                                       seq_list=None, main_only=True,
                                       van_norm=van_norm, van_run=van_run, pc_norm=pc_norm, plot3d=False)
@@ -1261,9 +1262,19 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     def get_data_key(self, run_number, chop_seq):
-        # TODO - TONIGHT 0 - Doc it!
+        # TODO - TONIGHT 0 ASAP - Doc it!
         if chop_seq is None:
             return self._single_run_data_dict[run_number]
+
+        """
+        Traceback (most recent call last):
+  File "/home/wzz/Projects/PyVDrive/build/lib.linux-x86_64-2.7/pyvdrive/interface/atomic_data_viewers.py", line 140, in do_add_line
+    data_key = self._parent.get_data_key(run_number, chop_seq_index)
+  File "/home/wzz/Projects/PyVDrive/build/lib.linux-x86_64-2.7/pyvdrive/interface/ReducedDataView.py", line 1269, in get_data_key
+    return self._chopped_run_data_dict[run_number][chop_seq]
+KeyError: 172271
+
+        """
 
         return self._chopped_run_data_dict[run_number][chop_seq]
 
@@ -1670,9 +1681,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             """ retrieve data for a single bank
             :return:
             """
+            # TODO - FIXME - TONIGHT 0 - unit as TOF shall be passed to this level with evt_unit_changed...
             vec_data_x, vec_data_y = self._myController.project.get_chopped_sequence_data(chop_run_key,
                                                                                           curr_seq_index,
-                                                                                          bank_id_i)
+                                                                                          bank_id_i,
+                                                                                          unit='dSpacing')
 
             # normalization
             if do_pc_norm:
@@ -1681,7 +1694,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
             if do_van_norm:
                 # vanadium normalization
-                vec_data_x /= van_vector_bank_i
+                vec_data_y /= van_vector_bank_i
 
             return vec_data_x, vec_data_y
 

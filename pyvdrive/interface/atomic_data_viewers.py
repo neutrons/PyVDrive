@@ -108,7 +108,11 @@ class AtomicReduced1DViewer(QMainWindow):
         # get data
         if not self._parent.has_data_loaded(run_number, chop_seq_index):
             # load data explicitly
-            if ipts_number is None:
+            if ipts_number is None and run_number in self._run_ipts_map:
+                # loaded run but different chop sequence
+                ipts_number = self._run_ipts_map[run_number]
+                self.ui.lineEdit_iptsNumber.setText('{}'.format(ipts_number))
+            elif ipts_number is None:
                 # information not adequet
                 GuiUtility.pop_dialog_error(self, 'Run {} has not been loaded; Specify IPTS'
                                                   ''.format(run_number))
@@ -128,6 +132,8 @@ class AtomicReduced1DViewer(QMainWindow):
                                                                 run_err))
                     return
             # END-IF-ELSE (IPTS)
+        elif ipts_number is None:
+            ipts_number = self._run_ipts_map[run_number]
         # END-IF (load data)
 
         try:
