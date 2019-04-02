@@ -1367,7 +1367,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def retrieve_loaded_reduced_data(self, data_key, bank_id, unit):
+    # TODO - TONIGHT 0 - Clean!
+    def retrieve_loaded_reduced_data(self, data_key, ipts_number, run_number, chop_seq_index, bank_id, unit, pc_norm, van_run):
         """
         Retrieve reduced data from workspace (via run number) to _reducedDataDict.
         Note: this method is used to talk with myController
@@ -1378,13 +1379,46 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         assert data_key is not None, 'Data key must be initialized'
 
-        try:
+        # try:
+        #     data_set = self._myController.get_reduced_data(run_id=data_key, target_unit=unit, bank_id=bank_id)
+        # except RuntimeError as run_err:
+        #     raise run_err
+        # # convert to 2 vectors
+        # vec_x = data_set[bank_id][0]
+        # vec_y = data_set[bank_id][1]
+
+        # vanadium or PC
+        if pc_norm:
+            pc_seq = self.get_proton_charge(ipts_number, run_number, chop_seq_index)
+        else:
+            pc_seq = 1
+
+        # vanadium
+        if van_run is None:
+            van_vec_y = None
+        else:
+            van_vec_y = self.get_vanadium_spectrum(van_run, bank_id)
+
+        # plot on the main figure
+        if chop_seq_index is not None:
+            print (type(data_key))
+            print (data_key)
+            vec_x, vec_y = self._myController.project.get_chopped_sequence_data(chop_run_key,
+                                                                                          chop_seq_index,
+                                                                                          bank_id)
+        else:
+            # raw GSAS
+            print (type(data_key))
+            print (data_key)
             data_set = self._myController.get_reduced_data(run_id=data_key, target_unit=unit, bank_id=bank_id)
-        except RuntimeError as run_err:
-            raise run_err
-        # convert to 2 vectors
-        vec_x = data_set[bank_id][0]
-        vec_y = data_set[bank_id][1]
+            # convert to 2 vectors
+            vec_x = data_set[bank_id][0]
+            vec_y = data_set[bank_id][1]
+        # END-IF-ELSE
+
+        vec_y /= pc_seq
+        if van_vec_y is not None:
+            vec_y /= van_vec_y
 
         return vec_x, vec_y
 
@@ -1492,20 +1526,28 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # set current data key
         self._curr_data_key = data_key
+        if van_norm:
+            van_run_temp = van_run
+        else:
+            van_run_temp = None
 
         # get the entry index for the data
         # entry_key = data_key, bank_id, self._currUnit
-        vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=data_key, bank_id=bank_id,
-                                                         unit=self._currUnit)
-        if pc_norm:
-            # proton charge normalization
-            pc_norm = self.get_proton_charge(self._iptsNumber, self._currRunNumber, None)
-            vec_y /= pc_norm
-        if van_norm:
-            # vanadium spectrum normalization
-            van_vec_y = self.get_vanadium_spectrum(van_run, bank_id)
-            vec_y /= van_vec_y
-            # END-IF
+        vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=data_key, ipts_number=self._iptsNumber,
+                                                         run_number=self._currRunNumber,
+                                                         chop_seq_index=None,
+                                                         bank_id=bank_id,
+                                                         unit=self._currUnit, pc_norm=pc_norm,
+                                                         van_run=van_run_temp)
+        # if pc_norm:
+        #     # proton charge normalization
+        #     pc_norm = self.get_proton_charge(self._iptsNumber, self._currRunNumber, None)
+        #     vec_y /= pc_norm
+        # if van_norm:
+        #     # vanadium spectrum normalization
+        #     van_vec_y = self.get_vanadium_spectrum(van_run, bank_id)
+        #     vec_y /= van_vec_y
+        #     # END-IF
 
         self._single_run_plot_option[data_key] = {'pc_norm': pc_norm,
                                                   'van_run': van_run,
@@ -1534,24 +1576,29 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             status, bank_ids = self._myController.get_reduced_run_info(run_number=None, data_key=data_key)
             if not status:
                 raise NotImplementedError('It is not possible to unable to get reduced run info!')
+
             run_number, none = self._data_key_run_seq[data_key]
-            print ('[DB...BAT] Bank IDs: {}'.format(bank_ids))
-            for bank_id in sorted(bank_ids):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
+            for bank_id_i in sorted(bank_ids):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
                 child_window = self.launch_single_run_view()
-                vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=data_key, bank_id=bank_id,
-                                                                 unit=self._currUnit)
-                if pc_norm:
-                    # proton charge normalization
-                    pc_norm = self.get_proton_charge(self._iptsNumber, self._currRunNumber, None)
-                    vec_y /= pc_norm
-                if van_norm:
-                    # vanadium normalization
-                    van_vec_y = self.get_vanadium_spectrum(van_run, bank_id)
-                    vec_y /= van_vec_y
-                    # END-IF
+                vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=data_key, ipts_number=self._iptsNumber,
+                                                                 run_number=self._currRunNumber,
+                                                                 chop_seq_index=None,
+                                                                 bank_id=bank_id_i,
+                                                                 unit=self._currUnit, pc_norm=pc_norm,
+                                                                 van_run=van_run_temp)
+                # if pc_norm:
+                #     # proton charge normalization
+                #     pc_norm = self.get_proton_charge(self._iptsNumber, self._currRunNumber, None)
+                #     vec_y /= pc_norm
+                # if van_norm:
+                #     # vanadium normalization
+                #     van_vec_y = self.get_vanadium_spectrum(van_run, bank_id)
+                #     vec_y /= van_vec_y
+                #     # END-IF
 
                 child_window.set_x_range(curr_min_x, curr_max_x)
-                child_window.plot_data(vec_x, vec_y, data_key, self._currUnit, bank_id, run_number, None)
+                child_window.plot_data(vec_x, vec_y, data_key, self._currUnit, bank_id_i, self._iptsNumber,
+                                       run_number, None, pc_norm, van_run_temp)
             # END-FOR
         # END-IF
 
@@ -1706,6 +1753,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # Plot 1D, 2D and/or 3D
         if not main_only:
+            # vanadium run?
+            if van_norm:
+                van_run_tmp = van_run
+            else:
+                van_run_tmp = None
             # plot 1Ds
             for bank_id in range(1, 4):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
                 child_window = self.launch_single_run_view()
@@ -1724,8 +1776,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                     run_number = chop_key
                 child_window.set_title('Run {} Chop-index {} Bank {}'.format(run_number, curr_seq, bank_id))
                 child_window.set_x_range(min_x, max_x)
-                child_window.plot_data(vec_x, vec_y, chop_key, self._currUnit, bank_id, run_number=run_number,
-                                       chop_seq_index=curr_seq)
+                child_window.plot_data(vec_x, vec_y, chop_key, self._currUnit, bank_id, ipts_number=self._iptsNumber,
+                                       run_number=run_number, chop_seq_index=curr_seq, pc_norm=pc_norm,
+                                       van_run=van_run_tmp)
             # END-FOR
         # END-IF-NOT (main)
 

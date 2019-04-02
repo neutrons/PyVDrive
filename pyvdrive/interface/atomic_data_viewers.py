@@ -56,6 +56,10 @@ class AtomicReduced1DViewer(QMainWindow):
         # list of plot IDs for add/remove
         self._plot_id_dict = dict()  # [run, (chop-sq)] = plot ID
         self._plot_id_list = list()  # for any non-registered plot
+        self._norm_proton_charge = False  # normalized by proton charge
+        self._van_number = None  # normalized by vanadium or not
+
+        self._run_ipts_map = dict()   # [run number] = IPTS number
 
         return
 
@@ -71,7 +75,6 @@ class AtomicReduced1DViewer(QMainWindow):
 
         return
 
-    # TODO - TODAY 191 - Test new feature
     def do_add_line(self):
         """ Add a line
         :return:
@@ -114,6 +117,7 @@ class AtomicReduced1DViewer(QMainWindow):
                 # load data via parent window
                 try:
                     self._parent.load_data(ipts_number, run_number, chop_seq_index is None)
+                    self._run_ipts_map[run_number] = ipts_number
                 except RuntimeError as run_err:
                     if chop_seq_index is None:
                         chop_note = 'original GSAS'
@@ -128,7 +132,10 @@ class AtomicReduced1DViewer(QMainWindow):
 
         try:
             data_key = self._parent.get_data_key(run_number, chop_seq_index)
-            vec_x, vec_y = self._parent.retrieve_loaded_reduced_data(data_key, bank_id, unit='dSpacing')
+            vec_x, vec_y = self._parent.retrieve_loaded_reduced_data(data_key, ipts_number, run_number,
+                                                                     chop_seq_index, bank_id, unit='dSpacing',
+                                                                     pc_norm=self._norm_proton_charge,
+                                                                     van_run=self._van_number)
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self, 'Unable to retrieve data from Run {} Bank {} due to {}'
                                               ''.format(run_number, bank_id, run_err))
@@ -136,7 +143,11 @@ class AtomicReduced1DViewer(QMainWindow):
 
         # plot
         self.plot_data(vec_x, vec_y, 'data key', unit=None, bank_id=bank_id,
-                       run_number=run_number, chop_seq_index=chop_seq_index)
+                       ipts_number=self._run_ipts_map[run_number],
+                       run_number=run_number,
+                       chop_seq_index=chop_seq_index,
+                       pc_norm=self._norm_proton_charge,
+                       van_run=self._van_number)
 
         return
 
@@ -206,15 +217,27 @@ class AtomicReduced1DViewer(QMainWindow):
 
         return
 
-    def plot_data(self, vec_x, vec_y, data_key, unit, bank_id, run_number, chop_seq_index):
+    # INFORMATION
+    # TODO - TONIGHT 11 - Develop a universal run number - IPTS number mapping record
+    # TODO - TONIGHT 0 - Consider to separate this method into 2 for setting/information only
+    def plot_data(self, vec_x, vec_y, data_key, unit, bank_id, ipts_number, run_number, chop_seq_index,
+                  pc_norm, van_run):
         """ Plot 1D diffraction data
         :param vec_x:
         :param vec_y:
         :param data_key: data key
         :param unit: Unit (just as information)
         :param bank_id: bank ID (just as information)
+        :param pc_norm: flag to set the current proton charge normalization state
+        :param van_run: flag to set the vanadium run normalization state
         :return:
         """
+        datatypeutility.check_bool_variable('Normalized by proton charge', pc_norm)
+        self._norm_proton_charge = pc_norm
+        self._van_number = van_run
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, 99999))
+        self._run_ipts_map[run_number] = ipts_number
+
         line_label = 'Run {}'.format(run_number)
         if chop_seq_index:
             line_label += ' Chop-index {}'.format(chop_seq_index)
