@@ -31,6 +31,8 @@ from pyvdrive.lib import datatypeutility
 import atomic_data_viewers
 from gui.samplelogview import LogGraphicsView
 from pyvdrive.lib import reduce_VULCAN
+from pyvdrive.lib import vdrive_constants
+from atomic_data_viewers import PlotInformation
 
 
 def generate_sample_log_list():
@@ -109,7 +111,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._chop_combo_name_list = list()  # chop run combo box names with orders sync with combo box
         self._chop_seq_combo_name_list = list()   # chop sequence combo box names with orders sync with combo box
         self._chop_run_plot_option = dict()  # [chop key] = dict() such as van_norm, van_run, pc_norm...
-        self._chopped_run_data_dict = dict()  # [run number][chop index] = data key
+        self._chopped_run_data_dict = dict()  # [run number] = [seq index]: run + seq = key to find the data
         # self._curr_chop_data_key = None   # run number of sliced case
 
         # record of X value range
@@ -166,7 +168,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # section: plot single run
         self.ui.pushButton_prevRun.clicked.connect(self.do_plot_prev_single_run)
         self.ui.pushButton_nextRun.clicked.connect(self.do_plot_next_single_run)
-        self.ui.pushButton_plot.clicked.connect(self.do_plot_diffraction_data)
+        # self.ui.pushButton_plot.clicked.connect(self.do_plot_diffraction_data)
         self.ui.comboBox_runs.currentIndexChanged.connect(self.evt_plot_different_single_run)
 
         # section: plot chopped run
@@ -595,13 +597,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # set the chop runs from project
         if len(chopped_run_list) == 0:
             # no chopped run: reset image
-            print ('[DB...........................BAT..........................] Update empty chopped run boxes')
             self.ui.graphicsView_mainPlot.reset_1d_plots()
             self._currentPlotID = None
             self.ui.graphicsView_logPlot.reset()
         else:
             # add chop "runs" to combo box
-            print ('[DB...........................BAT...........................] Update run box')
             for chop_run_tuple_i in chopped_run_list:
                 if isinstance(chop_run_tuple_i, tuple):
                     # chopped run in memory
@@ -1282,13 +1282,14 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                ''.format(run_number, self._single_run_data_dict.keys()))
             data_key = self._single_run_data_dict[run_number]
         else:
+            # for chopped run, run number + chop sequence index is the key
             if run_number not in self._chopped_run_data_dict:
                 raise KeyError('{} not among self._chopped_run_data_dict keys {}'
                                ''.format(run_number, self._chopped_run_data_dict.keys()))
             if chop_seq not in self._chopped_run_data_dict[run_number]:
-                raise KeyError('{} not among self._chopped_run_data_dict keys {}'
-                               ''.format(chop_seq, self._chopped_run_data_dict[run_number].keys()))
-            data_key = self._chopped_run_data_dict[run_number][chop_seq]
+                raise KeyError('{} not among self._chopped_run_data_dict[{}] {}'
+                               ''.format(chop_seq, run_number, self._chopped_run_data_dict[run_number]))
+            data_key = run_number
         # END-IF-ELSE
 
         return data_key
@@ -1412,6 +1413,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         # datatypeutility.check_int_variable('Run number', run_number, (1, 99999999))
 
+        print ('[DB................BAT................LOOK! HERE TO LOAD')
+
         if chop_seq_index_list is None:
             # original run
             if run_number is not None and self._is_run_in_memory(run_number):
@@ -1435,22 +1438,31 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         else:
             # chopped run
+            print ('[DB................BAT................LOOK! HERE TO LOAD CHOPPED')
+
             datatypeutility.check_list('Chopped sequence indexes', chop_seq_index_list)
             chopped_data_dir = self._myController.get_archived_data_dir(ipts_number, run_number,
                                                                         chopped_data=True)
             file_loading_manager = self._myController.project.data_loading_manager
             data_set_dict = file_loading_manager.load_chopped_binned_data(run_number, chopped_data_dir,
                                                                           chop_seq_index_list, 'gsas')
+            print ('[DB................BAT................LOOK! LOADED: {}'.format(data_set_dict.keys()))
 
             # record
             if run_number not in self._chopped_run_data_dict:
                 # if never been added: add a new list considering the case of loading chop indexes a few at a time
                 # but for many times
                 self._chopped_run_data_dict[run_number] = list()
-            self._chopped_run_data_dict[run_number].extend(data_set_dict.keys())
+            self._chopped_run_data_dict[run_number].extend(data_set_dict.keys())  # run number + seq index --> find it!
+
+            for key in self._chopped_run_data_dict[run_number]:
+                print (key, type(key))
 
             data_key = data_set_dict
         # END-IF-ELSE
+
+        # # register
+        # vdrive_constants.run_ipts_dict[run_number] = ipts_number
 
         return data_key
 
@@ -1488,11 +1500,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # plot on the main figure
         if chop_seq_index is not None:
-            print (type(data_key))
-            print (data_key)
-            vec_x, vec_y = self._myController.project.get_chopped_sequence_data(chop_run_key,
-                                                                                          chop_seq_index,
-                                                                                          bank_id)
+            print ('[DB............BAT.............CHOPPED KEY LOOK] key = {}'.format(data_key))
+            vec_x, vec_y = self._myController.project.get_chopped_sequence_data(data_key, chop_seq_index,
+                                                                                bank_id, unit)
         else:
             # raw GSAS
             print (type(data_key))
@@ -1684,8 +1694,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 #     # END-IF
 
                 child_window.set_x_range(curr_min_x, curr_max_x)
-                child_window.plot_data(vec_x, vec_y, data_key, self._currUnit, bank_id_i, self._iptsNumber,
-                                       run_number, None, pc_norm, van_run_temp)
+                plot_information = PlotInformation(self._iptsNumber, run_number, None, pc_norm, van_run_temp)
+                child_window.plot_data(vec_x, vec_y, data_key, self._currUnit, bank_id_i, plot_information)
             # END-FOR
         # END-IF
 
@@ -1706,8 +1716,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         def construct_chopped_data(chop_data_key, chop_sequences, bank_index, do_pc_norm,
                                    do_van_norm, vanadium_vector):
             """
-            construct the chopped data to plot
-            :param chop_data_key:
+            construct the chopped data into MATRIX to plot contour and 3D
+            :param chop_data_key: get_chopped_sequence_data(chop_data_key, seq)
             :param chop_sequences:
             :param bank_index:
             :param do_pc_norm:
@@ -1774,6 +1784,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
             return vec_data_x, vec_data_y
 
+        print ('[DB....................BAT.................LOOK] chop data key: {} of type {}'
+               ''.format(chop_key, type(chop_key)))
         # check inputs
         datatypeutility.check_int_variable('Bank ID', bank_id, (None, None))
         if pc_norm is None:
@@ -1865,9 +1877,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                     run_number = chop_key
                 child_window.set_title('Run {} Chop-index {} Bank {}'.format(run_number, curr_seq, bank_id))
                 child_window.set_x_range(min_x, max_x)
-                child_window.plot_data(vec_x, vec_y, chop_key, self._currUnit, bank_id, ipts_number=self._iptsNumber,
-                                       run_number=run_number, chop_seq_index=curr_seq, pc_norm=pc_norm,
-                                       van_run=van_run_tmp)
+                ipts_number = vdrive_constants.run_ipts_dict[run_number]
+                plot_information = PlotInformation(ipts_number, run_number, curr_seq, pc_norm, van_run_tmp)
+                child_window.plot_data(vec_x, vec_y, chop_key, self._currUnit, bank_id, plot_information)
             # END-FOR
         # END-IF-NOT (main)
 

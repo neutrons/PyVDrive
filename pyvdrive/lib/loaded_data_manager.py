@@ -298,7 +298,6 @@ class LoadedDataManager(object):
 
         # list the files in a directory
         file_list = [f for f in listdir(chopped_data_dir) if isfile(join(chopped_data_dir, f))]
-        print ('[DB...BAT] Files: {}'.format(file_list))
         chop_info_file = self.search_chop_info_file(file_list)
 
         if chop_info_file:

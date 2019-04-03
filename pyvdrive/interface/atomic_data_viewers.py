@@ -46,9 +46,9 @@ class PlotInformation(object):
         datatypeutility.check_int_variable('Run number', run_number, (1, 999999999))
         if chop_index is not None:
             datatypeutility.check_int_variable('Chop index', chop_index, (0, None))
-        datatypeutility.check_bool_variable(norm_pc)
+        datatypeutility.check_bool_variable('Flag for proton charge normalization', norm_pc)
         if van_run is not None:
-            datatypeutility.check_int_variable('Vanadiurm run number', van_run, (1, 99999999))
+            datatypeutility.check_int_variable('Vanadium run number', van_run, (1, 99999999))
 
         self._ipts_number = ipts_number
         self._run_number = run_number
@@ -162,9 +162,11 @@ class AtomicReduced1DViewer(QMainWindow):
             try:
                 # need to convert chop-sequence-index to list
                 if chop_seq_index is not None:
-                    chop_seq_index = [chop_seq_index]
+                    chop_seq_index_list = [chop_seq_index]
+                else:
+                    chop_seq_index_list = None
                 # load data
-                self._parent.load_reduced_data(ipts_number, run_number, chop_seq_index)
+                self._parent.load_reduced_data(ipts_number, run_number, chop_seq_index_list)
                 self._run_ipts_map[run_number] = ipts_number
                 vdrive_constants.run_ipts_dict[run_number] = ipts_number
             except RuntimeError as run_err:
@@ -226,7 +228,7 @@ class AtomicReduced1DViewer(QMainWindow):
 
         # remove the line
         if plot_key in self._plot_id_dict:
-            self.ui.graphicsView_mainPlot.remove_line(self, self._plot_id_dict[plot_key])
+            self.ui.graphicsView_mainPlot.remove_line(self._plot_id_dict[plot_key])
             del self._plot_id_dict[plot_key]
         else:
             GuiUtility.pop_dialog_error(self, 'Run {} Chop-Seq {} is not in figure to delete'
