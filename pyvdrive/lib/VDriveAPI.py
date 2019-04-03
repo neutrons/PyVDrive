@@ -748,9 +748,11 @@ class VDriveAPI(object):
         :param chopped_data:
         :return:
         """
+        import vdrive_constants
         if chopped_data:
             # chopped data
             sns_dir = self.archive_manager.get_vulcan_chopped_gsas_dir(ipts_number, run_number)
+            vdrive_constants.run_ipts_dict[run_number] = ipts_number
         else:
             # regular GSAS file directory
             sns_dir = self.archive_manager.get_vulcan_gsas_dir(ipts_number)
