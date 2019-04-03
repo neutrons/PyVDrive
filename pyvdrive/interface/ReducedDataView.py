@@ -882,6 +882,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     # TODO - TODAY - TEST!
+    # TODO - TONIGHT 0 ASAP - Clean up this method!
     def do_plot_sample_logs(self):
         """ Plot selected sample logs:
         Workflow:
