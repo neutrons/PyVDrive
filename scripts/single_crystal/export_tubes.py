@@ -1,7 +1,6 @@
-import pyvdrive
-from pyvdrive.lib import save_vulcan_gsas
-gsas_writer = save_vulcan_gsas.SaveVulcanGSS(vulcan_ref_name='/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5')
-
+#import pyvdrive
+#from pyvdrive.lib import save_vulcan_gsas
+#gsas_writer = save_vulcan_gsas.SaveVulcanGSS(vulcan_ref_name='/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5')
 
 
 # TODO  [SECTION: for user to set up]
@@ -9,19 +8,21 @@ gsas_writer = save_vulcan_gsas.SaveVulcanGSS(vulcan_ref_name='/SNS/VULCAN/shared
 single_ipts_number = 22752
 single_run_number = 172254
 
-# diamond with mask
-single_ipts_number =22753
-single_run_number = 172361
-background_run_number = 172362
-
-# diamond without mask IPTS-22752, Run 172439, 172441
-single_ipts_number =22752
-single_run_number = 172439
-background_run_number = 172362
-
 # background: background of single crystal group
 background_ipts_number = 22752
 background_run_number = 172368
+
+if True:
+    # diamond without mask IPTS-22752, Run 172439, 172441
+    single_ipts_number =22752
+    single_run_number = 172439
+    background_run_number = 172362
+ 
+if False:
+    # diamond with mask
+    single_ipts_number =22753
+    single_run_number = 172361
+    background_run_number = 172362
 
 # [SECTION: NORMALIZE SINGLE CRYSTAL EXPERIMENT]
 single_crystal_nexus = '/SNS/VULCAN/IPTS-{}/nexus/VULCAN_{}.nxs.h5'.format(single_ipts_number, single_run_number)
@@ -42,7 +43,8 @@ for iws in (3234, 6468):
     tube_group_ws.dataY(iws)[0] = 2
 for i_tube in range(72):
         for i_pixel in range(256):
-            tube_group_ws.dataY(6468 + 72*i_tube + i_pixel)[0] = i_tube + 3   # group 1 to 72
+            tube_group_ws.dataY(6468 + 256*i_tube + i_pixel)[0] = i_tube + 3   # group 1 to 72
+        print (6468 + 256*i_tube + i_pixel-1, i_tube+3)
 # END-IF (grouping)
 
 # [Align and Focus]
@@ -69,7 +71,7 @@ for index in range(vec_x.shape[0]):
         text_buffer += '{}\t '.format(tubes_ws.readY(2+itube)[index])
     text_buffer += '\n'
 
-ascii_d_name = '{}_dSpacing.dat'.format(single_run_number)
+ascii_d_name = '{}_dSpacing_Tubes.dat'.format(single_run_number)
 ascii_d_file = open(ascii_d_name, 'w')
 ascii_d_file.write(text_buffer)
 ascii_d_file.close()
