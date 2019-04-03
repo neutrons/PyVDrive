@@ -282,7 +282,7 @@ class LoadedDataManager(object):
         :param file_format:
         :param run_number: prefix to the loaded workspace from GSAS. It is just for decoration
         :return: 2-tuple of dictionary and integer (run number)
-            dictionary: [order] = (workspace name, gsas file name, log HDF file name)    i.e., 3-tuple
+            dictionary: [chop seq index] = (workspace name, gsas file name, log HDF file name)    i.e., 3-tuple
         """
         # check inputs
         datatypeutility.check_int_variable('Run number', run_number, (1, 9999999))

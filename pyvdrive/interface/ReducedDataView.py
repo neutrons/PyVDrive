@@ -309,15 +309,16 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             raise NotImplementedError('ASAP: What shall be chop key?')
         elif ipts_number is not None and run_number is not None:
             # load data from archive
-            chopped_data_dir = self._myController.get_archived_data_dir(self._iptsNumber, run_number,
-                                                                        chopped_data=True)
-            file_loading_manager = self._myController.project.data_loading_manager
-            chopped_data_dict = file_loading_manager.load_chopped_binned_data(run_number, chopped_data_dir,
-                                                                              chopped_seq_list, 'gsas')
+            self.load_reduced_data(ipts_number, run_number, chopped_seq_list)
+            # chopped_data_dir = self._myController.get_archived_data_dir(self._iptsNumber, run_number,
+            #                                                             chopped_data=True)
+            # file_loading_manager = self._myController.project.data_loading_manager
+            # chopped_data_dict = file_loading_manager.load_chopped_binned_data(run_number, chopped_data_dir,
+            #                                                                   chopped_seq_list, 'gsas')
         else:
             raise NotImplementedError('Not sure how to load from an arbitrary directory!')
 
-        return chopped_data_dict
+        return
 
     def do_load_single_run(self, ipts_number=None, run_number=None, plot=True):
         """
@@ -339,25 +340,32 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             self.ui.lineEdit_run.setText('{}'.format(run_number))
 
         # loaded reduced data or set in-memory reduced workspaces
-        if run_number is not None and self._is_run_in_memory(run_number):
-            # load from memory
-            data_key = self._myController.project.reduction_manager.get_reduced_workspace(run_number)
-            self._single_run_data_dict[run_number] = data_key
-            self._data_key_run_seq[data_key] = run_number, None
-        elif ipts_number is not None and run_number is not None:
-            # load data from archive
+        if run_number is not None and (self._is_run_in_memory(run_number) or ipts_number is not None):
+            # load runs from memory or from disk
             try:
-                reduced_file_name = self._myController.archive_manager.get_gsas_file(ipts_number, run_number,
-                                                                                     check_exist=True)
-                file_type = 'gsas'
-                data_key = self._myController.project.data_loading_manager.load_binned_data(reduced_file_name,
-                                                                                            file_type,
-                                                                                            max_int=99999)
-                self._single_run_data_dict[run_number] = data_key
-                self._data_key_run_seq[data_key] = run_number, None
+                data_key = self.load_reduced_data(ipts_number, run_number, None)
             except RuntimeError as run_err:
                 GuiUtility.pop_dialog_error(self, 'Unable to find GSAS: {}'.format(run_err))
-                return
+
+        # if run_number is not None and self._is_run_in_memory(run_number):
+        #     # load from memory
+        #     data_key = self._myController.project.reduction_manager.get_reduced_workspace(run_number)
+        #     self._single_run_data_dict[run_number] = data_key
+        #     self._data_key_run_seq[data_key] = run_number, None
+        # elif ipts_number is not None and run_number is not None:
+        #     # load data from archive
+        #     try:
+        #         reduced_file_name = self._myController.archive_manager.get_gsas_file(ipts_number, run_number,
+        #                                                                              check_exist=True)
+        #         file_type = 'gsas'
+        #         data_key = self._myController.project.data_loading_manager.load_binned_data(reduced_file_name,
+        #                                                                                     file_type,
+        #                                                                                     max_int=99999)
+        #         self._single_run_data_dict[run_number] = data_key
+        #         self._data_key_run_seq[data_key] = run_number, None
+        #     except RuntimeError as run_err:
+        #         GuiUtility.pop_dialog_error(self, 'Unable to find GSAS: {}'.format(run_err))
+        #         return
         else:
             # load from disk by users' choice
             if ipts_number is not None:
@@ -1262,21 +1270,28 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     def get_data_key(self, run_number, chop_seq):
-        # TODO - TONIGHT 0 ASAP - Doc it!
+        """
+        Get the data-key for a run and chop sequence
+        :param run_number:
+        :param chop_seq:
+        :return: data key
+        """
         if chop_seq is None:
-            return self._single_run_data_dict[run_number]
+            if run_number not in self._single_run_data_dict:
+                raise KeyError('{} not among self._single_run_data_dict keys {}'
+                               ''.format(run_number, self._single_run_data_dict.keys()))
+            data_key = self._single_run_data_dict[run_number]
+        else:
+            if run_number not in self._chopped_run_data_dict:
+                raise KeyError('{} not among self._chopped_run_data_dict keys {}'
+                               ''.format(run_number, self._chopped_run_data_dict.keys()))
+            if chop_seq not in self._chopped_run_data_dict[run_number]:
+                raise KeyError('{} not among self._chopped_run_data_dict keys {}'
+                               ''.format(chop_seq, self._chopped_run_data_dict[run_number].keys()))
+            data_key = self._chopped_run_data_dict[run_number][chop_seq]
+        # END-IF-ELSE
 
-        """
-        Traceback (most recent call last):
-  File "/home/wzz/Projects/PyVDrive/build/lib.linux-x86_64-2.7/pyvdrive/interface/atomic_data_viewers.py", line 140, in do_add_line
-    data_key = self._parent.get_data_key(run_number, chop_seq_index)
-  File "/home/wzz/Projects/PyVDrive/build/lib.linux-x86_64-2.7/pyvdrive/interface/ReducedDataView.py", line 1269, in get_data_key
-    return self._chopped_run_data_dict[run_number][chop_seq]
-KeyError: 172271
-
-        """
-
-        return self._chopped_run_data_dict[run_number][chop_seq]
+        return data_key
 
     def get_proton_charge(self, ipts_number, run_number, chop_seq):
         """ get proton charge (summed) of a run
@@ -1339,11 +1354,20 @@ KeyError: 172271
         return run_number
 
     def has_data_loaded(self, run_number, chop_seq_index):
-        # TODO - TONIGHT 0 - Doc it
+        """ Check whether a data set has been loaded from GSAS or not
+        :param run_number:
+        :param chop_seq_index:
+        :return:
+        """
         if chop_seq_index is None:
+            # original run
             return run_number in self._single_run_data_dict
         elif run_number not in self._chopped_run_data_dict:
+            # chopped run
             return False
+
+        # chopped run
+        datatypeutility.check_int_variable('Chop sequence index', chop_seq_index, (0, None))
 
         return chop_seq_index in self._chopped_run_data_dict[run_number]
 
@@ -1377,6 +1401,58 @@ KeyError: 172271
         self.ui.label_currentRun.setText(label_str)
 
         return
+
+    def load_reduced_data(self, ipts_number, run_number, chop_seq_index_list):
+        """
+        Load reduced data
+        :param ipts_number:
+        :param run_number:
+        :param chop_seq_index_list:
+        :return: (1) data key  or (2) dictionary of keys
+        """
+        # datatypeutility.check_int_variable('Run number', run_number, (1, 99999999))
+
+        if chop_seq_index_list is None:
+            # original run
+            if run_number is not None and self._is_run_in_memory(run_number):
+                # load from memory
+                data_key = self._myController.project.reduction_manager.get_reduced_workspace(run_number)
+                # self._single_run_data_dict[run_number] = data_key
+                # self._data_key_run_seq[data_key] = run_number, None
+            else:
+                # load from archived disk
+                reduced_file_name = self._myController.archive_manager.get_gsas_file(ipts_number, run_number,
+                                                                                     check_exist=True)
+                file_type = 'gsas'
+                data_key = self._myController.project.data_loading_manager.load_binned_data(reduced_file_name,
+                                                                                            file_type,
+                                                                                            max_int=99999)
+            # END-IF-ELSE
+
+            # register
+            self._single_run_data_dict[run_number] = data_key
+            self._data_key_run_seq[data_key] = run_number, None
+
+        else:
+            # chopped run
+            datatypeutility.check_list('Chopped sequence indexes', chop_seq_index_list)
+            chopped_data_dir = self._myController.get_archived_data_dir(ipts_number, run_number,
+                                                                        chopped_data=True)
+            file_loading_manager = self._myController.project.data_loading_manager
+            data_set_dict = file_loading_manager.load_chopped_binned_data(run_number, chopped_data_dir,
+                                                                          chop_seq_index_list, 'gsas')
+
+            # record
+            if run_number not in self._chopped_run_data_dict:
+                # if never been added: add a new list considering the case of loading chop indexes a few at a time
+                # but for many times
+                self._chopped_run_data_dict[run_number] = list()
+            self._chopped_run_data_dict[run_number].extend(data_set_dict.keys())
+
+            data_key = data_set_dict
+        # END-IF-ELSE
+
+        return data_key
 
     # TODO - TONIGHT 0 - Clean!
     def retrieve_loaded_reduced_data(self, data_key, ipts_number, run_number, chop_seq_index, bank_id, unit, pc_norm, van_run):

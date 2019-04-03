@@ -322,6 +322,10 @@ class DataArchiveManager(object):
         :param check_exist: if specified as True and file does not exist, a RuntimeError will be raised
         :return:
         """
+        # check
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, 999999))
+        datatypeutility.check_int_variable('Run number', run_number, (1, 99999999))
+
         # build file name
         base_name = '{0}.gda'.format(run_number)
         sub_path = os.path.join('IPTS-{0}/shared/binned_data/'.format(ipts_number), base_name)
@@ -509,6 +513,9 @@ class DataArchiveManager(object):
         :param run_number:
         :return: directory under ..../shared/
         """
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, 999999))
+        datatypeutility.check_int_variable('Run number', run_number, (1, 99999999))
+
         return '/SNS/VULCAN/IPTS-{0}/shared/binned_data/{1}/'.format(ipts_number, run_number)
 
     def load_auto_record(self, ipts_number, record_type):

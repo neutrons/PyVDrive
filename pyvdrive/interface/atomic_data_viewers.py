@@ -21,10 +21,48 @@ from pyvdrive.interface.gui.generalrunview import GeneralRunView
 from pyvdrive.interface.gui.generalrunview import ContourPlotView
 from pyvdrive.interface.gui.generalrunview import LinePlot3DView
 from pyvdrive.lib import datatypeutility
+from pyvdrive.lib import vdrive_constants
 import numpy as np
 """
 Containing a set of "atomic" data viewers used by VIEW
 """
+
+
+class PlotInformation(object):
+    """
+    Record as the information for plot
+    """
+    def __init__(self, ipts_number, run_number, chop_index, norm_pc, van_run):
+        """
+        constructor for plotting information
+        :param ipts_number: IPTS number
+        :param run_number: run number
+        :param chop_index: chop sequence index
+        :param norm_pc: flag to set the current proton charge normalization state
+        :param van_run: flag to set the vanadium run normalization state
+        """
+        # check
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, 9999999))
+        datatypeutility.check_int_variable('Run number', run_number, (1, 999999999))
+        if chop_index is not None:
+            datatypeutility.check_int_variable('Chop index', chop_index, (0, None))
+        datatypeutility.check_bool_variable(norm_pc)
+        if van_run is not None:
+            datatypeutility.check_int_variable('Vanadiurm run number', van_run, (1, 99999999))
+
+        self._ipts_number = ipts_number
+        self._run_number = run_number
+        self._chop_index = chop_index
+        self._norm_by_pc = norm_pc   # normalized by proton charge
+        self._vanadium_run_number = van_run
+
+        return
+
+    def get_info(self):
+        """ get all the information
+        :return: tuple as (ipts, run, chop index, norm_pc, van_run)
+        """
+        return self._ipts_number, self._run_number, self._chop_index, self._norm_by_pc, self._vanadium_run_number
 
 
 class AtomicReduced1DViewer(QMainWindow):
@@ -108,6 +146,7 @@ class AtomicReduced1DViewer(QMainWindow):
         # get data
         if not self._parent.has_data_loaded(run_number, chop_seq_index):
             # load data explicitly
+            # check IPTS information
             if ipts_number is None and run_number in self._run_ipts_map:
                 # loaded run but different chop sequence
                 ipts_number = self._run_ipts_map[run_number]
@@ -117,24 +156,31 @@ class AtomicReduced1DViewer(QMainWindow):
                 GuiUtility.pop_dialog_error(self, 'Run {} has not been loaded; Specify IPTS'
                                                   ''.format(run_number))
                 return
-            else:
-                # load data via parent window
-                try:
-                    self._parent.load_data(ipts_number, run_number, chop_seq_index is None)
-                    self._run_ipts_map[run_number] = ipts_number
-                except RuntimeError as run_err:
-                    if chop_seq_index is None:
-                        chop_note = 'original GSAS'
-                    else:
-                        chop_note = ' chopped runs '
-                    GuiUtility.pop_dialog_error(self, 'Unable to load {} of IPTS {} Run {}: '
-                                                      ''.format(chop_note, ipts_number, run_number,
-                                                                run_err))
-                    return
-            # END-IF-ELSE (IPTS)
+            # END-IF-ELSE
+
+            # load data via parent window
+            try:
+                # need to convert chop-sequence-index to list
+                if chop_seq_index is not None:
+                    chop_seq_index = [chop_seq_index]
+                # load data
+                self._parent.load_reduced_data(ipts_number, run_number, chop_seq_index)
+                self._run_ipts_map[run_number] = ipts_number
+                vdrive_constants.run_ipts_dict[run_number] = ipts_number
+            except RuntimeError as run_err:
+                if chop_seq_index is None:
+                    chop_note = 'original GSAS'
+                else:
+                    chop_note = 'chopped run {}'.format(chop_seq_index)
+                GuiUtility.pop_dialog_error(self, 'Unable to load {} of IPTS {} Run {}: '
+                                                  ''.format(chop_note, ipts_number, run_number,
+                                                            run_err))
+                return
+            # END-TRY-Catch
         elif ipts_number is None:
-            ipts_number = self._run_ipts_map[run_number]
-        # END-IF (load data)
+            # set the IPTS even the data has been loaded
+            ipts_number = vdrive_constants.run_ipts_dict[run_number]
+        # END-IF-ELSE
 
         try:
             data_key = self._parent.get_data_key(run_number, chop_seq_index)
@@ -148,12 +194,9 @@ class AtomicReduced1DViewer(QMainWindow):
             return
 
         # plot
-        self.plot_data(vec_x, vec_y, 'data key', unit=None, bank_id=bank_id,
-                       ipts_number=self._run_ipts_map[run_number],
-                       run_number=run_number,
-                       chop_seq_index=chop_seq_index,
-                       pc_norm=self._norm_proton_charge,
-                       van_run=self._van_number)
+        plot_information = PlotInformation(ipts_number, run_number, chop_seq_index, self._norm_proton_charge,
+                                           self._van_number)
+        self.plot_data(vec_x, vec_y, 'data key', unit=None, bank_id=bank_id, plot_info=plot_information)
 
         return
 
@@ -183,7 +226,7 @@ class AtomicReduced1DViewer(QMainWindow):
 
         # remove the line
         if plot_key in self._plot_id_dict:
-            self.ui.graphicsView_mainPlot.remove_1d_plot(self._plot_id_dict[plot_key])
+            self.ui.graphicsView_mainPlot.remove_line(self, self._plot_id_dict[plot_key])
             del self._plot_id_dict[plot_key]
         else:
             GuiUtility.pop_dialog_error(self, 'Run {} Chop-Seq {} is not in figure to delete'
@@ -224,30 +267,30 @@ class AtomicReduced1DViewer(QMainWindow):
         return
 
     # INFORMATION
-    # TODO - TONIGHT 11 - Develop a universal run number - IPTS number mapping record
-    # TODO - TONIGHT 0 - Consider to separate this method into 2 for setting/information only
-    def plot_data(self, vec_x, vec_y, data_key, unit, bank_id, ipts_number, run_number, chop_seq_index,
-                  pc_norm, van_run):
+    # TODO - TODAY 191 - TEST
+    def plot_data(self, vec_x, vec_y, data_key, unit, bank_id, plot_info):
         """ Plot 1D diffraction data
         :param vec_x:
         :param vec_y:
-        :param data_key: data key
+        :param data_key: data key (just for information)
         :param unit: Unit (just as information)
         :param bank_id: bank ID (just as information)
-        :param pc_norm: flag to set the current proton charge normalization state
-        :param van_run: flag to set the vanadium run normalization state
+        :param plot_info: PlotInformation object
         :return:
         """
-        datatypeutility.check_bool_variable('Normalized by proton charge', pc_norm)
-        self._norm_proton_charge = pc_norm
-        self._van_number = van_run
-        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, 99999))
+        # check inputs
+        assert isinstance(plot_info, PlotInformation), 'Input plotting information {} must be an instance of ' \
+                                                       'PlotInformation but not {}' \
+                                                       ''.format(plot_info, type(plot_info))
+
+        ipts_number, run_number, chop_seq_index, self._norm_proton_charge, self._van_number = plot_info.get_info()
+
+        vdrive_constants.run_ipts_dict[run_number] = ipts_number
         self._run_ipts_map[run_number] = ipts_number
 
         line_label = 'Run {}'.format(run_number)
         if chop_seq_index:
             line_label += ' Chop-index {}'.format(chop_seq_index)
-
         line_label += ' Bank {}'.format(bank_id)
 
         plot_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y),
@@ -292,7 +335,12 @@ class AtomicReduced1DViewer(QMainWindow):
         return
 
     def set_title(self, title):
-        # TODO - TONIGHT - Doc it!
+        """
+        Set title of the plot
+        :param title:
+        :return:
+        """
+        datatypeutility.check_string_variable('Plot title', title)
         self.label_title.setText(title)
 
 
