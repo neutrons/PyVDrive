@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1432</width>
-    <height>1054</height>
+    <width>1388</width>
+    <height>933</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -105,7 +105,7 @@
            </font>
           </property>
           <property name="text">
-           <string>ITPTS</string>
+           <string>IPTS</string>
           </property>
          </widget>
         </item>
@@ -1231,7 +1231,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1432</width>
+     <width>1388</width>
      <height>25</height>
     </rect>
    </property>

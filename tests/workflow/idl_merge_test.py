@@ -98,10 +98,11 @@ def test_main():
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
     if Passed:
-        test_ned_simple(command_tester)
-        test_ned_vanadium(command_tester)
+        pass
     else:
         test_ned_analysis(command_tester)
+        test_ned_simple(command_tester)
+        test_ned_vanadium(command_tester)
 
     return command_tester.main_window
 

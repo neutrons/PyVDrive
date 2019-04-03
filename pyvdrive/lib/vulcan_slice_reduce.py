@@ -365,11 +365,19 @@ class SliceFocusVulcan(object):
             # FIXME TODO - TOMORROW 0 - Vanadium workspace for Fullprof?
             self.write_to_fullprof_files(output_names, None, output_dir)
 
+        # TODO - TONIGHT 1 - put this section to a method
         if True:
             pc_time0 = mantid_helper.get_workspace_property(event_ws_name, 'proton_charge').times[0]
+            # user does not want to HDF5 in same directory.  Need to write to a special directory
+            if self._output_dir.startswith('/SNS/VULCAN/IPTS-'):
+                # on the SNS server, do it in a different way
+                output_dir = vulcan_util.generate_chopped_log_dir(self._output_dir, True)
+            else:
+                output_dir = self._output_dir
             self.export_split_logs(output_names, gsas_file_index_start=gsas_file_index_start,
                                    run_start_time=pc_time0,
-                                   output_dir=self._output_dir)
+                                   output_dir=output_dir)
+        # END-IF
 
         # write to logs
         self.write_log_records(output_names, log_type='loadframe')

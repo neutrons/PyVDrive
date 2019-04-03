@@ -748,9 +748,11 @@ class VDriveAPI(object):
         :param chopped_data:
         :return:
         """
+        import vdrive_constants
         if chopped_data:
             # chopped data
             sns_dir = self.archive_manager.get_vulcan_chopped_gsas_dir(ipts_number, run_number)
+            vdrive_constants.run_ipts_dict[run_number] = ipts_number
         else:
             # regular GSAS file directory
             sns_dir = self.archive_manager.get_vulcan_gsas_dir(ipts_number)
@@ -1391,28 +1393,38 @@ class VDriveAPI(object):
                                                                               mask_list=mask_list,
                                                                               no_cal_mask=no_cal_mask)
 
-            # deal with sample logs
-            run_number, ws_name = run_number_list[0]
-            if standard_sample_tuple:
+            # post process:
+            print ('................BAT...........  run numbers: {}.... merged: {}'
+                   ''.format(run_number_list, merge_runs))
+
+            if len(run_number_list) == 0:
+                # no runs reduced successfully
+                status = False
+
+            elif standard_sample_tuple:
+                # deal with sample logs
                 if len(run_number_list) != 1:
                     return False, 'Standard tag {} can only work with 1 run'.format(standard_sample_tuple)
 
                 # get information of run number and workspace
+                run_number, ws_name = run_number_list[0]
                 status, error_message = vdrivehelper.export_standard_sample_log(ipts_number, run_number, ws_name,
                                                                                 standard_sample_tuple)
 
             elif merge_runs:
                 # merge runs
                 record_file_name = os.path.join(output_directory, 'AutoRecord.txt')
+                run_number, ws_name = run_number_list[0]
                 status, error_message = vdrivehelper.export_normal_sample_log(ipts_number, run_number, ws_name,
                                                                               record_file_name)
+                print ('[DB......BAT.......BAT1] status = {}, error: "{}"'.format(status, error_message))
 
             else:
                 status = True
-            error_message = ''
             # END-IF
 
-            # deal with error mssage
+            # deal with error message
+            error_message = ''
             for msg in msg_list:
                 if msg.count('Failed'):
                     status = False
@@ -1420,13 +1432,15 @@ class VDriveAPI(object):
 
         else:
             # Not auto reduction and Not reduction with version=2
-            # TODO - TONIGHT - Better error message
+            # TODO - TONIGHT 0 - Better error message
             raise RuntimeError('blabla')
         # END-IF-ELSE
 
         # mark the runs be reduced so that they will not be reduced again next time.
         reduction_state_list = None
         self._myProject.mark_runs_reduced(runs_to_reduce, reduction_state_list)
+
+        print ('[DB......BAT.......BAT] status = {}, error: "{}"'.format(status, error_message))
 
         return status, error_message
 

@@ -518,7 +518,14 @@ class Qt4Mpl2DCanvas(FigureCanvas):
 
         # Do plot: resolution on Z axis (color bar is set to 100)
         self.axes.clear()
-        contour_plot = self.axes.contourf(grid_x, grid_y, matrix_z, 100)
+        if False:
+            contour_plot = self.axes.contourf(grid_x, grid_y, matrix_z, 100)
+        else:
+            self._imagePlot = self.axes.imshow(matrix_z,
+                                               extent=[grid_x.min(), grid_x.max(),
+                                                       grid_y.min(), grid_y.max()],
+                                               interpolation='none')
+        # END-IF-ELSE: Try different plotting option
 
         labels = [item.get_text() for item in self.axes.get_yticklabels()]
         print '[DB...BAT] Number of Y labels = ', len(labels), ', Number of Y = ', len(vec_y)
@@ -534,13 +541,14 @@ class Qt4Mpl2DCanvas(FigureCanvas):
         # explicitly set aspect ratio of the image
         self.axes.set_aspect('auto')
 
-        # Set color bar.  plt.colorbar() does not work!
-        if self._colorBar is None:
-            # set color map type
-            contour_plot.set_cmap('spectral')
-            self._colorBar = self.fig.colorbar(contour_plot)
-        else:
-            self._colorBar.update_bruteforce(contour_plot)
+        if False:  # contour
+            # Set color bar.  plt.colorbar() does not work!
+            if self._colorBar is None:
+                # set color map type
+                contour_plot.set_cmap('spectral')
+                self._colorBar = self.fig.colorbar(contour_plot)
+            else:
+                self._colorBar.update_bruteforce(contour_plot)
 
         # Flush...
         self._flush()

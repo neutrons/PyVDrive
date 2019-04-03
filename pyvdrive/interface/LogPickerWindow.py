@@ -1164,11 +1164,12 @@ class WindowLogPicker(QMainWindow):
 
     def plot_nexus_log(self, log_name, x_axis_log='Time'):
         """
-        Plot log from NEXUX file
+        Plot log value loaded from NeXus file
         Requirement:
         1. sample log name is valid;
         2. resolution is set up (time or maximum number of points)
         :param log_name:
+        :param x_axis_log: log name of X-axis
         :return:
         """
         # check
@@ -1201,9 +1202,9 @@ class WindowLogPicker(QMainWindow):
                 self._sampleLogDict[self._currRunNumber][log_name] = vec_x, vec_y
             # END-IF
 
-            # get range of the data
-            new_min_x = GuiUtility.parse_float(self.ui.lineEdit_minX)
-            new_max_x = GuiUtility.parse_float(self.ui.lineEdit_maxX)
+            # get range of the data: allow empty
+            new_min_x = GuiUtility.parse_float(self.ui.lineEdit_minX, True, None)
+            new_max_x = GuiUtility.parse_float(self.ui.lineEdit_maxX, True, None)
 
             # adjust the resolution
             plot_x, plot_y = self.process_data(vec_x, vec_y, use_num_res, use_time_res, resolution,
@@ -1241,7 +1242,7 @@ class WindowLogPicker(QMainWindow):
     def process_data(vec_x, vec_y, use_number_resolution, use_time_resolution, resolution,
                      min_x, max_x):
         """
-        re-process the original to plot on canvas smartly
+        re-process the original log data to plot on canvas smartly
         :param vec_x: vector of time in unit of seconds
         :param vec_y:
         :param use_number_resolution:

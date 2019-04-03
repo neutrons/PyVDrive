@@ -1071,7 +1071,7 @@ class ReductionManager(object):
         :param save_chopped_nexus:
         :param number_banks:
         :param tof_correction: TOF correction
-        :param van_gda_name: None (for no-correction) or an integer (vanadium run number)
+        :param van_gda_name: None (for no-correction) or GSAS file name of smoothed vanadium
         :param user_binning_parameter:
         :param fullprof: Flag to write out Fullprof file format
         :param roi_list:
@@ -1289,14 +1289,13 @@ class ReductionManager(object):
             if not tracker.is_reduced:
                 continue
 
-            # filter out the tracker with key type and flag-chopped
+            # filter out the tracker with key of type, tuple, which are for chopped runs
             if not isinstance(tracker_key, int):
-                print ('[DB...BAT] Chop data keys: {}'.format(tracker_key))
                 continue
 
-            run_number = tracker_key
-            print ('[DB...BAT] Reduced run with {} of type {}'.format(run_number, type(run_number)))
-            return_list.append(run_number)
+            # using run number (for name) and tracker key (for accessing the specific workspace)
+            run_number = tracker.run_number
+            return_list.append((run_number, tracker_key))
         # END-FOR
 
         return return_list
@@ -1310,8 +1309,6 @@ class ReductionManager(object):
         :return: a list of (run number, slice key)
         """
         return_list = list()
-
-        print ('[DB...BAT...Chopped] Reduction-track dict keys: {}'.format(self._reductionTrackDict.keys()))
 
         # from tracker
         for tracker_key in self._reductionTrackDict.keys():
@@ -1734,7 +1731,7 @@ class ReductionManager(object):
 
         return calib_ws_name, group_ws_name, mask_ws_name
 
-    # TODO | Code Quality - 20180713 - Find out how to reuse codes from vulcan_slice_reduce.SliceFocusVulcan
+    # TODO - TONIGHT 0 - Code Quality - 20180713 - Find out how to reuse codes from vulcan_slice_reduce.SliceFocusVulcan
     def reduce_event_nexus(self, ipts_number, run_number, event_nexus_name, target_unit, binning_parameters,
                            num_banks, roi_list, mask_list, no_cal_mask):
         """ Reduce event workspace including load and diffraction focus. V2

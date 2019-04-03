@@ -426,7 +426,7 @@ class ProjectManager(object):
                                                                       user_binning_parameter=user_bin_parameter,
                                                                       roi_list=roi_list,
                                                                       mask_list=mask_list,
-                                                                      van_gda_name=van_gsas_name,
+                                                                      van_gda_name=van_gsas_name,  # GSAS file name
                                                                       gsas_parm_name=iparam_file_name,
                                                                       fullprof=fullprof,
                                                                       no_cal_mask=False,
@@ -1372,6 +1372,9 @@ class ProjectManager(object):
             else:
                 error_messages.append('[INFO] For {}: {}'.format(run_number, msg))
         # END-FOR
+
+        if len(reduced_run_numbers) == 0:
+            return reduced_run_numbers, error_messages
 
         # process reduced data
         if gsas and vanadium_run is not None:

@@ -68,6 +68,10 @@ ascii_d_file.write(text_buffer)
 ascii_d_file.close()
 
 # [SECTION: Write out 72 GSAS files]
+import pyvdrive
+print (pyvdrive)
+from pyvdrive.lib import save_vulcan_gsas
+saver = save_vulcan_gsas.SaveVulcanGSS(vulcan_ref_name='/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5')
 ConvertUnit(InputWorkspace=single_ws_name, OutputWorkspace=single_ws_name, Target='TOF')
 Rebin(InputWorkspace=single_ws_name, OutputWorkspace=single_ws_name, Params='3000., -0.0003, 70000.')
 SaveGSS(InputWorkspace=single_ws_name,
