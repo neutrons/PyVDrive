@@ -71,7 +71,8 @@ class WindowLogPicker(QMainWindow):
         self._mutexLockSwitchSliceMethod = False
 
         # special slicer helper
-        self._curr_curve_slicer = None
+        self._current_slicer_type = None
+        self._current_slicers_dict = {'time': None, 'log': None, 'manual': None, 'curve': None}
 
         # set up UI
         ui_path = os.path.join(os.path.dirname(__file__), "gui/VdriveLogPicker.ui")
@@ -204,6 +205,28 @@ class WindowLogPicker(QMainWindow):
 
         self.ui.pushButton_prevLog.setEnabled(False)
         self.ui.pushButton_prevLog.hide()
+
+    def _get_current_slicers(self, is_time, is_log_value, is_manual, is_curve):
+        """
+        :param is_time:
+        :param is_log_value:
+        :param is_manual:
+        :param is_curve: chop long curve length (log A vs log B)
+        :return:
+        """
+        if int(is_time) + int(is_log_value) + int(is_manual) + int(is_curve) != 1:
+            raise RuntimeError('Programming logic error')
+
+        if is_time:
+            type_name = 'time'
+        elif is_log_value:
+            type_name = 'log'
+        elif is_manual:
+            type_name = 'manual'
+        else:
+            type_name = 'curve'
+
+        return self._current_slicers_dict[type_name]
 
     def _init_widgets_setup(self):
         """
@@ -356,10 +379,10 @@ class WindowLogPicker(QMainWindow):
         # high lighted segments
         if False:
             # TODO - TONIGHT 0 - implement slicer_dict['time', 'log', 'manual', 'curve']
-            self._curr_curve_slicer = self._cached_slicers(self.ui.radioButton_timeSlicer.isChecked(),
-                                                            self.ui.radioButton_logValueSlicer.isChecked(),
-                                                            self.ui.radioButton_manualSlicer.isChecked(),
-                                                            self.ui.radioButton_curveSlicer.isChecked())
+            self._current_slicers_dict = self._cached_slicers(self.ui.radioButton_timeSlicer.isChecked(),
+                                                              self.ui.radioButton_logValueSlicer.isChecked(),
+                                                              self.ui.radioButton_manualSlicer.isChecked(),
+                                                              self.ui.radioButton_curveSlicer.isChecked())
             self.evt_show_slicer()
         # END-IF
 
@@ -1273,7 +1296,7 @@ class WindowLogPicker(QMainWindow):
                                                       sample_log_name=log_name,
                                                       sample_log_name_x=x_axis_log)
 
-            self._curr_curve_slicer = controller.create_curve_slicer_generator(vec_times, plot_x, plot_y)
+            self._current_slicers_dict = controller.create_curve_slicer_generator(vec_times, plot_x, plot_y)
 
         # END-IF
 
@@ -1385,6 +1408,6 @@ class WindowLogPicker(QMainWindow):
         return
 
     def smooth_sample_log_curve(self):
-        print (self._curr_curve_slicer)
+        print (self._current_slicers_dict)
 
-        self._curr_curve_slicer.smooth_curve('nearest', 1)
+        self._current_slicers_dict.smooth_curve('nearest', 1)
