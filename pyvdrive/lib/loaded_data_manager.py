@@ -80,7 +80,6 @@ class LoadedDataManager(object):
         :param run_number:
         :return:
         """
-        # datatypeutility.check_int_variable('Run number', run_number, (1, 99999999))
         if run_number not in self._chopped_gsas_dict.keys():
             raise RuntimeError('Chopped run number {} has not been loaded.  Loaded chopped runs are {}'
                                ''.format(run_number, self._chopped_gsas_dict.keys()))
@@ -101,8 +100,10 @@ class LoadedDataManager(object):
             raise RuntimeError('Run {} is not in "Chopped GSAS Dict".  Existing runs are {}'
                                ''.format(run_number, self._chopped_gsas_dict.keys()))
         if chop_sequence not in self._chopped_gsas_dict[run_number]:
-            raise RuntimeError('Chopped (out) sequence {} is not in loaded chapped run.  Existing sequences are {}'
-                               ''.format(chop_sequence, run_number, self._chopped_gsas_dict.keys()))
+            raise RuntimeError('Chopped (out) sequence {} is not in loaded chapped run {}.  Existing sequences are {}.'
+                               'Chopped runs are {}'
+                               ''.format(chop_sequence, run_number, self._chopped_gsas_dict[run_number].keys(),
+                                         self._chopped_gsas_dict.keys()))
 
         return self._chopped_gsas_dict[run_number][chop_sequence]
 

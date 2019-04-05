@@ -775,7 +775,7 @@ class ProjectManager(object):
 
     def get_chopped_sequence_data(self, chop_data_key, chop_sequence, bank_id, unit='dSpacing'):
         """ Get the data (vec x and vec y) of a workspace in a chopped data sequence
-        :param chop_data_key:
+        :param chop_data_key: very likely run number
         :param chop_sequence: sequence index in the chopped run
         :param bank_id: bank ID
         :param unit: target unit
@@ -1417,13 +1417,14 @@ class ProjectManager(object):
             # always merged to run_number_list[0]/ws_name_list[0]
             run_number, out_ws_name = reduced_run_numbers[0]
             print ('[DB...BAT] Input run numbers: {}'.format(run_number_list))
-            print ('[DB...BAT] Redued runs: {}'.format(reduced_run_numbers))
+            print ('[DB...BAT] Reduced runs: {}'.format(reduced_run_numbers))
             # merge runs
             mantid_helper.merge_runs(ws_name_list, out_ws_name)
 
             raw_file_name, ipts_number = self._dataFileDict[run_number]
             run_date_time = vulcan_util.get_run_date(out_ws_name, raw_file_name)
             gsas_file_name = os.path.join(output_directory, '{}.gda'.format(run_number))
+            print ('[DB.....BAT.....MERGE] Merged GSAS will be written to {}'.format(gsas_file_name))
 
             self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
                                                     gsas_file_name=gsas_file_name,

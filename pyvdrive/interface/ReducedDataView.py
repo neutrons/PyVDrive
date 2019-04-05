@@ -640,13 +640,12 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 self.ui.comboBox_choppedRunNumber.setCurrentIndex(0)
                 new_chop_run_name = self._chop_combo_name_list[0]
                 chop_run_key = self._chop_combo_data_key_dict[new_chop_run_name]
-                print ('[DB...BAT] New Chop Run: {}.  Slicer key: {}'.format(new_chop_run_name, chop_run_key))
                 current_seq_item = None
             # END-IF-ELSE
 
             # refresh the list
             seq_list = self._myController.project.get_chopped_sequence(chop_run_key)
-            print ('[DB...BAT] Chopped sequence: {}'.format(seq_list))
+            print ('[DB...BAT] Reduced View Chopped sequence of {}: {}'.format(chop_run_key, seq_list))
 
             self._mutexChopSeqList = True    # lock
 
@@ -1018,7 +1017,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # Update chopped runs
         self.update_chopped_run_combo_box()
 
-        # re-focus back to original one
+        # focus on
         if set_to is not None and not is_chopped:
             # need to set the combo index to the specified SINGLE run
             self.ui.radioButton_chooseSingleRun.setChecked(True)
@@ -1033,11 +1032,19 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         elif set_to is not None and is_chopped:
             # need to update the focus to chopped run and plot
             self.ui.radioButton_chooseChopped.setChecked(True)
-            print ('[DB...BAT] Set To: {} as {}'.format(set_to, type(set_to)))
-            new_chop_index = self._chop_combo_name_list.index(set_to)
-            self.ui.comboBox_choppedRunNumber.setCurrentIndex(new_chop_index)  # this will trigger the event to plot
-            new_seq_index = self._chop_seq_combo_name_list.index(set_to_seq)
-            self.ui.comboBox_chopSeq.setCurrentIndex(new_seq_index)
+            # NOTE: be careful about non-existing chop name and seq name
+            if set_to in self._chop_combo_name_list:
+                new_chop_index = self._chop_combo_name_list.index(set_to)
+                self.ui.comboBox_choppedRunNumber.setCurrentIndex(new_chop_index)  # this will trigger the event to plot
+                if set_to_seq in self._chop_seq_combo_name_list:
+                    new_seq_index = self._chop_seq_combo_name_list.index(set_to_seq)
+                    self.ui.comboBox_chopSeq.setCurrentIndex(new_seq_index)
+                else:
+                    GuiUtility.pop_dialog_error(self, '{} does not exist in chopped sequences'.format(set_to_seq))
+                    return
+            else:
+                GuiUtility.pop_dialog_error(self, '{} does not exist in chopped runs'.format(set_to))
+                return
 
         # END
 
@@ -1802,13 +1809,17 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                 'van_run': van_run}
 
         # record the current chopped-sequence
-        try:
-            # loaded GSAS file... possible non-consecutive integers
-            curr_seq = int(str(self.ui.comboBox_chopSeq.currentText()))
-        except ValueError:
-            # just-reduced run
-            curr_seq = self.ui.comboBox_chopSeq.currentIndex()
-        # END-IF-ELSE
+        # TODO - TONIGHT 0.191.2 - Implement a method to filter seq_list with get_chopped_sequences()
+        if seq_list is None:
+            try:
+                # loaded GSAS file... possible non-consecutive integers
+                curr_seq = int(str(self.ui.comboBox_chopSeq.currentText()))
+            except ValueError:
+                # just-reduced run
+                curr_seq = self.ui.comboBox_chopSeq.currentIndex()
+                # END-IF-ELSE
+        else:
+            curr_seq = seq_list[0]
 
         # vanadium or PC
         if pc_norm:
