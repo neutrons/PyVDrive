@@ -275,11 +275,24 @@ def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
         # in case user input split workspace name
         split_ws = retrieve_workspace(split_ws)
 
-    assert split_ws.__class__.__name__.count('Splitter') == 1,\
-        'Input SplittersWorkspace %s must be of type SplittersWorkspace must not %s' \
-        '' % (str(split_ws), split_ws.__class__.__name__)
+    # TODO - TONIGHT 0 - Make this method work with Table/Splitters/Matrix
+    is_splitter_ws = False
+    is_arb_table_ws = False
+    if split_ws.id() == 'TableWorkspace':
+        if split_ws.__class__.__name__.count('Splitter') == 1:
+            is_splitter_ws = True
+        else:
+            is_arb_table_ws = True
+    elif split_ws.id() == 'Workspace2D':
+        pass
+    else:
+        raise AssertionError('Input SplittersWorkspace %s must be of type'
+                             'SplittersWorkspace/TableWorkspace/Workspace2D '
+                             'but not %s' % (str(split_ws), split_ws.__class__.__name__))
 
     # go over rows
+    # if is_splitter_ws or is_arb_table_ws:
+    # TODO - TONIGHT 0 - continue from here!
     num_rows = split_ws.rowCount()
     time_list = list()
     ws_list = list()
@@ -290,8 +303,9 @@ def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
         ws_index = split_ws.cell(row_index, 2)
 
         # convert units of time from int64/nanoseconds to float/seconds
-        start_time = float(start_time) * 1.0E-9
-        end_time = float(end_time) * 1.0E-9
+        if is_splitter_ws:
+            start_time = float(start_time) * 1.0E-9
+            end_time = float(end_time) * 1.0E-9
 
         if row_index == 0:
             # first splitter, starting with start_time[0]

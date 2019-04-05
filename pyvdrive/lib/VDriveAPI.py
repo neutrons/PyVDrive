@@ -1104,17 +1104,6 @@ class VDriveAPI(object):
         """
         return self._myProject.reduction_manager.has_run_reduced(run_number)
 
-    # TODO - TONIGHT 0 - Clean it out!
-    @staticmethod
-    def import_data_slicers(file_name):
-        """ import slicers from a text file
-        :param file_name:
-        :return: ref_run, run_start, segment_list
-        """
-        ref_run, run_start_time, time_segment_list = chop_utility.parse_time_segments(file_name)
-
-        return ref_run, run_start_time, time_segment_list
-
     def load_meta_data(self, ipts_number, run_number, file_name):
         """
         Load NeXus file to ADS
