@@ -1101,10 +1101,9 @@ class VDriveAPI(object):
 
         return peak_list
 
-    def has_chopped_data(self, run_number, reduced):
-        """check whether a run has chopped data reduced or not
+    def has_native_sliced_reduced_workspaces(self, run_number):
+        """check whether IN MEMORY, the specified run has been sliced and reduced
         :param run_number:
-        :param reduced:
         :return:
         """
         return self._myProject.reduction_manager.has_run_reduced(run_number)
@@ -1388,8 +1387,6 @@ class VDriveAPI(object):
                                                                               no_cal_mask=no_cal_mask)
 
             # post process:
-            print ('................BAT...........  run numbers: {}.... merged: {}'
-                   ''.format(run_number_list, merge_runs))
 
             if len(run_number_list) == 0:
                 # no runs reduced successfully
@@ -1411,8 +1408,6 @@ class VDriveAPI(object):
                 run_number, ws_name = run_number_list[0]
                 status, error_message = vdrivehelper.export_normal_sample_log(ipts_number, run_number, ws_name,
                                                                               record_file_name)
-                print ('[DB......BAT.......BAT1] status = {}, error: "{}"'.format(status, error_message))
-
             else:
                 status = True
             # END-IF

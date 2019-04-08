@@ -192,7 +192,7 @@ class AtomicReduced1DViewer(QMainWindow):
                                                                      chop_seq_index, bank_id, unit='dSpacing',
                                                                      pc_norm=self._norm_proton_charge,
                                                                      van_run=self._van_number)
-        except RuntimeError as run_err:
+        except (RuntimeError, KeyError) as run_err:
             GuiUtility.pop_dialog_error(self, 'Unable to retrieve data from Run {} Bank {} due to {}'
                                               ''.format(run_number, bank_id, run_err))
             return

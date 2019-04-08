@@ -366,6 +366,7 @@ class SliceFocusVulcan(object):
             self.write_to_fullprof_files(output_names, None, output_dir)
 
         # TODO - TONIGHT 1 - put this section to a method
+        # TODO FIXME - TODAY 0 -... Debug disable
         if True:
             pc_time0 = mantid_helper.get_workspace_property(event_ws_name, 'proton_charge').times[0]
             # user does not want to HDF5 in same directory.  Need to write to a special directory

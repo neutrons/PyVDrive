@@ -107,7 +107,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._data_key_run_seq = dict()  # [data key] = run number, chop-seq
 
         # chopped runs: chop run combo box items and other information
-        self._chop_combo_data_key_dict = dict()  # [chop run combo box name] = run number, slicer key; sync with combo
+        self._chop_combo_data_key_dict = dict()  # [chop run combo box name] = run number, slicer key;
+        # sync with comboBox_choppedRunNumber
         self._chop_combo_name_list = list()  # chop run combo box names with orders sync with combo box
         self._chop_seq_combo_name_list = list()   # chop sequence combo box names with orders sync with combo box
         self._chop_run_plot_option = dict()  # [chop key] = dict() such as van_norm, van_run, pc_norm...
@@ -117,12 +118,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # record of X value range
         self._xrange_dict = {'TOF': (1000, 70000),
                              'dSpacing': (None, None)}
-
-        # self._loadedChoppedRunList = list()   # synchronized with comboBox_choppedRunNumber
-        # chopped run number (parent-data-key) list:
-        # self._chopped_run_list = list()  # synchronized with comboBox_choppedRunNumber
-        # self._choppedRunDict = dict()  # [chop run ID *][seq_number**] = chopped/reduced workspace name
-        # * chop run ID in _loadedChoppedRunList  ** seq_number in ...
 
         # sample log runs and logs
         self._log_data_key = None
@@ -172,8 +167,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.comboBox_runs.currentIndexChanged.connect(self.evt_plot_different_single_run)
 
         # section: plot chopped run
-        self.ui.pushButton_prevChopped.clicked.connect(self.do_plot_prev_chopped)
-        self.ui.pushButton_nextChopped.clicked.connect(self.do_plot_next_chopped)
+        self.ui.pushButton_prevChopped.clicked.connect(self.do_plot_prev_chopped_sequence)
+        self.ui.pushButton_nextChopped.clicked.connect(self.do_plot_next_chopped_sequence)
+        self.ui.comboBox_choppedRunNumber.currentIndexChanged.connect(self.evt_plot_different_chopped_run)
         self.ui.comboBox_chopSeq.currentIndexChanged.connect(self.evt_plot_different_chopped_sequence)
 
         # section: plot sample log
@@ -304,19 +300,15 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             self.ui.lineEdit_run.setText('{}'.format(run_number))
 
         # get data sets
-        if run_number is not None and self._myController.has_chopped_data(run_number, reduced=True):
+        if run_number is not None and self._myController.has_native_sliced_reduced_workspaces(run_number) and False:
+            # TODO - TONIGHT 196 - Disabled to load data from memory
             # load from memory
             # FIXME - TOMORROW - NOT TEST YET! Need to be on analysis cluster!
-            data_key_dict, run_number_str = self._myController.load_chopped_data(run_number, chopped_seq_list)
+            data_key_dict, run_number_str = self._myController.something.load_chopped_data(run_number, chopped_seq_list)
             raise NotImplementedError('ASAP: What shall be chop key?')
         elif ipts_number is not None and run_number is not None:
             # load data from archive
             self.load_reduced_data(ipts_number, run_number, chopped_seq_list)
-            # chopped_data_dir = self._myController.get_archived_data_dir(self._iptsNumber, run_number,
-            #                                                             chopped_data=True)
-            # file_loading_manager = self._myController.project.data_loading_manager
-            # chopped_data_dict = file_loading_manager.load_chopped_binned_data(run_number, chopped_data_dir,
-            #                                                                   chopped_seq_list, 'gsas')
         else:
             raise NotImplementedError('Not sure how to load from an arbitrary directory!')
 
@@ -472,7 +464,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # END-TRY
 
         # load log
-        if self._myController.has_chopped_data(ipts_number, run_number, in_memory=True):
+        if self._myController.has_native_sliced_reduced_workspaces(ipts_number, run_number, in_memory=True):
             # data sliced in memory: simply need workspaces
             sample_log_names = self._sample_log_name_list
         else:
@@ -646,22 +638,23 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # refresh the list
             seq_list = self._myController.project.get_chopped_sequence(chop_run_key)
             print ('[DB...BAT] Reduced View Chopped sequence of {}: {}'.format(chop_run_key, seq_list))
+            if len(seq_list) > 0:
+                self._mutexChopSeqList = True  # lock
 
-            self._mutexChopSeqList = True    # lock
+                # update to the chop-sequences
+                self.ui.comboBox_chopSeq.clear()
+                set_to_index = 0
+                self._chop_seq_combo_name_list = list()  # clear
+                for item_index, seq_i in enumerate(seq_list):
+                    seq_item_i = '{}'.format(seq_i)
+                    self.ui.comboBox_chopSeq.addItem(seq_item_i)
+                    self._chop_seq_combo_name_list.append(seq_item_i)
+                    if '{}'.format(seq_i) == current_seq_item:
+                        set_to_index = item_index
+                self.ui.comboBox_chopSeq.setCurrentIndex(set_to_index)
 
-            self.ui.comboBox_chopSeq.clear()
-            set_to_index = 0
-            self._chop_seq_combo_name_list = list()   # clear
-            for item_index, seq_i in enumerate(seq_list):
-                seq_item_i = '{}'.format(seq_i)
-                self.ui.comboBox_chopSeq.addItem(seq_item_i)
-                self._chop_seq_combo_name_list.append(seq_item_i)
-                if '{}'.format(seq_i) == current_seq_item:
-                    set_to_index = item_index
-            self.ui.comboBox_chopSeq.setCurrentIndex(set_to_index)
-
-            self._mutexChopSeqList = False   # unlock
-            # END-IF-ELSE
+                self._mutexChopSeqList = False  # unlock
+            # END-IF (set chopped sequence)
         # END-IF-ELSE
 
         self._mutexChopRunList = False  # unlock the chopped run boxes
@@ -848,7 +841,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def do_plot_prev_chopped(self):
+    def do_plot_prev_chopped_sequence(self):
         """
         Plot previous chopped sequence
         :return:
@@ -864,7 +857,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def do_plot_next_chopped(self):
+    def do_plot_next_chopped_sequence(self):
         """
         Plot the next chopped sequence reduced data
         :return:
@@ -1039,7 +1032,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                     new_seq_index = self._chop_seq_combo_name_list.index(set_to_seq)
                     self.ui.comboBox_chopSeq.setCurrentIndex(new_seq_index)
                 else:
-                    GuiUtility.pop_dialog_error(self, '{} does not exist in chopped sequences'.format(set_to_seq))
+                    GuiUtility.pop_dialog_error(self, 'Failed to set chopped run {} to seq {}. Reason: {}'
+                                                      ' does not exist in chopped sequences'
+                                                      ''.format(set_to, set_to_seq, set_to_seq))
                     return
             else:
                 GuiUtility.pop_dialog_error(self, '{} does not exist in chopped runs'.format(set_to))
@@ -1249,6 +1244,53 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         self.ui.groupBox_plotSingleRun.setEnabled(self.ui.radioButton_chooseSingleRun.isChecked())
         self.ui.groupBox_plotChoppedRun.setEnabled(self.ui.radioButton_chooseChopped.isChecked())
+
+        return
+
+    def evt_plot_different_chopped_run(self):
+        """
+        Handle the event if there is a change in chopped run to plot
+        :return:
+        """
+        print ('[DB.............BAT] Chopped run is changed... size = {}'
+               ''.format(self.ui.comboBox_choppedRunNumber.size()))
+
+        # skip if mutex is on
+        if self._mutexChopRunList is True:
+            return
+
+        # get current chop name
+        curr_chop_name = str(self.ui.comboBox_choppedRunNumber.currentText())
+        if curr_chop_name == '':
+            print ('[DB...BAT] Is ChoppedRun combo box empty? {}'
+                   ''.format(self.ui.comboBox_choppedRunNumber.size()))
+            return
+
+        curr_data_key = self._chop_combo_data_key_dict[curr_chop_name]
+
+        chopped_sequence_list = self._myController.project.get_chopped_sequence(curr_data_key)
+
+        # clear
+        self._mutexChopSeqList = True
+        self.ui.comboBox_chopSeq.clear()
+        self._chop_seq_combo_name_list = list()
+        self._mutexChopSeqList = False
+
+        # plot the first one
+        print ('[DB...BAT] Tending to update/plot run {} chop-seq {}'.format(curr_chop_name, chopped_sequence_list[0]))
+        if len(chopped_sequence_list) > 0:
+            seq_name_0 = '{}'.format(chopped_sequence_list[0])
+            self.ui.comboBox_chopSeq.addItem(seq_name_0)
+            self._chop_combo_name_list.append(seq_name_0)
+        # END-IF-ELSE
+
+        # plot the others
+        self._mutexChopSeqList = True
+        for item_index in range(1, len(chopped_sequence_list)):
+            seq_name_i = '{}'.format(chopped_sequence_list[item_index])
+            self.ui.comboBox_chopSeq.addItem(seq_name_i)
+            self._chop_seq_combo_name_list.append(seq_name_i)
+        self._mutexChopSeqList = False
 
         return
 
@@ -1804,7 +1846,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # check whether user-specified sequences do exist
             filtered_seq_list = list()
             non_exist_seqs = list()
-            for user_seq in filtered_seq_list:
+
+            for user_seq in seq_list:
                 if user_seq in existing_seq_list:
                     filtered_seq_list.append(user_seq)
                 else:

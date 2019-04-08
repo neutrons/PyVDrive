@@ -339,9 +339,9 @@ class LoadedDataManager(object):
             print ('[DB...BAT] Seq-index = {}, GSAS file name = {}'.format(seq_index, file_name))
             data_ws_name = self.load_binned_data(data_file_name=file_name, data_file_type=file_format,
                                                  prefix='G{}'.format(run_number),
-                                                 max_int=len(chopped_sequence_keys) + 1)
+                                                 max_int=max(10, len(chopped_sequence_keys) + 1))
+            # FIXME TODO - TONIGHT 190 - "None" (in next row) shall be replaced by x.hdf5
             loaded_gsas_dict[seq_index] = data_ws_name, file_name, None
-            # FIXME TODO - TONIGHT 1 - None shall be replaced by x.hdf5
         # END-FOR
 
         # register for chopped data dictionary: if run exists, then merge 2 dictionary!
