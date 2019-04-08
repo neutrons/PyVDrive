@@ -606,6 +606,10 @@ class VdriveChop(VDriveCommand):
 
         # parse the scope of runs
         run_start, run_end = self._process_vulcan_runs()
+        # check an output
+        if not (isinstance(run_start, int) and isinstance(run_end, int)):
+            return False, 'Both run start {} and run end {} must be integer' \
+                          ''.format(run_start, run_end)
 
         try:
             is_dry_run = self._is_dry_run()

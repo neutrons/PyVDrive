@@ -1097,19 +1097,17 @@ class VulcanLiveDataView(QMainWindow):
           - self._currSampleLogValueVector = None
         :param x_axis_name:
         :param y_axis_name_list:
-        :param side_list: list of boolean. True = left/main axis; False = right axis
+        :param side_list: Flag for left/right side to plot list of boolean. True = left/main axis; False = right axis
         :param d_min:
         :param d_max:
         :param norm_by_van:
         :return:
         """
         # parse the user-specified X and Y axis name and process name in case of 'name (#)'
-        # check and etc
-        # TODO - TONIGHT 3 - Modernize
-        assert isinstance(y_axis_name_list, list), '{0} shall be list but not {1}' \
-                                                   ''.format(y_axis_name_list, type(y_axis_name_list))
-        assert isinstance(side_list, list), 'Axis-side {0} shall be given in a list but not a {1}.' \
-                                            ''.format(side_list, type(side_list))
+        # check inputs
+        datatypeutility.check_list('Log names for Y axis', y_axis_name_list)
+        datatypeutility.check_list('Flag for the axis-side (left/right) of sample log to plot', side_list)
+
         if len(y_axis_name_list) != len(side_list):
             raise RuntimeError('Number of Y-axis names ({0}) must be same as number of sides ({1}).'
                                ''.format(len(y_axis_name_list), len(side_list)))
@@ -1214,7 +1212,7 @@ class VulcanLiveDataView(QMainWindow):
             peak_name = y_axis_name.split('* Peak:')[1].strip()
 
             # gather the data in banks
-            BANK_LIST = [1, 2]              # TODO/FUTURE - shall allow bank 3
+            BANK_LIST = [1, 2, 3]
             if peak_name.lower().count('center') > 0:
                 param_type = 'center'
             elif peak_name.lower().count('intensity') > 0:
@@ -1621,7 +1619,7 @@ class VulcanLiveDataView(QMainWindow):
             last_n_run = parse_set_last_n()
             # retrieve data
 
-            # TODO/ISSUE/NOW/FIXME - It is in a debug mode
+            # TODO/ISSUE/NOW/FIXME - 2D mode is only in 'Accumulation Mod'. Shall be extended to Unit and runs mode too
             self._2dMode = 'acc'  #
             # --------------------------------------------
 

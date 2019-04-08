@@ -865,6 +865,7 @@ class WindowLogPicker(QMainWindow):
                 return
 
         elif self.ui.radioButton_logValueSlicer.isChecked():
+            # TODO - TODAY TEST - Check this feature! (broken expected)
             # set and make log vale-based slicer
             log_name = str(self.ui.comboBox_logNames.currentText())
             # log name might be with information

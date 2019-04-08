@@ -455,13 +455,12 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    # TODO - TONIGHT - Add UI
+    # TODO - TODAY 0 - Add UI
     def do_load_sliced_logs(self):
         """
         Load sliced sample logs
         :return:
         """
-
         try:
             ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
             run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
@@ -581,6 +580,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :return:
         """
         # get chopped runs in the memory (loaded or real time reduced)
+        # FIXME TODO - TODAY 196 - only runs loaded from GSASs
         chopped_run_list = self._myController.get_focused_runs(chopped=True)  # chop keys: list of tuples
 
         self._mutexChopRunList = True  # lock the event triggered and handled elsewhere
@@ -881,7 +881,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     # TODO - TODAY - TEST!
-    # TODO - TONIGHT 0 ASAP - Clean up this method!
     def do_plot_sample_logs(self):
         """ Plot selected sample logs:
         Workflow:
@@ -1415,21 +1414,15 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         Load reduced data
         :param ipts_number:
-        :param run_number:
+        :param run_number: can (1) run number (int) or None (loading explicitly)
         :param chop_seq_index_list:
         :return: (1) data key  or (2) dictionary of keys
         """
-        # datatypeutility.check_int_variable('Run number', run_number, (1, 99999999))
-
-        print ('[DB................BAT................LOOK! HERE TO LOAD')
-
         if chop_seq_index_list is None:
             # original run
             if run_number is not None and self._is_run_in_memory(run_number):
                 # load from memory
                 data_key = self._myController.project.reduction_manager.get_reduced_workspace(run_number)
-                # self._single_run_data_dict[run_number] = data_key
-                # self._data_key_run_seq[data_key] = run_number, None
             else:
                 # load from archived disk
                 reduced_file_name = self._myController.archive_manager.get_gsas_file(ipts_number, run_number,
@@ -1446,15 +1439,12 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         else:
             # chopped run
-            print ('[DB................BAT................LOOK! HERE TO LOAD CHOPPED')
-
             datatypeutility.check_list('Chopped sequence indexes', chop_seq_index_list)
             chopped_data_dir = self._myController.get_archived_data_dir(ipts_number, run_number,
                                                                         chopped_data=True)
             file_loading_manager = self._myController.project.data_loading_manager
             data_set_dict = file_loading_manager.load_chopped_binned_data(run_number, chopped_data_dir,
                                                                           chop_seq_index_list, 'gsas')
-            print ('[DB................BAT................LOOK! LOADED: {}'.format(data_set_dict.keys()))
 
             # record
             if run_number not in self._chopped_run_data_dict:
@@ -1474,7 +1464,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return data_key
 
-    # TODO - TONIGHT 0 - Clean!
     def retrieve_loaded_reduced_data(self, data_key, ipts_number, run_number, chop_seq_index, bank_id, unit, pc_norm, van_run):
         """
         Retrieve reduced data from workspace (via run number) to _reducedDataDict.
@@ -1485,14 +1474,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :return:
         """
         assert data_key is not None, 'Data key must be initialized'
-
-        # try:
-        #     data_set = self._myController.get_reduced_data(run_id=data_key, target_unit=unit, bank_id=bank_id)
-        # except RuntimeError as run_err:
-        #     raise run_err
-        # # convert to 2 vectors
-        # vec_x = data_set[bank_id][0]
-        # vec_y = data_set[bank_id][1]
 
         # vanadium or PC
         if pc_norm:
@@ -1508,7 +1489,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # plot on the main figure
         if chop_seq_index is not None:
-            print ('[DB............BAT.............CHOPPED KEY LOOK] key = {}'.format(data_key))
             vec_x, vec_y = self._myController.project.get_chopped_sequence_data(data_key, chop_seq_index,
                                                                                 bank_id, unit)
         else:
@@ -1809,17 +1789,50 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                 'van_run': van_run}
 
         # record the current chopped-sequence
-        # TODO - TONIGHT 0.191.2 - Implement a method to filter seq_list with get_chopped_sequences()
+        # TODO - TODAY-TEST 0.191.2 - Implement a method to filter seq_list with get_chopped_sequences()
+        existing_seq_list = self._myController.project.get_chopped_sequence(chop_key)
+
+        # check whether any sequence exists
+        if len(existing_seq_list) == 0:
+            GuiUtility.pop_dialog_error(self, 'There is no chopped sequences for (chop key) {}'.format(chop_key))
+            return
+
         if seq_list is None:
-            try:
-                # loaded GSAS file... possible non-consecutive integers
-                curr_seq = int(str(self.ui.comboBox_chopSeq.currentText()))
-            except ValueError:
-                # just-reduced run
-                curr_seq = self.ui.comboBox_chopSeq.currentIndex()
-                # END-IF-ELSE
+            # default is to use all the chopped sequences
+            seq_list = existing_seq_list[:]
         else:
+            # check whether user-specified sequences do exist
+            filtered_seq_list = list()
+            non_exist_seqs = list()
+            for user_seq in filtered_seq_list:
+                if user_seq in existing_seq_list:
+                    filtered_seq_list.append(user_seq)
+                else:
+                    non_exist_seqs.append(user_seq)
+            # END-FOR
+            if len(non_exist_seqs) == len(seq_list):
+                GuiUtility.pop_dialog_error(self, 'For (chop key) {}, none of the users specified sequence\n{}\n'
+                                                  'exists. \nAvailable sequences are \n{}'
+                                                  ''.format(chop_key, seq_list, existing_seq_list))
+                return
+            elif len(non_exist_seqs) > 0:
+                GuiUtility.pop_dialog_error(self, 'For (chop key) {}, the following chopped sequences do not exist:'
+                                                  '\n{}'.format(chop_key, non_exist_seqs))
+            # assign
+            seq_list = filtered_seq_list[:]
+        # END-IF-ELSE
+
+        # set current sequence to plot as single pattern
+        # NOTE: maybe over-engineered.  But safe is the highest priority
+        try:
+            # loaded GSAS file... possible non-consecutive integers
+            curr_seq = int(str(self.ui.comboBox_chopSeq.currentText()))
+            if curr_seq not in seq_list:
+                curr_seq = seq_list[0]
+        except ValueError:
+            # just-reduced run
             curr_seq = seq_list[0]
+        # END-TRY
 
         # vanadium or PC
         if pc_norm:
@@ -1872,7 +1885,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             else:
                 van_run_tmp = None
             # plot 1Ds
-            for bank_id in range(1, 4):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
+            # TODO - FUTURE - This could be an issue for Not-3 bank data
+            MAX_BANK = 3
+            for bank_id in range(1, MAX_BANK+1):
                 child_window = self.launch_single_run_view()
                 vec_x, vec_y = get_single_bank_data(chop_run_key=chop_key,
                                                     curr_seq_index=curr_seq,
@@ -1896,8 +1911,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # END-IF-NOT (main)
 
         # set sequence
-        if seq_list is None:
-            seq_list = self._myController.project.get_chopped_sequence(chop_key)
         if not main_only and len(seq_list) > 1:
             # launch windows for contour plots and 3D line plots
             for bank_id in range(1, 4):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data

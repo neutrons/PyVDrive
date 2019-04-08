@@ -1,6 +1,7 @@
 import os
 import process_vcommand
 import pyvdrive.lib.vulcan_util as vulcan_util
+from pyvdrive.lib import datatypeutility
 
 # VDRIVEBIN, i.e., VBIN
 # 
@@ -276,7 +277,6 @@ class VBin(process_vcommand.VDriveCommand):
             for run_info in run_info_list:
                 run_number_list.append(run_info['run'])
             self._controller.set_runs_to_reduce(run_number_list)
-            print ('[DB...............BAT..........] run numbers: {}'.format(run_number_list))
 
             # reduce by regular runs
             status, message = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
@@ -362,7 +362,15 @@ class VBin(process_vcommand.VDriveCommand):
 
         return help_str
 
-    # TODO - TONIGHT - Code quality
     def set_merge_flag(self, flag):
+        """
+        set the flag whether the runs will be merged or not
+        :param flag:
+        :return:
+        """
+        datatypeutility.check_bool_variable('Flag to merge runs', flag)
+
         self._merge_flag = flag
+
+        return
 

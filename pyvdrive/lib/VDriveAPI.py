@@ -772,22 +772,27 @@ class VDriveAPI(object):
             print ('[DB...BAT] API: Loaded chopped gsas: {}'.format(loaded_runs_list))
 
             # from memory
-            reduced_runs_list = self._myProject.reduction_manager.get_reduced_chopped_runs()
-            print ('[DB...BAT] API: In-Memory chopped runs: {}'.format(reduced_runs_list))
+            if False:
+                # FIXME TODO - TODAY 191 - only runs loaded from GSASs
+                reduced_runs_list = self._myProject.reduction_manager.get_reduced_chopped_runs()
+                print ('[DB...BAT] API: In-Memory chopped runs: {}'.format(reduced_runs_list))
 
         else:
             # from archive
             loaded_runs_list = self._myProject.get_loaded_reduced_runs()
 
             # from project
-            reduced_runs_list = self._myProject.reduction_manager.get_reduced_single_runs()
-            print ('[DB...BAT] API: In-Memory reduced single-runs: {}'.format(reduced_runs_list))
+            if False:
+                # FIXME TODO - TODAY 191 - only runs loaded from GSASs
+                reduced_runs_list = self._myProject.reduction_manager.get_reduced_single_runs()
+                print ('[DB...BAT] API: In-Memory reduced single-runs: {}'.format(reduced_runs_list))
 
         # END-IF-ELSE
 
         # combine
         run_in_mem = loaded_runs_list[:]
-        run_in_mem.extend(reduced_runs_list)
+        # FIXME TODO - TODAY 191 - only runs loaded from GSASs
+        # run_in_mem.extend(reduced_runs_list)
 
         return run_in_mem
 

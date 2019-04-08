@@ -1,5 +1,7 @@
 import os
 import os.path
+import numpy
+import shutil
 import random
 from chop_utility import DataChopper
 import datatypeutility
@@ -10,7 +12,6 @@ import archivemanager
 import loaded_data_manager
 import vanadium_utility
 import peak_util
-import numpy
 import vulcan_util
 
 
@@ -644,7 +645,7 @@ class ProjectManager(object):
                                    start_time, end_time, min_log_value, max_log_value,
                                    log_value_step, slice_tag=None):
         """
-        Generate data slicer/splitters by log values
+        Generate data slicer/splitters by log values without value-chaning direction
         :param run_number:
         :param sample_log_name:
         :param start_time:
@@ -655,44 +656,43 @@ class ProjectManager(object):
         :param slice_tag:
         :return:
         """
-        raise RuntimeError('This method shall be reviewed!')
-        # # TEST/NOWNOW - Need to find a test for this!
-        # # check whether DataChopper
-        # if run_number not in self._chopManagerDict:
-        #     return False, 'Run number %s does not have DataChopper associated.' % str(run_number)
-        #
-        # # Get file name according to run number
-        # if isinstance(run_number, int):
-        #     # run number is a Run Number, locate file
-        #     file_name = self.get_file_path(run_number)
-        # elif isinstance(run_number, str):
-        #     # run number is a file name
-        #     base_file_name = run_number
-        #     file_name = self.get_file_path(base_file_name)
-        # else:
-        #     return False, 'Input run_number %s is either an integer or string.' % str(run_number)
-        #
-        # # Start a session
-        # # FIXE/NOWNOW - How to get slicer manager to do these jobs
-        # self._mySlicingManager.load_meta_data_from_file(nxs_file_name=file_name, run_number=run_number)
-        #
-        # # this_ws_name = get_standard_ws_name(file_name, True)
-        # # mtdHelper.load_nexus(file_name, this_ws_name, True)
-        # # slicer_name, info_name = get_splitters_names(this_ws_name)
-        # # print '[DB] slicer_name = ', slicer_name, 'info_name = ', info_name, 'ws_name = ', this_ws_name,
-        # # print 'log_name = ', sample_log_name
-        #
-        # # FIXME - Need to pass value change direction
-        # self._mySlicingManager.generate_events_filter_by_log(log_name=sample_log_name,
-        #                                                      min_time=start_time, max_time=end_time,
-        #                                                      relative_time=True,
-        #                                                      min_log_value=min_log_value,
-        #                                                      max_log_value=max_log_value,
-        #                                                      log_value_interval=log_value_step,
-        #                                                      value_change_direction='Both',
-        #                                                      tag=slice_tag)
-        #
-        # return
+        # TODO - TODAY 0 - TEST - Need to find a test for this!
+        # check whether DataChopper
+        if run_number not in self._chopManagerDict:
+            return False, 'Run number %s does not have DataChopper associated.' % str(run_number)
+
+        # Get file name according to run number
+        if isinstance(run_number, int):
+            # run number is a Run Number, locate file
+            file_name = self.get_file_path(run_number)
+        elif isinstance(run_number, str):
+            # run number is a file name
+            base_file_name = run_number
+            file_name = self.get_file_path(base_file_name)
+        else:
+            return False, 'Input run_number %s is either an integer or string.' % str(run_number)
+
+        # Start a session
+        # FIXE/NOWNOW - How to get slicer manager to do these jobs
+        self._mySlicingManager.load_meta_data_from_file(nxs_file_name=file_name, run_number=run_number)
+
+        # this_ws_name = get_standard_ws_name(file_name, True)
+        # mtdHelper.load_nexus(file_name, this_ws_name, True)
+        # slicer_name, info_name = get_splitters_names(this_ws_name)
+        # print '[DB] slicer_name = ', slicer_name, 'info_name = ', info_name, 'ws_name = ', this_ws_name,
+        # print 'log_name = ', sample_log_name
+
+        # FIXME - Need to pass value change direction
+        self._mySlicingManager.generate_events_filter_by_log(log_name=sample_log_name,
+                                                             min_time=start_time, max_time=end_time,
+                                                             relative_time=True,
+                                                             min_log_value=min_log_value,
+                                                             max_log_value=max_log_value,
+                                                             log_value_interval=log_value_step,
+                                                             value_change_direction='Both',
+                                                             tag=slice_tag)
+
+        return
 
     def get_file_path(self, run_number):
         """ Get file path
@@ -763,6 +763,8 @@ class ProjectManager(object):
                 # reduced runs from memory
                 sequence_keys = self._reductionManager.get_sliced_focused_workspaces(chop_data_key[0],
                                                                                      chop_data_key[1])
+                # returned a list of workspaces
+                # TODO - TONIGHT 196 - This is not same as GSAS-case....
             else:
                 # cannot be found
                 sequence_keys = None
@@ -1416,15 +1418,15 @@ class ProjectManager(object):
             ws_name_list = [item[1] for item in reduced_run_numbers]
             # always merged to run_number_list[0]/ws_name_list[0]
             run_number, out_ws_name = reduced_run_numbers[0]
-            print ('[DB...BAT] Input run numbers: {}'.format(run_number_list))
-            print ('[DB...BAT] Reduced runs: {}'.format(reduced_run_numbers))
+            # print ('[DB...BAT] Input run numbers: {} --> Reduced runs: {}'
+            #        ''.format(run_number_list, reduced_run_numbers))
             # merge runs
             mantid_helper.merge_runs(ws_name_list, out_ws_name)
 
             raw_file_name, ipts_number = self._dataFileDict[run_number]
             run_date_time = vulcan_util.get_run_date(out_ws_name, raw_file_name)
             gsas_file_name = os.path.join(output_directory, '{}.gda'.format(run_number))
-            print ('[DB.....BAT.....MERGE] Merged GSAS will be written to {}'.format(gsas_file_name))
+            vdrive_gsas_name = os.path.join(output_directory, '1.gda')  # this is for VIEW,CHOPRUN=,RUNS=1
 
             self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
                                                     gsas_file_name=gsas_file_name,
@@ -1435,6 +1437,8 @@ class ProjectManager(object):
                                                     van_ws_name=van_ws_name,
                                                     is_chopped_run=False,
                                                     write_to_file=True)
+            # copy the file
+            shutil.copy(gsas_file_name, vdrive_gsas_name)
         else:
             # do nothing
             pass

@@ -19,6 +19,7 @@ import vdrive_commands.process_vcommand
 import pyvdrive.lib.datatypeutility
 from pyvdrive.lib import datatypeutility
 import time
+from pyvdrive.lib import vulcan_util
 
 
 class VdriveCommandProcessor(object):
@@ -230,8 +231,7 @@ class VdriveCommandProcessor(object):
         return status, err_msg
 
     def _process_chop(self, arg_dict):
-        """
-        VDRIVE CHOP
+        """ process command VDRIVE CHOP
         Example: CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1
         :param arg_dict:
         :return: 2-tuple
@@ -250,16 +250,14 @@ class VdriveCommandProcessor(object):
 
         # process for special case: log-pick-helper
         if message == 'pop':
+            # pop out the log window
             log_window = self._mainWindow.do_launch_log_picker_window()
             ipts_number, run_numbers = processor.get_ipts_runs()
+            # set IPTS and run if they are given
             if ipts_number:
                 log_window.set_ipts(ipts_number)
             if len(run_numbers) > 0:
                 log_window.set_run(run_numbers[0])
-
-            # TODO - TONIGHT 0 - clean after testing
-            print ('[DB] self._chopRunNumberList: {} of type {}'
-                   ''.format(self._chopRunNumberList, type(self._chopRunNumberList)))
 
             if isinstance(self._chopRunNumberList, list) and len(self._chopRunNumberList) > 0:
                 log_window.load_run(self._chopRunNumberList[0])
@@ -339,28 +337,35 @@ class VdriveCommandProcessor(object):
         view_window.set_x_range(processor.x_min, processor.x_max)
         view_window.set_unit(processor.unit)
 
+        # check whether the run is just chopped and data still in memory
+        run_number, ipts_number = processor.get_run_tuple_list()[0]
+        if run_number in self._myController.project.reduction_manager.get_reduced_chopped_runs():
+            # TODO - TONIGHT 196 - Need to make this False @ end
+            load_gsas = True
+        else:
+            load_gsas = True
+
         # proton charge normalization: complicated
         if processor.do_proton_charge_normalization:
-            from pyvdrive.lib import vulcan_util
-            run_number, ipts_number = processor.get_run_tuple_list()[0]
-            if processor.is_chopped_run:
+            if processor.is_chopped_run and load_gsas:
+                # chopped runs
                 try:
                     log_header, log_set = vulcan_util.import_sample_log_record(ipts_number, run_number, is_chopped=True,
                                                                                record_type='start')
                 except RuntimeError as run_err:
                     return False, 'Unable to import sample log record: {}'.format(run_err)
                 view_window.set_chopped_logs(ipts_number, run_number, log_header, log_set, 'start')
-            else:
+            elif load_gsas:
+                # raw runs
                 try:
                     log_set = vulcan_util.import_auto_record(ipts_number, run_number)
                 except RuntimeError as run_err:
-                    #  TODO - TONIGHT 0 - NICER
-                    return False, 'blalba {}'.format(run_err)
+                    return False, 'Unable to import AutoRecord.txt of IPTS-{} Run-{} due to {}' \
+                                  ''.format(ipts_number, run_number, run_err)
                 view_window.set_logs(ipts_number, run_number, log_set)
         # END-IF (proton charge normalization)
 
         # vanadium
-        run_number, ipts_number = processor.get_run_tuple_list()[0]
         if processor.do_vanadium_normalization:
             van_run_number = processor.get_vanadium_number(run_number)
             # load vanadium to workspace workspace and get calculation prm file
@@ -377,7 +382,8 @@ class VdriveCommandProcessor(object):
             view_window.set_run_number(run_number)
 
             chop_seq_list = processor.get_chopped_sequence_range()
-            view_window.do_load_chopped_runs(ipts_number, run_number, chop_seq_list)
+            if load_gsas:
+                view_window.do_load_chopped_runs(ipts_number, run_number, chop_seq_list)
 
             chop_name = '{}: GSAS'.format(run_number)
             chop_key = run_number
@@ -394,19 +400,8 @@ class VdriveCommandProcessor(object):
                                          plot3d=processor.plot_3d)
 
         elif len(processor.get_run_tuple_list()) == 1:
-            # one run situation
-            # run_number, ipts_number = processor.get_run_tuple_list()[0]
+            # raw/original/non-chopped run situation
             view_window.set_run_number(run_number)
-
-            # if processor.do_vanadium_normalization:
-            #     van_run_number = processor.get_vanadium_number(run_number)
-            #     # load vanadium to workspace workspace and get calculation prm file
-            #     van_gsas_name, iparam_file_name = \
-            #         self._myController.archive_manager.locate_process_vanadium(van_run_number)
-            #     van_ws_name = self._myController.project.reduction_manager.gsas_writer.import_vanadium(van_gsas_name)
-            #     view_window.set_vanadium_ws(van_run_number, van_ws_name)
-            # else:
-            #     van_run_number = None
             data_key = view_window.do_load_single_run(ipts_number, run_number, False)
             if data_key:
                 view_window.do_refresh_existing_runs(set_to=data_key)

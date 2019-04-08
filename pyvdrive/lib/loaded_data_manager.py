@@ -78,7 +78,7 @@ class LoadedDataManager(object):
         """
         get the GSAS workspaces of a chopped run as a sequence
         :param run_number:
-        :return:
+        :return: list of integers (as sequence order)
         """
         if run_number not in self._chopped_gsas_dict.keys():
             raise RuntimeError('Chopped run number {} has not been loaded.  Loaded chopped runs are {}'
@@ -110,7 +110,7 @@ class LoadedDataManager(object):
     def get_loaded_chopped_runs(self):
         """
         get the run numbers or data keys of the loaded chopped data
-        :return:
+        :return: list of runs
         """
         loaded_chopped_runs = self._chopped_gsas_dict.keys()
         loaded_chopped_runs.sort()
