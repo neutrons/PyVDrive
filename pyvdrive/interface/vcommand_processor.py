@@ -385,8 +385,8 @@ class VdriveCommandProcessor(object):
             if load_gsas:
                 view_window.do_load_chopped_runs(ipts_number, run_number, chop_seq_list)
 
-            chop_name = '{}: GSAS'.format(run_number)
-            chop_key = run_number
+            # chop_name = '{}: GSAS'.format(run_number)
+            # chop_key = run_number
 
             # refresh list and set to chop run
             # view_window.do_refresh_existing_runs(set_to=chop_name, set_to_seq=chop_seq_list[0], is_chopped=True)
@@ -395,9 +395,10 @@ class VdriveCommandProcessor(object):
             if len(new_names) > 0:
                 print ('[DB.....BAT] New names = {}'.format(new_names))
                 # TODO - TONIGHT 191 Make following work!
-                view_window.set_chopped_run(new_names[0])
+                chop_key = view_window.set_chopped_run(new_names[0], True)
             else:
                 print ('[DB.....BAT] No change!')
+                chop_key = view_window.set_chopped_run(None, True)
 
             # set a signal to view-window to make main_only True (once)
             # # TODO - TONIGHT 191 - Separate plotting individual windows!

@@ -571,15 +571,19 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """ Update the chopped run's combo box
         :return:
         """
+        assert self._mutexChopRunList, 'Mutex on combo-box chopped run must be turned on'
+        assert self._mutexChopSeqList, 'Mutex on combo-box chopped sequence must be turned on'
+
+        # current run
+        curr_chopped_run_name = str(self.ui.comboBox_choppedRunNumber.currentText())
+        # preserve previously chopped runs' names
+        previous_chopped_names = set(self._chop_combo_name_list)
+
         # get chopped runs in the memory (loaded or real time reduced)
         # FIXME TODO - TODAY 196 - only runs loaded from GSASs
         chopped_run_list = self._myController.get_focused_runs(chopped=True)  # chop keys: list of tuples
 
-        # self._mutexChopRunList = True  # lock the event triggered and handled elsewhere
-
-        # preserve previously chopped runs' names
-        previous_chopped_names = set(self._chop_combo_name_list)
-
+        # FIXME - delete after #191
         # # get the current (chopped) run's name
         # if len(self._chop_combo_name_list) == 0:
         #     curr_chop_name = None
@@ -589,14 +593,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # reset the combo box anyway
         self.ui.comboBox_choppedRunNumber.clear()
 
-        # set the chop runs from project
-        if len(chopped_run_list) == 0:
-            # no chopped run: reset image
-            self.ui.graphicsView_mainPlot.reset_1d_plots()
-            self._currentPlotID = None
-            self.ui.graphicsView_logPlot.reset()
+        if len(chopped_run_list) > 0:
+            chopped_run_list.sort()
 
-        else:
             # add chop "runs" to combo box
             for chop_run_tuple_i in chopped_run_list:
                 if isinstance(chop_run_tuple_i, tuple):
@@ -625,45 +624,57 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # END-FOR
         # END-FOR
 
-        if False:  # TODO FIXME - TODAY 191 - Leave to other methods
-            # handle the new index to the chop run combo box
-            if curr_chop_name in self._chop_combo_name_list:
-                # focus to the original one and no need to change the sequential number
-                combo_index = self._chop_combo_name_list.index(curr_chop_name)
-                chop_run_key = self._chop_combo_data_key_dict[curr_chop_name]
-                self.ui.comboBox_choppedRunNumber.setCurrentIndex(combo_index)
-                current_seq_item = str(self.ui.comboBox_chopSeq.currentText())
-            else:
-                # need to refresh: set to first one
-                self.ui.comboBox_choppedRunNumber.setCurrentIndex(0)
-                new_chop_run_name = self._chop_combo_name_list[0]
-                chop_run_key = self._chop_combo_data_key_dict[new_chop_run_name]
-                current_seq_item = None
-            # END-IF-ELSE
+        # if False:  # TODO FIXME - TODAY 191 - Leave to other methods
+        #     # handle the new index to the chop run combo box
+        #     if curr_chop_name in self._chop_combo_name_list:
+        #         # focus to the original one and no need to change the sequential number
+        #         combo_index = self._chop_combo_name_list.index(curr_chop_name)
+        #         chop_run_key = self._chop_combo_data_key_dict[curr_chop_name]
+        #         self.ui.comboBox_choppedRunNumber.setCurrentIndex(combo_index)
+        #         current_seq_item = str(self.ui.comboBox_chopSeq.currentText())
+        #     else:
+        #         # need to refresh: set to first one
+        #         self.ui.comboBox_choppedRunNumber.setCurrentIndex(0)
+        #         new_chop_run_name = self._chop_combo_name_list[0]
+        #         chop_run_key = self._chop_combo_data_key_dict[new_chop_run_name]
+        #         current_seq_item = None
+        #     # END-IF-ELSE
+        #
+        #     # refresh the list
+        #     seq_list = self._myController.project.get_chopped_sequence(chop_run_key)
+        #     print ('[DB...BAT] Reduced View Chopped sequence of {}: {}'.format(chop_run_key, seq_list))
+        #     if len(seq_list) > 0:
+        #         self._mutexChopSeqList = True  # lock
+        #
+        #         # update to the chop-sequences
+        #         self.ui.comboBox_chopSeq.clear()
+        #         set_to_index = 0
+        #         self._chop_seq_combo_name_list = list()  # clear
+        #         for item_index, seq_i in enumerate(seq_list):
+        #             seq_item_i = '{}'.format(seq_i)
+        #             self.ui.comboBox_chopSeq.addItem(seq_item_i)
+        #             self._chop_seq_combo_name_list.append(seq_item_i)
+        #             if '{}'.format(seq_i) == current_seq_item:
+        #                 set_to_index = item_index
+        #         self.ui.comboBox_chopSeq.setCurrentIndex(set_to_index)
+        #
+        #         self._mutexChopSeqList = False  # unlock
+        #     # END-IF (set chopped sequence)
+        # # END-IF-ELSE
 
-            # refresh the list
-            seq_list = self._myController.project.get_chopped_sequence(chop_run_key)
-            print ('[DB...BAT] Reduced View Chopped sequence of {}: {}'.format(chop_run_key, seq_list))
-            if len(seq_list) > 0:
-                self._mutexChopSeqList = True  # lock
+        # After combo box update operation
+        if curr_chopped_run_name not in self._chop_combo_name_list:
+            # no chopped run: reset image
+            self.ui.graphicsView_mainPlot.reset_1d_plots()
+            self._currentPlotID = None
+            self.ui.graphicsView_logPlot.reset()
 
-                # update to the chop-sequences
-                self.ui.comboBox_chopSeq.clear()
-                set_to_index = 0
-                self._chop_seq_combo_name_list = list()  # clear
-                for item_index, seq_i in enumerate(seq_list):
-                    seq_item_i = '{}'.format(seq_i)
-                    self.ui.comboBox_chopSeq.addItem(seq_item_i)
-                    self._chop_seq_combo_name_list.append(seq_item_i)
-                    if '{}'.format(seq_i) == current_seq_item:
-                        set_to_index = item_index
-                self.ui.comboBox_chopSeq.setCurrentIndex(set_to_index)
-
-                self._mutexChopSeqList = False  # unlock
-            # END-IF (set chopped sequence)
-        # END-IF-ELSE
-
-        # self._mutexChopRunList = False  # unlock the chopped run boxes
+            # TODO - TONIGHT 191.1 - May need to clear the chop sequence combo box... But there are other variables to set
+        else:
+            # set the chop run to 'current'/previous chopped name
+            combo_index = self._chop_combo_name_list.index(curr_chopped_run_name)
+            self.ui.comboBox_choppedRunNumber.setCurrentIndex(combo_index)
+        # END-IF
 
         return set(self._chop_combo_name_list), previous_chopped_names
 
@@ -672,53 +683,89 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         Changes will be made to
         (1) run combo box
         (2) single_run_list
-        :return:
+        :return: set of current single run list, set of previous single run list
         """
+        assert self._mutexRunNumberList, 'Mutex for run number combo box must be turned on before called'
+
+        # register
+        prev_runs_names = set(self._single_combo_name_list)
+        curr_run_name = str(self.ui.comboBox_runs.currentText())
+
+        # refresh
         single_runs_list = self._myController.get_focused_runs(chopped=False)
+        self.ui.comboBox_runs.clear()
+
         self._single_combo_name_list = list()
-
-        self._mutexRunNumberList = True  # set on the mutex
-
-        if len(single_runs_list) == 0:
-            # no runs: just clear in case
-            self.ui.comboBox_runs.clear()
-
-        else:
-            # current selection
-            current_single_run_name = str(self.ui.comboBox_runs.currentText()).strip()
-            if current_single_run_name == '':
-                current_single_run_name = None
-
-            # single runs
+        if len(single_runs_list) > 0:
             single_runs_list.sort()
 
-            # update
-            self.ui.comboBox_runs.clear()
             for run_number, data_key in single_runs_list:
                 print ('[INFO] Add loaded run {} (type = {}) data key = {}'
                        ''.format(run_number, type(run_number), data_key))
 
                 # come up an entry name
                 # convert run  number from integer to string as the standard
-                if isinstance(run_number, int):
-                    run_number = '{0}'.format(run_number)
+                item_name_i = '{0}'.format(run_number)
 
                 # add to combo box as the data key that can be used to refer
-                self.ui.comboBox_runs.addItem(run_number)
-                self._single_combo_name_list.append(run_number)  # synchronize single_run_list with combo box
-                self._single_combo_data_key_dict[run_number] = data_key
+                self.ui.comboBox_runs.addItem(item_name_i)
+                self._single_combo_name_list.append(item_name_i)  # synchronize single_run_list with combo box
+                self._single_combo_data_key_dict[item_name_i] = data_key
             # END-FOR
+        # END-IF
 
+        # after update operation
+        if curr_run_name != '' and curr_run_name in self._single_combo_name_list:
             # re-focus to the previous one
-            if current_single_run_name != '' and current_single_run_name in self._single_combo_name_list:
-                combo_index = self._single_combo_name_list.index(current_single_run_name)
-                self.ui.comboBox_runs.setCurrentIndex(combo_index)
-        # END-IF-ELSE
+            combo_index = self._single_combo_name_list.index(curr_run_name)
+            self.ui.comboBox_runs.setCurrentIndex(combo_index)
+        elif self.ui.radioButton_chooseSingleRun.isChecked():
+            # previously plotting a single run: reset
+            self.ui.graphicsView_mainPlot.reset_1d_plots()
 
-        # loose it
-        self._mutexRunNumberList = False
+        #
+        #
+        #
+        #
+        #
+        # if len(single_runs_list) == 0:
+        #     # no runs: clear image
+        #     self.ui.graphicsView_mainPlot.reset_1d_plots()
+        # else:
+        #     # current selection
+        #     current_single_run_name = str(self.ui.comboBox_runs.currentText()).strip()
+        #     if current_single_run_name == '':
+        #         current_single_run_name = None
+        #
+        #     # single runs
+        #
+        #     # update
+        #     self.ui.comboBox_runs.clear()
+        #     # for run_number, data_key in single_runs_list:
+        #     #     print ('[INFO] Add loaded run {} (type = {}) data key = {}'
+        #     #            ''.format(run_number, type(run_number), data_key))
+        #     #
+        #     #     # come up an entry name
+        #     #     # convert run  number from integer to string as the standard
+        #     #     if isinstance(run_number, int):
+        #     #         run_number = '{0}'.format(run_number)
+        #     #
+        #     #     # add to combo box as the data key that can be used to refer
+        #     #     self.ui.comboBox_runs.addItem(run_number)
+        #     #     self._single_combo_name_list.append(run_number)  # synchronize single_run_list with combo box
+        #     #     self._single_combo_data_key_dict[run_number] = data_key
+        #     # # END-FOR
+        #
+        #     # re-focus to the previous one
+        #     if current_single_run_name != '' and current_single_run_name in self._single_combo_name_list:
+        #         combo_index = self._single_combo_name_list.index(current_single_run_name)
+        #         self.ui.comboBox_runs.setCurrentIndex(combo_index)
+        # # END-IF-ELSE
+        #
+        # # loose it
+        # self._mutexRunNumberList = False
 
-        return
+        return prev_runs_names, set(self._single_combo_name_list)
 
     def do_set_x_range(self):
         """ Apply new data range to the plots on graph
@@ -993,14 +1040,32 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     def do_refresh_existing_runs(self):
-        """ refresh the existing runs in the combo box
-        NEW: no need to switch to the new data to plot
-        :param set_to: run number / combo item name to set to
-        :param set_to_seq: sequence index/name to set to
-        :param is_chopped: Flag whether it is good to set to chopped data
-        :param is_data_key: Flag to indicate that 'set_to' is a data key or a run number/sequence number
+        """ Refresh the existing runs in both of the combo box
+        The original set up will be preserved.
+        There won't be any operation to plot
         :return:
         """
+        # single runs
+        self._mutexRunNumberList = True
+
+        # Update single runs
+        curr_single_names, prev_single_names = self.update_single_run_combo_box()
+
+        # release
+        self._mutexRunNumberList = False
+
+        # make sure nothing will be plot
+        self._mutexChopRunList = True
+        self._mutexChopSeqList = True
+
+        # Update chopped runs
+        curr_chop_names, prev_chop_names = self.update_chopped_run_combo_box()
+
+        # release
+        self._mutexChopRunList = False
+        self._mutexChopSeqList = False
+
+
         # # could be an integer as run number: convert to string
         # if isinstance(set_to, int):
         #     set_to = str(set_to)
@@ -1010,18 +1075,12 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # datatypeutility.check_bool_variable('Flag to indicate whether the next will be set to chopped runs'
         #                                     'single run', is_chopped)
 
-        # nothing to plot
-        self._mutexChopRunList = True
-        self._mutexChopSeqList = True
+
 
         # TODO - TONIGHT 191 - ....
         # .. get current name
 
-        # Update single runs
-        self.update_single_run_combo_box()
 
-        # Update chopped runs
-        curr_chop_names, prev_chop_names = self.update_chopped_run_combo_box()
 
         # TODO - TONIGHT 191 - ....
         # .. set back to current name (if existed)
@@ -1063,12 +1122,99 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # END
 
+        return curr_single_names, prev_single_names, curr_chop_names, prev_chop_names
+
+    def set_chopped_run(self, chop_run_name, update_main):
+        """ Set the chopped run (name) to a specified value.
+        And then, refresh
+        :param chop_run_name: If None, then, current one
+        :return:
+        """
+        # lock
+        self._mutexChopRunList = True
+
+        if chop_run_name is None:
+            # get the name
+            chop_run_name = str(self.ui.comboBox_choppedRunNumber.currentText())
+
+            # exception for empty box
+            if chop_run_name == '':
+                self._mutexChopRunList = False
+                raise RuntimeError('Chopped run number (combo box) is empty')
+
+        elif chop_run_name in self._chop_combo_name_list:
+            # focus to the new one
+            item_index = self._chop_combo_name_list.index(chop_run_name)
+            self.ui.comboBox_choppedRunNumber.setCurrentIndex(item_index)
+
+        else:
+            # exception for wrong chop run name
+            self._mutexChopRunList = False
+            raise RuntimeError('Chopped run {} does not exist.  Available: {}'
+                               ''.format(chop_run_name, self._chop_combo_name_list))
+
+        # END-IF
+
+        # unlock
         self._mutexChopRunList = False
-        self._mutexChopSeqList = False
 
-        return curr_chop_names, prev_chop_names
+        # sequences
+        self._mutexChopSeqList = True  # lock
 
-    def view_data(self, set_to=None, set_to_seq=None, is_chopped=False, is_data_key=True):
+        chop_run_key = self._chop_combo_data_key_dict[chop_run_name]
+        seq_list = self._myController.project.get_chopped_sequence(chop_run_key)
+        print ('[DB...BAT] Reduced View Chopped sequence of {}: {}'.format(chop_run_key, seq_list))
+
+        # clean combo box
+        self.ui.comboBox_chopSeq.clear()
+
+        if len(seq_list) > 0:
+            seq_list.sort()
+
+            # update to the chop-sequences
+            self._chop_seq_combo_name_list = list()  # clear
+            for item_index, seq_i in enumerate(seq_list):
+                seq_item_i = '{}'.format(seq_i)
+                self.ui.comboBox_chopSeq.addItem(seq_item_i)
+                self._chop_seq_combo_name_list.append(seq_item_i)
+            # END-FOR
+        # END-IF (set chopped sequence)
+
+        self._mutexChopSeqList = False  # unlock
+
+        # if False:  # TODO FIXME - TODAY 191 - Leave to other methods
+        #     # handle the new index to the chop run combo box
+        #     if curr_chop_name in self._chop_combo_name_list:
+        #         # focus to the original one and no need to change the sequential number
+        #         combo_index = self._chop_combo_name_list.index(curr_chop_name)
+        #         chop_run_key = self._chop_combo_data_key_dict[curr_chop_name]
+        #         self.ui.comboBox_choppedRunNumber.setCurrentIndex(combo_index)
+        #         current_seq_item = str(self.ui.comboBox_chopSeq.currentText())
+        #     else:
+        #         # need to refresh: set to first one
+        #         self.ui.comboBox_choppedRunNumber.setCurrentIndex(0)
+        #         new_chop_run_name = self._chop_combo_name_list[0]
+        #         chop_run_key = self._chop_combo_data_key_dict[new_chop_run_name]
+        #         current_seq_item = None
+        #     # END-IF-ELSE
+        #
+        #     # refresh the list
+        #
+        # # END-IF-ELSE
+
+        return
+
+    # TODO - TODAY 191 - Evaluate whether this method is useful
+    def set_general_view(self, set_to=None, set_to_seq=None, is_chopped=False, is_data_key=True):
+        """
+        :param set_to: run number / combo item name to set to
+        :param set_to_seq: sequence index/name to set to
+        :param is_chopped: Flag whether it is good to set to chopped data
+        :param is_data_key: Flag to indicate that 'set_to' is a data key or a run number/sequence number
+        :return:
+        """
+
+
         # could be an integer as run number: convert to string
         if isinstance(set_to, int):
             set_to = str(set_to)
