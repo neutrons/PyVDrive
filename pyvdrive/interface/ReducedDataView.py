@@ -107,7 +107,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._data_key_run_seq = dict()  # [data key] = run number, chop-seq
 
         # chopped runs: chop run combo box items and other information
-        self._chop_combo_data_key_dict = dict()  # [chop run combo box name] = run number, slicer key; sync with combo
+        self._chop_combo_data_key_dict = dict()  # [chop run combo box name] = run number, slicer key;
+        # sync with comboBox_choppedRunNumber
         self._chop_combo_name_list = list()  # chop run combo box names with orders sync with combo box
         self._chop_seq_combo_name_list = list()   # chop sequence combo box names with orders sync with combo box
         self._chop_run_plot_option = dict()  # [chop key] = dict() such as van_norm, van_run, pc_norm...
@@ -117,12 +118,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # record of X value range
         self._xrange_dict = {'TOF': (1000, 70000),
                              'dSpacing': (None, None)}
-
-        # self._loadedChoppedRunList = list()   # synchronized with comboBox_choppedRunNumber
-        # chopped run number (parent-data-key) list:
-        # self._chopped_run_list = list()  # synchronized with comboBox_choppedRunNumber
-        # self._choppedRunDict = dict()  # [chop run ID *][seq_number**] = chopped/reduced workspace name
-        # * chop run ID in _loadedChoppedRunList  ** seq_number in ...
 
         # sample log runs and logs
         self._log_data_key = None
@@ -172,8 +167,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.comboBox_runs.currentIndexChanged.connect(self.evt_plot_different_single_run)
 
         # section: plot chopped run
-        self.ui.pushButton_prevChopped.clicked.connect(self.do_plot_prev_chopped)
-        self.ui.pushButton_nextChopped.clicked.connect(self.do_plot_next_chopped)
+        self.ui.pushButton_prevChopped.clicked.connect(self.do_plot_prev_chopped_sequence)
+        self.ui.pushButton_nextChopped.clicked.connect(self.do_plot_next_chopped_sequence)
+        self.ui.comboBox_choppedRunNumber.currentIndexChanged.connect(self.evt_plot_different_chopped_run)
         self.ui.comboBox_chopSeq.currentIndexChanged.connect(self.evt_plot_different_chopped_sequence)
 
         # section: plot sample log
@@ -304,23 +300,19 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             self.ui.lineEdit_run.setText('{}'.format(run_number))
 
         # get data sets
-        if run_number is not None and self._myController.has_chopped_data(run_number, reduced=True):
+        if run_number is not None and self._myController.has_native_sliced_reduced_workspaces(run_number) and False:
+            # TODO - TONIGHT 196 - Disabled to load data from memory
             # load from memory
             # FIXME - TOMORROW - NOT TEST YET! Need to be on analysis cluster!
-            data_key_dict, run_number_str = self._myController.load_chopped_data(run_number, chopped_seq_list)
+            data_key_dict, run_number_str = self._myController.something.load_chopped_data(run_number, chopped_seq_list)
             raise NotImplementedError('ASAP: What shall be chop key?')
         elif ipts_number is not None and run_number is not None:
             # load data from archive
-            self.load_reduced_data(ipts_number, run_number, chopped_seq_list)
-            # chopped_data_dir = self._myController.get_archived_data_dir(self._iptsNumber, run_number,
-            #                                                             chopped_data=True)
-            # file_loading_manager = self._myController.project.data_loading_manager
-            # chopped_data_dict = file_loading_manager.load_chopped_binned_data(run_number, chopped_data_dir,
-            #                                                                   chopped_seq_list, 'gsas')
+            data_key, loaded_seq_list = self.load_reduced_data(ipts_number, run_number, chopped_seq_list)
         else:
             raise NotImplementedError('Not sure how to load from an arbitrary directory!')
 
-        return
+        return loaded_seq_list
 
     def do_load_single_run(self, ipts_number=None, run_number=None, plot=True):
         """
@@ -345,29 +337,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         if run_number is not None and (self._is_run_in_memory(run_number) or ipts_number is not None):
             # load runs from memory or from disk
             try:
-                data_key = self.load_reduced_data(ipts_number, run_number, None)
+                data_key, no_use = self.load_reduced_data(ipts_number, run_number, None)
             except RuntimeError as run_err:
                 GuiUtility.pop_dialog_error(self, 'Unable to find GSAS: {}'.format(run_err))
+                return False
 
-        # if run_number is not None and self._is_run_in_memory(run_number):
-        #     # load from memory
-        #     data_key = self._myController.project.reduction_manager.get_reduced_workspace(run_number)
-        #     self._single_run_data_dict[run_number] = data_key
-        #     self._data_key_run_seq[data_key] = run_number, None
-        # elif ipts_number is not None and run_number is not None:
-        #     # load data from archive
-        #     try:
-        #         reduced_file_name = self._myController.archive_manager.get_gsas_file(ipts_number, run_number,
-        #                                                                              check_exist=True)
-        #         file_type = 'gsas'
-        #         data_key = self._myController.project.data_loading_manager.load_binned_data(reduced_file_name,
-        #                                                                                     file_type,
-        #                                                                                     max_int=99999)
-        #         self._single_run_data_dict[run_number] = data_key
-        #         self._data_key_run_seq[data_key] = run_number, None
-        #     except RuntimeError as run_err:
-        #         GuiUtility.pop_dialog_error(self, 'Unable to find GSAS: {}'.format(run_err))
-        #         return
         else:
             # load from disk by users' choice
             if ipts_number is not None:
@@ -383,7 +357,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                        file_list=False, save_file=False)
             # check whether user cancels the operation
             if reduced_data_file is None or reduced_data_file == '':
-                return
+                return False
 
             try:
                 if reduced_data_file.lower().endswith('nxs'):
@@ -405,7 +379,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # next step
         if plot:
             # refresh
-            self.do_refresh_existing_runs(set_to=data_key, is_chopped=False)
+            self.do_refresh_existing_runs()
+            # TODO - TONIGHT 191 - Implement set_single_run(name, key, blabla)
+            # TODO - TONIGHT 191 - Implement plot_current_data()
 
         return data_key
 
@@ -455,13 +431,12 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    # TODO - TONIGHT - Add UI
+    # TODO - TODAY 0 - Add UI
     def do_load_sliced_logs(self):
         """
         Load sliced sample logs
         :return:
         """
-
         try:
             ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
             run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
@@ -473,7 +448,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # END-TRY
 
         # load log
-        if self._myController.has_chopped_data(ipts_number, run_number, in_memory=True):
+        if self._myController.has_native_sliced_reduced_workspaces(ipts_number, run_number, in_memory=True):
             # data sliced in memory: simply need workspaces
             sample_log_names = self._sample_log_name_list
         else:
@@ -580,27 +555,32 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """ Update the chopped run's combo box
         :return:
         """
+        assert self._mutexChopRunList, 'Mutex on combo-box chopped run must be turned on'
+        assert self._mutexChopSeqList, 'Mutex on combo-box chopped sequence must be turned on'
+
+        # current run
+        curr_chopped_run_name = str(self.ui.comboBox_choppedRunNumber.currentText())
+        # preserve previously chopped runs' names
+        previous_chopped_names = set(self._chop_combo_name_list)
+
         # get chopped runs in the memory (loaded or real time reduced)
+        # FIXME TODO - TODAY 196 - only runs loaded from GSASs
         chopped_run_list = self._myController.get_focused_runs(chopped=True)  # chop keys: list of tuples
 
-        self._mutexChopRunList = True  # lock the event triggered and handled elsewhere
-
-        # get the current (chopped) run's name
-        if len(self._chop_combo_name_list) == 0:
-            curr_chop_name = None
-        else:
-            curr_chop_name = str(self.ui.comboBox_choppedRunNumber.currentText())  # whatever shown in the combo box
+        # FIXME - delete after #191
+        # # get the current (chopped) run's name
+        # if len(self._chop_combo_name_list) == 0:
+        #     curr_chop_name = None
+        # else:
+        #     curr_chop_name = str(self.ui.comboBox_choppedRunNumber.currentText())  # whatever shown in the combo box
 
         # reset the combo box anyway
         self.ui.comboBox_choppedRunNumber.clear()
+        self._chop_combo_name_list = list()
 
-        # set the chop runs from project
-        if len(chopped_run_list) == 0:
-            # no chopped run: reset image
-            self.ui.graphicsView_mainPlot.reset_1d_plots()
-            self._currentPlotID = None
-            self.ui.graphicsView_logPlot.reset()
-        else:
+        if len(chopped_run_list) > 0:
+            chopped_run_list.sort()
+
             # add chop "runs" to combo box
             for chop_run_tuple_i in chopped_run_list:
                 if isinstance(chop_run_tuple_i, tuple):
@@ -627,100 +607,150 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 self._chop_combo_name_list.append(chop_run_name)
                 self._chop_combo_data_key_dict[chop_run_name] = chop_key
             # END-FOR
+        # END-FOR
 
-            # handle the new index to the chop run combo box
-            if curr_chop_name in self._chop_combo_name_list:
-                # focus to the original one and no need to change the sequential number
-                combo_index = self._chop_combo_name_list.index(curr_chop_name)
-                chop_run_key = self._chop_combo_data_key_dict[curr_chop_name]
-                self.ui.comboBox_choppedRunNumber.setCurrentIndex(combo_index)
-                current_seq_item = str(self.ui.comboBox_chopSeq.currentText())
-            else:
-                # need to refresh: set to first one
-                self.ui.comboBox_choppedRunNumber.setCurrentIndex(0)
-                new_chop_run_name = self._chop_combo_name_list[0]
-                chop_run_key = self._chop_combo_data_key_dict[new_chop_run_name]
-                print ('[DB...BAT] New Chop Run: {}.  Slicer key: {}'.format(new_chop_run_name, chop_run_key))
-                current_seq_item = None
-            # END-IF-ELSE
+        # if False:  # TODO FIXME - TODAY 191 - Leave to other methods
+        #     # handle the new index to the chop run combo box
+        #     if curr_chop_name in self._chop_combo_name_list:
+        #         # focus to the original one and no need to change the sequential number
+        #         combo_index = self._chop_combo_name_list.index(curr_chop_name)
+        #         chop_run_key = self._chop_combo_data_key_dict[curr_chop_name]
+        #         self.ui.comboBox_choppedRunNumber.setCurrentIndex(combo_index)
+        #         current_seq_item = str(self.ui.comboBox_chopSeq.currentText())
+        #     else:
+        #         # need to refresh: set to first one
+        #         self.ui.comboBox_choppedRunNumber.setCurrentIndex(0)
+        #         new_chop_run_name = self._chop_combo_name_list[0]
+        #         chop_run_key = self._chop_combo_data_key_dict[new_chop_run_name]
+        #         current_seq_item = None
+        #     # END-IF-ELSE
+        #
+        #     # refresh the list
+        #     seq_list = self._myController.project.get_chopped_sequence(chop_run_key)
+        #     print ('[DB...BAT] Reduced View Chopped sequence of {}: {}'.format(chop_run_key, seq_list))
+        #     if len(seq_list) > 0:
+        #         self._mutexChopSeqList = True  # lock
+        #
+        #         # update to the chop-sequences
+        #         self.ui.comboBox_chopSeq.clear()
+        #         set_to_index = 0
+        #         self._chop_seq_combo_name_list = list()  # clear
+        #         for item_index, seq_i in enumerate(seq_list):
+        #             seq_item_i = '{}'.format(seq_i)
+        #             self.ui.comboBox_chopSeq.addItem(seq_item_i)
+        #             self._chop_seq_combo_name_list.append(seq_item_i)
+        #             if '{}'.format(seq_i) == current_seq_item:
+        #                 set_to_index = item_index
+        #         self.ui.comboBox_chopSeq.setCurrentIndex(set_to_index)
+        #
+        #         self._mutexChopSeqList = False  # unlock
+        #     # END-IF (set chopped sequence)
+        # # END-IF-ELSE
 
-            # refresh the list
-            seq_list = self._myController.project.get_chopped_sequence(chop_run_key)
-            print ('[DB...BAT] Chopped sequence: {}'.format(seq_list))
+        # After combo box update operation
+        if curr_chopped_run_name not in self._chop_combo_name_list:
+            # no chopped run: reset image
+            self.ui.graphicsView_mainPlot.reset_1d_plots()
+            self._currentPlotID = None
+            self.ui.graphicsView_logPlot.reset()
 
-            self._mutexChopSeqList = True    # lock
+            # TODO - TONIGHT 191.1 - May need to clear the chop sequence combo box... But there are other variables to set
+        else:
+            # set the chop run to 'current'/previous chopped name
+            combo_index = self._chop_combo_name_list.index(curr_chopped_run_name)
+            self.ui.comboBox_choppedRunNumber.setCurrentIndex(combo_index)
+        # END-IF
 
-            self.ui.comboBox_chopSeq.clear()
-            set_to_index = 0
-            self._chop_seq_combo_name_list = list()   # clear
-            for item_index, seq_i in enumerate(seq_list):
-                seq_item_i = '{}'.format(seq_i)
-                self.ui.comboBox_chopSeq.addItem(seq_item_i)
-                self._chop_seq_combo_name_list.append(seq_item_i)
-                if '{}'.format(seq_i) == current_seq_item:
-                    set_to_index = item_index
-            self.ui.comboBox_chopSeq.setCurrentIndex(set_to_index)
-
-            self._mutexChopSeqList = False   # unlock
-            # END-IF-ELSE
-        # END-IF-ELSE
-
-        self._mutexChopRunList = False  # unlock the chopped run boxes
-
-        return
+        return set(self._chop_combo_name_list), previous_chopped_names
 
     def update_single_run_combo_box(self):
         """ Update the single run combo-box with current single runs in the memory
         Changes will be made to
         (1) run combo box
         (2) single_run_list
-        :return:
+        :return: set of current single run list, set of previous single run list
         """
+        assert self._mutexRunNumberList, 'Mutex for run number combo box must be turned on before called'
+
+        # register
+        prev_runs_names = set(self._single_combo_name_list)
+        curr_run_name = str(self.ui.comboBox_runs.currentText())
+
+        # refresh
         single_runs_list = self._myController.get_focused_runs(chopped=False)
+        self.ui.comboBox_runs.clear()
+
         self._single_combo_name_list = list()
-
-        self._mutexRunNumberList = True  # set on the mutex
-
-        if len(single_runs_list) == 0:
-            # no runs: just clear in case
-            self.ui.comboBox_runs.clear()
-
-        else:
-            # current selection
-            current_single_run_name = str(self.ui.comboBox_runs.currentText()).strip()
-            if current_single_run_name == '':
-                current_single_run_name = None
-
-            # single runs
+        if len(single_runs_list) > 0:
             single_runs_list.sort()
 
-            # update
-            self.ui.comboBox_runs.clear()
             for run_number, data_key in single_runs_list:
                 print ('[INFO] Add loaded run {} (type = {}) data key = {}'
                        ''.format(run_number, type(run_number), data_key))
 
                 # come up an entry name
                 # convert run  number from integer to string as the standard
-                if isinstance(run_number, int):
-                    run_number = '{0}'.format(run_number)
+                item_name_i = '{0}'.format(run_number)
 
                 # add to combo box as the data key that can be used to refer
-                self.ui.comboBox_runs.addItem(run_number)
-                self._single_combo_name_list.append(run_number)  # synchronize single_run_list with combo box
-                self._single_combo_data_key_dict[run_number] = data_key
+                self.ui.comboBox_runs.addItem(item_name_i)
+                self._single_combo_name_list.append(item_name_i)  # synchronize single_run_list with combo box
+                self._single_combo_data_key_dict[item_name_i] = data_key
             # END-FOR
+        # END-IF
 
+        # after update operation
+        if curr_run_name != '' and curr_run_name in self._single_combo_name_list:
             # re-focus to the previous one
-            if current_single_run_name != '' and current_single_run_name in self._single_combo_name_list:
-                combo_index = self._single_combo_name_list.index(current_single_run_name)
-                self.ui.comboBox_runs.setCurrentIndex(combo_index)
-        # END-IF-ELSE
+            combo_index = self._single_combo_name_list.index(curr_run_name)
+            self.ui.comboBox_runs.setCurrentIndex(combo_index)
+        elif self.ui.radioButton_chooseSingleRun.isChecked():
+            # previously plotting a single run: reset
+            self.ui.graphicsView_mainPlot.reset_1d_plots()
 
-        # loose it
-        self._mutexRunNumberList = False
+        #
+        #
+        #
+        #
+        #
+        # if len(single_runs_list) == 0:
+        #     # no runs: clear image
+        #     self.ui.graphicsView_mainPlot.reset_1d_plots()
+        # else:
+        #     # current selection
+        #     current_single_run_name = str(self.ui.comboBox_runs.currentText()).strip()
+        #     if current_single_run_name == '':
+        #         current_single_run_name = None
+        #
+        #     # single runs
+        #
+        #     # update
+        #     self.ui.comboBox_runs.clear()
+        #     # for run_number, data_key in single_runs_list:
+        #     #     print ('[INFO] Add loaded run {} (type = {}) data key = {}'
+        #     #            ''.format(run_number, type(run_number), data_key))
+        #     #
+        #     #     # come up an entry name
+        #     #     # convert run  number from integer to string as the standard
+        #     #     if isinstance(run_number, int):
+        #     #         run_number = '{0}'.format(run_number)
+        #     #
+        #     #     # add to combo box as the data key that can be used to refer
+        #     #     self.ui.comboBox_runs.addItem(run_number)
+        #     #     self._single_combo_name_list.append(run_number)  # synchronize single_run_list with combo box
+        #     #     self._single_combo_data_key_dict[run_number] = data_key
+        #     # # END-FOR
+        #
+        #     # re-focus to the previous one
+        #     if current_single_run_name != '' and current_single_run_name in self._single_combo_name_list:
+        #         combo_index = self._single_combo_name_list.index(current_single_run_name)
+        #         self.ui.comboBox_runs.setCurrentIndex(combo_index)
+        # # END-IF-ELSE
+        #
+        # # loose it
+        # self._mutexRunNumberList = False
 
-        return
+        return prev_runs_names, set(self._single_combo_name_list)
 
     def do_set_x_range(self):
         """ Apply new data range to the plots on graph
@@ -849,7 +879,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def do_plot_prev_chopped(self):
+    def do_plot_prev_chopped_sequence(self):
         """
         Plot previous chopped sequence
         :return:
@@ -865,7 +895,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def do_plot_next_chopped(self):
+    def do_plot_next_chopped_sequence(self):
         """
         Plot the next chopped sequence reduced data
         :return:
@@ -994,14 +1024,207 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def do_refresh_existing_runs(self, set_to=None, set_to_seq=None, is_chopped=False, is_data_key=True):
-        """ refresh the existing runs in the combo box
+    def do_refresh_existing_runs(self):
+        """ Refresh the existing runs in both of the combo box
+        The original set up will be preserved.
+        There won't be any operation to plot
+        :return:
+        """
+        # single runs
+        self._mutexRunNumberList = True
+
+        # Update single runs
+        curr_single_names, prev_single_names = self.update_single_run_combo_box()
+
+        # release
+        self._mutexRunNumberList = False
+
+        # make sure nothing will be plot
+        self._mutexChopRunList = True
+        self._mutexChopSeqList = True
+
+        # Update chopped runs
+        curr_chop_names, prev_chop_names = self.update_chopped_run_combo_box()
+
+        # release
+        self._mutexChopRunList = False
+        self._mutexChopSeqList = False
+
+
+        # # could be an integer as run number: convert to string
+        # if isinstance(set_to, int):
+        #     set_to = str(set_to)
+        # if isinstance(set_to_seq, int):
+        #     set_to_seq = '{}'.format(set_to_seq)
+        #
+        # datatypeutility.check_bool_variable('Flag to indicate whether the next will be set to chopped runs'
+        #                                     'single run', is_chopped)
+
+
+
+        # TODO - TONIGHT 191 - ....
+        # .. get current name
+
+
+
+        # TODO - TONIGHT 191 - ....
+        # .. set back to current name (if existed)
+
+        # # focus on
+        # if set_to is not None and not is_chopped:
+        #     # need to set the combo index to the specified SINGLE run
+        #     self.ui.radioButton_chooseSingleRun.setChecked(True)
+        #     if is_data_key:
+        #         for combo_name in self._single_combo_data_key_dict.keys():
+        #             if self._single_combo_data_key_dict[combo_name] == set_to:
+        #                 set_to = combo_name
+        #                 break
+        #     new_single_index = self._single_combo_name_list.index(set_to)
+        #     self.ui.comboBox_runs.setCurrentIndex(new_single_index)  # this will trigger the event to plot!
+        #
+        # elif set_to is not None and is_chopped:
+        #     # need to update the focus to chopped run and plot
+        #     self.ui.radioButton_chooseChopped.setChecked(True)
+        #     # NOTE: be careful about non-existing chop name and seq name
+        #     if set_to in self._chop_combo_name_list:
+        #         new_chop_index = self._chop_combo_name_list.index(set_to)
+        #         self.ui.comboBox_choppedRunNumber.setCurrentIndex(new_chop_index)  # this will trigger the event to plot
+        #         if set_to_seq in self._chop_seq_combo_name_list:
+        #             new_seq_index = self._chop_seq_combo_name_list.index(set_to_seq)
+        #             self.ui.comboBox_chopSeq.setCurrentIndex(new_seq_index)
+        #         else:
+        #             GuiUtility.pop_dialog_error(self, 'Failed to set chopped run {} to seq {}. Reason: {}'
+        #                                               ' does not exist in chopped sequences'
+        #                                               ''.format(set_to, set_to_seq, set_to_seq))
+        #             # self._mutexChopRunList = False
+        #             # self._mutexChopSeqList = False
+        #             return
+        #     else:
+        #         GuiUtility.pop_dialog_error(self, '{} does not exist in chopped runs'.format(set_to))
+        #         self._mutexChopRunList = False
+        #         self._mutexChopSeqList = False
+        #         return
+
+        # END
+
+        return curr_single_names, prev_single_names, curr_chop_names, prev_chop_names
+
+    def set_chopped_run(self, chop_run_name, slice_sequence_name):
+        """ Set the chopped run (name) to a specified value.
+        NO PLOT! SO client needs to call plot explicitly
+        :param chop_run_name: If None, then, current one
+        :param slice_sequence_name:
+        :return:
+        """
+        datatypeutility.check_string_variable('Slice sequence name', slice_sequence_name)
+
+        # lock
+        self._mutexChopRunList = True
+
+        # set radio button
+        # TODO - TONIGHT 191 - Need event handler for changing radio button (mutex too)
+        self.ui.radioButton_chooseChopped.setChecked(True)
+
+        if chop_run_name is None:
+            # use the current name
+            chop_run_name = str(self.ui.comboBox_choppedRunNumber.currentText())
+            print ('[.....] current name = {} / {}'
+                   ''.format(chop_run_name, self.ui.comboBox_choppedRunNumber.currentIndex()))
+
+            # exception for empty box
+            if chop_run_name == '':
+                self._mutexChopRunList = False
+                raise RuntimeError('Chopped run number (combo box) is empty')
+
+        elif chop_run_name in self._chop_combo_name_list:
+            # focus to the new one
+            item_index = self._chop_combo_name_list.index(chop_run_name)
+
+            print ('[.....] target name = {}, focus to {}... combo name list: {}'
+                   ''.format(chop_run_name, item_index, self._chop_combo_name_list))
+
+            self.ui.comboBox_choppedRunNumber.setCurrentIndex(item_index)
+
+        else:
+            # exception for wrong chop run name
+            self._mutexChopRunList = False
+            raise RuntimeError('Chopped run {} does not exist.  Available: {}'
+                               ''.format(chop_run_name, self._chop_combo_name_list))
+
+        # END-IF
+
+        # unlock
+        self._mutexChopRunList = False
+
+        # sequences
+        self._mutexChopSeqList = True  # lock
+
+        chop_run_key = self._chop_combo_data_key_dict[chop_run_name]
+        seq_list = self._myController.project.get_chopped_sequence(chop_run_key)
+        print ('[DB...BAT] Reduced View Chopped sequence of {}: {}'.format(chop_run_key, seq_list))
+
+        # clean combo box
+        self.ui.comboBox_chopSeq.clear()
+
+        if len(seq_list) > 0:
+            seq_list.sort()
+
+            # update to the chop-sequences
+            self._chop_seq_combo_name_list = list()  # clear
+            for item_index, seq_i in enumerate(seq_list):
+                seq_item_i = '{}'.format(seq_i)
+                self.ui.comboBox_chopSeq.addItem(seq_item_i)
+                self._chop_seq_combo_name_list.append(seq_item_i)
+            # END-FOR
+        # END-IF (set chopped sequence)
+
+        if slice_sequence_name in self._chop_seq_combo_name_list:
+            seq_index = self._chop_seq_combo_name_list.index(slice_sequence_name)
+            self.ui.comboBox_chopSeq.setCurrentIndex(seq_index)
+        else:
+            print ('[WARNING] Unable to focus chop run {} to sequence {}'.format(chop_run_name, slice_sequence_name))
+            debug_string = ''
+            # focus sequence
+            # for name in self._chop_seq_combo_name_list:
+            #     print (name, type(name))
+            # print (slice_sequence_name, type(slice_sequence_name))
+
+
+        self._mutexChopSeqList = False  # unlock
+
+        # if False:  # TODO FIXME - TODAY 191 - Leave to other methods
+        #     # handle the new index to the chop run combo box
+        #     if curr_chop_name in self._chop_combo_name_list:
+        #         # focus to the original one and no need to change the sequential number
+        #         combo_index = self._chop_combo_name_list.index(curr_chop_name)
+        #         chop_run_key = self._chop_combo_data_key_dict[curr_chop_name]
+        #         self.ui.comboBox_choppedRunNumber.setCurrentIndex(combo_index)
+        #         current_seq_item = str(self.ui.comboBox_chopSeq.currentText())
+        #     else:
+        #         # need to refresh: set to first one
+        #         self.ui.comboBox_choppedRunNumber.setCurrentIndex(0)
+        #         new_chop_run_name = self._chop_combo_name_list[0]
+        #         chop_run_key = self._chop_combo_data_key_dict[new_chop_run_name]
+        #         current_seq_item = None
+        #     # END-IF-ELSE
+        #
+        #     # refresh the list
+        #
+        # # END-IF-ELSE
+
+        return chop_run_key
+
+    # TODO - TODAY 191 - Evaluate whether this method is useful
+    def set_general_view(self, set_to=None, set_to_seq=None, is_chopped=False, is_data_key=True):
+        """
         :param set_to: run number / combo item name to set to
         :param set_to_seq: sequence index/name to set to
         :param is_chopped: Flag whether it is good to set to chopped data
         :param is_data_key: Flag to indicate that 'set_to' is a data key or a run number/sequence number
         :return:
         """
+
+
         # could be an integer as run number: convert to string
         if isinstance(set_to, int):
             set_to = str(set_to)
@@ -1011,13 +1234,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         datatypeutility.check_bool_variable('Flag to indicate whether the next will be set to chopped runs'
                                             'single run', is_chopped)
 
-        # Update single runs
-        self.update_single_run_combo_box()
-
-        # Update chopped runs
-        self.update_chopped_run_combo_box()
-
-        # re-focus back to original one
+        # focus on
         if set_to is not None and not is_chopped:
             # need to set the combo index to the specified SINGLE run
             self.ui.radioButton_chooseSingleRun.setChecked(True)
@@ -1032,13 +1249,25 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         elif set_to is not None and is_chopped:
             # need to update the focus to chopped run and plot
             self.ui.radioButton_chooseChopped.setChecked(True)
-            print ('[DB...BAT] Set To: {} as {}'.format(set_to, type(set_to)))
-            new_chop_index = self._chop_combo_name_list.index(set_to)
-            self.ui.comboBox_choppedRunNumber.setCurrentIndex(new_chop_index)  # this will trigger the event to plot
-            new_seq_index = self._chop_seq_combo_name_list.index(set_to_seq)
-            self.ui.comboBox_chopSeq.setCurrentIndex(new_seq_index)
-
-        # END
+            # NOTE: be careful about non-existing chop name and seq name
+            if set_to in self._chop_combo_name_list:
+                new_chop_index = self._chop_combo_name_list.index(set_to)
+                self.ui.comboBox_choppedRunNumber.setCurrentIndex(new_chop_index)  # this will trigger the event to plot
+                if set_to_seq in self._chop_seq_combo_name_list:
+                    new_seq_index = self._chop_seq_combo_name_list.index(set_to_seq)
+                    self.ui.comboBox_chopSeq.setCurrentIndex(new_seq_index)
+                else:
+                    GuiUtility.pop_dialog_error(self, 'Failed to set chopped run {} to seq {}. Reason: {}'
+                                                      ' does not exist in chopped sequences'
+                                                      ''.format(set_to, set_to_seq, set_to_seq))
+                    # self._mutexChopRunList = False
+                    # self._mutexChopSeqList = False
+                    return
+            else:
+                GuiUtility.pop_dialog_error(self, '{} does not exist in chopped runs'.format(set_to))
+                # self._mutexChopRunList = False
+                # self._mutexChopSeqList = False
+                return
 
         return
 
@@ -1245,6 +1474,52 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
+    def evt_plot_different_chopped_run(self):
+        """
+        Handle the event if there is a change in chopped run to plot
+        :return:
+        """
+        print ('[DB.............BAT] Chopped run is changed... size = {}'
+               ''.format(self.ui.comboBox_choppedRunNumber.size()))
+
+        # skip if mutex is on
+        if self._mutexChopRunList is True:
+            return
+
+        # get current chop name
+        curr_chop_name = str(self.ui.comboBox_choppedRunNumber.currentText())
+        if curr_chop_name == '':
+            print ('[DB...BAT] Is ChoppedRun combo box empty? {}'
+                   ''.format(self.ui.comboBox_choppedRunNumber.size()))
+            return
+
+        curr_data_key = self._chop_combo_data_key_dict[curr_chop_name]
+
+        chopped_sequence_list = self._myController.project.get_chopped_sequence(curr_data_key)
+
+        # clear
+        self._mutexChopSeqList = True
+        self.ui.comboBox_chopSeq.clear()
+        self._chop_seq_combo_name_list = list()
+        self._mutexChopSeqList = False
+
+        # plot the first one
+        print ('[DB...BAT] Tending to update/plot run {} chop-seq {}'.format(curr_chop_name, chopped_sequence_list[0]))
+        if len(chopped_sequence_list) > 0:
+            seq_name_0 = '{}'.format(chopped_sequence_list[0])
+            self.ui.comboBox_chopSeq.addItem(seq_name_0)
+        # END-IF-ELSE
+
+        # plot the others
+        self._mutexChopSeqList = True
+        for item_index in range(1, len(chopped_sequence_list)):
+            seq_name_i = '{}'.format(chopped_sequence_list[item_index])
+            self.ui.comboBox_chopSeq.addItem(seq_name_i)
+            self._chop_seq_combo_name_list.append(seq_name_i)
+        self._mutexChopSeqList = False
+
+        return
+
     def evt_plot_different_chopped_sequence(self):
         """
         Handle the event if there is change in chopped sequence list
@@ -1380,8 +1655,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # Check
         # assert isinstance(controller, VDriveAPI)
         self._myController = controller
-
-        self.do_refresh_existing_runs(set_to=None)
+        self.do_refresh_existing_runs()
 
         return
 
@@ -1407,21 +1681,15 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         Load reduced data
         :param ipts_number:
-        :param run_number:
+        :param run_number: can (1) run number (int) or None (loading explicitly)
         :param chop_seq_index_list:
-        :return: (1) data key  or (2) dictionary of keys
+        :return: 2-tuple (1) data key  or  dictionary of keys  (2) loaded chop-sequence indexes
         """
-        # datatypeutility.check_int_variable('Run number', run_number, (1, 99999999))
-
-        print ('[DB................BAT................LOOK! HERE TO LOAD')
-
         if chop_seq_index_list is None:
             # original run
             if run_number is not None and self._is_run_in_memory(run_number):
                 # load from memory
                 data_key = self._myController.project.reduction_manager.get_reduced_workspace(run_number)
-                # self._single_run_data_dict[run_number] = data_key
-                # self._data_key_run_seq[data_key] = run_number, None
             else:
                 # load from archived disk
                 reduced_file_name = self._myController.archive_manager.get_gsas_file(ipts_number, run_number,
@@ -1436,17 +1704,17 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             self._single_run_data_dict[run_number] = data_key
             self._data_key_run_seq[data_key] = run_number, None
 
+            load_seq_list = None
+
         else:
             # chopped run
-            print ('[DB................BAT................LOOK! HERE TO LOAD CHOPPED')
-
             datatypeutility.check_list('Chopped sequence indexes', chop_seq_index_list)
             chopped_data_dir = self._myController.get_archived_data_dir(ipts_number, run_number,
                                                                         chopped_data=True)
             file_loading_manager = self._myController.project.data_loading_manager
-            data_set_dict = file_loading_manager.load_chopped_binned_data(run_number, chopped_data_dir,
-                                                                          chop_seq_index_list, 'gsas')
-            print ('[DB................BAT................LOOK! LOADED: {}'.format(data_set_dict.keys()))
+            data_set_dict, load_seq_list = file_loading_manager.load_chopped_binned_data(run_number, chopped_data_dir,
+                                                                                         chop_seq_index_list,
+                                                                                         'gsas')
 
             # record
             if run_number not in self._chopped_run_data_dict:
@@ -1464,9 +1732,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # # register
         # vdrive_constants.run_ipts_dict[run_number] = ipts_number
 
-        return data_key
+        return data_key, load_seq_list
 
-    # TODO - TONIGHT 0 - Clean!
     def retrieve_loaded_reduced_data(self, data_key, ipts_number, run_number, chop_seq_index, bank_id, unit, pc_norm, van_run):
         """
         Retrieve reduced data from workspace (via run number) to _reducedDataDict.
@@ -1477,14 +1744,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :return:
         """
         assert data_key is not None, 'Data key must be initialized'
-
-        # try:
-        #     data_set = self._myController.get_reduced_data(run_id=data_key, target_unit=unit, bank_id=bank_id)
-        # except RuntimeError as run_err:
-        #     raise run_err
-        # # convert to 2 vectors
-        # vec_x = data_set[bank_id][0]
-        # vec_y = data_set[bank_id][1]
 
         # vanadium or PC
         if pc_norm:
@@ -1500,7 +1759,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # plot on the main figure
         if chop_seq_index is not None:
-            print ('[DB............BAT.............CHOPPED KEY LOOK] key = {}'.format(data_key))
             vec_x, vec_y = self._myController.project.get_chopped_sequence_data(data_key, chop_seq_index,
                                                                                 bank_id, unit)
         else:
@@ -1801,13 +2059,51 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                 'van_run': van_run}
 
         # record the current chopped-sequence
+        # TODO - TODAY-TEST 0.191.2 - Implement a method to filter seq_list with get_chopped_sequences()
+        existing_seq_list = self._myController.project.get_chopped_sequence(chop_key)
+
+        # check whether any sequence exists
+        if len(existing_seq_list) == 0:
+            GuiUtility.pop_dialog_error(self, 'There is no chopped sequences for (chop key) {}'.format(chop_key))
+            return
+
+        if seq_list is None:
+            # default is to use all the chopped sequences
+            seq_list = existing_seq_list[:]
+        else:
+            # check whether user-specified sequences do exist
+            filtered_seq_list = list()
+            non_exist_seqs = list()
+
+            for user_seq in seq_list:
+                if user_seq in existing_seq_list:
+                    filtered_seq_list.append(user_seq)
+                else:
+                    non_exist_seqs.append(user_seq)
+            # END-FOR
+            if len(non_exist_seqs) == len(seq_list):
+                GuiUtility.pop_dialog_error(self, 'For (chop key) {}, none of the users specified sequence\n{}\n'
+                                                  'exists. \nAvailable sequences are \n{}'
+                                                  ''.format(chop_key, seq_list, existing_seq_list))
+                return
+            elif len(non_exist_seqs) > 0:
+                GuiUtility.pop_dialog_error(self, 'For (chop key) {}, the following chopped sequences do not exist:'
+                                                  '\n{}'.format(chop_key, non_exist_seqs))
+            # assign
+            seq_list = filtered_seq_list[:]
+        # END-IF-ELSE
+
+        # set current sequence to plot as single pattern
+        # NOTE: maybe over-engineered.  But safe is the highest priority
         try:
             # loaded GSAS file... possible non-consecutive integers
             curr_seq = int(str(self.ui.comboBox_chopSeq.currentText()))
+            if curr_seq not in seq_list:
+                curr_seq = seq_list[0]
         except ValueError:
             # just-reduced run
-            curr_seq = self.ui.comboBox_chopSeq.currentIndex()
-        # END-IF-ELSE
+            curr_seq = seq_list[0]
+        # END-TRY
 
         # vanadium or PC
         if pc_norm:
@@ -1860,7 +2156,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             else:
                 van_run_tmp = None
             # plot 1Ds
-            for bank_id in range(1, 4):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
+            # TODO - FUTURE - This could be an issue for Not-3 bank data
+            MAX_BANK = 3
+            for bank_id in range(1, MAX_BANK+1):
                 child_window = self.launch_single_run_view()
                 vec_x, vec_y = get_single_bank_data(chop_run_key=chop_key,
                                                     curr_seq_index=curr_seq,
@@ -1884,8 +2182,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # END-IF-NOT (main)
 
         # set sequence
-        if seq_list is None:
-            seq_list = self._myController.project.get_chopped_sequence(chop_key)
         if not main_only and len(seq_list) > 1:
             # launch windows for contour plots and 3D line plots
             for bank_id in range(1, 4):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data

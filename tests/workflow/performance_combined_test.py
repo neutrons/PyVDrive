@@ -9,6 +9,10 @@ except ImportError:
     from PyQt4.QtGui import QApplication
 
 
+PASSED = False
+TEST_NOW = True
+
+
 def test_vbin_chop_simple(tester):
     """
     Test a set of commands including VBIN, CHOP
@@ -107,6 +111,41 @@ def test_chop_large_set(tester):
     # output summary
     tester.show_output_files(test_dir)
 
+    return
+
+
+def acceptance_test_phase1_analysis_cluster(tester):
+    """
+    Acceptance test for PyVDrive phase 1
+    Requirement: This shall be run on analysis cluster
+    Here is the sequence of commands to test with
+    1. chop, ipts = 22753, runs = 172271, dbin = 120
+    2. view, ipts=22753, choprun=172271, runs=2
+    3. view, ipts=22753, choprun=172271, runs=1,rune=500, runv=171869
+    4. merge, ipts=22753, runlist=172360 & 172362
+    5. view,ipts=22753,choprun=172360,runs=1
+    6. view,ipts=22753,runs=172360
+    7. chop, help=1
+    :param tester:
+    :return:
+    """
+    commands_list = ['chop, ipts = 22753, runs = 172271, dbin = 120',
+                     'view, ipts=22753, choprun=172271, runs=2',
+                     'view, ipts=22753, choprun=172271, runs=1,rune=500, runv=171869',
+                     'merge, ipts=22753, runlist=172360 & 172362',
+                     'view,ipts=22753,choprun=172360,runs=1',
+                     'view,ipts=22753,runs=172360',
+                     'chop, help=1']
+
+    # run commands
+    for idl_command in commands_list:
+        tester.run_command(idl_command)
+
+    # output
+    tester.show_output_files('/SNS/VULCAN/IPTS-22753/shared/binned_data/172271')
+    tester.show_output_files('/SNS/VULCAN/IPTS-22753/shared/binned_data/172360')
+
+    return
 
 
 def test_main():
@@ -115,13 +154,18 @@ def test_main():
     """
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
-    test_vbin_chop_simple(command_tester)
+    if TEST_NOW:
+        acceptance_test_phase1_analysis_cluster(command_tester)
 
-    # large data set for chopping
-    # test_chop_large_set(command_tester)
+    if PASSED:
+        test_vbin_chop_simple(command_tester)
 
-    # large data set combo
-    test_vbin_chop_large_set(command_tester)
+        # large data set for chopping
+        test_chop_large_set(command_tester)
+
+        # large data set combo
+        test_vbin_chop_large_set(command_tester)
+    # END-IF
 
     return command_tester.main_window
 

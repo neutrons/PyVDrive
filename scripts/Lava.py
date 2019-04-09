@@ -49,9 +49,7 @@ class LauncherManager(QDialog):
             if dir_name.startswith('lib'):
                 lib_dir = dir_name
         ui_dir = os.path.join(script_dir, '../{}/pyvdrive/interface/gui'.format(lib_dir))
-        # print ('UI dir = {}. Exist = {}'.format(ui_dir, os.path.exists(ui_dir)))
         ui_path = os.path.join(ui_dir, 'LaunchManager.ui')
-        # print ('UI     = {}. Exist = {}'.format(ui_path, os.path.exists(ui_path)))
         self.ui = load_ui(ui_path, baseinstance=self)
 
         # init widgets
@@ -180,66 +178,65 @@ def lava_app():
         _app = QApplication(sys.argv)
     return _app
 
+
 # get arguments
 args = sys.argv
 if len(args) == 2:
     option = args[1]
 else:
-    option = None
+    option = '-t'
+if isinstance(option, str):
+    option = option.lower()
+else:
+    print ('Lava option must be a string.  Execute "lava --help" for help')
+    sys.exit(-1)
 
 app = lava_app()
 
 launcher = LauncherManager()
 launcher.show()
 
-if option is None:
-    pass
 
-elif isinstance(option, str) and (option.lower().startswith('-h') or option.lower().startswith('--h')):
+if option in ['-h', '--help']:
     print 'Options:'
     print '  -t: launch IPython terminal'
     print '  -c: launch chopping/slicing interface'
-    print '  -p: launch peak processing interface'
-    print '  -v: launch reduced data view interface'
-    print '  --live: launch live data view interface in auto mode'
+    print '  --view (-v): launch reduced data view interface'
+    print '  --peak (-p): launch peak processing interface'
+    print '  --main (-m): launch main PyVDrive GUI control panel'
+    print '  --live (-l): launch live data view interface in auto mode'
     print '  --live-prof: launch live data view interface in professional mode'
     print '  --record: launch experimental record manager'
     sys.exit(1)
 
-elif option.lower() == '-m':
+elif option in ['-v', '--view']:
     launcher.do_launch_vdrive()
     launcher.close()
 
-elif isinstance(option, str) and option.lower() == '-t':
+elif option in ['-t']:
     launcher.do_launch_terminal()
     launcher.close()
 
-elif isinstance(option, str) and option.lower().startswith('-c'):
+elif option in ['-c']:
     launcher.do_launch_chopper()
     launcher.close()
 
-elif isinstance(option, str) and option.lower().startswith('-p'):
+elif option in ['-p', '--peak']:
     launcher.do_launch_peak_picker()
     launcher.close()
 
-elif isinstance(option, str) and option.lower().startswith('-v'):
+elif option in ['-v', '--view']:
     launcher.do_launch_viewer()
     launcher.close()
 
-elif isinstance(option, str) and option.lower().count('t') and option.lower().count('c'):
-    launcher.do_launch_chopper()
-    launcher.do_launch_terminal()
-    launcher.close()
-
-elif isinstance(option, str) and option.lower().startswith('--live'):
+elif option in ['--live', '-l']:
     # live view widget
     auto_start = option.lower().count('prof') == 0
     launcher.do_launch_live_view(auto_start)
     launcher.close()
 
-elif isinstance(option, str) and option.lower().startswith('--record'):
+elif option in ['--record']:
     launcher.do_launch_record_view()
     launcher.close()
-
 
 app.exec_()

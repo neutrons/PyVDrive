@@ -255,6 +255,8 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # self._pickerRangeDict[self._currMousePosX] = indicator_id
         self._pickerRangeDict[pos_x] = indicator_id
 
+        # TODO - TONIGHT -
+
         # update the new list to parent window
         picker_pos_list = self.get_pickers_positions()
         self.mySlicerUpdatedSignal.emit(picker_pos_list)

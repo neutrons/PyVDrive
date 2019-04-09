@@ -90,6 +90,8 @@ class AtomicReduced1DViewer(QMainWindow):
         self.ui.pushButton_setYRange.clicked.connect(self.do_set_y_range)
         self.ui.pushButton_removeLine.clicked.connect(self.do_remove_line)
         self.ui.pushButton_addLine.clicked.connect(self.do_add_line)
+        self.ui.pushButton_saveData.clicked.connect(self.do_save_data)
+        self.ui.actionQuit.triggered.connect(self.do_quit)
 
         # list of plot IDs for add/remove
         self._plot_id_dict = dict()  # [run, (chop-sq)] = plot ID
@@ -190,7 +192,7 @@ class AtomicReduced1DViewer(QMainWindow):
                                                                      chop_seq_index, bank_id, unit='dSpacing',
                                                                      pc_norm=self._norm_proton_charge,
                                                                      van_run=self._van_number)
-        except RuntimeError as run_err:
+        except (RuntimeError, KeyError) as run_err:
             GuiUtility.pop_dialog_error(self, 'Unable to retrieve data from Run {} Bank {} due to {}'
                                               ''.format(run_number, bank_id, run_err))
             return
@@ -202,7 +204,13 @@ class AtomicReduced1DViewer(QMainWindow):
 
         return
 
-    # TODO - TODAY 191 - Test new feature
+    def do_quit(self):
+        """
+        Quit/close
+        :return:
+        """
+        self.close()
+
     def do_remove_line(self):
         """ Remove a line
         :return:
@@ -233,6 +241,32 @@ class AtomicReduced1DViewer(QMainWindow):
         else:
             GuiUtility.pop_dialog_error(self, 'Run {} Chop-Seq {} is not in figure to delete'
                                               ''.format(run_number, chop_seq_index))
+
+        return
+
+    def do_save_data(self):
+        """
+        Save plotted data as data file or image according to the file type
+        :return:
+        """
+        default_dir = self._parent.controller.get_working_dir()
+        file_filter = 'PNG (*.png);;JPG (*.jpg);;Post Script (*.ps);;Ascii (*.dat);;HDF5 (*.hdf5)'
+
+        out_file_name = GuiUtility.get_save_file_by_dialog(self, 'Specify file name to save data',
+                                                           default_dir, file_filter)
+
+        # identify the file type
+        file_postfix = out_file_name.split('.')[-1].lower()
+
+        if file_postfix in ['png', 'jpg', 'jpeg', 'ps', 'pdf']:
+            # export image to file
+            self.ui.graphicsView_mainPlot.save_image(out_file_name)
+        elif file_postfix in ['hdf5', 'h5', 'dat', 'data']:
+            # save column data
+            self.ui.graphicsView_mainPlot.export_data(out_file_name)
+        else:
+            GuiUtility.pop_dialog_error(self, 'Output file {} with type {} is not supported.'
+                                              ''.format(out_file_name, file_postfix))
 
         return
 
@@ -268,8 +302,6 @@ class AtomicReduced1DViewer(QMainWindow):
 
         return
 
-    # INFORMATION
-    # TODO - TODAY 191 - TEST
     def plot_data(self, vec_x, vec_y, data_key, unit, bank_id, plot_info):
         """ Plot 1D diffraction data
         :param vec_x:

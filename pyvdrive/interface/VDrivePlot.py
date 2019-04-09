@@ -33,6 +33,7 @@ from pyvdrive.interface.gui.mplgraphicsview import MplGraphicsView
 from pyvdrive.interface.gui.vdrivetreewidgets import FileSystemTreeView
 from pyvdrive.interface.gui.vdrivetablewidgets import VdriveRunTableWidget
 from pyvdrive.interface.gui.vdrivetablewidgets import TimeSegmentsTable
+from pyvdrive.lib import file_utilities
 import PeakPickWindow as PeakPickWindow
 import snapgraphicsview as SnapGView
 import ReducedDataView as DataView
@@ -1023,7 +1024,7 @@ class VdriveMainWindow(QMainWindow):
 
         # Import file
         try:
-            ref_run, run_start, time_seg_list = self._myWorkflow.import_data_slicers(seg_file_name)
+            time_seg_list = file_utilities.parse_data_slicer_file(seg_file_name)  # missing: ref_run, run_start_time,
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self, str(run_err))
             return

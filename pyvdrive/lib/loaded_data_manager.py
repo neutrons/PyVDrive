@@ -78,9 +78,8 @@ class LoadedDataManager(object):
         """
         get the GSAS workspaces of a chopped run as a sequence
         :param run_number:
-        :return:
+        :return: list of integers (as sequence order)
         """
-        # datatypeutility.check_int_variable('Run number', run_number, (1, 99999999))
         if run_number not in self._chopped_gsas_dict.keys():
             raise RuntimeError('Chopped run number {} has not been loaded.  Loaded chopped runs are {}'
                                ''.format(run_number, self._chopped_gsas_dict.keys()))
@@ -101,15 +100,17 @@ class LoadedDataManager(object):
             raise RuntimeError('Run {} is not in "Chopped GSAS Dict".  Existing runs are {}'
                                ''.format(run_number, self._chopped_gsas_dict.keys()))
         if chop_sequence not in self._chopped_gsas_dict[run_number]:
-            raise RuntimeError('Chopped (out) sequence {} is not in loaded chapped run.  Existing sequences are {}'
-                               ''.format(chop_sequence, run_number, self._chopped_gsas_dict.keys()))
+            raise RuntimeError('Chopped (out) sequence {} is not in loaded chapped run {}.  Existing sequences are {}.'
+                               'Chopped runs are {}'
+                               ''.format(chop_sequence, run_number, self._chopped_gsas_dict[run_number].keys(),
+                                         self._chopped_gsas_dict.keys()))
 
         return self._chopped_gsas_dict[run_number][chop_sequence]
 
     def get_loaded_chopped_runs(self):
         """
         get the run numbers or data keys of the loaded chopped data
-        :return:
+        :return: list of runs
         """
         loaded_chopped_runs = self._chopped_gsas_dict.keys()
         loaded_chopped_runs.sort()
@@ -296,6 +297,9 @@ class LoadedDataManager(object):
         if not os.path.exists(chopped_data_dir):
             raise RuntimeError('Directory {0} for chopped data does not exist.'.format(chopped_data_dir))
 
+        if run_number is None and run_number is None:
+            raise RuntimeError('Run number must be given (or ) but cannot be None')
+
         # list the files in a directory
         file_list = [f for f in listdir(chopped_data_dir) if isfile(join(chopped_data_dir, f))]
         chop_info_file = self.search_chop_info_file(file_list)
@@ -322,25 +326,34 @@ class LoadedDataManager(object):
             # convert single sequence to a list
             chop_sequences = [chop_sequences]
         else:
+            # a list: remove redundant
             datatypeutility.check_list('Chopped sequences to load', chop_sequences)
-            print ('[DB...BAT] User specified sequence: {}'.format(chop_sequences))
+            chop_sequences = sorted(list(set(chop_sequences)))
+            # print ('[DB...BAT] User specified sequence: {}'.format(chop_sequences))
         # END-IF-ELSE
 
         loaded_gsas_dict = dict()   # [sequence] = workspace_name, file_name, None
-        if run_number is None and run_number is None:
-            raise RuntimeError('Run number must be given (or  ')
+        loaded_sequence_list = list()
+
         for seq_index in chop_sequences:
             # load GSAS file
             if seq_index not in reduced_tuple_dict:
                 print ('[DB...BAT] {}-th chopped data does not exist.'.format(seq_index))
                 continue
+
+            loaded_sequence_list.append(seq_index)
             file_name = reduced_tuple_dict[seq_index][0]
-            print ('[DB...BAT] Seq-index = {}, GSAS file name = {}'.format(seq_index, file_name))
+            # print ('[DB...BAT] Seq-index = {}, GSAS file name = {}'.format(seq_index, file_name))
             data_ws_name = self.load_binned_data(data_file_name=file_name, data_file_type=file_format,
                                                  prefix='G{}'.format(run_number),
-                                                 max_int=len(chopped_sequence_keys) + 1)
-            loaded_gsas_dict[seq_index] = data_ws_name, file_name, None
-            # FIXME TODO - TONIGHT 1 - None shall be replaced by x.hdf5
+                                                 max_int=max(10, len(chopped_sequence_keys) + 1))
+
+            # sliced log HDF5
+            log_h5_name = file_name.replace('.gda', '.hdf')
+            if not os.path.exists(log_h5_name):
+                log_h5_name = None
+
+            loaded_gsas_dict[seq_index] = data_ws_name, file_name, log_h5_name
         # END-FOR
 
         # register for chopped data dictionary: if run exists, then merge 2 dictionary!
@@ -350,7 +363,7 @@ class LoadedDataManager(object):
         else:
             self._chopped_gsas_dict[run_number] = loaded_gsas_dict
 
-        return loaded_gsas_dict
+        return loaded_gsas_dict, loaded_sequence_list
 
     @staticmethod
     def parse_chop_info_file(info_file_name):

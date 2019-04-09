@@ -1300,13 +1300,13 @@ class ReductionManager(object):
 
         return return_list
 
-    def get_reduced_chopped_runs(self, with_ipts=False, chopped=False):
+    def get_reduced_chopped_runs(self):
         """
         get reduced VULCAN runs with option for single run or chopped run
         (It is just for information)
         :param with_ipts:
         :param chopped:
-        :return: a list of (run number, slice key)
+        :return: a list of tracker key , i.e., tuple (run number, slice key)
         """
         return_list = list()
 

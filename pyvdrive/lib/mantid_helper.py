@@ -275,23 +275,37 @@ def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
         # in case user input split workspace name
         split_ws = retrieve_workspace(split_ws)
 
-    assert split_ws.__class__.__name__.count('Splitter') == 1,\
-        'Input SplittersWorkspace %s must be of type SplittersWorkspace must not %s' \
-        '' % (str(split_ws), split_ws.__class__.__name__)
+    # TODO - TODAY 0 TEST - Make this method work with Table/Splitters/Matrix
+    is_splitter_ws = False
+    is_arb_table_ws = False
+    if split_ws.id() == 'TableWorkspace':
+        if split_ws.__class__.__name__.count('Splitter') == 1:
+            is_splitter_ws = True
+        else:
+            is_arb_table_ws = True
+    elif split_ws.id() == 'Workspace2D':
+        pass
+    else:
+        raise AssertionError('Input SplittersWorkspace %s must be of type'
+                             'SplittersWorkspace/TableWorkspace/Workspace2D '
+                             'but not %s' % (str(split_ws), split_ws.__class__.__name__))
 
-    # go over rows
-    num_rows = split_ws.rowCount()
-    time_list = list()
-    ws_list = list()
-    for row_index in range(num_rows):
-        # get start time and end time in int64
-        start_time = split_ws.cell(row_index, 0)
+    if is_splitter_ws or is_arb_table_ws:
+        # splitters workspace
+        #  go over rows
+        num_rows = split_ws.rowCount()
+        time_list = list()
+        ws_list = list()
+        for row_index in range(num_rows):
+            # get start time and end time in int64
+            start_time = split_ws.cell(row_index, 0)
         end_time = split_ws.cell(row_index, 1)
         ws_index = split_ws.cell(row_index, 2)
 
         # convert units of time from int64/nanoseconds to float/seconds
-        start_time = float(start_time) * 1.0E-9
-        end_time = float(end_time) * 1.0E-9
+        if is_splitter_ws:
+            start_time = float(start_time) * 1.0E-9
+            end_time = float(end_time) * 1.0E-9
 
         if row_index == 0:
             # first splitter, starting with start_time[0]
@@ -1933,14 +1947,31 @@ def merge_runs(ws_name_list, out_ws_name):
     return
 
 
-# TODO - TONIGHT 0 - Clean up!
 def map_sample_logs(meta_ws_name, log_name_x, log_name_y):
+    """
+    Map 2 sample logs by aligning them on the same time stamps
+    :param meta_ws_name:
+    :param log_name_x:
+    :param log_name_y:
+    :return: 3-tuple of vectors: (1) time, (2) log x, (3) log y
+    """
+    datatypeutility.check_string_variable('Meta data workspace', meta_ws_name)
+    datatypeutility.check_string_variable('Name of log on X axis', log_name_x)
+    datatypeutility.check_string_variable('Name of log on Y axis', log_name_y)
+
+    if not ADS.doesExist(meta_ws_name):
+        raise RuntimeError('Workspace {} for meta data does not exist'.format(meta_ws_name))
+    sample_logs = get_sample_log_names(meta_ws_name, False)
+    if not (log_name_x in sample_logs and log_name_y in sample_logs):
+        raise RuntimeError('Sample log {} or {} does not exist in {}. Available logs are {}'
+                           ''.format(log_name_x, log_name_y, meta_ws_name, sample_logs))
+
     mantidapi.ExportSampleLogsToCSVFile(InputWorkspace=meta_ws_name,
-                                           OutputFilename='/tmp/test.dat',
-                                           SampleLogNames=[log_name_x, log_name_y],
-                                           WriteHeaderFile=False,
-                                           TimeZone='UTC',
-                                           Header='')
+                                        OutputFilename='/tmp/test.dat',
+                                        SampleLogNames=[log_name_x, log_name_y],
+                                        WriteHeaderFile=False,
+                                        TimeZone='UTC',
+                                        Header='')
 
     import vulcan_util
 

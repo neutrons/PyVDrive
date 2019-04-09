@@ -207,8 +207,7 @@ class ManualSlicerSetupTableDialog(QDialog):
         return
 
     def do_hide_window(self):
-        """
-
+        """ blabla
         :return:
         """
         self.setHidden(True)
@@ -237,13 +236,11 @@ class ManualSlicerSetupTableDialog(QDialog):
             return
 
         # pop a dialog for the name of the slicer
-        # TODO - TONIGHT 3 - Use stanard methods
         file_filter = 'Data Files (*.dat);; All Files (*.*)'
-        file_name = QFileDialog.getSaveFileName(self, 'Time slicer file name',
-                                                          self.controller.get_working_dir(),
-                                                          file_filter)
-        if isinstance(file_name, tuple):
-            file_name = file_name[0]
+        file_name = GuiUtil.get_save_file_by_dialog(self, title='Time slicer file name',
+                                                    default_dir=self.controller.get_working_dir(),
+                                                    file_filter=file_filter)
+
         if len(file_name) == 0:
             return
 

@@ -772,22 +772,27 @@ class VDriveAPI(object):
             print ('[DB...BAT] API: Loaded chopped gsas: {}'.format(loaded_runs_list))
 
             # from memory
-            reduced_runs_list = self._myProject.reduction_manager.get_reduced_chopped_runs()
-            print ('[DB...BAT] API: In-Memory chopped runs: {}'.format(reduced_runs_list))
+            if False:
+                # FIXME TODO - TODAY 191 - only runs loaded from GSASs
+                reduced_runs_list = self._myProject.reduction_manager.get_reduced_chopped_runs()
+                print ('[DB...BAT] API: In-Memory chopped runs: {}'.format(reduced_runs_list))
 
         else:
             # from archive
             loaded_runs_list = self._myProject.get_loaded_reduced_runs()
 
             # from project
-            reduced_runs_list = self._myProject.reduction_manager.get_reduced_single_runs()
-            print ('[DB...BAT] API: In-Memory reduced single-runs: {}'.format(reduced_runs_list))
+            if False:
+                # FIXME TODO - TODAY 191 - only runs loaded from GSASs
+                reduced_runs_list = self._myProject.reduction_manager.get_reduced_single_runs()
+                print ('[DB...BAT] API: In-Memory reduced single-runs: {}'.format(reduced_runs_list))
 
         # END-IF-ELSE
 
         # combine
         run_in_mem = loaded_runs_list[:]
-        run_in_mem.extend(reduced_runs_list)
+        # FIXME TODO - TODAY 191 - only runs loaded from GSASs
+        # run_in_mem.extend(reduced_runs_list)
 
         return run_in_mem
 
@@ -1096,24 +1101,12 @@ class VDriveAPI(object):
 
         return peak_list
 
-    def has_chopped_data(self, run_number, reduced):
-        """check whether a run has chopped data reduced or not
+    def has_native_sliced_reduced_workspaces(self, run_number):
+        """check whether IN MEMORY, the specified run has been sliced and reduced
         :param run_number:
-        :param reduced:
         :return:
         """
         return self._myProject.reduction_manager.has_run_reduced(run_number)
-
-    # TODO - TONIGHT 0 - Clean it out!
-    @staticmethod
-    def import_data_slicers(file_name):
-        """ import slicers from a text file
-        :param file_name:
-        :return: ref_run, run_start, segment_list
-        """
-        ref_run, run_start_time, time_segment_list = chop_utility.parse_time_segments(file_name)
-
-        return ref_run, run_start_time, time_segment_list
 
     def load_meta_data(self, ipts_number, run_number, file_name):
         """
@@ -1394,8 +1387,6 @@ class VDriveAPI(object):
                                                                               no_cal_mask=no_cal_mask)
 
             # post process:
-            print ('................BAT...........  run numbers: {}.... merged: {}'
-                   ''.format(run_number_list, merge_runs))
 
             if len(run_number_list) == 0:
                 # no runs reduced successfully
@@ -1417,8 +1408,6 @@ class VDriveAPI(object):
                 run_number, ws_name = run_number_list[0]
                 status, error_message = vdrivehelper.export_normal_sample_log(ipts_number, run_number, ws_name,
                                                                               record_file_name)
-                print ('[DB......BAT.......BAT1] status = {}, error: "{}"'.format(status, error_message))
-
             else:
                 status = True
             # END-IF

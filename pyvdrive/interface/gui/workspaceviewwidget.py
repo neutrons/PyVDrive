@@ -400,9 +400,11 @@ class WorkspaceViewWidget(QWidget):
         :param diff_set:
         :return:
         """
-        print ('Workspace set differece: {}'.format(diff_set))
+        # print ('Workspace set differece: {}'.format(diff_set))
 
-        # TODO/NOW/ISSUE/51 - 20181214 - Implement!
+        # TODO - TONIGHT 5 - - 20181214 - Implement!
+        # TODO - when it will be called
+        # TODO - What is the expected behavior
 
         return
 
