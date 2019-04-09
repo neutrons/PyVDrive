@@ -575,13 +575,16 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # FIXME TODO - TODAY 196 - only runs loaded from GSASs
         chopped_run_list = self._myController.get_focused_runs(chopped=True)  # chop keys: list of tuples
 
-        self._mutexChopRunList = True  # lock the event triggered and handled elsewhere
+        # self._mutexChopRunList = True  # lock the event triggered and handled elsewhere
 
-        # get the current (chopped) run's name
-        if len(self._chop_combo_name_list) == 0:
-            curr_chop_name = None
-        else:
-            curr_chop_name = str(self.ui.comboBox_choppedRunNumber.currentText())  # whatever shown in the combo box
+        # preserve previously chopped runs' names
+        previous_chopped_names = set(self._chop_combo_name_list)
+
+        # # get the current (chopped) run's name
+        # if len(self._chop_combo_name_list) == 0:
+        #     curr_chop_name = None
+        # else:
+        #     curr_chop_name = str(self.ui.comboBox_choppedRunNumber.currentText())  # whatever shown in the combo box
 
         # reset the combo box anyway
         self.ui.comboBox_choppedRunNumber.clear()
@@ -592,6 +595,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             self.ui.graphicsView_mainPlot.reset_1d_plots()
             self._currentPlotID = None
             self.ui.graphicsView_logPlot.reset()
+
         else:
             # add chop "runs" to combo box
             for chop_run_tuple_i in chopped_run_list:
@@ -619,7 +623,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 self._chop_combo_name_list.append(chop_run_name)
                 self._chop_combo_data_key_dict[chop_run_name] = chop_key
             # END-FOR
+        # END-FOR
 
+        if False:  # TODO FIXME - TODAY 191 - Leave to other methods
             # handle the new index to the chop run combo box
             if curr_chop_name in self._chop_combo_name_list:
                 # focus to the original one and no need to change the sequential number
@@ -657,9 +663,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # END-IF (set chopped sequence)
         # END-IF-ELSE
 
-        self._mutexChopRunList = False  # unlock the chopped run boxes
+        # self._mutexChopRunList = False  # unlock the chopped run boxes
 
-        return
+        return set(self._chop_combo_name_list), previous_chopped_names
 
     def update_single_run_combo_box(self):
         """ Update the single run combo-box with current single runs in the memory
@@ -986,14 +992,83 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def do_refresh_existing_runs(self, set_to=None, set_to_seq=None, is_chopped=False, is_data_key=True):
+    def do_refresh_existing_runs(self):
         """ refresh the existing runs in the combo box
+        NEW: no need to switch to the new data to plot
         :param set_to: run number / combo item name to set to
         :param set_to_seq: sequence index/name to set to
         :param is_chopped: Flag whether it is good to set to chopped data
         :param is_data_key: Flag to indicate that 'set_to' is a data key or a run number/sequence number
         :return:
         """
+        # # could be an integer as run number: convert to string
+        # if isinstance(set_to, int):
+        #     set_to = str(set_to)
+        # if isinstance(set_to_seq, int):
+        #     set_to_seq = '{}'.format(set_to_seq)
+        #
+        # datatypeutility.check_bool_variable('Flag to indicate whether the next will be set to chopped runs'
+        #                                     'single run', is_chopped)
+
+        # nothing to plot
+        self._mutexChopRunList = True
+        self._mutexChopSeqList = True
+
+        # TODO - TONIGHT 191 - ....
+        # .. get current name
+
+        # Update single runs
+        self.update_single_run_combo_box()
+
+        # Update chopped runs
+        curr_chop_names, prev_chop_names = self.update_chopped_run_combo_box()
+
+        # TODO - TONIGHT 191 - ....
+        # .. set back to current name (if existed)
+
+        # # focus on
+        # if set_to is not None and not is_chopped:
+        #     # need to set the combo index to the specified SINGLE run
+        #     self.ui.radioButton_chooseSingleRun.setChecked(True)
+        #     if is_data_key:
+        #         for combo_name in self._single_combo_data_key_dict.keys():
+        #             if self._single_combo_data_key_dict[combo_name] == set_to:
+        #                 set_to = combo_name
+        #                 break
+        #     new_single_index = self._single_combo_name_list.index(set_to)
+        #     self.ui.comboBox_runs.setCurrentIndex(new_single_index)  # this will trigger the event to plot!
+        #
+        # elif set_to is not None and is_chopped:
+        #     # need to update the focus to chopped run and plot
+        #     self.ui.radioButton_chooseChopped.setChecked(True)
+        #     # NOTE: be careful about non-existing chop name and seq name
+        #     if set_to in self._chop_combo_name_list:
+        #         new_chop_index = self._chop_combo_name_list.index(set_to)
+        #         self.ui.comboBox_choppedRunNumber.setCurrentIndex(new_chop_index)  # this will trigger the event to plot
+        #         if set_to_seq in self._chop_seq_combo_name_list:
+        #             new_seq_index = self._chop_seq_combo_name_list.index(set_to_seq)
+        #             self.ui.comboBox_chopSeq.setCurrentIndex(new_seq_index)
+        #         else:
+        #             GuiUtility.pop_dialog_error(self, 'Failed to set chopped run {} to seq {}. Reason: {}'
+        #                                               ' does not exist in chopped sequences'
+        #                                               ''.format(set_to, set_to_seq, set_to_seq))
+        #             # self._mutexChopRunList = False
+        #             # self._mutexChopSeqList = False
+        #             return
+        #     else:
+        #         GuiUtility.pop_dialog_error(self, '{} does not exist in chopped runs'.format(set_to))
+        #         self._mutexChopRunList = False
+        #         self._mutexChopSeqList = False
+        #         return
+
+        # END
+
+        self._mutexChopRunList = False
+        self._mutexChopSeqList = False
+
+        return curr_chop_names, prev_chop_names
+
+    def view_data(self, set_to=None, set_to_seq=None, is_chopped=False, is_data_key=True):
         # could be an integer as run number: convert to string
         if isinstance(set_to, int):
             set_to = str(set_to)
@@ -1002,12 +1077,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         datatypeutility.check_bool_variable('Flag to indicate whether the next will be set to chopped runs'
                                             'single run', is_chopped)
-
-        # Update single runs
-        self.update_single_run_combo_box()
-
-        # Update chopped runs
-        self.update_chopped_run_combo_box()
 
         # focus on
         if set_to is not None and not is_chopped:
@@ -1035,12 +1104,14 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                     GuiUtility.pop_dialog_error(self, 'Failed to set chopped run {} to seq {}. Reason: {}'
                                                       ' does not exist in chopped sequences'
                                                       ''.format(set_to, set_to_seq, set_to_seq))
+                    # self._mutexChopRunList = False
+                    # self._mutexChopSeqList = False
                     return
             else:
                 GuiUtility.pop_dialog_error(self, '{} does not exist in chopped runs'.format(set_to))
+                # self._mutexChopRunList = False
+                # self._mutexChopSeqList = False
                 return
-
-        # END
 
         return
 
@@ -1429,8 +1500,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # Check
         # assert isinstance(controller, VDriveAPI)
         self._myController = controller
-
-        self.do_refresh_existing_runs(set_to=None)
+        self.do_refresh_existing_runs()
 
         return
 
