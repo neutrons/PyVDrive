@@ -383,22 +383,22 @@ class VdriveCommandProcessor(object):
 
             chop_seq_list = processor.get_chopped_sequence_range()
             if load_gsas:
-                view_window.do_load_chopped_runs(ipts_number, run_number, chop_seq_list)
+                data_key, chop_seq_list = view_window.do_load_chopped_runs(ipts_number, run_number, chop_seq_list)
 
             # chop_name = '{}: GSAS'.format(run_number)
             # chop_key = run_number
 
             # refresh list and set to chop run
             # view_window.do_refresh_existing_runs(set_to=chop_name, set_to_seq=chop_seq_list[0], is_chopped=True)
-            now_set, prev_set = view_window.do_refresh_existing_runs()
+            now_single_set, prev_single_set, now_set, prev_set = view_window.do_refresh_existing_runs()
             new_names = list(now_set - prev_set)
             if len(new_names) > 0:
                 print ('[DB.....BAT] New names = {}'.format(new_names))
                 # TODO - TONIGHT 191 Make following work!
-                chop_key = view_window.set_chopped_run(new_names[0], True)
+                chop_key = view_window.set_chopped_run(new_names[0], chop_seq_list[0])
             else:
                 print ('[DB.....BAT] No change!')
-                chop_key = view_window.set_chopped_run(None, True)
+                chop_key = view_window.set_chopped_run(None, chop_seq_list[0])
 
             # set a signal to view-window to make main_only True (once)
             # # TODO - TONIGHT 191 - Separate plotting individual windows!
@@ -415,7 +415,7 @@ class VdriveCommandProcessor(object):
             view_window.set_run_number(run_number)
             data_key = view_window.do_load_single_run(ipts_number, run_number, False)
             if data_key:
-                view_window.do_refresh_existing_runs(set_to=data_key)
+                now_single_set, prev_single_set, now_set, prev_set = view_window.do_refresh_existing_runs()
                 view_window.plot_single_run(data_key,
                                             van_norm=processor.do_vanadium_normalization,
                                             van_run=van_run_number,

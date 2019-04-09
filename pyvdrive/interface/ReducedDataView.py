@@ -308,11 +308,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             raise NotImplementedError('ASAP: What shall be chop key?')
         elif ipts_number is not None and run_number is not None:
             # load data from archive
-            self.load_reduced_data(ipts_number, run_number, chopped_seq_list)
+            data_key, loaded_seq_list = self.load_reduced_data(ipts_number, run_number, chopped_seq_list)
         else:
             raise NotImplementedError('Not sure how to load from an arbitrary directory!')
 
-        return
+        return loaded_seq_list
 
     def do_load_single_run(self, ipts_number=None, run_number=None, plot=True):
         """
@@ -337,7 +337,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         if run_number is not None and (self._is_run_in_memory(run_number) or ipts_number is not None):
             # load runs from memory or from disk
             try:
-                data_key = self.load_reduced_data(ipts_number, run_number, None)
+                data_key, no_use = self.load_reduced_data(ipts_number, run_number, None)
             except RuntimeError as run_err:
                 GuiUtility.pop_dialog_error(self, 'Unable to find GSAS: {}'.format(run_err))
 
@@ -1124,10 +1124,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return curr_single_names, prev_single_names, curr_chop_names, prev_chop_names
 
-    def set_chopped_run(self, chop_run_name, update_main):
+    def set_chopped_run(self, chop_run_name, slice_sequence_name):
         """ Set the chopped run (name) to a specified value.
-        And then, refresh
+        NO PLOT! SO client needs to call plot explicitly
         :param chop_run_name: If None, then, current one
+        :param slice_sequence_name:
         :return:
         """
         # lock
@@ -1179,6 +1180,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 self._chop_seq_combo_name_list.append(seq_item_i)
             # END-FOR
         # END-IF (set chopped sequence)
+
+        # focus sequence
+        if slice_sequence_name in self._chop_seq_combo_name_list:
+            seq_index = self._chop_seq_combo_name_list.index(slice_sequence_name)
+            self.ui.comboBox_chopSeq.setCurrentIndex(seq_index)
+        else:
+            print ('[WARNING] Unable to focus chop run {} to sequence {}'.format(chop_run_name, slice_sequence_name))
 
         self._mutexChopSeqList = False  # unlock
 
@@ -1674,7 +1682,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param ipts_number:
         :param run_number: can (1) run number (int) or None (loading explicitly)
         :param chop_seq_index_list:
-        :return: (1) data key  or (2) dictionary of keys
+        :return: 2-tuple (1) data key  or  dictionary of keys  (2) loaded chop-sequence indexes
         """
         if chop_seq_index_list is None:
             # original run
@@ -1695,14 +1703,17 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             self._single_run_data_dict[run_number] = data_key
             self._data_key_run_seq[data_key] = run_number, None
 
+            load_seq_list = None
+
         else:
             # chopped run
             datatypeutility.check_list('Chopped sequence indexes', chop_seq_index_list)
             chopped_data_dir = self._myController.get_archived_data_dir(ipts_number, run_number,
                                                                         chopped_data=True)
             file_loading_manager = self._myController.project.data_loading_manager
-            data_set_dict = file_loading_manager.load_chopped_binned_data(run_number, chopped_data_dir,
-                                                                          chop_seq_index_list, 'gsas')
+            data_set_dict, load_seq_list = file_loading_manager.load_chopped_binned_data(run_number, chopped_data_dir,
+                                                                                         chop_seq_index_list,
+                                                                                         'gsas')
 
             # record
             if run_number not in self._chopped_run_data_dict:
@@ -1720,7 +1731,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # # register
         # vdrive_constants.run_ipts_dict[run_number] = ipts_number
 
-        return data_key
+        return data_key, load_seq_list
 
     def retrieve_loaded_reduced_data(self, data_key, ipts_number, run_number, chop_seq_index, bank_id, unit, pc_norm, van_run):
         """
