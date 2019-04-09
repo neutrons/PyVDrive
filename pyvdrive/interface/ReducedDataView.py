@@ -340,26 +340,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 data_key, no_use = self.load_reduced_data(ipts_number, run_number, None)
             except RuntimeError as run_err:
                 GuiUtility.pop_dialog_error(self, 'Unable to find GSAS: {}'.format(run_err))
+                return False
 
-        # if run_number is not None and self._is_run_in_memory(run_number):
-        #     # load from memory
-        #     data_key = self._myController.project.reduction_manager.get_reduced_workspace(run_number)
-        #     self._single_run_data_dict[run_number] = data_key
-        #     self._data_key_run_seq[data_key] = run_number, None
-        # elif ipts_number is not None and run_number is not None:
-        #     # load data from archive
-        #     try:
-        #         reduced_file_name = self._myController.archive_manager.get_gsas_file(ipts_number, run_number,
-        #                                                                              check_exist=True)
-        #         file_type = 'gsas'
-        #         data_key = self._myController.project.data_loading_manager.load_binned_data(reduced_file_name,
-        #                                                                                     file_type,
-        #                                                                                     max_int=99999)
-        #         self._single_run_data_dict[run_number] = data_key
-        #         self._data_key_run_seq[data_key] = run_number, None
-        #     except RuntimeError as run_err:
-        #         GuiUtility.pop_dialog_error(self, 'Unable to find GSAS: {}'.format(run_err))
-        #         return
         else:
             # load from disk by users' choice
             if ipts_number is not None:
@@ -375,7 +357,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                        file_list=False, save_file=False)
             # check whether user cancels the operation
             if reduced_data_file is None or reduced_data_file == '':
-                return
+                return False
 
             try:
                 if reduced_data_file.lower().endswith('nxs'):
@@ -397,7 +379,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # next step
         if plot:
             # refresh
-            self.do_refresh_existing_runs(set_to=data_key, is_chopped=False)
+            self.do_refresh_existing_runs()
+            # TODO - TONIGHT 191 - Implement set_single_run(name, key, blabla)
+            # TODO - TONIGHT 191 - Implement plot_current_data()
 
         return data_key
 
