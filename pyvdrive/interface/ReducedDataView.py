@@ -592,6 +592,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # reset the combo box anyway
         self.ui.comboBox_choppedRunNumber.clear()
+        self._chop_combo_name_list = list()
 
         if len(chopped_run_list) > 0:
             chopped_run_list.sort()
@@ -1131,12 +1132,20 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param slice_sequence_name:
         :return:
         """
+        datatypeutility.check_string_variable('Slice sequence name', slice_sequence_name)
+
         # lock
         self._mutexChopRunList = True
 
+        # set radio button
+        # TODO - TONIGHT 191 - Need event handler for changing radio button (mutex too)
+        self.ui.radioButton_chooseChopped.setChecked(True)
+
         if chop_run_name is None:
-            # get the name
+            # use the current name
             chop_run_name = str(self.ui.comboBox_choppedRunNumber.currentText())
+            print ('[.....] current name = {} / {}'
+                   ''.format(chop_run_name, self.ui.comboBox_choppedRunNumber.currentIndex()))
 
             # exception for empty box
             if chop_run_name == '':
@@ -1146,6 +1155,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         elif chop_run_name in self._chop_combo_name_list:
             # focus to the new one
             item_index = self._chop_combo_name_list.index(chop_run_name)
+
+            print ('[.....] target name = {}, focus to {}... combo name list: {}'
+                   ''.format(chop_run_name, item_index, self._chop_combo_name_list))
+
             self.ui.comboBox_choppedRunNumber.setCurrentIndex(item_index)
 
         else:
@@ -1181,12 +1194,17 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # END-FOR
         # END-IF (set chopped sequence)
 
-        # focus sequence
         if slice_sequence_name in self._chop_seq_combo_name_list:
             seq_index = self._chop_seq_combo_name_list.index(slice_sequence_name)
             self.ui.comboBox_chopSeq.setCurrentIndex(seq_index)
         else:
             print ('[WARNING] Unable to focus chop run {} to sequence {}'.format(chop_run_name, slice_sequence_name))
+            debug_string = ''
+            # focus sequence
+            # for name in self._chop_seq_combo_name_list:
+            #     print (name, type(name))
+            # print (slice_sequence_name, type(slice_sequence_name))
+
 
         self._mutexChopSeqList = False  # unlock
 
@@ -1506,7 +1524,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         if len(chopped_sequence_list) > 0:
             seq_name_0 = '{}'.format(chopped_sequence_list[0])
             self.ui.comboBox_chopSeq.addItem(seq_name_0)
-            self._chop_combo_name_list.append(seq_name_0)
         # END-IF-ELSE
 
         # plot the others

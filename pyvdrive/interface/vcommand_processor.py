@@ -46,6 +46,8 @@ class VdriveCommandProcessor(object):
         self._commandList = ['CHOP', 'VBIN', 'VDRIVE', 'MERGE', 'AUTO', 'VIEW', 'VDRIVEVIEW', 'VPEAK',
                              'INFO']
 
+        self._view_chop_run_name_map = dict()  # [run number (int)] = chop run name (in Reduced Data View)
+
         return
 
     def get_vdrive_commands(self):
@@ -383,7 +385,14 @@ class VdriveCommandProcessor(object):
 
             chop_seq_list = processor.get_chopped_sequence_range()
             if load_gsas:
-                chop_seq_list = view_window.do_load_chopped_runs(ipts_number, run_number, chop_seq_list)
+                loaded_chop_seq_list = view_window.do_load_chopped_runs(ipts_number, run_number, chop_seq_list)
+                if len(loaded_chop_seq_list) == 0:
+                    return False, 'None sequences in user-specified list ({}) can be loaded.'.format(chop_seq_list)
+                else:
+                    chop_seq_list = loaded_chop_seq_list
+            else:
+                raise RuntimeError('TONIGHT 196')
+            # END-IF
 
             # chop_name = '{}: GSAS'.format(run_number)
             # chop_key = run_number
@@ -393,17 +402,22 @@ class VdriveCommandProcessor(object):
             now_single_set, prev_single_set, now_set, prev_set = view_window.do_refresh_existing_runs()
             new_names = list(now_set - prev_set)
             if len(new_names) > 0:
-                print ('[DB.....BAT] New names = {}'.format(new_names))
-                # TODO - TONIGHT 191 Make following work!
-                chop_key = view_window.set_chopped_run(new_names[0], chop_seq_list[0])
+                # if there are new chopped runs
+                # TODO - TONIGHT 191 - Better to assign this dictionary to ReducedDataView
+                self._view_chop_run_name_map[run_number] = new_names[0]
+                chop_key = view_window.set_chopped_run(new_names[0], str(chop_seq_list[0]))
             else:
-                print ('[DB.....BAT] No change!')
-                chop_key = view_window.set_chopped_run(None, chop_seq_list[0])
+                print ('[DB.....BAT] No change.  Search {} from [{}]'.format(run_number, self._view_chop_run_name_map))
+                chop_key = view_window.set_chopped_run(self._view_chop_run_name_map[run_number],
+                                                       str(chop_seq_list[0]))
 
             # set a signal to view-window to make main_only True (once)
             # # TODO - TONIGHT 191 - Separate plotting individual windows!
             # TODO - TONIGHT 196 - For in-memory, requiring more than run number but whole chop-key
-            run_number = chop_key[0]
+            if isinstance(chop_key, tuple):
+                run_number = chop_key[0]
+            else:
+                run_number = chop_key
             view_window.plot_chopped_run(run_number, bank_id=1,
                                          seq_list=chop_seq_list,
                                          van_norm=processor.do_vanadium_normalization,
