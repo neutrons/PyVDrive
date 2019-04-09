@@ -383,7 +383,7 @@ class VdriveCommandProcessor(object):
 
             chop_seq_list = processor.get_chopped_sequence_range()
             if load_gsas:
-                data_key, chop_seq_list = view_window.do_load_chopped_runs(ipts_number, run_number, chop_seq_list)
+                chop_seq_list = view_window.do_load_chopped_runs(ipts_number, run_number, chop_seq_list)
 
             # chop_name = '{}: GSAS'.format(run_number)
             # chop_key = run_number
@@ -402,7 +402,9 @@ class VdriveCommandProcessor(object):
 
             # set a signal to view-window to make main_only True (once)
             # # TODO - TONIGHT 191 - Separate plotting individual windows!
-            view_window.plot_chopped_run(chop_key, bank_id=1,
+            # TODO - TONIGHT 196 - For in-memory, requiring more than run number but whole chop-key
+            run_number = chop_key[0]
+            view_window.plot_chopped_run(run_number, bank_id=1,
                                          seq_list=chop_seq_list,
                                          van_norm=processor.do_vanadium_normalization,
                                          van_run=van_run_number,

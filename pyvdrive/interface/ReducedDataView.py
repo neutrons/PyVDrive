@@ -1210,7 +1210,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         #
         # # END-IF-ELSE
 
-        return
+        return chop_run_key
 
     # TODO - TODAY 191 - Evaluate whether this method is useful
     def set_general_view(self, set_to=None, set_to_seq=None, is_chopped=False, is_data_key=True):
