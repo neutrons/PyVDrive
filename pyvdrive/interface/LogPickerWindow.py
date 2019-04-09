@@ -1006,6 +1006,8 @@ class WindowLogPicker(QMainWindow):
             status, ret_obj = self.get_controller().get_slicer(self._curr_run_number, self._currSlicerKey)
             if status:
                 slicer_time_vec, slicer_ws_vec = ret_obj
+                # print (slicer_time_vec) : looks correct
+                # print (slicer_ws_vec)
             else:
                 GuiUtility.pop_dialog_error(self, str(ret_obj))
                 return

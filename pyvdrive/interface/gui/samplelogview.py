@@ -668,6 +668,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         :param vec_target_ws:
         :return:
         """
+        # TODO - TONIGHT 190 - Add debugging to this method!
         # check state
         if self._currPlotID is None:
             return True, 'No plot on the screen yet.'
