@@ -719,12 +719,14 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         :param vec_target_ws:
         :return:
         """
+
+
         # TODO - TONIGHT 190 - Add debugging to this method!
         # check state
         if self._currPlotID is None:
             return True, 'No plot on the screen yet.'
 
-        if len(vec_times) == len(vec_target_ws) + 1:
+        if len(vec_times) != len(vec_target_ws) + 1:
             raise NotImplementedError('Assumption that input is a histogram! Now vec x size = {},'
                                       'vec y size = {}'.format(vec_times.shape, vec_target_ws.shape))
 
@@ -742,11 +744,14 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         MAX_SEGMENT_TO_SHOW = 20
         num_seg_to_show = min(len(vec_target_ws), MAX_SEGMENT_TO_SHOW)
 
+        print ('[DB...BAT] # segments = {}... vec target type: {}'
+               ''.format(num_seg_to_show, vec_target_ws.dtype))
         for i_seg in range(num_seg_to_show):
             # get start time and stop time
             x_start = vec_times[i_seg]
             x_stop = vec_times[i_seg+1]
-            color_index = vec_target_ws[i_seg]
+
+            print ('[DB...BAT] Segment {}: Time range = {}, {}'.format(i_seg, x_start, x_stop))
 
             # get start time and stop time's index
             i_start = (np.abs(vec_x - x_start)).argmin()
@@ -760,12 +765,18 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
                 raise RuntimeError('It is impossible to have start index {0} > stop index {1}'
                                    ''.format(i_start, i_stop))
 
+            print ('[DB...BAT] Segment {}: Index range = {}, {}'.format(i_seg, i_start, i_stop))
+
             # get the partial for plot
             vec_x_i = vec_x[i_start:i_stop]
             vec_y_i = vec_y[i_start:i_stop]
 
             # plot
-            color_i = COLOR_LIST[color_index % num_color]
+            color_index = vec_target_ws[i_seg]
+            if isinstance(color_index, int):
+                color_i = COLOR_LIST[color_index % num_color]
+            else:
+                color_i = COLOR_LIST[i_seg % num_color]
             seg_plot_index = self.add_plot_1d(vec_x_i, vec_y_i, marker=None, line_style='-', color=color_i,
                                               line_width=2)
 

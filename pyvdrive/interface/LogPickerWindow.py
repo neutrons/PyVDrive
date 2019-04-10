@@ -458,7 +458,7 @@ class WindowLogPicker(QMainWindow):
 
         return
 
-    def do_import_slicer_file(self):
+    def do_import_slicer_file(self, slicer_file_name=None):
         """ Import an ASCII file which contains the slicers.
         The format will be a 3 column file as run start (in second), run stop(in second) and target workspace
         :return:
@@ -466,9 +466,10 @@ class WindowLogPicker(QMainWindow):
         from pyvdrive.lib import file_utilities
 
         # get file
-        default_dir = self._myParent.get_controller().get_working_dir()
-        slicer_file_name = GuiUtility.get_load_file_by_dialog(self, 'Read Slicer File', default_dir,
-                                                              'Data File (*.dat);;Text (*.txt)')
+        if slicer_file_name is None:
+            default_dir = self._myParent.get_controller().get_working_dir()
+            slicer_file_name = GuiUtility.get_load_file_by_dialog(self, 'Read Slicer File', default_dir,
+                                                                  'Data File (*.dat);;Text (*.txt)')
 
         if len(slicer_file_name) == 0:
             # return if operation is cancelled
@@ -500,12 +501,15 @@ class WindowLogPicker(QMainWindow):
             # relative time: no experiment in 1991
             run_start_s = 0.
 
+        # TODO - TONIGHT 190 - Add an option (> 10 slicers) for not plotting
+        # ... ...
+
         # set to figure
         prev_stop_time = -1.E-20
         for slicer in slicer_list:
             start_time, stop_time, target = slicer
             if start_time > prev_stop_time:
-                self.ui.graphicsView_main.add_picker(start_time - run_start_s)
+                self.ui.graphicsView_main.add_picker(start_time - run_start_s)    # TODO - Shall we register these picker?
             self.ui.graphicsView_main.add_picker(stop_time - run_start_s)
             prev_stop_time = stop_time
 

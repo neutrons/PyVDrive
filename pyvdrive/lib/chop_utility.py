@@ -316,6 +316,7 @@ class DataChopper(object):
 
         # get workspace
         slice_ws_name = chopper['splitter']
+        print ('[DB...BAT] Slicer name: {}'.format(slice_ws_name))
         try:
             vec_times, vec_ws_index = mantid_helper.convert_splitters_workspace_to_vectors(
                 split_ws=slice_ws_name, run_start_time=run_start_time)

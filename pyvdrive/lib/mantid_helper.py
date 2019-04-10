@@ -275,7 +275,6 @@ def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
         # in case user input split workspace name
         split_ws = retrieve_workspace(split_ws)
 
-    # TODO - TODAY 0 TEST - Make this method work with Table/Splitters/Matrix
     is_splitter_ws = False
     is_arb_table_ws = False
     if split_ws.id() == 'TableWorkspace':
@@ -327,13 +326,17 @@ def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
         vec_ws = numpy.array(ws_list)
     else:
         # for matrix workspace splitter
+        # TODO - TONIGHT -1 - Make this method work with Matrix
         raise RuntimeError('TODO FUTURE Implement matrix parser')
 
     # reset to run start time
-    if run_start_time is not None:
+    if run_start_time is not None and is_splitter_ws:
         # run start time is of float in unit of seconds
         datatypeutility.check_float_variable('Run start', run_start_time, (None, None))
         vec_times -= run_start_time
+    elif run_start_time is not None and is_arb_table_ws:
+        # it is assumed that TableWorkspace is relative time and in seconds already
+        pass
     # END-IF
 
     return vec_times, vec_ws
