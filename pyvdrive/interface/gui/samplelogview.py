@@ -661,9 +661,60 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         return
 
+    # TODO - TODAY - It is meant to replace show_slicers
+    def show_slicers_repetitions(self, vec_slicers_times, vec_target_ws):
+
+
+        unique_target_ws_set = set(vec_target_ws.astype('int16'))
+        num_segments = len(unique_target_ws_set)
+        segment_list = sorted(list(unique_target_ws_set))
+        print ('[DB...BAT] Segments: {}'.format(segment_list))
+
+        # init data
+        for seg_index, target_index in enumerate(segment_list):
+            color_i = COLOR_LIST[seg_index % num_color]
+            data_set_i = None, None
+        # END-FOR
+
+        for i_seg in range(num_seg_to_show):
+            # get start time and stop time
+            x_start = vec_times[i_seg]
+            x_stop = vec_times[i_seg+1]
+            color_index = vec_target_ws[i_seg]
+
+            # get start time and stop time's index
+            i_start = (np.abs(vec_x - x_start)).argmin()
+            i_stop = (np.abs(vec_x - x_stop)).argmin()
+            if i_start == i_stop:
+                # empty!
+                print '[SampleLogView WARNING] Range: %d to %d  (%f to %f) cannot generate any vector. ' \
+                      '' % (i_start, i_stop, vec_x[i_start], vec_x[i_stop])
+                continue
+            elif i_start > i_stop:
+                raise RuntimeError('It is impossible to have start index {0} > stop index {1}'
+                                   ''.format(i_start, i_stop))
+
+            # get the partial for plot
+            vec_x_i = vec_x[i_start:i_stop]
+            vec_y_i = vec_y[i_start:i_stop]
+
+            # concatenate
+            np.concatenate((a, b))
+        # END-FOR
+
+        # plot
+        for a in b:
+            # plot
+            color_i = COLOR_LIST[color_index % num_color]
+            seg_plot_index = self.add_plot_1d(vec_x_i, vec_y_i, marker=None, line_style='-', color=color_i,
+                                              line_width=2)
+
+            self._splitterSegmentsList.append(seg_plot_index)
+        # END-FOR
+
     def show_slicers(self, vec_times, vec_target_ws):
         """
-        show slicers on the canvas
+        show slicers on the canvas by plotting segment of sample logs
         :param vec_times:
         :param vec_target_ws:
         :return:
@@ -673,10 +724,17 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         if self._currPlotID is None:
             return True, 'No plot on the screen yet.'
 
-        assert len(vec_times) == len(vec_target_ws) + 1, 'Assumption that input is a histogram!'
+        if len(vec_times) == len(vec_target_ws) + 1:
+            raise NotImplementedError('Assumption that input is a histogram! Now vec x size = {},'
+                                      'vec y size = {}'.format(vec_times.shape, vec_target_ws.shape))
 
         # get data from the figure
+        # TODO - TODAY 190 - Check whether remove_all_lines() is ever called
+        print ('[DB...BAT] Current Plot ID = {}'.format(self._currPlotID))
         vec_x, vec_y = self.canvas().get_data(self._currPlotID)
+
+        print ('[DB...BAT] Sample log vector X range: {}, {}'.format(vec_x[0], vec_x[-1]))
+        print ('[DB...BAT] Slicer times range: {}, {}'.format(vec_times[0], vec_times[-1]))
 
         num_color = len(COLOR_LIST)
 
