@@ -85,7 +85,7 @@ class EventFilteringAssistantTestEnvironment(object):
         self._slice_window.ui.radioButton_manualSlicer.setChecked(True)
 
         # load data
-        self._slice_window.do_import_slicer_file('tests/data/cyclic_data/upslope_slicer.dat')
+        # self._slice_window.do_import_slicer_file('tests/data/cyclic_data/upslope_slicer.dat')
 
         # load data
 

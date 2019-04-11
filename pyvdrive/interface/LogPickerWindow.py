@@ -466,7 +466,7 @@ class WindowLogPicker(QMainWindow):
         from pyvdrive.lib import file_utilities
 
         # get file
-        if slicer_file_name is None:
+        if slicer_file_name is None or not slicer_file_name:
             default_dir = self._myParent.get_controller().get_working_dir()
             slicer_file_name = GuiUtility.get_load_file_by_dialog(self, 'Read Slicer File', default_dir,
                                                                   'Data File (*.dat);;Text (*.txt)')
