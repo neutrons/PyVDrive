@@ -469,13 +469,14 @@ class WindowLogPicker(QMainWindow):
             default_dir = self._myParent.get_controller().get_working_dir()
             slicer_file_name = GuiUtility.get_load_file_by_dialog(self, 'Read Slicer File', default_dir,
                                                                   'Data File (*.dat);;Text (*.txt)')
+            print ('[DB...BAT] Slicer file: {}'.format(slicer_file_name))
 
         if len(slicer_file_name) == 0:
             # return if operation is cancelled
             return
 
         try:
-            slicer_list = file_utilities.parse_data_slicer_file(slicer_file_name)  # missing: ref_run, run_start_time,
+            slicer_list = file_utilities.load_event_slicers_file(slicer_file_name)  # missing: ref_run, run_start_time,
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self, '{}'.format(run_err))
             return
@@ -502,7 +503,8 @@ class WindowLogPicker(QMainWindow):
             run_start_s = 0.
 
         # load slicers
-        if len(slicer_list) > 10:
+        # TODO - FUTURE- Need to make this number flexible
+        if len(slicer_list) > 30:
             # too many slicers: affect speed and load slicers to table but not plot
             # TODO - TODAY 190 - Add an option (> 10 slicers) for not plotting
             if False:  # TODO - Implement!
@@ -1046,13 +1048,18 @@ class WindowLogPicker(QMainWindow):
         :param slicer_name:
         :return:
         """
-        status, ret_obj = self._myParent.get_controller().gen_data_slice_manual(run_number=self._curr_run_number,
-                                                                                relative_time=True,
-                                                                                time_segment_list=split_tup_list,
-                                                                                slice_tag=slicer_name)
+        chopper = self.get_controller().project.get_chopper(self._curr_run_number)
+        status, slice_tag = chopper.generate_events_filter_manual(run_number=self._curr_run_number,
+                                                                  split_list=split_tup_list,
+                                                                  relative_time=True,
+                                                                  splitter_tag=slicer_name)
+        # status, ret_obj = self._myParent.get_controller().gen_data_slice_manual(run_number=self._curr_run_number,
+        #                                                                         relative_time=True,
+        #                                                                         time_segment_list=split_tup_list,
+        #                                                                         slice_tag=slicer_name)
 
         if status:
-            self._currSlicerKey = ret_obj
+            self._currSlicerKey = slice_tag
         else:
             GuiUtility.pop_dialog_error(self, 'Failed to generate arbitrary data slicer due to {0}.'.format(ret_obj))
 

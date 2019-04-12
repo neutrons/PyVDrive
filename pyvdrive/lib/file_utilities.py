@@ -130,31 +130,49 @@ def load_sample_logs_h5(log_h5_name, log_name=None):
 
 
 # TODO/NEXT - If parse_time_segmenets works for data slicer file too, then remove parse_data_slicer_file()
-def parse_data_slicer_file(file_name):
-    """
-    parse data slicer file
+def load_event_slicers_file(file_name):
+    """ Load and parse data/events slicer file
     :param file_name:
-    :return:
+    :return: list (3-tuple, start time, stop time, target)
     """
-    slicer_file = open(file_name, 'r')
-    raw_lines = slicer_file.readlines()
-    slicer_file.close()
+    # check
+    datatypeutility.check_file_name(file_name, True, False, False, 'Event data slicers/splitters setup file')
+
+    # load all the file content
+    try:
+        slicer_file = open(file_name, 'r')
+        raw_lines = slicer_file.readlines()
+        slicer_file.close()
+    except IOError as io_err:
+        raise RuntimeError('Unable to open file {0} due to {1}.'.format(file_name, io_err))
+    except OSError as os_err:
+        raise RuntimeError('Unable to import file {0} due to {1}.'.format(file_name, os_err))
 
     slicer_list = list()
-    for line in raw_lines:
-        # print '[DB...BAT] Line: {0}'.format(line)
+    error_message = ''
+    for line_number, line in enumerate(raw_lines):
         line = line.strip()
+
+        # skip empty line and comment line
         if len(line) == 0 or line[0] == '#':
             continue
 
         terms = line.split()
-        # print '[DB...BAT] Line split to {0}'.format(terms)
-        if len(terms) < 3:
+        if len(terms) < 2:
             continue
-        start_time = float(terms[0])
-        stop_time = float(terms[1])
-        target_ws = str(terms[2])
-        slicer_list.append((start_time, stop_time, target_ws))
+
+        try:
+            start_time = float(terms[0])
+            stop_time = float(terms[1])
+            if len(terms) >= 3:
+                target_ws = str(terms[2])
+            else:
+                target_ws = None
+
+            slicer_list.append((start_time, stop_time, target_ws))
+        except ValueError as val_err:
+            error_message += 'Skip line {} due to {}\n'.format(line_number, val_err)
+
     # END-FOR
 
     return slicer_list

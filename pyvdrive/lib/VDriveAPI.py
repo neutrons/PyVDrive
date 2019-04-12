@@ -338,24 +338,24 @@ class VDriveAPI(object):
     #
     #     return True, peak_info_list
 
-    def gen_data_slice_manual(self, run_number, relative_time, time_segment_list, slice_tag):
-        """ generate event slicer for data manually
-        :param run_number:
-        :param relative_time:
-        :param time_segment_list:
-        :param slice_tag: string for slice tag name
-        :return: slice tag. if user gives slice tag as None, then the returned one is the auto-generated.
-        """
-        # TODO FIXME - NIGHT - This method can be removed
-        # get the chopper
-        chopper = self._myProject.get_chopper(run_number)
-
-        status, slice_tag = chopper.generate_events_filter_manual(run_number=run_number,
-                                                                  split_list=time_segment_list,
-                                                                  relative_time=relative_time,
-                                                                  splitter_tag=slice_tag)
-
-        return status, slice_tag
+    # def gen_data_slice_manual(self, run_number, relative_time, time_segment_list, slice_tag):
+    #     """ generate event slicer for data manually
+    #     :param run_number:
+    #     :param relative_time:
+    #     :param time_segment_list:
+    #     :param slice_tag: string for slice tag name
+    #     :return: slice tag. if user gives slice tag as None, then the returned one is the auto-generated.
+    #     """
+    #     # TODO FIXME - NIGHT - This method can be removed
+    #     # get the chopper
+    #     chopper = self._myProject.get_chopper(run_number)
+    #
+    #     status, slice_tag = chopper.generate_events_filter_manual(run_number=run_number,
+    #                                                               split_list=time_segment_list,
+    #                                                               relative_time=relative_time,
+    #                                                               splitter_tag=slice_tag)
+    #
+    #     return status, slice_tag
 
     def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step, raw_nexus_name=None):
         """

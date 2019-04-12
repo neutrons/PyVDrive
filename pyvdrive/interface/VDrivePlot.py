@@ -1024,7 +1024,7 @@ class VdriveMainWindow(QMainWindow):
 
         # Import file
         try:
-            time_seg_list = file_utilities.parse_data_slicer_file(seg_file_name)  # missing: ref_run, run_start_time,
+            time_seg_list = file_utilities.load_event_slicers_file(seg_file_name)  # missing: ref_run, run_start_time,
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self, str(run_err))
             return

@@ -185,11 +185,27 @@ class DataChopper(object):
         assert isinstance(split_list, list), 'Splitters {0} must be given by list but not {1}.' \
                                              ''.format(split_list, type(split_list))
 
+        # auto target (1, 2, 3, ...) or user specified target
+        # TODO - TONIGHT - better to check all the splitters
+        if len(split_list) == 0:
+            raise WhatEver
+        else:
+            splitter0 = split_list[0]
+            if len(splitter0) < 2:
+                raise WhatEver
+            elif len(splitter0) == 2:
+                auto_target = True
+            elif splitter0[2] is None:
+                auto_target = True
+            else:
+                auto_target = False
+
         # Generate split workspace
         status, ret_obj = mantid_helper.generate_event_filters_arbitrary(split_list,
                                                                          relative_time=relative_time,
                                                                          tag=splitter_tag,
-                                                                         auto_target=True)
+                                                                         auto_target=auto_target)
+
         if status:
             split_ws_name, info_ws_name = ret_obj
         else:

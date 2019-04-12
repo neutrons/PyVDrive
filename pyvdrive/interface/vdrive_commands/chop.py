@@ -312,7 +312,7 @@ class VdriveChop(VDriveCommand):
         return True, 'DT is implemented but not efficient'
 
     def chop_data_manually(self, run_number, slicer_list, reduce_flag, vanadium, output_dir, epoch_time, dry_run,
-                           chop_loadframe_log, chop_furnace_log,roi_list, mask_list,  num_banks,
+                           chop_loadframe_log, chop_furnace_log, roi_list, mask_list,  num_banks,
                            binning_parameters,  save_to_nexus, iparm_file_name):
         """
         chop and/or reduce data with arbitrary slicers
@@ -354,10 +354,17 @@ class VdriveChop(VDriveCommand):
         # END-IF (dry run)
 
         # generate data slicer
-        status, slicer_key = self._controller.gen_data_slice_manual(run_number,
-                                                                    relative_time=not epoch_time,
-                                                                    time_segment_list=slicer_list,
-                                                                    slice_tag=None)
+        chopper = self._controller.project.get_chopper(run_number)
+        status, slicer_key = chopper.generate_events_filter_manual(run_number=run_number,
+                                                                   split_list=slicer_list,
+                                                                   relative_time=not epoch_time,
+                                                                   splitter_tag=None)  # auto slice tag
+
+        # return status, slice_tag
+        # status, slicer_key = self._controller.gen_data_slice_manual(run_number,
+        #                                                             relative_time=not epoch_time,
+        #                                                             time_segment_list=slicer_list,
+        #                                                             slice_tag=None)
 
         if not status:
             error_msg = str(slicer_key)
@@ -855,38 +862,43 @@ class VdriveChop(VDriveCommand):
         :param file_name:
         :return:
         """
-        # check file existence
-        assert isinstance(file_name, str), 'File name {0} must be a string but not a {1}.' \
-                                           ''.format(file_name, type(file_name))
-        try:
-            in_file = open(file_name, 'r')
-            lines = in_file.readlines()
-            in_file.close()
-        except IOError as io_err:
-            raise RuntimeError('Unable to open file {0} due to {1}.'.format(file_name, io_err))
-        except OSError as os_err:
-            raise RuntimeError('Unable to import file {0} due to {1}.'.format(file_name, os_err))
+        from pyvdrive.lib import file_utilities
 
-        split_list = list()
-        for raw_line in lines:
-            # clean the line
-            line = raw_line.strip()
-            if len(line) == 0:
-                continue
+        split_list = file_utilities.load_event_slicers_file(file_name)
 
-            # split
-            terms = line.split()
-            if len(terms) < 2:
-                continue
-
-            try:
-                start_time = float(terms[0])
-                stop_time = float(terms[1])
-                split_list.append((start_time, stop_time))
-            except ValueError:
-                # ignore if the line does not contain 2 floats
-                continue
-        # END-FOR
+        # FIXME - TODO - TODAY - After testing, the following line will be removed
+        # # check file existence
+        # assert isinstance(file_name, str), 'File name {0} must be a string but not a {1}.' \
+        #                                    ''.format(file_name, type(file_name))
+        # try:
+        #     in_file = open(file_name, 'r')
+        #     lines = in_file.readlines()
+        #     in_file.close()
+        # except IOError as io_err:
+        #     raise RuntimeError('Unable to open file {0} due to {1}.'.format(file_name, io_err))
+        # except OSError as os_err:
+        #     raise RuntimeError('Unable to import file {0} due to {1}.'.format(file_name, os_err))
+        #
+        # split_list = list()
+        # for raw_line in lines:
+        #     # clean the line
+        #     line = raw_line.strip()
+        #     if len(line) == 0:
+        #         continue
+        #
+        #     # split
+        #     terms = line.split()
+        #     if len(terms) < 2:
+        #         continue
+        #
+        #     try:
+        #         start_time = float(terms[0])
+        #         stop_time = float(terms[1])
+        #         split_list.append((start_time, stop_time))
+        #     except ValueError:
+        #         # ignore if the line does not contain 2 floats
+        #         continue
+        # # END-FOR
 
         return split_list
 

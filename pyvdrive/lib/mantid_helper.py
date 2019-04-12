@@ -567,7 +567,7 @@ def generate_event_filters_arbitrary(split_list, relative_time, tag, auto_target
             target = '{0}'.format(index + 1)
         else:
             # not allowing auto target, then must have a coding error
-            raise RuntimeError('Splitter tuple has only 2 entries!')
+            raise RuntimeError('Splitter tuple has only 2 entries but auto target is turned on!')
 
         # add splitter
         splitter_ws.addRow([start_time, stop_time, target])
