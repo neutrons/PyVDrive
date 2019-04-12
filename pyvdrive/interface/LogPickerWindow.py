@@ -31,6 +31,7 @@ import ReducedDataView
 import LoadMTSLogWindow
 import QuickChopDialog
 import ManualSlicerSetupDialog
+from pyvdrive.lib import file_utilities
 
 OUT_PICKER = 0
 IN_PICKER = 1
@@ -112,7 +113,7 @@ class WindowLogPicker(QMainWindow):
 
         # manual slicer picker
         self.ui.pushButton_showManualSlicerTable.clicked.connect(self.do_show_manual_slicer_setup_ui)
-        self.ui.pushButton_loadSlicerFile.clicked.connect(self.do_import_slicer_file)
+        self.ui.pushButton_loadSlicerFile.clicked.connect(self.do_load_splitter_file)
         self.ui.pushButton_plotManualSlicer.clicked.connect(self.do_show_manual_slicers)
 
         # Slicer table
@@ -458,13 +459,11 @@ class WindowLogPicker(QMainWindow):
 
         return
 
-    def do_import_slicer_file(self, slicer_file_name=None):
+    def do_load_splitter_file(self, slicer_file_name=None):
         """ Import an ASCII file which contains the slicers.
         The format will be a 3 column file as run start (in second), run stop(in second) and target workspace
         :return:
         """
-        from pyvdrive.lib import file_utilities
-
         # get file
         if slicer_file_name is None or not slicer_file_name:
             default_dir = self._myParent.get_controller().get_working_dir()
@@ -494,6 +493,7 @@ class WindowLogPicker(QMainWindow):
         slicer_start_time = slicer_list[0][0]   # Error:  TypeError: 'TimeSegment' object does not support indexing
         # Error above line
 
+        # automatically determine the type of slicer time: epoch (nano seconds or relative)
         if slicer_start_time > 3600 * 24 * 365:
             # larger than 1 year. then must be an absolute time
             run_start_s = int(self.ui.label_runStartEpoch.text())
@@ -501,17 +501,24 @@ class WindowLogPicker(QMainWindow):
             # relative time: no experiment in 1991
             run_start_s = 0.
 
-        # TODO - TONIGHT 190 - Add an option (> 10 slicers) for not plotting
-        # ... ...
-
-        # set to figure
-        prev_stop_time = -1.E-20
-        for slicer in slicer_list:
-            start_time, stop_time, target = slicer
-            if start_time > prev_stop_time:
-                self.ui.graphicsView_main.add_picker(start_time - run_start_s)    # TODO - Shall we register these picker?
-            self.ui.graphicsView_main.add_picker(stop_time - run_start_s)
-            prev_stop_time = stop_time
+        # load slicers
+        if len(slicer_list) > 10:
+            # too many slicers: affect speed and load slicers to table but not plot
+            # TODO - TODAY 190 - Add an option (> 10 slicers) for not plotting
+            if False:  # TODO - Implement!
+                self.add_time_picker(slicer_list)
+                self.disable_user_pick()
+        else:
+            # set to figure
+            prev_stop_time = -1.E-20
+            for slicer in slicer_list:
+                start_time, stop_time, target = slicer
+                if start_time > prev_stop_time:
+                    self.ui.graphicsView_main.add_picker(
+                        start_time - run_start_s)  # TODO - Shall we register these picker?
+                self.ui.graphicsView_main.add_picker(stop_time - run_start_s)
+                prev_stop_time = stop_time
+        # END-IF
 
         return
 

@@ -719,7 +719,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         :param vec_target_ws:
         :return:
         """
-
+        print ('[DB...BAT] Vector of times: {}'.format(vec_times))
 
         # TODO - TONIGHT 190 - Add debugging to this method!
         # check state
@@ -746,11 +746,11 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         print ('[DB...BAT] # segments = {}... vec target type: {}'
                ''.format(num_seg_to_show, vec_target_ws.dtype))
+
         for i_seg in range(num_seg_to_show):
             # get start time and stop time
             x_start = vec_times[i_seg]
             x_stop = vec_times[i_seg+1]
-
             print ('[DB...BAT] Segment {}: Time range = {}, {}'.format(i_seg, x_start, x_stop))
 
             # get start time and stop time's index
@@ -758,8 +758,10 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
             i_stop = (np.abs(vec_x - x_stop)).argmin()
             if i_start == i_stop:
                 # empty!
-                print '[SampleLogView WARNING] Range: %d to %d  (%f to %f) cannot generate any vector. ' \
-                      '' % (i_start, i_stop, vec_x[i_start], vec_x[i_stop])
+                print '[SampleLogView WARNING] splitter start @ {} ({}), stop @ {} ({}). Unable to generate ' \
+                      'time segment vector. FYI from index {} to {}: {}' \
+                      ''.format(x_start, i_start, x_stop, i_stop, i_start-1, i_stop+1,
+                                vec_x[i_start-1:i_stop+2])
                 continue
             elif i_start > i_stop:
                 raise RuntimeError('It is impossible to have start index {0} > stop index {1}'
@@ -768,8 +770,8 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
             print ('[DB...BAT] Segment {}: Index range = {}, {}'.format(i_seg, i_start, i_stop))
 
             # get the partial for plot
-            vec_x_i = vec_x[i_start:i_stop]
-            vec_y_i = vec_y[i_start:i_stop]
+            vec_x_i = vec_x[i_start:i_stop+1]
+            vec_y_i = vec_y[i_start:i_stop+1]
 
             # plot
             color_index = vec_target_ws[i_seg]

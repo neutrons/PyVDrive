@@ -219,7 +219,7 @@ class ManualSlicerSetupTableDialog(QDialog):
         Load data slicers from a csv-like file
         :return:
         """
-        self._myParent.do_import_slicer_file()
+        self._myParent.do_load_splitter_file()
 
         return
 
