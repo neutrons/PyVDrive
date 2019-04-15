@@ -179,7 +179,6 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
 
         return
 
-    # TODO - TODAY 190 - Test!
     def set_time_slicers(self, time_slicer_list):
         """
         clear the current table and set new time slicers (in a list) to this table
@@ -209,7 +208,7 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
                     self.append_row([time_slicer_tup[0], time_slicer_tup[1], slicer_index+1, True])
                 else:
                     # use user specified as target workspace
-                    self.append_row([time_slicer_tup[0], time_slicer_list[1], time_slicer_list[2],
+                    self.append_row([time_slicer_tup[0], time_slicer_tup[1], time_slicer_tup[2],
                                      True])
                 # END-IF-ELSE
             # END-FOR
@@ -217,7 +216,7 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
             # type 1: list of time stamps: set time
             for i_time in range(len(time_slicer_list)-1):
                 start_time = time_slicer_list[i_time]
-                stop_time = time_slicer_list[i_time + 1]
+                stop_time = time_slicer_list[i_time+1]
                 self.append_row([start_time, stop_time, i_time, True])
         # END-FOR
 

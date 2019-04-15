@@ -173,6 +173,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         # update the new list to parent window
         picker_pos_list = list()
+        print ('[DB...BAT] Clear picker: emit signal with empty position list')
         self.mySlicerUpdatedSignal.emit(picker_pos_list)
 
         return

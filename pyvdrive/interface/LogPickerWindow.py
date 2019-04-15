@@ -531,8 +531,10 @@ class WindowLogPicker(QMainWindow):
         # check slicer keys
         if self._currSlicerKey is None:
             GuiUtility.pop_dialog_error(self, 'Slicer has not been set up yet.')
+            return
         else:
             datatypeutility.check_string_variable('Current slicer key', self._currSlicerKey, None)
+
         # slice data
         status, message = self.get_controller().project.chop_run(run_number, self._currSlicerKey,
                                                                  reduce_flag=to_reduce_gsas,
@@ -1154,7 +1156,7 @@ class WindowLogPicker(QMainWindow):
 
         if status:
             self._currSlicerKey = slice_tag
-            self._cacheSlicerDict['manual'] = slice_tag
+            # self._cacheSlicerDict['manual'] = slice_tag
             message = 'Manual splitters set up (key: {})'.format(slice_tag)
             self.ui.label_slicerSetupInfo.setText(message)
         else:

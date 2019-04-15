@@ -75,7 +75,7 @@ class EventFilteringAssistantTestEnvironment(object):
         :return:
         """
         # set x and y sample logs
-        GuiUtility.set_combobox_current_item(self._slice_window.ui.comboBox_logNames, 'loadframe.furnace2',
+        GuiUtility.set_combobox_current_item(self._slice_window.ui.comboBox_logNames, 'loadframe.furnace1',
                                              match_beginning=True)
 
         # plot
@@ -85,7 +85,7 @@ class EventFilteringAssistantTestEnvironment(object):
         self._slice_window.ui.radioButton_manualSlicer.setChecked(True)
 
         # load data
-        # self._slice_window.do_import_slicer_file('tests/data/cyclic_data/upslope_slicer.dat')
+        self._slice_window.do_load_splitter_file('tests/data/cyclic_data/upslope_slicer.dat')
 
         # load data
 

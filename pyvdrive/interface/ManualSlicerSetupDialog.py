@@ -361,6 +361,9 @@ class ManualSlicerSetupTableDialog(QDialog):
         :param slicers_list: a list of 2-tuple or 3-tuple
         :return:
         """
-        self.ui.tableWidget_segments.set_time_slicers(slicers_list)
+        try:
+            self.ui.tableWidget_segments.set_time_slicers(slicers_list)
+        except RuntimeError as run_err:
+            print ('[WARNING] Writing slicer table: {}'.format(run_err))
 
         return
