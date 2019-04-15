@@ -930,32 +930,55 @@ def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, 
     :return: 2-tuple.  vector of epoch time in unit of second. vector of log value
     """
     # Check
-    # assert workspace_does_exist(src_workspace)
-    assert isinstance(sample_log_name, str)
+    datatypeutility.check_string_variable('Sample log name', sample_log_name)
+    if isinstance(src_workspace, str):
+        src_workspace = retrieve_workspace(src_workspace, True)
 
-    # Form args
-    args = dict()
-    if start_time is not None:
-        args['StartTime'] = start_time
-    if stop_time is not None:
-        args['StopTime'] = stop_time
+    if start_time is None and stop_time is None:
+        # access sample log directly
+        try:
+            log_property = src_workspace.run().getProperty(sample_log_name)
+        except KeyError as key_err:
+            raise RuntimeError('Unable to locate sample log {}: {}'.format(sample_log_name, key_err))
 
-    # Call
-    temp_out_ws_name = str(src_workspace) + '_' + sample_log_name
-    mantidapi.ExportTimeSeriesLog(InputWorkspace=src_workspace,
-                                  OutputWorkspace=temp_out_ws_name,
-                                  LogName=sample_log_name,
-                                  UnitOfTime='Seconds',
-                                  OutputAbsoluteTime=not relative,
-                                  IsEventWorkspace=False,
-                                  **args)
+        vec_times = log_property.times
+        vec_value = log_property.value
 
-    out_ws = mantid.AnalysisDataService.retrieve(temp_out_ws_name)
+        if relative:
+            # relative time: get run 0
+            run_start = src_workspace.run().getProperty('proton_charge').times[0]
+            vec_times = (vec_times - run_start).astype('float') * 1.E-9
+        else:
+            vec_times = vec_times[:]
+        # END-IF
+        vec_value = vec_value[:]  # copy data for reference safe
 
-    # copy the vector of X (time) and Y (value) for returning
-    # FUTURE - what if the returned values are the reference to the vectors in workspace?
-    vec_times = out_ws.readX(0)[:]
-    vec_value = out_ws.readY(0)[:]
+    else:
+        # need part of sample logs
+        # Form args
+        args = dict()
+        if start_time is not None:
+            args['StartTime'] = start_time
+        if stop_time is not None:
+            args['StopTime'] = stop_time
+
+        # Call
+        temp_out_ws_name = str(src_workspace) + '_' + sample_log_name
+        mantidapi.ExportTimeSeriesLog(InputWorkspace=src_workspace,
+                                      OutputWorkspace=temp_out_ws_name,
+                                      LogName=sample_log_name,
+                                      UnitOfTime='Seconds',
+                                      OutputAbsoluteTime=not relative,
+                                      IsEventWorkspace=False,
+                                      **args)
+
+        out_ws = mantid.AnalysisDataService.retrieve(temp_out_ws_name)
+
+        # copy the vector of X (time) and Y (value) for returning
+        # FUTURE - what if the returned values are the reference to the vectors in workspace?
+        vec_times = out_ws.readX(0)[:]
+        vec_value = out_ws.readY(0)[:]
+    # END-IF-ELSE
 
     return vec_times, vec_value
 
