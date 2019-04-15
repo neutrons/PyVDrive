@@ -1691,22 +1691,32 @@ def load_nexus(data_file_name, output_ws_name, meta_data_only, max_time=None):
     :param max_time: relative max time (stop time) to load from Event Nexus file in unit of seconds
     :return: 2-tuple
     """
-    try:
-        if not data_file_name.endswith('.h5'):
-            out_ws = mantidapi.Load(Filename=data_file_name,
-                                    OutputWorkspace=output_ws_name,
-                                    MetaDataOnly=meta_data_only)
-        elif max_time is None:
-            out_ws = mantidapi.LoadEventNexus(Filename=data_file_name,
-                                              OutputWorkspace=output_ws_name,
-                                              MetaDataOnly=meta_data_only)
-        else:
-            out_ws = mantidapi.LoadEventNexus(Filename=data_file_name,
-                                              OutputWorkspace=output_ws_name,
-                                              FilterByTimeStop=max_time)
+    if meta_data_only:
+        # load logs to an empty workspace
+        out_ws = mantidapi.CreateWorkspace(DataX=[0], DataY=[0], DataE=[0], NSpec=1, OutputWorkspace=output_ws_name)
+        try:
+            mantidapi.LoadNexusLogs(Workspace=output_ws_name, Filename=data_file_name, OverwriteLogs=True)
+        except RuntimeError as run_err:
+            return False, 'Unable to load Nexus (log) file {} due to {}'.format(data_file_name, run_err)
+    else:
+        # regular workspace with data
+        try:
+            if not data_file_name.endswith('.h5'):
+                out_ws = mantidapi.Load(Filename=data_file_name,
+                                        OutputWorkspace=output_ws_name,
+                                        MetaDataOnly=False)
+            elif max_time is None:
+                out_ws = mantidapi.LoadEventNexus(Filename=data_file_name,
+                                                  OutputWorkspace=output_ws_name,
+                                                  MetaDataOnly=False)
+            else:
+                out_ws = mantidapi.LoadEventNexus(Filename=data_file_name,
+                                                  OutputWorkspace=output_ws_name,
+                                                  FilterByTimeStop=max_time)
 
-    except RuntimeError as e:
-        return False, 'Unable to load Nexus file %s due to %s' % (data_file_name, str(e))
+        except RuntimeError as e:
+            return False, 'Unable to load Nexus file %s due to %s' % (data_file_name, str(e))
+    # END-IF-ELSE
 
     return True, out_ws
 

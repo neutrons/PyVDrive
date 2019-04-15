@@ -114,7 +114,6 @@ class WindowLogPicker(QMainWindow):
         # manual slicer picker
         self.ui.pushButton_showManualSlicerTable.clicked.connect(self.do_show_manual_slicer_setup_ui)
         self.ui.pushButton_loadSlicerFile.clicked.connect(self.do_load_splitter_file)
-        self.ui.pushButton_plotManualSlicer.clicked.connect(self.do_show_manual_slicers)
 
         # Slicer table
         # Canvas
@@ -355,7 +354,7 @@ class WindowLogPicker(QMainWindow):
             :return:
             """
             # cache current
-            self._cached_slicers_dict[self._current_slicer_type] = self._current_slicer_tag
+            self._cached_slicers_dict[self._current_slicer_type] = self._current_slicer_type
             prev_slicer = self._current_slicer_type
 
             # get the next
@@ -364,6 +363,10 @@ class WindowLogPicker(QMainWindow):
 
             return
         # END-DEF
+
+        # skip if target mode is same as current mode
+        if target_mode == self._current_slicer_type:
+            return
 
         self._mutexLockSwitchSliceMethod = True  # lock slicer
 
@@ -427,51 +430,64 @@ class WindowLogPicker(QMainWindow):
             return
 
         # Reset the image and etc
-        ... ... blabla continue from hereß
+        self.ui.graphicsView_main.remove_slicers()
 
-        # Reset the cached slicers
-        if False:  # TODO - TODAY 190 - Enable
-            # ['time', 'log', 'manual', 'curve']
-
-            self._cached_slicers_dict = self._cached_slicers(self.ui.radioButton_timeSlicer.isChecked(),
-                                                             self.ui.radioButton_logValueSlicer.isChecked(),
-                                                             self.ui.radioButton_manualSlicer.isChecked(),
-                                                             self.ui.radioButton_curveSlicer.isChecked())
-
-
+        # plot slicer segments
+        if self.ui.checkBox_showSlicer.isChecked():
             self.evt_show_slicer()
 
-        # manual slicer window
-        if self.ui.radioButton_manualSlicer.isChecked():
+        # do something special
+        if self._current_slicer_type == 'manual':
             # set up and launch ManualSlicerSetupDialog
             self.do_show_manual_slicer_setup_ui()
-            self.ui.graphicsView_main.set_manual_slicer_setup_mode(True)
 
         elif self._manualSlicerDialog is not None:
             # other mode than manual selection
             self._manualSlicerDialog.do_hide_window()
-            self.ui.graphicsView_main.set_manual_slicer_setup_mode(False)
-        # END-IF-ELSE
 
-        # high light
-
-        # For sample log plot
-        # high lighted segments
-        if False:  # TODO - TODAY 190 - Enable
-            # TODO - TONIGHT 0 - implement slicer_dict['time', 'log', 'manual', 'curve']
-            self._cached_slicers_dict = self._cached_slicers(self.ui.radioButton_timeSlicer.isChecked(),
-                                                             self.ui.radioButton_logValueSlicer.isChecked(),
-                                                             self.ui.radioButton_manualSlicer.isChecked(),
-                                                             self.ui.radioButton_curveSlicer.isChecked())
-            self.evt_show_slicer()
-        # END-IF
-
-        # slicers
-        # TODO - TONIGHT 0 - Need to find out the code to add/remove manual slicer-pickers
+        # # Reset the cached slicers
+        # if False:  # TODO - TODAY 190 - Enable
+        #     # ['time', 'log', 'manual', 'curve']
+        #
+        #     self._cached_slicers_dict = self._cached_slicers(self.ui.radioButton_timeSlicer.isChecked(),
+        #                                                      self.ui.radioButton_logValueSlicer.isChecked(),
+        #                                                      self.ui.radioButton_manualSlicer.isChecked(),
+        #                                                      self.ui.radioButton_curveSlicer.isChecked())
+        #
+        #
+        #     self.evt_show_slicer()
+        #
+        # # manual slicer window
         # if self.ui.radioButton_manualSlicer.isChecked():
-        #     self.ui.graphicsView_main.show_pickers()
-        # else:
-        #     self.ui.graphicsView_main.hide_pickers()
+        # #     # set up and launch ManualSlicerSetupDialog
+        # #     self.do_show_manual_slicer_setup_ui()
+        # #     self.ui.graphicsView_main.set_manual_slicer_setup_mode(True)
+        # #
+        # # elif self._manualSlicerDialog is not None:
+        # #     # other mode than manual selection
+        # #     self._manualSlicerDialog.do_hide_window()
+        # #     self.ui.graphicsView_main.set_manual_slicer_setup_mode(False)
+        # # END-IF-ELSE
+        #
+        # # high light
+        #
+        # # For sample log plot
+        # # high lighted segments
+        # if False:  # TODO - TODAY 190 - Enable
+        #     # TODO - TONIGHT 0 - implement slicer_dict['time', 'log', 'manual', 'curve']
+        #     self._cached_slicers_dict = self._cached_slicers(self.ui.radioButton_timeSlicer.isChecked(),
+        #                                                      self.ui.radioButton_logValueSlicer.isChecked(),
+        #                                                      self.ui.radioButton_manualSlicer.isChecked(),
+        #                                                      self.ui.radioButton_curveSlicer.isChecked())
+        #     self.evt_show_slicer()
+        # # END-IF
+        #
+        # # slicers
+        # # TODO - TONIGHT 0 - Need to find out the code to add/remove manual slicer-pickers
+        # # if self.ui.radioButton_manualSlicer.isChecked():
+        # #     self.ui.graphicsView_main.show_pickers()
+        # # else:
+        # #     self.ui.graphicsView_main.hide_pickers()
 
         self._mutexLockSwitchSliceMethod = True  # un-lock slicer
 
@@ -608,15 +624,6 @@ class WindowLogPicker(QMainWindow):
         #         self.ui.graphicsView_main.add_picker(stop_time - run_start_s)
         #         prev_stop_time = stop_time
         # # END-IF
-
-        return
-
-    # TODO - TODAY 0 - TEST (new and broken)
-    def do_show_manual_slicers(self):
-        """ Color the segments from different target workspaces which was set by manual pickers
-        :return:
-        """
-        self.evt_show_slicer()
 
         return
 
@@ -1030,10 +1037,12 @@ class WindowLogPicker(QMainWindow):
         :return:
         """
         datatypeutility.check_list('Slicers list', slicers_list)
-        if self._manualSlicerDialog is not None:
-            self._manualSlicerDialog.write_table(slicers_list)
-        else:
-            GuiUtility.pop_dialog_error(self, 'blabla 123')
+
+        # show slicer setup (child) window
+        self.do_show_manual_slicer_setup_ui()
+
+        # write slicers
+        self._manualSlicerDialog.write_table(slicers_list)
 
         return
 

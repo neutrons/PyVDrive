@@ -1126,7 +1126,13 @@ class VDriveAPI(object):
             # END-IF
 
             file_name = self._myArchiveManager.locate_event_nexus(ipts_number, run_number=run_number)
+            if file_name is None:
+                raise RuntimeError('Unable to find or access NeXus file of IPTS-{} Run-{}'
+                                   ''.format(ipts_number, run_number))
         # END-IF
+
+        # add to project
+        self._myProject.add_run(run_number, file_name, ipts_number)
 
         # load file
         output_ws_name = self._myProject.load_meta_data(ipts_number=ipts_number, run_number=run_number,

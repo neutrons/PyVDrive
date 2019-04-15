@@ -226,7 +226,10 @@ class DataArchiveManager(object):
             # might be a pre-nED
             base_name = 'VULCAN_{0}_event.nxs'.format(run_number)
             sub_path = os.path.join('IPTS-{0}/0/{1}/NeXus'.format(ipts_number, run_number), base_name)
+            raw_event_file_name_h5 = raw_event_file_name
             raw_event_file_name = os.path.join(self._archiveRootDirectory, sub_path)
+        else:
+            raw_event_file_name_h5 = '<Logic Error>'
         # END-IF
 
         # early return
@@ -236,6 +239,8 @@ class DataArchiveManager(object):
         else:
             # return for nothing
             raw_event_file_name = None
+            print ('[INFO] For IPTS-{} Run-{}, neither {} nor {} exists.'
+                   ''.format(ipts_number, run_number, raw_event_file_name_h5, raw_event_file_name))
         # END-IF-ELSE
 
         return raw_event_file_name
