@@ -72,8 +72,8 @@ class WindowLogPicker(QMainWindow):
         self._mutexLockSwitchSliceMethod = False
 
         # special slicer helper
-        self._current_slicer_type = None
-        self._current_slicers_dict = {'time': None, 'log': None, 'manual': None, 'curve': None}
+        self._current_slicer_type = None  # slicer mode, i.e.,time, log, manual, curve
+        self._cached_slicers_dict = {'time': None, 'log': None, 'manual': None, 'curve': None}
 
         # set up UI
         ui_path = os.path.join(os.path.dirname(__file__), "gui/VdriveLogPicker.ui")
@@ -227,7 +227,7 @@ class WindowLogPicker(QMainWindow):
         else:
             type_name = 'curve'
 
-        return self._current_slicers_dict[type_name]
+        return self._cached_slicers_dict[type_name]
 
     def _init_widgets_setup(self):
         """
@@ -250,7 +250,7 @@ class WindowLogPicker(QMainWindow):
         self.ui.radioButton_timeSlicer.setChecked(True)
         self.ui.radioButton_logValueSlicer.setChecked(False)
         self.ui.radioButton_manualSlicer.setChecked(False)
-        self._set_main_slice_method()
+        self.set_slice_mode(target_mode='time')
         for item in ['Both', 'Increase', 'Decrease']:
             self.ui.comboBox_logChangeDirection.addItem(item)
 
@@ -280,80 +280,141 @@ class WindowLogPicker(QMainWindow):
 
         return
 
-    def _set_main_slice_method(self):
+    # TODO - TODAY 190 - Test (in develop)
+    def set_slice_mode(self, target_mode):
         """
         Set the main slicer method, manual or auto
+        :param target_mode: [time, log, manual, curve, None]
         :return:
         """
-        # check for a possible error condition
-        if self.ui.radioButton_timeSlicer.isChecked() is False:
-            try:
-                self.ui.graphicsView_main.get_data_range()
-            except RuntimeError:
-                # data range is not set up yet
-                self._mutexLockSwitchSliceMethod = True   # lock slicer
-                self.ui.radioButton_timeSlicer.setChecked(True)
-                self._mutexLockSwitchSliceMethod = True   # un-lock slicer
-                return
-        # END-IF
+        def set_auto_log_mode_widgets(is_value_log):
 
-        # enable to disable widgets
-        if self.ui.radioButton_timeSlicer.isChecked():
-            # time slicer
+            # enable and disable group boxes
             self.ui.groupBox_sliceSetupAuto.setEnabled(True)
             self.ui.groupBox_slicerSetupManual.setEnabled(False)
 
-            self.ui.lineEdit_minSlicerLogValue.setEnabled(False)
-            self.ui.lineEdit_slicerLogValueStep.setEnabled(True)
-            self.ui.lineEdit_maxSlicerLogValue.setEnabled(False)
-            self.ui.comboBox_logChangeDirection.setEnabled(False)
+            self.ui.groupBox_sliceSetupAuto.setHidden(False)
+            self.ui.groupBox_slicerSetupManual.setHidden(True)
+
+            # enable and disable line edits and combo boxes
+            self.ui.lineEdit_minSlicerLogValue.setEnabled(is_value_log)
+            # self.ui.lineEdit_slicerLogValueStep.setEnabled(True) always enabled
+            self.ui.lineEdit_maxSlicerLogValue.setEnabled(is_value_log)
+            self.ui.comboBox_logChangeDirection.setEnabled(is_value_log)
 
             # hide some labels and line edits
-            self.ui.label_minValue.setHidden(True)
-            self.ui.label_maxValue.setHidden(True)
-            self.ui.label_direction.setHidden(True)
-            self.ui.lineEdit_minSlicerLogValue.setHidden(True)
-            self.ui.lineEdit_maxSlicerLogValue.setHidden(True)
-            self.ui.comboBox_logChangeDirection.setHidden(True)
+            # self.ui.label_minValue.setHidden(True)
+            # self.ui.label_maxValue.setHidden(True)
+            # self.ui.label_direction.setHidden(True)
+            # self.ui.lineEdit_minSlicerLogValue.setHidden(True)
+            # self.ui.lineEdit_maxSlicerLogValue.setHidden(True)
+            # self.ui.comboBox_logChangeDirection.setHidden(True)
 
-            self.ui.label_step.setText('Time Step')
+            # for log value
+
+            # self.ui.groupBox_sliceSetupAuto.setEnabled(True)
+            # self.ui.groupBox_slicerSetupManual.setEnabled(False)
+
+            # self.ui.lineEdit_minSlicerLogValue.setEnabled(True)
+            # self.ui.lineEdit_slicerLogValueStep.setEnabled(True)
+            # self.ui.lineEdit_maxSlicerLogValue.setEnabled(True)
+            # self.ui.comboBox_logChangeDirection.setEnabled(True)
+
+            # also set up the min and max log value
+            if is_value_log:
+                x_min, x_max, y_min, y_max = self.ui.graphicsView_main.get_data_range()
+
+                self.ui.lineEdit_minSlicerLogValue.setText('%.4f' % y_min)
+                self.ui.lineEdit_maxSlicerLogValue.setText('%.4f' % y_max)
+                self.ui.label_step.setText('Log Value Step')
+            else:
+                self.ui.label_step.setText('Time Step')
+
+            # show some labels and line edits
+            self.ui.label_minValue.setHidden(not is_value_log)
+            self.ui.label_maxValue.setHidden(not is_value_log)
+            self.ui.label_direction.setHidden(not is_value_log)
+            self.ui.lineEdit_minSlicerLogValue.setHidden(not is_value_log)
+            self.ui.lineEdit_maxSlicerLogValue.setHidden(not is_value_log)
+            self.ui.comboBox_logChangeDirection.setHidden(not is_value_log)
+
+            return
+        # END-DEF
+
+        def set_manual_mode_widgets():
+            self.ui.groupBox_sliceSetupAuto.setEnabled(False)
+            self.ui.groupBox_slicerSetupManual.setEnabled(True)
+
+            self.ui.groupBox_sliceSetupAuto.setHidden(True)
+            self.ui.groupBox_slicerSetupManual.setHidden(False)
+
+        def switch_slice_mode(mode_name):
+            """
+            switch slice mode: cache current; get cached new value; ..
+            :param mode_name:
+            :return:
+            """
+            # cache current
+            self._cached_slicers_dict[self._current_slicer_type] = self._current_slicer_tag
+            prev_slicer = self._current_slicer_type
+
+            # get the next
+            self._current_slicer_type = mode_name
+            self._currSlicerKey = self._cached_slicers_dict[self._current_slicer_type]
+
+            return
+        # END-DEF
+
+        self._mutexLockSwitchSliceMethod = True  # lock slicer
+
+        if target_mode is not None:
+            datatypeutility.check_string_variable('Target slicing mode', target_mode,
+                                                  ['time', 'log', 'manual', 'curve'])
+            if target_mode == 'time':
+                self.ui.radioButton_timeSlicer.setChecked(True)
+            elif target_mode == 'log':
+                self.ui.radioButton_logValueSlicer.setChecked(True)
+            elif target_mode == 'manual':
+                self.ui.radioButton_manualSlicer.setChecked(True)
+            else:
+                self.ui.radioButton_curveSlicer.setChecked(True)
+        # END-IF: set mode explicitly
+
+        # TODO - TODAY 190 - Find out why this can be triggered
+        # # check for a possible error condition
+        # if self.ui.radioButton_timeSlicer.isChecked() is False:
+        #     try:
+        #         self.ui.graphicsView_main.get_data_range()
+        #     except RuntimeError:
+        #         # data range is not set up yet
+        #         self.ui.radioButton_timeSlicer.setChecked(True)
+        #         return
+        # # END-IF
+
+        # Enable and disable widgets according to type
+        if self.ui.radioButton_timeSlicer.isChecked():
+            # time slicer
+            set_auto_log_mode_widgets(is_value_log=False)
+            switch_slice_mode('time')
 
             # set up graphic view's mode
             self.ui.graphicsView_main.set_manual_slicer_setup_mode(False)
 
         elif self.ui.radioButton_logValueSlicer.isChecked():
             # log value slicer
-            self.ui.groupBox_sliceSetupAuto.setEnabled(True)
-            self.ui.groupBox_slicerSetupManual.setEnabled(False)
+            set_auto_log_mode_widgets(is_value_log=True)
+            switch_slice_mode('log')
 
-            self.ui.lineEdit_minSlicerLogValue.setEnabled(True)
-            self.ui.lineEdit_slicerLogValueStep.setEnabled(True)
-            self.ui.lineEdit_maxSlicerLogValue.setEnabled(True)
-            self.ui.comboBox_logChangeDirection.setEnabled(True)
-
-            # also set up the min and max log value
-            x_min, x_max, y_min, y_max = self.ui.graphicsView_main.get_data_range()
-
-            self.ui.lineEdit_minSlicerLogValue.setText('%.4f' % y_min)
-            self.ui.lineEdit_maxSlicerLogValue.setText('%.4f' % y_max)
-
-            # show some labels and line edits
-            self.ui.label_minValue.setHidden(False)
-            self.ui.label_maxValue.setHidden(False)
-            self.ui.label_direction.setHidden(False)
-            self.ui.lineEdit_minSlicerLogValue.setHidden(False)
-            self.ui.lineEdit_maxSlicerLogValue.setHidden(False)
-            self.ui.comboBox_logChangeDirection.setHidden(False)
             # set up graphic view's mode
-
-            self.ui.label_step.setText('Log Value Step')
+            self.ui.graphicsView_main.set_manual_slicer_setup_mode(False)
 
         elif self.ui.radioButton_manualSlicer.isChecked():
             # manual slicer
-            self.ui.groupBox_sliceSetupAuto.setEnabled(False)
-            self.ui.groupBox_slicerSetupManual.setEnabled(True)
+            set_manual_mode_widgets()
+            switch_slice_mode('manual')
 
             # set up graphic view's mode
+            self.ui.graphicsView_main.set_manual_slicer_setup_mode(True)
 
         elif self.ui.radioButton_curveSlicer.isChecked():
             # curve/manual slicer
@@ -365,6 +426,21 @@ class WindowLogPicker(QMainWindow):
             GuiUtility.pop_dialog_error(self, 'Nothing selected?')
             return
 
+        # Reset the image and etc
+        ... ... blabla continue from hereß
+
+        # Reset the cached slicers
+        if False:  # TODO - TODAY 190 - Enable
+            # ['time', 'log', 'manual', 'curve']
+
+            self._cached_slicers_dict = self._cached_slicers(self.ui.radioButton_timeSlicer.isChecked(),
+                                                             self.ui.radioButton_logValueSlicer.isChecked(),
+                                                             self.ui.radioButton_manualSlicer.isChecked(),
+                                                             self.ui.radioButton_curveSlicer.isChecked())
+
+
+            self.evt_show_slicer()
+
         # manual slicer window
         if self.ui.radioButton_manualSlicer.isChecked():
             # set up and launch ManualSlicerSetupDialog
@@ -375,15 +451,18 @@ class WindowLogPicker(QMainWindow):
             # other mode than manual selection
             self._manualSlicerDialog.do_hide_window()
             self.ui.graphicsView_main.set_manual_slicer_setup_mode(False)
+        # END-IF-ELSE
+
+        # high light
 
         # For sample log plot
         # high lighted segments
-        if False:
+        if False:  # TODO - TODAY 190 - Enable
             # TODO - TONIGHT 0 - implement slicer_dict['time', 'log', 'manual', 'curve']
-            self._current_slicers_dict = self._cached_slicers(self.ui.radioButton_timeSlicer.isChecked(),
-                                                              self.ui.radioButton_logValueSlicer.isChecked(),
-                                                              self.ui.radioButton_manualSlicer.isChecked(),
-                                                              self.ui.radioButton_curveSlicer.isChecked())
+            self._cached_slicers_dict = self._cached_slicers(self.ui.radioButton_timeSlicer.isChecked(),
+                                                             self.ui.radioButton_logValueSlicer.isChecked(),
+                                                             self.ui.radioButton_manualSlicer.isChecked(),
+                                                             self.ui.radioButton_curveSlicer.isChecked())
             self.evt_show_slicer()
         # END-IF
 
@@ -393,6 +472,8 @@ class WindowLogPicker(QMainWindow):
         #     self.ui.graphicsView_main.show_pickers()
         # else:
         #     self.ui.graphicsView_main.hide_pickers()
+
+        self._mutexLockSwitchSliceMethod = True  # un-lock slicer
 
         return
 
@@ -502,25 +583,31 @@ class WindowLogPicker(QMainWindow):
             # relative time: no experiment in 1991
             run_start_s = 0.
 
-        # load slicers
-        # TODO - FUTURE- Need to make this number flexible
-        if len(slicer_list) > 30:
-            # too many slicers: affect speed and load slicers to table but not plot
-            # TODO - TODAY 190 - Add an option (> 10 slicers) for not plotting
-            if False:  # TODO - Implement!
-                self.add_time_picker(slicer_list)
-                self.disable_user_pick()
-        else:
-            # set to figure
-            prev_stop_time = -1.E-20
-            for slicer in slicer_list:
-                start_time, stop_time, target = slicer
-                if start_time > prev_stop_time:
-                    self.ui.graphicsView_main.add_picker(
-                        start_time - run_start_s)  # TODO - Shall we register these picker?
-                self.ui.graphicsView_main.add_picker(stop_time - run_start_s)
-                prev_stop_time = stop_time
-        # END-IF
+        # add slicers to table
+        # TODO - TODAY 190 - Test
+        self.evt_rewrite_manual_table(slicer_list)
+        self.ui.checkBox_showSlicer.setChecked(False)
+
+        # # load slicers
+        # # TODO - FUTURE- Need to make this number flexible
+        # if len(slicer_list) > 30:
+        #     # too many slicers: affect speed and load slicers to table but not plot
+        #     # TODO - TODAY 190 - Add an option (> 10 slicers) for not plotting
+        #     if False:  # TODO - Implement!
+        #         self.add_time_picker(slicer_list)
+        #         self.disable_user_pick()
+        # else:
+        #     FIXME - This works. But it is replaced now
+        #     # set to figure
+        #     prev_stop_time = -1.E-20
+        #     for slicer in slicer_list:
+        #         start_time, stop_time, target = slicer
+        #         if start_time > prev_stop_time:
+        #             self.ui.graphicsView_main.add_picker(
+        #                 start_time - run_start_s)  # TODO - Shall we register these picker?
+        #         self.ui.graphicsView_main.add_picker(stop_time - run_start_s)
+        #         prev_stop_time = stop_time
+        # # END-IF
 
         return
 
@@ -852,7 +939,7 @@ class WindowLogPicker(QMainWindow):
 
     def do_setup_uniform_slicer(self):
         """
-        Set up the log value or time chopping
+        Set up (apply) the log value or time chopping
         :return:
         """
         # read the values
@@ -871,7 +958,7 @@ class WindowLogPicker(QMainWindow):
                                                                             time_step=step)
             if status:
                 self._currSlicerKey = ret_obj
-                message = 'Time slicer: from %s to %s with step %f.' % (str(start_time), str(stop_time), step)
+                message = 'Uniform Time slicer: from %s to %s with step %f.' % (str(start_time), str(stop_time), step)
             else:
                 GuiUtility.pop_dialog_error(self, 'Failed to generate data slicer by time due to %s.'
                                                   '' % str(ret_obj))
@@ -905,10 +992,8 @@ class WindowLogPicker(QMainWindow):
                                                   '' % str(run_err))
                 return
 
-            message = 'Log {0} slicer: from {1} to {2} with step {3}.'.format(log_name,
-                                                                              str(min_log_value),
-                                                                              str(max_log_value),
-                                                                              log_value_step)
+            message = 'Uniform Log {0} value slicer: from {1} to {2} with step {3}.' \
+                      ''.format(log_name, str(min_log_value), str(max_log_value), log_value_step)
 
         else:
             # bad coding
@@ -940,15 +1025,15 @@ class WindowLogPicker(QMainWindow):
         return
 
     def evt_rewrite_manual_table(self, slicers_list):
-        """
-
-        :param slicers_list:
+        """ Clear manual selected splitter table and write the splitters to table
+        :param slicers_list: list of 2-tuple or 3 tuple
         :return:
         """
-        # print '[DB...BAT] Input slicers', slicers_list
-
+        datatypeutility.check_list('Slicers list', slicers_list)
         if self._manualSlicerDialog is not None:
             self._manualSlicerDialog.write_table(slicers_list)
+        else:
+            GuiUtility.pop_dialog_error(self, 'blabla 123')
 
         return
 
@@ -965,7 +1050,7 @@ class WindowLogPicker(QMainWindow):
         self._mutexLockSwitchSliceMethod = True
 
         # Only 1 situation requires
-        self._set_main_slice_method()
+        self.set_slice_mode(target_mode=None)
 
         # Unlock
         self._mutexLockSwitchSliceMethod = False
@@ -1048,20 +1133,24 @@ class WindowLogPicker(QMainWindow):
         :param slicer_name:
         :return:
         """
+        if not self.ui.radioButton_manualSlicer.isChecked():
+            GuiUtility.pop_dialog_error(self, 'Current slicer setup is not for manual slicer')
+            return
+
         chopper = self.get_controller().project.get_chopper(self._curr_run_number)
         status, slice_tag = chopper.generate_events_filter_manual(run_number=self._curr_run_number,
                                                                   split_list=split_tup_list,
                                                                   relative_time=True,
                                                                   splitter_tag=slicer_name)
-        # status, ret_obj = self._myParent.get_controller().gen_data_slice_manual(run_number=self._curr_run_number,
-        #                                                                         relative_time=True,
-        #                                                                         time_segment_list=split_tup_list,
-        #                                                                         slice_tag=slicer_name)
 
         if status:
             self._currSlicerKey = slice_tag
+            self._cacheSlicerDict['manual'] = slice_tag
+            message = 'Manual splitters set up (key: {})'.format(slice_tag)
+            self.ui.label_slicerSetupInfo.setText(message)
         else:
-            GuiUtility.pop_dialog_error(self, 'Failed to generate arbitrary data slicer due to {0}.'.format(ret_obj))
+            GuiUtility.pop_dialog_error(self, 'Failed to generate arbitrary data slicer due to {0}.'
+                                              ''.format(slice_tag))
 
         return
 
@@ -1317,7 +1406,7 @@ class WindowLogPicker(QMainWindow):
                                                       sample_log_name=log_name,
                                                       sample_log_name_x=x_axis_log)
 
-            self._current_slicers_dict = controller.create_curve_slicer_generator(vec_times, plot_x, plot_y)
+            self._cached_slicers_dict = controller.create_curve_slicer_generator(vec_times, plot_x, plot_y)
 
         # END-IF
 
@@ -1429,6 +1518,6 @@ class WindowLogPicker(QMainWindow):
         return
 
     def smooth_sample_log_curve(self):
-        print (self._current_slicers_dict)
+        print (self._cached_slicers_dict)
 
-        self._current_slicers_dict.smooth_curve('nearest', 1)
+        self._cached_slicers_dict.smooth_curve('nearest', 1)

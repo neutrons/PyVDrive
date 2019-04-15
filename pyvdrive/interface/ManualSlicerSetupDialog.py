@@ -102,7 +102,7 @@ class ManualSlicerSetupTableDialog(QDialog):
         generate the time slicers in controller/memory from this table
         :return:
         """
-        # Get splitters
+        # Get splitters: splitters will be retrieved from table
         try:
             split_tup_list = self.ui.tableWidget_segments.get_splitter_list()
         except RuntimeError as e:
@@ -357,9 +357,8 @@ class ManualSlicerSetupTableDialog(QDialog):
         return self.ui.tableWidget_segments.get_splitter_list()
 
     def write_table(self, slicers_list):
-        """
-
-        :param slicers_list:
+        """ write something to a table!
+        :param slicers_list: a list of 2-tuple or 3-tuple
         :return:
         """
         self.ui.tableWidget_segments.set_time_slicers(slicers_list)

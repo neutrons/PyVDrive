@@ -137,14 +137,21 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         return nearest_picker_distance, nearest_picker_id
 
-    def _remove_picker_from_range_dictionary(self, value_to_remove):
+    def _remove_picker_from_range_dictionary(self, picker_id_to_remove):
         """
         remove an entry in the dictionary by value
-        :param value_to_remove:
+        :param picker_id_to_remove:
         :return:
         """
-        self._pickerRangeDict = {pos_x: picker_id for pos_x, picker_id in
-                                 self._pickerRangeDict.items() if picker_id != value_to_remove}
+        if False:
+            # TODO - TODAY 190 - Remove after testing
+            self._pickerRangeDict = {pos_x: picker_id for pos_x, picker_id in
+                                     self._pickerRangeDict.items() if picker_id != picker_id_to_remove}
+        else:
+            for pos_x, picker_id in self._pickerRangeDict.items():
+                if picker_id == picker_id_to_remove:
+                    del self._pickerRangeDict[pos_x]
+        # ...
 
         return
 
@@ -214,12 +221,17 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         get the positions of all pickers on canvas
         :return: a list of floats
         """
-        picker_pos_list = list()
-        for p_id in self._currentLogPickerList:
-            pos = self.get_indicator_position(p_id)[0]
-            picker_pos_list.append(pos)
-
+        picker_pos_list = self._pickerRangeDict.keys()
         picker_pos_list.sort()
+
+        if True:
+            # TODO - TODAY 190 - Remove after testing
+            picker_pos_list2 = list()
+            for p_id in self._currentLogPickerList:
+                pos = self.get_indicator_position(p_id)[0]
+                picker_pos_list2.append(pos)
+            if set(picker_pos_list) != set(picker_pos_list2):
+                raise ArithmeticError('Picker: {} vs {}'.format(picker_pos_list, picker_pos_list2))
 
         return picker_pos_list
 
@@ -229,37 +241,13 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         :return:
         """
         self.add_picker(self._currMousePosX)
-        # # add a picker
-        # indicator_id = self.add_vertical_indicator(self._currMousePosX, color='red', line_width='2')
-        # # add to dictionary
-        # self._currentLogPickerList.append(indicator_id)
-        # # add the picker to the dictionary
-        # self._pickerRangeDict[self._currMousePosX] = indicator_id
-        #
-        # # update the new list to parent window
-        # picker_pos_list = self.get_pickers_positions()
-        # self.mySlicerUpdatedSignal.emit(picker_pos_list)
 
-        return
-
-    def add_picker(self, pos_x):
-        """
-        add a log picker
-        :return:
-        """
-        # add a picker
-        indicator_id = self.add_vertical_indicator(pos_x, color='red', line_width='2')
-        # add to dictionary
-        self._currentLogPickerList.append(indicator_id)
-        # add the picker to the dictionary
-        # self._pickerRangeDict[self._currMousePosX] = indicator_id
-        self._pickerRangeDict[pos_x] = indicator_id
-
-        # TODO - TONIGHT -
-
+        # update to parent window
         # update the new list to parent window
         picker_pos_list = self.get_pickers_positions()
         self.mySlicerUpdatedSignal.emit(picker_pos_list)
+
+        return
 
     def menu_delete_picker(self):
         """
@@ -383,23 +371,31 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # check status
         if self._mouseLeftButtonHold:
             # mouse button is hold with a picker is selected
+            # algorithms: if current mouse position is within boundary:
+            # 1. update selected indicator (line)'s position AND
+            # 2. update the pickerRangeDict
             assert self._currentSelectedPicker is not None, 'In mouse-left-button-hold mode, a picker must be selected.'
 
             # check whether the selected picker can move
-            print '[DB...BAT] Left limit = ', self._leftPickerLimit, ', Range = ', self._pickerRange
+            # print '[DB...BAT] Left limit = ', self._leftPickerLimit, ', Range = ', self._pickerRange
             left_bound = self._leftPickerLimit + self._pickerRange
             right_bound = self._rightPickerLimit - self._pickerRange
             if left_bound < self._currMousePosX < right_bound:
                 # free to move
-                self.set_indicator_position(self._currentSelectedPicker, pos_x=self._currMousePosX,
-                                            pos_y=self._currMousePosY)
-                # update the position dictionary
-                self._remove_picker_from_range_dictionary(self._currentSelectedPicker)
-                self._pickerRangeDict[self._currMousePosX] = self._currentSelectedPicker
+                if False:
+                    # TODO - TODAY 190 - Remove after testing
+                    self.set_indicator_position(self._currentSelectedPicker, pos_x=self._currMousePosX,
+                                                pos_y=self._currMousePosY)
+                    # update the position dictionary
+                    self._remove_picker_from_range_dictionary(self._currentSelectedPicker)
+                    self._pickerRangeDict[self._currMousePosX] = self._currentSelectedPicker
+                else:
+                    self.update_splitter_picker(self._currentSelectedPicker, self._currMousePosX,
+                                                self._currMousePosY)
 
                 # update the pickers' positions with parent window
-                picker_pos_list = self.get_pickers_positions()
-                self.mySlicerUpdatedSignal.emit(picker_pos_list)
+                updated_picker_positions = self.get_pickers_positions()
+                self.mySlicerUpdatedSignal.emit(updated_picker_positions)
 
             else:
                 # unable to move anymore: quit the hold and select to move mode
@@ -419,6 +415,40 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
                 self.deselect_picker()
             # END-IF-ELSE
         # END-IF-ELSE
+
+        return
+
+    def add_picker(self, pos_x):
+        """
+        add a log picker
+        :return:
+        """
+        # add a picker
+        indicator_id = self.add_vertical_indicator(pos_x, color='red', line_width='2')
+        # add to dictionary
+        self._currentLogPickerList.append(indicator_id)
+        # add the picker to the dictionary
+        self._pickerRangeDict[pos_x] = indicator_id
+
+        return
+
+    # TODO - TODAY 2019 - In Test
+    def update_splitter_picker(self, picker_id, position_x, position_y):
+        """
+        Update a splitter picker position (existed)
+        This operation is not synchronized with its parent' manual splitter setup
+        :param picker_id:
+        :param position_x:
+        :param position_y:
+        :return:
+        """
+        # update the EXISTING indicator position on the figure
+        self.set_indicator_position(picker_id, pos_x=position_x, pos_y=position_y)
+
+        # update the position dictionary
+        self._remove_picker_from_range_dictionary(picker_id)
+        # add back the entry with new position
+        self._pickerRangeDict[position_x] = picker_id
 
         return
 

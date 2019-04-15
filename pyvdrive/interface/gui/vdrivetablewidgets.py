@@ -1,4 +1,5 @@
 import ndav_widgets.NTableWidget as NdavTable
+from pyvdrive.lib import datatypeutility
 
 
 class DataSlicerSegmentTable(NdavTable.NTableWidget):
@@ -178,6 +179,7 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
 
         return
 
+    # TODO - TODAY 190 - Test!
     def set_time_slicers(self, time_slicer_list):
         """
         clear the current table and set new time slicers (in a list) to this table
@@ -185,16 +187,38 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         :return:
         """
         # check inputs
-        assert isinstance(time_slicer_list, list), 'Input time slicers {0} must be a list but not a {1}.'.format(time_slicer_list, type(time_slicer_list))
+        datatypeutility.check_list('Event splitters', time_slicer_list)
+        if len(time_slicer_list) == 0:
+            raise RuntimeError('An empty slicer list is input to set_time_slicers')
+        else:
+            # sort
+            time_slicer_list.sort()
 
         # clear the current table
         self.remove_all_rows()
 
-        # set time
-        for i_time in range(len(time_slicer_list)-1):
-            start_time = time_slicer_list[i_time]
-            stop_time = time_slicer_list[i_time + 1]
-            self.append_row([start_time, stop_time, i_time, True])
+        # check it is type 1 (list of times) or type 2 (list of splitters)
+        if isinstance(time_slicer_list[0], tuple) or isinstance(time_slicer_list[0], list):
+            # type 2: splitters
+            for slicer_index, time_slicer_tup in enumerate(time_slicer_list):
+                if len(time_slicer_tup) <= 1:
+                    raise RuntimeError('{}-th slicer has too less items'
+                                       ''.format(slicer_index, time_slicer_tup))
+                elif len(time_slicer_tup) == 2 or time_slicer_tup[2] is None:
+                    # use automatic slicer order index as target workspace
+                    self.append_row([time_slicer_tup[0], time_slicer_tup[1], slicer_index+1, True])
+                else:
+                    # use user specified as target workspace
+                    self.append_row([time_slicer_tup[0], time_slicer_list[1], time_slicer_list[2],
+                                     True])
+                # END-IF-ELSE
+            # END-FOR
+        else:
+            # type 1: list of time stamps: set time
+            for i_time in range(len(time_slicer_list)-1):
+                start_time = time_slicer_list[i_time]
+                stop_time = time_slicer_list[i_time + 1]
+                self.append_row([start_time, stop_time, i_time, True])
         # END-FOR
 
         return
