@@ -689,10 +689,11 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
                 self._currentSelectedPicker = None
             self._currMousePosX = None
             self._currMousePosY = None
+            self.clear_picker()
 
         return
 
-    # TODO - TODAY - It is meant to replace show_slicers
+    # TODO - TONIGHT 190 - It is meant to replace show_slicers
     def show_slicers_repetitions(self, vec_slicers_times, vec_target_ws):
 
 

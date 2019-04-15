@@ -419,6 +419,8 @@ class WindowLogPicker(QMainWindow):
             # set up graphic view's mode
             self.ui.graphicsView_main.set_manual_slicer_setup_mode(True)
 
+            # TODO - TONIGHT 190 - SHOW PICKER!
+
         elif self.ui.radioButton_curveSlicer.isChecked():
             # curve/manual slicer
             print ('ASAP')
@@ -427,6 +429,7 @@ class WindowLogPicker(QMainWindow):
         else:
             # werid
             GuiUtility.pop_dialog_error(self, 'Nothing selected?')
+            self._mutexLockSwitchSliceMethod = False  # unlock
             return
 
         # Reset the image and etc
@@ -489,7 +492,7 @@ class WindowLogPicker(QMainWindow):
         # # else:
         # #     self.ui.graphicsView_main.hide_pickers()
 
-        self._mutexLockSwitchSliceMethod = True  # un-lock slicer
+        self._mutexLockSwitchSliceMethod = False  # un-lock slicer
 
         return
 
@@ -603,6 +606,7 @@ class WindowLogPicker(QMainWindow):
 
         # add slicers to table
         # TODO - TODAY 190 - Test
+        self.ui.graphicsView_main.clear_picker()  # remove previously plotted if there is any
         self.evt_rewrite_manual_table(slicer_list)
         self.ui.checkBox_showSlicer.setChecked(False)
 
@@ -1053,18 +1057,18 @@ class WindowLogPicker(QMainWindow):
         handling the change of slicing method
         :return:
         """
-        # return if mutex is on to avoid nested calling for this event handling method
-        if self._mutexLockSwitchSliceMethod:
-            return
-
-        # Lock
-        self._mutexLockSwitchSliceMethod = True
+        # # return if mutex is on to avoid nested calling for this event handling method
+        # if self._mutexLockSwitchSliceMethod:
+        #     return
+        #
+        # # Lock
+        # self._mutexLockSwitchSliceMethod = True
 
         # Only 1 situation requires
         self.set_slice_mode(target_mode=None)
 
-        # Unlock
-        self._mutexLockSwitchSliceMethod = False
+        # # Unlock
+        # self._mutexLockSwitchSliceMethod = False
 
         return
 
@@ -1110,6 +1114,11 @@ class WindowLogPicker(QMainWindow):
         Show or hide the set up mantid-generated slicers on the canvas
         :return:
         """
+        if self._currSlicerKey is None:
+            GuiUtility.pop_dialog_information(self, 'Slicer (of type {}) has not been set up'
+                                                    ''.format(self._current_slicer_type))
+            return
+
         if self.ui.checkBox_showSlicer.isChecked():
             # show the slicers
             status, ret_obj = self.get_controller().get_slicer(self._curr_run_number, self._currSlicerKey)
@@ -1120,7 +1129,10 @@ class WindowLogPicker(QMainWindow):
             else:
                 GuiUtility.pop_dialog_error(self, str(ret_obj))
                 return
-            self.ui.graphicsView_main.show_slicers(slicer_time_vec, slicer_ws_vec)
+            if slicer_time_vec.shape[0] == slicer_ws_vec.shape[0] + 1:
+                self.ui.graphicsView_main.show_slicers(slicer_time_vec, slicer_ws_vec)
+            else:
+                self.ui.graphicsView_main.show_slicers_repetitions(slicer_time_vec, slicer_ws_vec)
 
         else:
             # hide the slicers

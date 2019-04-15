@@ -553,11 +553,17 @@ class VDriveAPI(object):
         """
         Get the slicer (in vectors) by run number and slicer ID
         :param run_number:
-        :param slicer_id:
+        :param slicer_id: string or integer???
         :return:  2-tuple.  [1] Boolean [2] (vector time, vector workspace) | error message
         """
-        chopper = self._myProject.get_chopper(run_number)
-        status, ret_obj = chopper.get_slicer_by_id(slicer_tag=slicer_id, relative_time=True)
+        assert slicer_id is not None, 'blabla'
+
+        try:
+            chopper = self._myProject.get_chopper(run_number)
+            status, ret_obj = chopper.get_slicer_by_id(slicer_tag=slicer_id, relative_time=True)
+        except RuntimeError as run_err:
+            status = False
+            ret_obj = 'Unable to get slicer dur to {}'.format(run_err)
 
         return status, ret_obj
 
