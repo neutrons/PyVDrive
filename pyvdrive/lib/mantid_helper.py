@@ -268,7 +268,7 @@ def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
     convert SplittersWorkspace to vectors of time and target workspace index
     :param split_ws:
     :param run_start_time:
-    :return: three tuple
+    :return: 2-tuple: numpy.array, numpy.array (times, target_ws)... [t_i, t_{i+1}] --> ws_i
     """
     # check inputs
     if isinstance(split_ws, str):

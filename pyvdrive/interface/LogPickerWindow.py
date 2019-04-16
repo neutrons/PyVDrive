@@ -1124,12 +1124,15 @@ class WindowLogPicker(QMainWindow):
             status, ret_obj = self.get_controller().get_slicer(self._curr_run_number, self._currSlicerKey)
             if status:
                 slicer_time_vec, slicer_ws_vec = ret_obj
-                # print (slicer_time_vec) : looks correct
+                # print ('[DEBUG..BAT] Slicers (time and target)')
+                # print (slicer_time_vec)  #: looks correct
                 # print (slicer_ws_vec)
             else:
                 GuiUtility.pop_dialog_error(self, str(ret_obj))
                 return
-            if slicer_time_vec.shape[0] == slicer_ws_vec.shape[0] + 1:
+
+            if slicer_time_vec.shape[0] == len(set(slicer_ws_vec)) + 1:
+                #  all the targets are unique
                 self.ui.graphicsView_main.show_slicers(slicer_time_vec, slicer_ws_vec)
             else:
                 self.ui.graphicsView_main.show_slicers_repetitions(slicer_time_vec, slicer_ws_vec)

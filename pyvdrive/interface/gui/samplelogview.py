@@ -696,53 +696,84 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
     # TODO - TONIGHT 190 - It is meant to replace show_slicers
     def show_slicers_repetitions(self, vec_slicers_times, vec_target_ws):
 
-
-        unique_target_ws_set = set(vec_target_ws.astype('int16'))
+        # TODO - FIXME - TODAY 190 - Need a use case for target as REAL string
+        vec_target_ws = vec_target_ws.astype('int16')
+        unique_target_ws_set = set(vec_target_ws)
         num_segments = len(unique_target_ws_set)
         segment_list = sorted(list(unique_target_ws_set))
+        if -1 in segment_list:
+            minus_one_index = segment_list.index(-1)
+            segment_list.pop(minus_one_index)
+
         print ('[DB...BAT] Segments: {}'.format(segment_list))
 
-        # init data
+        # construct the data sets for each segments
+        seg_dict = dict()
+        for seg_id in segment_list:
+            seg_dict[seg_id] = None
+        # END-FOR
+
+        vec_log_times, vec_log_value = self.canvas().get_data(self._currPlotID)
+
+        print ('[DEBUG...BAT] Log X and Y: size = {}'.format(vec_log_times.shape))
+
+        for i_target in range(vec_target_ws.shape[0]):
+            # ignore the non-interesting section
+            if vec_target_ws[i_target] == -1:
+                continue
+            else:
+                target_name_i = vec_target_ws[i_target]
+
+            # from start and stop time to get the index for the current (plotted) log
+            t_start = vec_slicers_times[i_target]
+            t_stop = vec_slicers_times[i_target]
+
+            time_index_list = np.searchsorted(vec_log_times, [t_start, t_stop])
+            log_time0_index, log_timef_index = time_index_list
+
+            # construct the vector: get the partial for plot
+            vec_x_i = vec_log_times[log_time0_index:log_timef_index]
+            vec_y_i = vec_log_value[log_time0_index:log_timef_index]
+
+            # TODO - TONIGHT 0 - From here!
+            raise NotImplementedError('index start and stop are the same!')
+            print ('[DB...BAT: indexes {}:{}'.format(log_time0_index, log_timef_index))
+
+            if False:
+                # get start time and stop time's index
+                i_start = (np.abs(vec_x - x_start)).argmin()
+                i_stop = (np.abs(vec_x - x_stop)).argmin()
+                if i_start == i_stop:
+                    # empty!
+                    print '[SampleLogView WARNING] Range: %d to %d  (%f to %f) cannot generate any vector. ' \
+                          '' % (i_start, i_stop, vec_x[i_start], vec_x[i_stop])
+                    continue
+                elif i_start > i_stop:
+                    raise RuntimeError('It is impossible to have start index {0} > stop index {1}'
+                                       ''.format(i_start, i_stop))
+            # END-IF
+
+            if seg_dict[target_name_i] is None:
+                seg_dict[target_name_i] = vec_x_i, vec_y_i
+            else:
+                new_vec_x = np.concatenate([seg_dict[target_name_i][0], vec_x_i])
+                new_vec_y = np.concatenate([seg_dict[target_name_i][1], vec_y_i])
+                seg_dict[target_name_i] = new_vec_x, new_vec_y
+        # END-FOR
+
+        # Plot
+        num_color = len(COLOR_LIST)  # ['red', 'green', 'black', 'cyan', 'magenta', 'yellow']
         for seg_index, target_index in enumerate(segment_list):
             color_i = COLOR_LIST[seg_index % num_color]
-            data_set_i = None, None
-        # END-FOR
+            vec_x_plot, vec_y_plot = seg_dict[seg_index]
 
-        for i_seg in range(num_seg_to_show):
-            # get start time and stop time
-            x_start = vec_times[i_seg]
-            x_stop = vec_times[i_seg+1]
-            color_index = vec_target_ws[i_seg]
-
-            # get start time and stop time's index
-            i_start = (np.abs(vec_x - x_start)).argmin()
-            i_stop = (np.abs(vec_x - x_stop)).argmin()
-            if i_start == i_stop:
-                # empty!
-                print '[SampleLogView WARNING] Range: %d to %d  (%f to %f) cannot generate any vector. ' \
-                      '' % (i_start, i_stop, vec_x[i_start], vec_x[i_stop])
-                continue
-            elif i_start > i_stop:
-                raise RuntimeError('It is impossible to have start index {0} > stop index {1}'
-                                   ''.format(i_start, i_stop))
-
-            # get the partial for plot
-            vec_x_i = vec_x[i_start:i_stop]
-            vec_y_i = vec_y[i_start:i_stop]
-
-            # concatenate
-            np.concatenate((a, b))
-        # END-FOR
-
-        # plot
-        for a in b:
             # plot
-            color_i = COLOR_LIST[color_index % num_color]
-            seg_plot_index = self.add_plot_1d(vec_x_i, vec_y_i, marker=None, line_style='-', color=color_i,
+            seg_plot_index = self.add_plot_1d(vec_x_plot, vec_y_plot, marker='o', line_style=None, color=color_i,
                                               line_width=2)
-
             self._splitterSegmentsList.append(seg_plot_index)
         # END-FOR
+
+        return
 
     def show_slicers(self, vec_times, vec_target_ws):
         """
