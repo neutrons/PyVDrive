@@ -715,9 +715,9 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         vec_log_times, vec_log_value = self.canvas().get_data(self._currPlotID)
 
-        print ('[DEBUG...BAT] Log X and Y: size = {}'.format(vec_log_times.shape))
+        print ('[DEBUG...BAT] Log X and Y: size = {}, {}'.format(vec_log_times.shape, vec_log_value.shape))
 
-        for i_target in range(vec_target_ws.shape[0]):
+        for i_target in range(vec_target_ws.shape[0] - 1):
             # ignore the non-interesting section
             if vec_target_ws[i_target] == -1:
                 continue
@@ -726,18 +726,22 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
             # from start and stop time to get the index for the current (plotted) log
             t_start = vec_slicers_times[i_target]
-            t_stop = vec_slicers_times[i_target]
+            t_stop = vec_slicers_times[i_target + 1]
 
             time_index_list = np.searchsorted(vec_log_times, [t_start, t_stop])
             log_time0_index, log_timef_index = time_index_list
+
+            # find the nearest
+            if t_start - vec_log_times[log_time0_index-1] < vec_log_times[log_time0_index] - t_start:
+                log_time0_index -= 1
+            if t_stop - vec_log_times[log_timef_index-1] < vec_log_times[log_timef_index] - t_stop:
+                log_timef_index -= 1
 
             # construct the vector: get the partial for plot
             vec_x_i = vec_log_times[log_time0_index:log_timef_index]
             vec_y_i = vec_log_value[log_time0_index:log_timef_index]
 
-            # TODO - TONIGHT 0 - From here!
-            raise NotImplementedError('index start and stop are the same!')
-            print ('[DB...BAT: indexes {}:{}'.format(log_time0_index, log_timef_index))
+            print ('[DB...BAT: Locate:  indexes {}:{}'.format(log_time0_index, log_timef_index))
 
             if False:
                 # get start time and stop time's index

@@ -30,7 +30,7 @@ section_boundary_list = list()  # = start time index (max), stop time index (min
 for index in range(min(len(minima_times), len(maxima_times))):
 
     print ('Maximum @ T = {}    --->   Minimum @ T = {}: delta T = {}'
-           ''.format(maxima_times[index], minima_times[index], maxima_times[index] - minima_times[index]))
+           ''.format(maxima_times[index], minima_times[index],  minima_times[index] - maxima_times[index]))
 
     # use search sorted to locate the min/max on the vec log: it may not be accurate
     index_list = numpy.searchsorted(vec_log_times, [maxima_times[index], minima_times[index]])
@@ -50,7 +50,8 @@ for index in range(min(len(minima_times), len(maxima_times))):
         found_min_index -= 1
         print ('Minimum is corrected to {}'.format(vec_log_times[found_min_index]))
 
-    print ('Section: {}'.format(vec_temperature[found_max_index:found_min_index+1]))
+    # print ('Section: Time[{}:{}]        range from {} to {}'.format(found_max_index, found_min_index, vec_log_times[found_max_index], vec_log_times[found_min_index]))
+    # print ('Section: Temperature[{}:{}] range from {} to {}'.format(found_max_index, found_min_index, vec_temperature[found_max_index], vec_temperature[found_min_index]))
 
     section_boundary_list.append((found_max_index, found_min_index))
 
@@ -68,7 +69,11 @@ print ('Final boundary (for cooling: {}'.format(boundaries))
 
 
 out_str = ''
-for max_time_index, min_time_index in section_boundary_list:
+splitters_times = list()
+splitters_value = list()
+for section_index, bound_tuple in enumerate(section_boundary_list):
+
+    max_time_index, min_time_index = bound_tuple
 
     # start_index, stop_index = index_list
     vec_log_value_i = vec_temperature[max_time_index:min_time_index + 1]
@@ -95,17 +100,28 @@ for max_time_index, min_time_index in section_boundary_list:
         if b_i_1 >= len(vec_log_value_i):
             continue
         
-        time_start = vec_log_times[b_i + start_index]
-        time_stop = vec_log_times[b_i_1 + start_index]
-        print time_start, '\t\t', time_stop, '\t\t', i
-        out_str += '{}  {}  {}\n'.format(time_start, time_stop, i)
+        time_start = vec_log_times[b_i + max_time_index]
+        time_stop = vec_log_times[b_i_1 + max_time_index]
+        value_start = vec_temperature[b_i + max_time_index]
+        value_stop = vec_temperature[b_i_1 + max_time_index]
+        
+        # print time_start, '\t\t', time_stop, '\t\t', i
+        out_str += '{}  {}  {}  {}  {}  {}\n'.format(time_start, time_stop, i, value_start, value_stop, time_stop-time_start)
+        splitters_times.append(time_start)
+        splitters_times.append(time_stop)
+        splitters_value.append(value_start)
+        splitters_value.append(value_stop)
     # ENDFOR
 
-    print (out_str)    
         
-    break
+    if section_index > 3:
+        break
 # ENDFOR
+
+print (out_str)
+
+CreateWorkspace(DataX=splitters_times, DataY=splitters_value, NSpec=1, OutputWorkspace='cooling_splitters')
         
-slicer_file = open('upslope_slicer', 'w')
+slicer_file = open('cooling_section.dat', 'w')
 slicer_file.write(out_str)
 slicer_file.close()
