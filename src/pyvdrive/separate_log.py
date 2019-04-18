@@ -1,4 +1,5 @@
-# separate log for filtering
+# Note: This script shall be executed inside MantidPlot after test_cyclic_filter
+# separate log for events filter featuring temperature rising section in the cycles
 import numpy
 
 upslope_splitters = list()
