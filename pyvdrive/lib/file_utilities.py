@@ -187,12 +187,19 @@ def parse_multi_run_slicer_file(file_name):
     # starting of a block
     [RUN] 123456
     # start_time    end_time   target_workspace_name/index
-    0     -1     1     #  from relative 0 to end of run, target is 12345_1, NO CHOPPING
+    0     -1     1   # from relative 0 to end of run, target is 12345_1, NO CHOPPING]
     [RUN] 123457
-    0     200    1     #  from relative 0 to 200, target is 123457_1
+    0     200    1   #  from relative 0 to 200, target is 123457_1
     200   420    2
     [RUN] 123458
     0     100    123456_1    # from relative 0 to 100, target will be combined with RUN-123456's WS-1
+
+    Acceptable line format
+    - start_time stop_time          : auto index
+    - start_time stop_time integer  : (index fro this run) ... final name: run_chopindex
+    - start_time stop_time string   : string not to be confused with integer... universal among runs
+    - start_time stop_time # ...    : auto index with comment after #
+
     :param file_name:
     :return:
     """
@@ -207,7 +214,8 @@ def parse_multi_run_slicer_file(file_name):
 
     slicer_dict = dict()
 
-    for line in raw_lines:
+    curr_run_number = None
+    for line_no, line in enumerate(raw_lines):
         line = line.strip()
         if line == '' or line.startswith('#'):
             # empty line or comment
@@ -219,18 +227,37 @@ def parse_multi_run_slicer_file(file_name):
             try:
                 curr_run_number = int(line.split('[RUN]')[1].strip().split()[0])
             except ValueError as value_err:
-                raise RuntimeError('Starting block line: "{}" is not valid to parse run number'.format(line))
+                raise RuntimeError('Starting block line: "{}" is not valid to parse run number: {}'
+                                   ''.format(line, value_err))
 
             slicer_dict[curr_run_number] = list()
 
         else:
             # slicer line
-            blabla
-            # TODO - TONIGHT 0 - [ASAP] continue from here!
+            contents = line.split()
+            if len(contents) < 2:
+                raise RuntimeError('{}-th line\n{}\nhas too few information'.format(line_no, line))
 
+            try:
+                start_time_curr = float(contents[0])
+                stop_time_curr = float(contents[1])
+            except ValueError as value_err:
+                raise RuntimeError(balbla)
 
+            if len(contents) == 2 or contents[2] == '#':
+                # only
+                target_ws = None
 
+            else:
+                target_ws = contents[2]
+                if target_ws.isdigit():
+                    target_ws = '{}_{:-05}'.format(curr_run_number, int(target_ws))
+    # END-FOR
 
+    # TODO - TONIGHT 0 - continue from here - check slicer formats and fill the ignored
+    slicer_dict = format_user_splitters()
+
+    return slicer_dict
 
 # TODO - TONIGHT 0 - Whether there is a similar method in chop/PICKDATA?
 def parse_time_segments(file_name):
