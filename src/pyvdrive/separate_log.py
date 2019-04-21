@@ -2,6 +2,18 @@
 # separate log for events filter featuring temperature rising section in the cycles
 import numpy
 
+# TODO - TONIGHT 0 - List of tasks for Hazah
+# TODO - ... ...   - 1. Reformat this like separating for cooling
+# TODO - ... ...   - 2. Rename to ..._heating.py
+# TODO - ... ..    - 3. Detailed debugging information for how to determine the start/stop for each segments
+# TODO - ... ...   -    including (1) theoretical start/stop value vs algorithm-found-log start/stop
+# TODO - ... ...   -    (2) cycle number
+# TODO - ... ...   - 4. Can define the range of cycles
+# TODO - ... ...   - 5. Output file for (1) over-all and (2) each individual segment
+# TODO - ... ...   - 6. Do statistic on each target workspace average and standard deviation
+# TODO - ... ...   - 7. Modify cooling.py accordingly
+# TODO - ... ...   - 8. Output file including information such as the sample log it is sliced from
+
 upslope_splitters = list()
 
 minima_ws = mtd['debug_minima']

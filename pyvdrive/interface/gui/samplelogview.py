@@ -738,8 +738,8 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
                 log_timef_index -= 1
 
             # construct the vector: get the partial for plot
-            vec_x_i = vec_log_times[log_time0_index:log_timef_index]
-            vec_y_i = vec_log_value[log_time0_index:log_timef_index]
+            vec_x_i = vec_log_times[log_time0_index:log_timef_index+1]
+            vec_y_i = vec_log_value[log_time0_index:log_timef_index+1]
 
             print ('[DB...BAT: Locate:  indexes {}:{}'.format(log_time0_index, log_timef_index))
 
@@ -772,8 +772,9 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
             vec_x_plot, vec_y_plot = seg_dict[seg_index]
 
             # plot
-            seg_plot_index = self.add_plot_1d(vec_x_plot, vec_y_plot, marker='o', line_style=None, color=color_i,
-                                              line_width=2)
+            seg_plot_index = self.add_plot_1d(vec_x_plot, vec_y_plot, color=color_i,
+                                              marker='o', marker_size=3,
+                                              line_style='none', line_width=2)
             self._splitterSegmentsList.append(seg_plot_index)
         # END-FOR
 
