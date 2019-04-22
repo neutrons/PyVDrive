@@ -2,7 +2,19 @@
 # separate log for events filter featuring temperature cooling section in the cycles
 import numpy
 
-cooling_splitters = list()   # item: start_t, stop_t, target_section, temperature min, temperature max
+
+
+
+
+
+
+
+
+
+
+
+
+cooling_splitters = list()  # item: start_t, stop_t, target_section, temperature min, temperature max
 
 minima_ws = mtd['debug_minima']
 maxima_ws = mtd['debug_maxima']
@@ -12,7 +24,7 @@ if minima_ws.readX(0)[0] < maxima_ws.readX(0)[0]:
     min_start_index = 1
 else:
     min_start_index = 0
-# print min_start_index
+print '[INFO] starting index = {}'.format(min_start_index)
 
 min_temp = numpy.average(minima_ws.readY(0)[1:])
 print ('Minimum temperature: {}'.format(min_temp))
