@@ -3,16 +3,7 @@
 import numpy
 
 # TODO - TONIGHT 0 - List of tasks for Hazah
-# TODO - ... ...   - 1. Reformat this like separating for cooling
-# TODO - ... ...   - 2. Rename to ..._heating.py
-# TODO - ... ..    - 3. Detailed debugging information for how to determine the start/stop for each segments
-# TODO - ... ...   -    including (1) theoretical start/stop value vs algorithm-found-log start/stop
-# TODO - ... ...   -    (2) cycle number
-# TODO - ... ...   - 4. Can define the range of cycles
-# TODO - ... ...   - 5. Output file for (1) over-all and (2) each individual segment
-# TODO - ... ...   - 6. Do statistic on each target workspace average and standard deviation
 # TODO - ... ...   - 7. Modify cooling.py accordingly
-# TODO - ... ...   - 8. Output file including information such as the sample log it is sliced from
 
 
 def search_sorted_nearest(vector, values):
@@ -28,6 +19,48 @@ def search_sorted_nearest(vector, values):
     # END-FOR
 
     return index_list
+
+
+def export_slicers_per_target(slicer_dict, base_name):
+
+    for target_index in sorted(slicer_dict.keys()):
+
+        out_str_i = ''
+        for i_s in range(len(slicer_dict[target_index])):
+            out_str_i += '{}  {}  {}  {}  {}\n'.format(slicer_dict[target_index][0],
+                                                       slicer_dict[target_index][1],
+                                                       target_index,
+                                                       slicer_dict[target_index][2],
+                                                       slicer_dict[target_index][3])
+        # END-FOR
+
+        file_i = open('{}_{}.dat'.format(base_name, target_index), 'w')
+        file_i.write(out_str_i)
+        file_i.close()
+    # END-FOR
+
+    return
+
+
+def stat_slicers(slicer_dict):
+    """
+    do statistic to slicers
+    :param slicer_dict:
+    :return:
+    """
+    for target_index in sorted(slicer_dict.keys()):
+        splitters = slicer_dict[target_index]
+
+        start_values = numpy.array([l[2] for l in splitters])
+        stop_values = numpy.array([l[3] for l in splitters])
+
+        print ('Target index {}: Starting value = {} +/- {}; Stopping value = {} +/- {}'
+               ''.format(target_index, numpy.average(start_values), numpy.std(start_values),
+                         numpy.average(stop_values), numpy.std(stop_values)))
+
+    # END-FOR
+
+    return
 
 
 # set up data
@@ -74,8 +107,9 @@ start_cycle_number = 0
 stop_cycle_number = 19
 phase_index = 1
 
-out_str = ''   # output file format
-heating_splitters = list()  # item: start_t, stop_t, target_section, temperature min, temperature max
+out_str = '# Sliced from IPTS-??? Run-??? loadframe.furnace1\n'   # output file format
+splitters_dict = dict()  # [target (integer)] = [start_t, stop_t, target_section, temperature min, temperature max]
+splitters_list = list()  # chronic order of splitters
 
 for i_cycle in range(start_cycle_number, stop_cycle_number+1):
     print ('[CHECK] Cycle = {}'.format(i_cycle))
@@ -117,9 +151,23 @@ for i_cycle in range(start_cycle_number, stop_cycle_number+1):
 
         print ('[CHECK]\t\t   Time: {}  {}, Value: {},  {}, Delta T = {}\n'
                ''.format(time_start, time_stop, value_start, value_stop, time_stop - time_start))
+
+        # record according to target index
+        if i_splitter not in splitters_dict:
+            splitters_dict[i_splitter] = list()
+        splitters_dict[i_splitter].append([time_start, time_stop, value_start, value_stop])
+        splitters_list.append([i_splitter, time_start, time_stop, value_start, value_stop])
+
     # END-FOR
 # END-FOR
 
-slicer_file = open('heating_slicers_section_{}'.format(phase_index), 'w')
+slicer_file_base = 'heating_slicers_section_{}'.format(phase_index)
+slicer_file = open('{}.dat', 'w')
 slicer_file.write(out_str)
 slicer_file.close()
+
+# further analysis of slicers
+export_slicers_per_target(splitters_dict, slicer_file_base)
+stat_slicers(splitters_dict)
+
+
