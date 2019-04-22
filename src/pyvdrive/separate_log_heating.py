@@ -139,6 +139,10 @@ for i_cycle in range(start_cycle_number, stop_cycle_number+1):
         if b_i_1 >= len(vec_temp_i):
             print ('[WARNING] Boundary index for stop (= {}) is out of boundary'.format(b_i_1))
             break
+        elif b_i == b_i_1:
+            # no decent data points
+            print ('[WARNING] Cycle {} Splitter {}: Cannot find a reasonable interval for [{}, {})'
+                   ''.format(i_cycle, i_splitter, bound_index_list[i_splitter], bound_index_list[i_splitter+1]))
 
         # get time and value
         time_start = vec_log_times[b_i + start_index]
@@ -147,7 +151,7 @@ for i_cycle in range(start_cycle_number, stop_cycle_number+1):
         value_stop = vec_temperature[b_i_1 + start_index]
 
         out_str += '{}  {}  {}  {}  {}  {}\n' \
-                   ''.format(time_start, time_stop, i_cycle, value_start, value_stop, time_stop - time_start)
+                   ''.format(time_start, time_stop, i_splitter, value_start, value_stop, time_stop - time_start)
 
         print ('[CHECK]\t\t   Time: {}  {}, Value: {},  {}, Delta T = {}\n'
                ''.format(time_start, time_stop, value_start, value_stop, time_stop - time_start))
@@ -162,7 +166,7 @@ for i_cycle in range(start_cycle_number, stop_cycle_number+1):
 # END-FOR
 
 slicer_file_base = 'heating_slicers_section_{}'.format(phase_index)
-slicer_file = open('{}.dat', 'w')
+slicer_file = open('{}.dat'.format(slicer_file_base), 'w')
 slicer_file.write(out_str)
 slicer_file.close()
 
