@@ -2,9 +2,6 @@
 # separate log for events filter featuring temperature rising section in the cycles
 import numpy
 
-# TODO - TONIGHT 0 - List of tasks for Hazah
-# TODO - ... ...   - 7. Modify cooling.py accordingly
-
 
 def search_sorted_nearest(vector, values):
     index_list = numpy.searchsorted(vector, values, side='left', sorter=None)
@@ -77,15 +74,16 @@ vec_temperature = furnace_log_ws.readY(0)
 
 # determine the starting point
 if minima_times[0] < maxima_times[0]:
-    min_start_index = 0
+    # starting from a local minimum
+    print ('[INFO] staring from local minimum and then local maximum')
 else:
-    min_start_index = 1
-    minima_times = minima_times[1:]
-    minima_vec = minima_vec[1:]
+    # start from a local maximum
+    # ignore the first local maximum
+    minima_times = minima_times[:]
+    minima_vec = minima_vec[:]
     maxima_times = maxima_times[1:]
     maxima_vec = maxima_vec[1:]
-
-print '[INFO] starting index = {}'.format(min_start_index)
+    print ('[INFO] starting from local maximum and then local minimum. Ignore the first local maximum')
 
 # information of minimum
 print ('[INFO] Furnace temperature minima = {} +/- {}'.format(numpy.average(minima_vec), numpy.std(minima_vec)))
@@ -98,7 +96,7 @@ for i_cycle in range(0, len(minima_times)-1):  # minima always ends with a false
     maximum_times_i = maxima_times[i_cycle]
 
     cycle_indexes = search_sorted_nearest(vec_log_times, [minimum_time_i, maximum_times_i])
-    print ('Cycle {}: {}'.format(i_cycle, vec_temperature[cycle_indexes[0]:cycle_indexes[1]]))
+    print ('Cycle Temperature {}: {}'.format(i_cycle, vec_temperature[cycle_indexes[0]:cycle_indexes[1]]))
 # END-FOR
     
 # TODO-NOTE: user determine!
@@ -122,7 +120,6 @@ for i_cycle in range(start_cycle_number, stop_cycle_number+1):
     # get the sub section of furnace temperature log
     start_index, stop_index = cycle_indexes
     vec_temp_i = vec_temperature[start_index:stop_index+1]
-
     print ('\tTemperature: {}'.format(vec_temp_i))
 
     # search boundaries
@@ -143,6 +140,7 @@ for i_cycle in range(start_cycle_number, stop_cycle_number+1):
             # no decent data points
             print ('[WARNING] Cycle {} Splitter {}: Cannot find a reasonable interval for [{}, {})'
                    ''.format(i_cycle, i_splitter, bound_index_list[i_splitter], bound_index_list[i_splitter+1]))
+            continue
 
         # get time and value
         time_start = vec_log_times[b_i + start_index]
@@ -173,5 +171,7 @@ slicer_file.close()
 # further analysis of slicers
 export_slicers_per_target(splitters_dict, slicer_file_base)
 stat_slicers(splitters_dict)
+
+
 
 
