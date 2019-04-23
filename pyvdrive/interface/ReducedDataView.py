@@ -431,7 +431,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    # TODO - TODAY 0 - Add UI
+    # TODO - TODAY 190 - Add UI widget to enable this!
     def do_load_sliced_logs(self):
         """
         Load sliced sample logs
