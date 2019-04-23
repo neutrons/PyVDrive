@@ -572,7 +572,7 @@
             <string>Curver Slicer Setup</string>
            </property>
            <layout class="QGridLayout" name="gridLayout_10">
-            <item row="0" column="0">
+            <item row="1" column="0">
              <widget class="QPushButton" name="pushButton">
               <property name="font">
                <font>
@@ -581,6 +581,18 @@
               </property>
               <property name="text">
                <string>Launch Curve Slicing Table</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QPushButton" name="pushButton_loadCyclicSlicers">
+              <property name="font">
+               <font>
+                <pointsize>9</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>Load From File</string>
               </property>
              </widget>
             </item>

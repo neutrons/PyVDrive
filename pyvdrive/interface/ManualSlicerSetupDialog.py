@@ -55,6 +55,11 @@ class ManualSlicerSetupTableDialog(QDialog):
 
         self.ui.pushButton_deselectAll.clicked.connect(self.do_set_target)
 
+        # tab-plot cyclic slicers
+        self.ui.pushButton_set1.clicked.connect(self.do_set_show_target_1)
+        self.ui.pushButton_showSlicers.clicked.connect(self.do_show_cyclic_slicers)
+        self.ui.pushButton_hideSlicers.clicked.connect(self.do_hide_cyclic_slicers)
+
         # FIXME / FUTURE : it is not well defined to remove a slicer from table and reflected to pickers on plotting
         # self.connect(self.ui.pushButton_deleteSlicer, QtCore.SIGNAL('clicked()'),
         #              self.do_delete_slicer)
@@ -83,6 +88,11 @@ class ManualSlicerSetupTableDialog(QDialog):
 
         # radio buttons
         self.ui.radioButton_timeStep.setChecked(True)
+
+        # add colors
+        for color_combo_box in [self.ui.comboBox_color1]:
+            for color_i in ['green', 'red', 'blue', 'yellow', 'black']:
+                color_combo_box.addItem(color_i)
 
         return
 
@@ -258,6 +268,38 @@ class ManualSlicerSetupTableDialog(QDialog):
 
         return
 
+    def do_show_cyclic_slicers(self):
+        """
+        blabla
+        :return:
+        """
+        # disable control from main window
+        self._myParent.ui.checkBox_showSlicer.setChecked(False)
+
+        # apply
+        # TODO - TONIGHT 0 - Need a mechanism for checking whether the current slicers being applied!
+        self.do_apply_slicers()
+
+        # get value now
+        try:
+            target_ws_1 = int(self.ui.lineEdit_target1.text())
+            color_ws_1 = str(self.ui.comboBox_color1.currentText())
+
+
+
+        except Exception as e:
+            GuiUtil.pop_dialog_error(self, 'Failed to show cyclic slicers: {}'.format(e))
+
+        return
+
+    def do_hide_cyclic_slicers(self):
+        """
+        blabla
+        :return:
+        """
+
+        return
+
     def do_select_all_rows(self):
         """
         select or de-select all rows
@@ -296,6 +338,34 @@ class ManualSlicerSetupTableDialog(QDialog):
             target = str(target)
 
         self.ui.tableWidget_segments.rename_chop_target(row_list, target)
+
+        return
+
+    def do_set_show_target_1(self):
+        """
+        set target 1''s slicers to plot
+        :return:
+        """
+        try:
+            target_ws = int(self.ui.lineEdit_target1.text())
+        except Exception as e:
+            GuiUtil.pop_dialog_error(self, 'blabla: {}'.format(e))
+            return
+
+        slicer_time_vec, slicer_ws_vec = self._myParent.get_current_slicer()
+
+        num_slicers = (slicer_ws_vec == target_ws).sum()
+
+        # TODO - TONIGHT 0 - From here!
+        """
+        Traceback (most recent call last):
+  File "/home/wzz/Projects/PyVDrive/build/lib.linux-x86_64-2.7/pyvdrive/interface/ManualSlicerSetupDialog.py", line 357, in do_set_show_target_1
+    num_slicers = (slicer_ws_vec == target_ws).sum()
+AttributeError: 'bool' object has no attribute 'sum'
+
+        """
+
+        self.ui.label_numSegment1.setText('{}'.format(num_slicers))
 
         return
 

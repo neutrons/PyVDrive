@@ -1121,17 +1121,21 @@ class WindowLogPicker(QMainWindow):
 
         if self.ui.checkBox_showSlicer.isChecked():
             # show the slicers
-            status, ret_obj = self.get_controller().get_slicer(self._curr_run_number, self._currSlicerKey)
-            if status:
-                slicer_time_vec, slicer_ws_vec = ret_obj
-                # print ('[DEBUG..BAT] Slicers (time and target)')
-                # print (slicer_time_vec)  #: looks correct
-                # print (slicer_ws_vec)
-            else:
-                GuiUtility.pop_dialog_error(self, str(ret_obj))
-                return
+            # status, ret_obj = self.get_controller().get_slicer(self._curr_run_number, self._currSlicerKey)
+            # if status:
+            #     slicer_time_vec, slicer_ws_vec = ret_obj
+            #     # print ('[DEBUG..BAT] Slicers (time and target)')
+            #     # print (slicer_time_vec)  #: looks correct
+            #     # print (slicer_ws_vec)
+            # else:
+            #     GuiUtility.pop_dialog_error(self, str(ret_obj))
+            #     return
 
-            if slicer_time_vec.shape[0] == len(set(slicer_ws_vec)) + 1:
+            slicer_time_vec, slicer_ws_vec = self.get_current_slicer()
+
+            if slicer_ws_vec is None:
+                pass
+            elif slicer_time_vec.shape[0] == len(set(slicer_ws_vec)) + 1:
                 #  all the targets are unique
                 self.ui.graphicsView_main.show_slicers(slicer_time_vec, slicer_ws_vec)
             else:
@@ -1142,6 +1146,19 @@ class WindowLogPicker(QMainWindow):
             self.ui.graphicsView_main.remove_slicers()
 
         return
+
+    def get_current_slicer(self):
+        status, ret_obj = self.get_controller().get_slicer(self._curr_run_number, self._currSlicerKey)
+        if status:
+            slicer_time_vec, slicer_ws_vec = ret_obj
+            # print ('[DEBUG..BAT] Slicers (time and target)')
+            # print (slicer_time_vec)  #: looks correct
+            # print (slicer_ws_vec)
+        else:
+            GuiUtility.pop_dialog_error(self, str(ret_obj))
+            return None, None
+
+        return slicer_time_vec, slicer_ws_vec
 
     def evt_quit_no_save(self):
         """
