@@ -24,11 +24,11 @@ def export_slicers_per_target(slicer_dict, base_name):  # NOTE: SAME as separate
 
         out_str_i = ''
         for i_s in range(len(slicer_dict[target_index])):
-            out_str_i += '{}  {}  {}  {}  {}\n'.format(slicer_dict[target_index][0],
-                                                       slicer_dict[target_index][1],
+            out_str_i += '{}  {}  {}  {}  {}\n'.format(slicer_dict[target_index][i_s][0],
+                                                       slicer_dict[target_index][i_s][1],
                                                        target_index,
-                                                       slicer_dict[target_index][2],
-                                                       slicer_dict[target_index][3])
+                                                       slicer_dict[target_index][i_s][2],
+                                                       slicer_dict[target_index][i_s][3])
         # END-FOR
 
         file_i = open('{}_{}.dat'.format(base_name, target_index), 'w')
