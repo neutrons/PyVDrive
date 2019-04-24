@@ -273,22 +273,62 @@ class ManualSlicerSetupTableDialog(QDialog):
         blabla
         :return:
         """
+        import numpy
+
         # disable control from main window
         self._myParent.ui.checkBox_showSlicer.setChecked(False)
 
         # apply
         # TODO - TONIGHT 0 - Need a mechanism for checking whether the current slicers being applied!
         self.do_apply_slicers()
+        slicer_time_vec, slicer_ws_vec = self._myParent.get_current_slicer()
+
+        # print ('A', slicer_time_vec.shape, slicer_time_vec)
+        # print ('B', slicer_ws_vec.shape, slicer_ws_vec)
 
         # get value now
         try:
-            target_ws_1 = int(self.ui.lineEdit_target1.text())
-            color_ws_1 = str(self.ui.comboBox_color1.currentText())
+            for i in range(1):
+                target_ws_1 = str(self.ui.lineEdit_target1.text()).strip()
+                color_ws_1 = str(self.ui.comboBox_color1.currentText())
 
+                num_slicers = (slicer_ws_vec == target_ws_1).sum()
+                location_indexes = numpy.where(slicer_ws_vec == target_ws_1)
+                # print ('C', type(location_indexes), location_indexes)
 
+                location_indexes = location_indexes[0]
+                assert num_slicers == location_indexes.shape[0], 'must be same!'
+
+                # print ('D', type(location_indexes))
+                stop_indexes = location_indexes + 1
+                # print ('E', stop_indexes)
+                # if stop_indexes[-1] == slicer_time_vec.shape[0]:
+                #     print ('End of slicers')
+                # else:
+                #     print ('EE',  stop_indexes[-1], slicer_time_vec.shape[0])
+                # print ('F', slicer_ws_vec[location_indexes])
+
+                single_ws_time_vec = numpy.ndarray((num_slicers*2,), dtype=slicer_time_vec.dtype)
+                single_ws_name_vec = numpy.ndarray((num_slicers*2-1,), dtype=slicer_ws_vec.dtype)
+
+                single_ws_time_vec[0::2] = slicer_time_vec[location_indexes]
+                single_ws_time_vec[1::2] = slicer_time_vec[stop_indexes]
+
+                single_ws_name_vec[0::2] = target_ws_1
+                single_ws_name_vec[1::2] = '-1'
+
+                print ('G: ', single_ws_time_vec)
+                print ('H: ', single_ws_name_vec)
+
+                self.ui.label_numSegment1.setText('{}'.format(num_slicers))
+
+                self._myParent.show_slicers(single_ws_time_vec, single_ws_name_vec, color_ws_1)
 
         except Exception as e:
-            GuiUtil.pop_dialog_error(self, 'Failed to show cyclic slicers: {}'.format(e))
+            GuiUtil.pop_dialog_error(self, 'blabla: {}'.format(e))
+            return
+
+
 
         return
 
@@ -347,23 +387,20 @@ class ManualSlicerSetupTableDialog(QDialog):
         :return:
         """
         try:
-            target_ws = int(self.ui.lineEdit_target1.text())
+            target_ws = str(self.ui.lineEdit_target1.text()).strip()
         except Exception as e:
             GuiUtil.pop_dialog_error(self, 'blabla: {}'.format(e))
             return
 
         slicer_time_vec, slicer_ws_vec = self._myParent.get_current_slicer()
 
+        # These are debug information
+        # print ('A', slicer_ws_vec, type(slicer_ws_vec))
+        # print ('B', target_ws, type(target_ws))
+        # print ('C', slicer_ws_vec == target_ws)
+        # print ('D', type(slicer_ws_vec == target_ws))
+
         num_slicers = (slicer_ws_vec == target_ws).sum()
-
-        # TODO - TONIGHT 0 - From here!
-        """
-        Traceback (most recent call last):
-  File "/home/wzz/Projects/PyVDrive/build/lib.linux-x86_64-2.7/pyvdrive/interface/ManualSlicerSetupDialog.py", line 357, in do_set_show_target_1
-    num_slicers = (slicer_ws_vec == target_ws).sum()
-AttributeError: 'bool' object has no attribute 'sum'
-
-        """
 
         self.ui.label_numSegment1.setText('{}'.format(num_slicers))
 

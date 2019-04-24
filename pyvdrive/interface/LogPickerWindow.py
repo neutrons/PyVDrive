@@ -1147,6 +1147,10 @@ class WindowLogPicker(QMainWindow):
 
         return
 
+    def show_slicers(self, time_vector, ws_vector, color):
+        self.ui.graphicsView_main.show_slicers(time_vector, ws_vector, color)
+
+
     def get_current_slicer(self):
         status, ret_obj = self.get_controller().get_slicer(self._curr_run_number, self._currSlicerKey)
         if status:

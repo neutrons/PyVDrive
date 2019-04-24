@@ -780,7 +780,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def show_slicers(self, vec_times, vec_target_ws):
+    def show_slicers(self, vec_times, vec_target_ws, color=None, max_segment_to_show=20):
         """
         show slicers on the canvas by plotting segment of sample logs
         :param vec_times:
@@ -809,14 +809,18 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         num_color = len(COLOR_LIST)
 
         # if there are too many slicing segments, then only shows the first N segments
-        MAX_SEGMENT_TO_SHOW = 20
-        num_seg_to_show = min(len(vec_target_ws), MAX_SEGMENT_TO_SHOW)
-
-        print ('[DB...BAT] # segments = {}... vec target type: {}'
-               ''.format(num_seg_to_show, vec_target_ws.dtype))
+        if max_segment_to_show is None:
+            num_seg_to_show = len(vec_target_ws)
+        else:
+            datatypeutility.check_int_variable('Maximum segment to show', max_segment_to_show, (1, 100000))
+            num_seg_to_show = min(len(vec_target_ws), max_segment_to_show)
 
         for i_seg in range(num_seg_to_show):
             # get start time and stop time
+            # skip the ignored ones
+            if vec_target_ws[i_seg] == '-1' or vec_target_ws[i_seg] == -1:
+                continue  # skip
+
             x_start = vec_times[i_seg]
             x_stop = vec_times[i_seg+1]
             print ('[DB...BAT] Segment {}: Time range = {}, {}'.format(i_seg, x_start, x_stop))
@@ -843,10 +847,14 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
             # plot
             color_index = vec_target_ws[i_seg]
-            if isinstance(color_index, int):
-                color_i = COLOR_LIST[color_index % num_color]
+            if color is None:
+                if isinstance(color_index, int):
+                    color_i = COLOR_LIST[color_index % num_color]
+                else:
+                    color_i = COLOR_LIST[i_seg % num_color]
             else:
-                color_i = COLOR_LIST[i_seg % num_color]
+                color_i = color
+
             seg_plot_index = self.add_plot_1d(vec_x_i, vec_y_i, marker=None, line_style='-', color=color_i,
                                               line_width=2)
 
