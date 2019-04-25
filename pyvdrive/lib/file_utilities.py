@@ -97,6 +97,7 @@ def import_detector_efficiency(h5_name):
     return pid_vec, det_eff_factor_vec
 
 
+# TODO - TONIGHT 0 - Clean up this method!  It has never been used/tested
 def load_sample_logs_h5(log_h5_name, log_name=None):
     """
     Load standard sample log (TimeSeriesProperty) from an HDF file
@@ -105,26 +106,31 @@ def load_sample_logs_h5(log_h5_name, log_name=None):
     :param log_name: specified log name to load.  If None, then load all the sample logs
     :return: dictionary: d[log name] = vec_times, vec_values  of numpy arrays
     """
-    def is_sample_log(log_entry_name):
-        return log_h5[log_entry_name].has_attribute('sample log')
+    def is_sample_log(h5_root, log_entry_name):
+        try:
+            is_s_l = h5_root[log_entry_name].has_attribute('sample log')
+        except AttributeError:  # in case the entry is not a Group
+            is_s_l = False
+        return is_s_l
 
-    def read_log(log_entry_name):
-        vec_times = log_h5[log_entry_name]['time']
-        vec_value = log_h5[log_entry_name]['value']
+    def read_log(h5_root, log_entry_name):
+        vec_times = h5_root[log_entry_name]['time']
+        vec_value = h5_root[log_entry_name]['value']
         return vec_times, vec_value
 
     datatypeutility.check_file_name(log_h5_name, True, False, False, 'PyVDRive HDF5 sample log file')
 
     log_h5 = h5py.File(log_h5_name, 'r')
+    print ('[DB...BAT] Open {}'.format(log_h5_name))
 
     sample_log_dict = dict()
     if log_name is None:
         for log_name in log_h5.keys():
-            if not is_sample_log(log_name):
+            if not is_sample_log(log_h5, log_name):
                 continue
-            sample_log_dict[log_name] = read_log(log_name)
+            sample_log_dict[log_name] = read_log(log_h5, log_name)
     else:
-        sample_log_dict[log_name] = read_log(log_name)
+        sample_log_dict[log_name] = read_log(log_h5, log_name)
 
     return sample_log_dict
 

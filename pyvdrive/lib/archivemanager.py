@@ -180,7 +180,7 @@ class DataArchiveManager(object):
         return gsas_file_name
 
     @staticmethod
-    def get_sliced_logs(ipts_number, run_number):
+    def locate_sliced_h5_logs(ipts_number, run_number):
         """
         get the file names of the sliced logs in HDF5 format
         Example:

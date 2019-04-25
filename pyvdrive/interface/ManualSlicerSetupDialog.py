@@ -342,7 +342,7 @@ class ManualSlicerSetupTableDialog(QDialog):
         if target_name == '':
             return
 
-        self._myParent.remove_slicers_hightlights(target_name)
+        self._myParent.remove_slicers_highlights(target_name)
 
         return
 

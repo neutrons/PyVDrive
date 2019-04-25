@@ -859,4 +859,5 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         return status, error_msg
 
     # TODO - TODAY 0 0 0 - Starting from here!  how to highlight/de-highlight slicers!!!
-    def remove_slicers_hightlights(self, target_name):
+    def remove_slicers_highlights(self, target_name):
+        return

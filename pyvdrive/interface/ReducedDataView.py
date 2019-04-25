@@ -19,6 +19,7 @@ except ImportError:
     from PyQt4.uic import loadUi as load_ui
     from PyQt4 import QtCore
 import gui.GuiUtility as GuiUtility
+from pyvdrive.lib import vulcan_util
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
@@ -453,7 +454,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             sample_log_names = self._sample_log_name_list
         else:
             try:
-                log_files = self._myController.archive_manager.get_sliced_logs(ipts_number, run_number)
+                log_files = self._myController.archive_manager.locate_sliced_h5_logs(ipts_number, run_number)
             except RuntimeError as any_err:
                 GuiUtility.pop_dialog_error(self, 'Unable to load log files of IPTS-{} Run-{} due to {}'
                                                   ''.format(ipts_number, run_number, any_err))
@@ -965,16 +966,24 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 # use IPTS and run to locate the loaded sample logs
                 ipts_number, run_number = self._sample_log_info_dict[self._log_data_key]
             except KeyError as key_err:
-                GuiUtility.pop_dialog_error(self, '{} is not loaded (sample log info dict): {}'
+                GuiUtility.pop_dialog_error(self, 'Log key {} does not exist (sample log info dict): {}'
                                                   ''.format(self._log_data_key, key_err))
                 return
 
             try:
                 if ipts_number not in self._sliced_log_dict or run_number in self._sliced_log_dict[ipts_number]:
-                    from pyvdrive.lib import vulcan_util
                     # load sample log file
-                    log_header, log_set = vulcan_util.import_sample_log_record(ipts_number, run_number, is_chopped=True,
-                                                                               record_type='start')
+                    try:
+                        log_files = self._myController.archive_manager.locate_sliced_h5_logs(ipts_number, run_number)
+                        whatever = self.load_chopped_h5_logs(log_files)
+                        log_header, log_set = whatever
+                    except RuntimeError as run_err:
+                        print ('[INFO] IPTS-{} Run-{} is not sliced with supported to h5-log files.'
+                               ''.format(ipts_number, run_number))
+
+                        log_header, log_set = vulcan_util.import_sample_log_record(ipts_number, run_number, is_chopped=True,
+                                                                                   record_type='start')
+                    # END-IF-ELSE
                     self.set_chopped_logs(ipts_number, run_number, log_header, log_set, 'start')
 
                 # start_log_set = self._sample_log_dict[ipts_number][run_number]['start']
@@ -982,6 +991,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 # print (type(self._sample_log_dict[ipts_number][run_number]))
 
                 if curr_x_log_name == 'Time':
+                    # TODO - TONIGHT - FIXME - data structure from h5 logs can be very different!
+                    # TODO - ... ... - Solution: make
                     start_vec_x = self._sliced_log_dict[ipts_number][run_number]['start'][1]['Time [sec]'].values
                 else:
                     mts_log_name_x = self._nexus_mtd_log_name_map[curr_x_log_name]
@@ -1734,6 +1745,29 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return data_key, load_seq_list
 
+    @staticmethod
+    def load_chopped_h5_logs(log_files):
+        # TODO - TONIGHT 0 - Better coding
+        from pyvdrive.lib import file_utilities
+        sample_log_dict = dict()
+        header_set = set()
+        for log_file, gda_file in log_files:
+            base_gda = gda_file.split('.')[0]
+            if base_gda.isdigit():
+                chop_index = int(base_gda)
+            else:
+                chop_index = base_gda
+
+            log_dict_i = file_utilities.load_sample_logs_h5(log_file, None)
+
+            sample_log_dict[chop_index] = log_dict_i
+            header_list = list(header_set)
+            header_list.extend(log_dict_i.keys())
+            header_set = set(header_list)
+        # END-FOR
+
+        return list(header_set), sample_log_dict
+
     def retrieve_loaded_reduced_data(self, data_key, ipts_number, run_number, chop_seq_index, bank_id, unit, pc_norm, van_run):
         """
         Retrieve reduced data from workspace (via run number) to _reducedDataDict.
@@ -2228,6 +2262,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     def set_chopped_logs(self, ipts_number, run_number, log_header, log_set, log_id='start'):
+        # TODO - TONIGHT 0 - Document! & consider the case of hdf5 logs!
         if ipts_number not in self._sliced_log_dict:
             self._sliced_log_dict[ipts_number] = dict()
         if run_number not in self._sliced_log_dict[ipts_number]:
