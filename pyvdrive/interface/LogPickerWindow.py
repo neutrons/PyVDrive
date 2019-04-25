@@ -1137,7 +1137,7 @@ class WindowLogPicker(QMainWindow):
                 pass
             elif slicer_time_vec.shape[0] == len(set(slicer_ws_vec)) + 1:
                 #  all the targets are unique
-                self.ui.graphicsView_main.show_slicers(slicer_time_vec, slicer_ws_vec)
+                self.ui.graphicsView_main.highlight_slicers(slicer_time_vec, slicer_ws_vec)
             else:
                 self.ui.graphicsView_main.show_slicers_repetitions(slicer_time_vec, slicer_ws_vec)
 
@@ -1148,7 +1148,7 @@ class WindowLogPicker(QMainWindow):
         return
 
     def show_slicers(self, time_vector, ws_vector, color):
-        self.ui.graphicsView_main.show_slicers(time_vector, ws_vector, color)
+        self.ui.graphicsView_main.highlight_slicers(time_vector, ws_vector, color)
 
 
     def get_current_slicer(self):

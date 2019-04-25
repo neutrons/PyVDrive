@@ -184,19 +184,13 @@ class DataArchiveManager(object):
         """
         get the file names of the sliced logs in HDF5 format
         Example:
-        [wzz@analysis-node09 pyvdrive_only]$ ls
-172282
-[wzz@analysis-node09 pyvdrive_only]$ cd 172282/
-[wzz@analysis-node09 172282]$ ls
-10.hdf5  12.hdf5  14.hdf5  16.hdf5  18.hdf5  1.hdf5   21.hdf5  23.hdf5  25.hdf5  27.hdf5  29.hdf5  30.hdf5  32.hdf5  4.hdf5  6.hdf5  8.hdf5  summary.txt
-11.hdf5  13.hdf5  15.hdf5  17.hdf5  19.hdf5  20.hdf5  22.hdf5  24.hdf5  26.hdf5  28.hdf5  2.hdf5   31.hdf5  3.hdf5   5.hdf5  7.hdf5  9.hdf5
-[wzz@analysis-node09 172282]$ cat summary.txt
-0  	/SNS/VULCAN/IPTS-22862/shared/pyvdrive_only/172282/1.hdf5  	1.gda
-1  	/SNS/VULCAN/IPTS-22862/shared/pyvdrive_only/172282/2.hdf5  	2.gda
-... ...
+        [wzz@analysis-node09 172282]$ cat summary.txt
+        0  	/SNS/VULCAN/IPTS-22862/shared/pyvdrive_only/172282/1.hdf5  	1.gda
+        1  	/SNS/VULCAN/IPTS-22862/shared/pyvdrive_only/172282/2.hdf5  	2.gda
+        ... ...
         :param ipts_number:
         :param run_number:
-        :return:
+        :return: list of 2-tuple (log h5 name, gsas file name)
         """
         datatypeutility.check_int_variable('Run number', run_number, (1, None))
         datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
@@ -207,13 +201,30 @@ class DataArchiveManager(object):
             raise RuntimeError('blabla')
 
         summary_name = os.path.join(archived_h5_dir, 'summary.txt')
+        if not os.path.exists(summary_name):
+            raise RuntimeError('Unable to locate {} for sliced logs\' summary')
 
+        # parse sliced log file
         log_file_names_tuple = list()
+        summary_file = open(summary_name, 'r')
+        raw_lines = summary_file.readlines()
+        summary_file.close()
 
-        # TODO - TODAY 0 - continue from here!
+        for line in raw_lines:
+            line = line.strip()
+            if line == '' or line[0] == '#':
+                continue  # ignore empty line and comment line
 
+            items = line.split()
+            if len(items) < 3:
+                continue  # invalid line
+            else:
+                log_h5_i = items[1]
+                gsas_i = items[2]
+                log_file_names_tuple.append((log_h5_i, gsas_i))
+        # END-FOR
 
-
+        return log_file_names_tuple
 
     @staticmethod
     def locate_chopped_nexus(ipts_number, run_number, chop_child_list):

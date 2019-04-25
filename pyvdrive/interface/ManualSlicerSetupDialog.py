@@ -322,7 +322,7 @@ class ManualSlicerSetupTableDialog(QDialog):
 
                 self.ui.label_numSegment1.setText('{}'.format(num_slicers))
 
-                self._myParent.show_slicers(single_ws_time_vec, single_ws_name_vec, color_ws_1)
+                self._myParent.highlight_slicers(single_ws_time_vec, single_ws_name_vec, color_ws_1)
 
         except Exception as e:
             GuiUtil.pop_dialog_error(self, 'blabla: {}'.format(e))
@@ -334,11 +334,15 @@ class ManualSlicerSetupTableDialog(QDialog):
 
     # TODO - TONIGHT 0 - Implement!
     def do_hide_cyclic_slicers(self):
-        """
-        blabla
+        """ Hide (or remove) the cyclic slicers' high lights
         :return:
         """
         # manage slicers by some keys!
+        target_name = str(self.ui.lineEdit_target1.text())
+        if target_name == '':
+            return
+
+        self._myParent.remove_slicers_hightlights(target_name)
 
         return
 

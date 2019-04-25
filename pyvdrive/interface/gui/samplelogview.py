@@ -10,6 +10,7 @@ except ImportError:
     from PyQt4.QtGui import QMenu, QAction, QCursor
 import mplgraphicsview
 from pyvdrive.lib import datatypeutility
+from pyvdrive.lib import vdrivehelper
 
 COLOR_LIST = ['red', 'green', 'black', 'cyan', 'magenta', 'yellow']
 
@@ -728,7 +729,8 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
             t_start = vec_slicers_times[i_target]
             t_stop = vec_slicers_times[i_target + 1]
 
-            time_index_list = np.searchsorted(vec_log_times, [t_start, t_stop])  # TODO - TONIGHT 0 - replace!
+            # time_index_list = np.searchsorted(vec_log_times, [t_start, t_stop])  # TODO-TEST - replaced!
+            time_index_list = vdrivehelper.search_sorted_nearest(vec_log_times, [t_start, t_stop])
             log_time0_index, log_timef_index = time_index_list
 
             # find the nearest
@@ -766,7 +768,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def show_slicers(self, vec_times, vec_target_ws, color=None, max_segment_to_show=20):
+    def highlight_slicers(self, vec_times, vec_target_ws, color=None, max_segment_to_show=20):
         """
         show slicers on the canvas by plotting segment of sample logs
         :param vec_times:
@@ -855,3 +857,6 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
                         '' % (len(vec_target_ws), max_segment_to_show)
 
         return status, error_msg
+
+    # TODO - TODAY 0 0 0 - Starting from here!  how to highlight/de-highlight slicers!!!
+    def remove_slicers_hightlights(self, target_name):
