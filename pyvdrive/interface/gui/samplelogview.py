@@ -728,7 +728,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
             t_start = vec_slicers_times[i_target]
             t_stop = vec_slicers_times[i_target + 1]
 
-            time_index_list = np.searchsorted(vec_log_times, [t_start, t_stop])
+            time_index_list = np.searchsorted(vec_log_times, [t_start, t_stop])  # TODO - TONIGHT 0 - replace!
             log_time0_index, log_timef_index = time_index_list
 
             # find the nearest
@@ -742,20 +742,6 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
             vec_y_i = vec_log_value[log_time0_index:log_timef_index+1]
 
             print ('[DB...BAT: Locate:  indexes {}:{}'.format(log_time0_index, log_timef_index))
-
-            if False:
-                # get start time and stop time's index
-                i_start = (np.abs(vec_x - x_start)).argmin()
-                i_stop = (np.abs(vec_x - x_stop)).argmin()
-                if i_start == i_stop:
-                    # empty!
-                    print '[SampleLogView WARNING] Range: %d to %d  (%f to %f) cannot generate any vector. ' \
-                          '' % (i_start, i_stop, vec_x[i_start], vec_x[i_stop])
-                    continue
-                elif i_start > i_stop:
-                    raise RuntimeError('It is impossible to have start index {0} > stop index {1}'
-                                       ''.format(i_start, i_stop))
-            # END-IF
 
             if seg_dict[target_name_i] is None:
                 seg_dict[target_name_i] = vec_x_i, vec_y_i
@@ -859,14 +845,13 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
                                               line_width=2)
 
             self._splitterSegmentsList.append(seg_plot_index)
-
         # END-FOR
 
         status = True
         error_msg = None
-        if len(vec_target_ws) > MAX_SEGMENT_TO_SHOW:
+        if len(vec_target_ws) > num_seg_to_show:
             status = False
             error_msg = 'There are too many (%d) segments in the slicers.  Only show the first %d.' \
-                        '' % (len(vec_target_ws), MAX_SEGMENT_TO_SHOW)
+                        '' % (len(vec_target_ws), max_segment_to_show)
 
         return status, error_msg

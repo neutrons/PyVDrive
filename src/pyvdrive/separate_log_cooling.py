@@ -10,9 +10,12 @@ def search_sorted_nearest(vector, values):  # NOTE: SAME as separate_log_cooling
             pass  # already out of left boundary
         elif index_i == vector.shape[0]:
             pass  # already out of right boundary
-        elif values[i] - vector[index_i-1] < vector[index_i] - values[i]:
-            # v_i is closer to left value
-            index_list[i] = index_i - 1
+        else:
+            # print ('[DEBUG ...] index = {}, left = {}, me = {}, right = {}'.format(i, vector[index_i-1], values[i], vector[index_i])) 
+            if values[i] - vector[index_i-1] < vector[index_i] - values[i]:
+              # v_i is closer to left value
+              index_list[i] = index_i - 1
+              # print ('[DEBUG...] then {} is selected'.format(vector[index_list[i]]))
     # END-FOR
 
     return index_list
@@ -139,8 +142,10 @@ for i_cycle in range(start_cycle_number, stop_cycle_number+1):
     # reverse the vector for search sorted
     reversed_temp_i = vec_temp_i[::-1]
     bound_index_list = search_sorted_nearest(reversed_temp_i, boundaries)
+    
     # reverse back
-    bound_index_list = list(reversed_temp_i.shape[0] - numpy.array(bound_index_list))  # reverse bound index again
+    bound_index_list = list(reversed_temp_i.shape[0] - numpy.array(bound_index_list) - 1)  # reverse bound index again
+
     # check the result
     for i_b in range(len(boundaries)):
         b_index = bound_index_list[i_b]

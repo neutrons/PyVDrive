@@ -101,9 +101,9 @@ for i_cycle in range(0, len(minima_times)-1):  # minima always ends with a false
     
 # TODO-NOTE: user determine!
 boundaries = [96, 180, 360, 540, 720, 900]
-start_cycle_number = 0
-stop_cycle_number = 19
-phase_index = 1
+start_cycle_number = 20
+stop_cycle_number = 29
+phase_index = 2
 
 out_str = '# Sliced from IPTS-??? Run-??? loadframe.furnace1\n'   # output file format
 splitters_dict = dict()  # [target (integer)] = [start_t, stop_t, target_section, temperature min, temperature max]

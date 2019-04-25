@@ -1490,7 +1490,7 @@ class WindowLogPicker(QMainWindow):
         else:
             max_x = min(vec_x[-1], max_x)
 
-        index_array = numpy.searchsorted(vec_x, [min_x - 1.E-20, max_x + 1.E-20])
+        index_array = numpy.searchsorted(vec_x, [min_x - 1.E-20, max_x + 1.E-20])   # TODO - TONIGHT - replace!
         i_start = index_array[0]
         i_stop = index_array[1]
 

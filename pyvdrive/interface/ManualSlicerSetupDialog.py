@@ -332,11 +332,13 @@ class ManualSlicerSetupTableDialog(QDialog):
 
         return
 
+    # TODO - TONIGHT 0 - Implement!
     def do_hide_cyclic_slicers(self):
         """
         blabla
         :return:
         """
+        # manage slicers by some keys!
 
         return
 
