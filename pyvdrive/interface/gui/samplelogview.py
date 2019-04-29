@@ -733,17 +733,19 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
             time_index_list = vdrivehelper.search_sorted_nearest(vec_log_times, [t_start, t_stop])
             log_time0_index, log_timef_index = time_index_list
 
-            # find the nearest
-            if t_start - vec_log_times[log_time0_index-1] < vec_log_times[log_time0_index] - t_start:
-                log_time0_index -= 1
-            if t_stop - vec_log_times[log_timef_index-1] < vec_log_times[log_timef_index] - t_stop:
-                log_timef_index -= 1
+            # # find the nearest
+            # if t_start - vec_log_times[log_time0_index-1] < vec_log_times[log_time0_index] - t_start:
+            #     log_time0_index -= 1
+            # if t_stop - vec_log_times[log_timef_index-1] < vec_log_times[log_timef_index] - t_stop:
+            #     log_timef_index -= 1
 
             # construct the vector: get the partial for plot
             vec_x_i = vec_log_times[log_time0_index:log_timef_index+1]
             vec_y_i = vec_log_value[log_time0_index:log_timef_index+1]
 
-            print ('[DB...BAT: Locate:  indexes {}:{}'.format(log_time0_index, log_timef_index))
+            print ('[DB...BAT] Locate: Time range {}, {} @ ({}, {}) and ({}, {})'
+                   ''.format(t_start, t_stop, vec_log_times[log_time0_index], vec_log_value[log_time0_index],
+                             vec_log_times[log_timef_index], vec_log_value[log_time0_index]))
 
             if seg_dict[target_name_i] is None:
                 seg_dict[target_name_i] = vec_x_i, vec_y_i
@@ -768,6 +770,60 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         return
 
+    def highlight_cyclic_slicers(self, vec_times, vec_targets, target_color_dict):
+        """ Use the input time/target vectors to calculate the segment on current plotted data
+        :param vec_times:
+        :param vec_targets:
+        :param target_color_dict:
+        :return:
+        """
+        # TODO - TODAY 0 - Implement this in order not to mess up with highlight_slicers()
+        # check state
+        if self._currPlotID is None:
+            raise RuntimeError('No sample log is plot now')
+
+        if len(vec_times) != len(vec_targets) + 1:
+            raise RuntimeError('Assumption that input is a histogram! Now vec x size = {},'
+                               'vec y size = {}'.format(vec_times.shape, vec_targets.shape))
+
+        # get data from the figure
+        # Note: remove_all_lines() is nevered call in this class and LogPickerWindow
+        curr_vec_x, curr_vec_y = self.canvas().get_data(self._currPlotID)
+        num_seg_to_show = vec_targets.shape[0]
+
+        for i_seg in range(num_seg_to_show):
+            # get start time and stop time
+            # skip the ignored ones
+            if vec_targets[i_seg] == '-1' or vec_targets[i_seg] == -1:
+                continue  # skip
+
+            # from start and stop time to get the index for the current (plotted) log
+            t_start = vec_times[i_seg]
+            t_stop = vec_times[i_seg + 1]
+
+            time_index_list = vdrivehelper.search_sorted_nearest(curr_vec_x, [t_start, t_stop])
+            log_time0_index, log_timef_index = time_index_list
+
+            # construct the vector: get the partial for plot
+            vec_x_i = curr_vec_x[log_time0_index:log_timef_index+1]
+            vec_y_i = curr_vec_y[log_time0_index:log_timef_index+1]
+
+            print ('[DB...BAT] Locate: Time range {}, {} @ ({}, {}) and ({}, {})'
+                   ''.format(t_start, t_stop, curr_vec_x[log_time0_index], curr_vec_y[log_time0_index],
+                             curr_vec_x[log_timef_index], curr_vec_y[log_timef_index]))
+
+            # plot
+            target_name = vec_targets[i_seg]
+            color_i = target_color_dict[target_name]
+
+            seg_plot_index = self.add_plot_1d(vec_x_i, vec_y_i, marker=None, line_style='-', color=color_i,
+                                              line_width=2)
+
+            self._splitterSegmentsList.append(seg_plot_index)
+        # END-FOR
+
+        return
+
     def highlight_slicers(self, vec_times, vec_target_ws, color=None, max_segment_to_show=20):
         """
         show slicers on the canvas by plotting segment of sample logs
@@ -777,7 +833,6 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         """
         print ('[DB...BAT] Vector of times: {}'.format(vec_times))
 
-        # TODO - TONIGHT 190 - Add debugging to this method!
         # check state
         if self._currPlotID is None:
             return True, 'No plot on the screen yet.'

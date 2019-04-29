@@ -322,10 +322,11 @@ class ManualSlicerSetupTableDialog(QDialog):
 
                 self.ui.label_numSegment1.setText('{}'.format(num_slicers))
 
-                self._myParent.highlight_slicers(single_ws_time_vec, single_ws_name_vec, color_ws_1)
+                self._myParent.ui.graphicsView_main.highlight_cyclic_slicers(single_ws_time_vec, single_ws_name_vec,
+                                                                             {target_ws_1: color_ws_1})
 
         except Exception as e:
-            GuiUtil.pop_dialog_error(self, 'blabla: {}'.format(e))
+            GuiUtil.pop_dialog_error(self, 'blabla 1: {}'.format(e))
             return
 
 
@@ -395,7 +396,7 @@ class ManualSlicerSetupTableDialog(QDialog):
         try:
             target_ws = str(self.ui.lineEdit_target1.text()).strip()
         except Exception as e:
-            GuiUtil.pop_dialog_error(self, 'blabla: {}'.format(e))
+            GuiUtil.pop_dialog_error(self, 'blabla 2: {}'.format(e))
             return
 
         slicer_time_vec, slicer_ws_vec = self._myParent.get_current_slicer()
