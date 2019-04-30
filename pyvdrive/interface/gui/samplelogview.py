@@ -788,7 +788,13 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         # get data from the figure
         # Note: remove_all_lines() is nevered call in this class and LogPickerWindow
-        curr_vec_x, curr_vec_y = self.canvas().get_data(self._currPlotID)
+        if False:
+            # this is incorrect as the data points on the plot is fewer than real data for fast plotting
+            curr_vec_x, curr_vec_y = self.canvas().get_data(self._currPlotID)
+        else:
+            # TODO - TONIGHT 0 - Make this work!  This is where the bug coming from!
+            curr_vec_x, curr_vec_y = full_log_vec_x, fullog_log_vec_y
+
         num_seg_to_show = vec_targets.shape[0]
 
         for i_seg in range(num_seg_to_show):

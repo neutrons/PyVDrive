@@ -460,13 +460,14 @@ def search_sorted_nearest(vector, values):  # NOTE: SAME as separate_log_cooling
         elif index_i == vector.shape[0]:
             pass  # already out of right boundary
         else:
+            # print ('[DB...BAT...1] For {}: Selected vector (+/- 1): {}'
+            #        ''.format(values[i], vector[index_i-1:index_i+2]))
             if values[i] - vector[index_i-1] < vector[index_i] - values[i]:
                 # v_i is closer to left value
                 index_list[i] = index_i - 1
     # END-FOR
 
     return index_list
-
 
 
 if __name__ == '__main__':
