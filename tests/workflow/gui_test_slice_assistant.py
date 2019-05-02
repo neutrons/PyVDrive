@@ -79,7 +79,7 @@ class EventFilteringAssistantTestEnvironment(object):
                                              match_beginning=True)
 
         # plot
-        self._slice_window.do_plot_sample_logs()  # 'push' button: pushButton_setXAxis()
+        self._slice_window.do_plot_sample_log_raw()  # 'push' button: pushButton_setXAxis()
 
         # set up slicer
         self._slice_window.ui.radioButton_manualSlicer.setChecked(True)
@@ -101,7 +101,7 @@ class EventFilteringAssistantTestEnvironment(object):
                                              match_beginning=True)
 
         # plot
-        self._slice_window.do_plot_sample_logs()  # 'push' button: pushButton_setXAxis()
+        self._slice_window.do_plot_sample_log_raw()  # 'push' button: pushButton_setXAxis()
 
         # smooth
         self._slice_window.smooth_sample_log_curve()
