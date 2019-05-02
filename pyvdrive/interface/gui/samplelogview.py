@@ -58,6 +58,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         # current plot IDs
         self._currPlotID = None
+        self._curr_log_name = None  # real sample log name can be traced to log file/bundled with currPlotID
         self._currentSelectedPicker = None
         self._currMousePosX = None
         self._currMousePosY = None
@@ -540,6 +541,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         # update
         self._currPlotID = plot_id
+        self._curr_log_name = sample_log_name
 
         return plot_id
 
@@ -617,6 +619,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # clear all lines
         self.clear_all_lines()
         self._currPlotID = None
+        self._curr_log_name = None
 
         return
 
@@ -793,7 +796,9 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
             curr_vec_x, curr_vec_y = self.canvas().get_data(self._currPlotID)
         else:
             # TODO - TONIGHT 0 - Make this work!  This is where the bug coming from!
-            curr_vec_x, curr_vec_y = full_log_vec_x, fullog_log_vec_y
+            full_log_vec_x, full_log_vec_y = self._myParent.get_sample_log_data(self._curr_log_name)
+            curr_vec_x, curr_vec_y = full_log_vec_x, full_log_vec_y
+        # END-IF
 
         num_seg_to_show = vec_targets.shape[0]
 

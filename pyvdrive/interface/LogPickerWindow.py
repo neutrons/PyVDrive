@@ -1383,6 +1383,24 @@ class WindowLogPicker(QMainWindow):
 
         return
 
+    def get_sample_log_data(self, log_name):
+        """
+        get sample log data: time and value vector
+        :param sample_log_name:
+        :return:
+        """
+        # get the sample log data
+        if log_name in self._sampleLogDict[self._curr_run_number]:
+            # get sample log value from previous stored
+            vec_x, vec_y = self._sampleLogDict[self._curr_run_number][log_name]
+        else:
+            # get sample log data from driver
+            vec_x, vec_y = self._myParent.get_sample_log_value(self._curr_run_number, log_name, relative=True)
+            self._sampleLogDict[self._curr_run_number][log_name] = vec_x, vec_y
+            # END-IF
+
+        return  vec_x, vec_y
+
     def plot_nexus_log(self, log_name, x_axis_log='Time'):
         """
         Plot log value loaded from NeXus file
@@ -1414,22 +1432,23 @@ class WindowLogPicker(QMainWindow):
                 return
 
             # get the sample log data
-            if log_name in self._sampleLogDict[self._curr_run_number]:
-                # get sample log value from previous stored
-                vec_x, vec_y = self._sampleLogDict[self._curr_run_number][log_name]
-            else:
-                # get sample log data from driver
-                vec_x, vec_y = self._myParent.get_sample_log_value(self._curr_run_number, log_name, relative=True)
-                self._sampleLogDict[self._curr_run_number][log_name] = vec_x, vec_y
-            # END-IF
+            vec_x, vec_y = self.get_sample_log_data(log_name)
+            # if log_name in self._sampleLogDict[self._curr_run_number]:
+            #     # get sample log value from previous stored
+            #     vec_x, vec_y = self._sampleLogDict[self._curr_run_number][log_name]
+            # else:
+            #     # get sample log data from driver
+            #     vec_x, vec_y = self._myParent.get_sample_log_value(self._curr_run_number, log_name, relative=True)
+            #     self._sampleLogDict[self._curr_run_number][log_name] = vec_x, vec_y
+            # # END-IF
 
             # get range of the data: allow empty
             new_min_x = GuiUtility.parse_float(self.ui.lineEdit_minX, True, None)
             new_max_x = GuiUtility.parse_float(self.ui.lineEdit_maxX, True, None)
 
             # adjust the resolution
-            plot_x, plot_y = self.process_data(vec_x, vec_y, use_num_res, use_time_res, resolution,
-                                               new_min_x, new_max_x)
+            plot_x, plot_y = self.adjust_log_resolution(vec_x, vec_y, use_num_res, use_time_res, resolution,
+                                                        new_min_x, new_max_x)
 
             # overlay?
             if self.ui.checkBox_overlay.isChecked() is False:
@@ -1460,8 +1479,8 @@ class WindowLogPicker(QMainWindow):
         return
 
     @staticmethod
-    def process_data(vec_x, vec_y, use_number_resolution, use_time_resolution, resolution,
-                     min_x, max_x):
+    def adjust_log_resolution(vec_x, vec_y, use_number_resolution, use_time_resolution, resolution,
+                              min_x, max_x):
         """
         re-process the original log data to plot on canvas smartly
         :param vec_x: vector of time in unit of seconds
