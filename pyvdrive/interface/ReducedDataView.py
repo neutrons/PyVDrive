@@ -1107,6 +1107,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return curr_x_log_name, curr_y_log_name
 
     @staticmethod
+    def process_sliced_log_v2(vec_time, vec_y, vec_splitter_time, vec_splitter_value):
+        # TODO - TONIGHT 0 -
+        # TODO ... (1) plot a step function of splitter with height as start/stop data sample logs!
+
+        return
+
+    @staticmethod
     def process_sliced_log(vec_time, vec_y, vec_splitter_time, vec_splitter_value):
         """
         Split log from Mantid will have 1 entry before split start time and 1 entry after split stop time.
