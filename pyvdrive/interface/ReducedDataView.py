@@ -1000,8 +1000,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             for chop_index in sorted(self._sliced_h5_log_dict.keys()):
                 # get data
                 vec_y = self._sliced_h5_log_dict[chop_index][y_log_name][1]
+                vec_splitter_time, vec_splitter_value = self._sliced_h5_log_dict[chop_index]['splitter']
+
                 if x_log_name == 'Time':
-                    vec_x = self._sliced_h5_log_dict[chop_index][y_log_name][0]
+                    vec_time = self._sliced_h5_log_dict[chop_index][y_log_name][0]
+                    vec_x, vec_y = self.process_sliced_log(vec_time, vec_y, vec_splitter_time, vec_splitter_value)
                 else:
                     # plot log vs log
                     vec_x = self._sliced_h5_log_dict[chop_index][y_log_name][1]
@@ -1102,6 +1105,42 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         curr_y_log_name = self._log_display_name_dict[display_name_y]
 
         return curr_x_log_name, curr_y_log_name
+
+    @staticmethod
+    def process_sliced_log(vec_time, vec_y, vec_splitter_time, vec_splitter_value):
+        """
+        Split log from Mantid will have 1 entry before split start time and 1 entry after split stop time.
+        It has a bad effect on plotting especially when there are very few data points, because
+        a large portion of sample points overlap between two sliced data sets.
+        Therefore, use the True/False from splitter (log) to clearly define the first and last value of the splitter
+        :param vec_time:
+        :param vec_y:
+        :param vec_splitter_time:
+        :param vec_splitter_value:
+        :return:
+        """
+        # filter out the cases that are not considered
+        if vec_splitter_value.shape[0] % 2 != 1 or vec_splitter_value[0] > 0.1:
+            raise NotImplementedError('Case not considered')
+
+        for i_splitter in range(vec_splitter_time.shape[0]/2):
+            # splitter start time
+            start_time_i = vec_splitter_time[i_splitter*2+1]
+            stop_time_i = vec_splitter_time[i_splitter*2+2]
+
+            log_t0_index, log_tf_index = numpy.searchsorted(vec_time, [start_time_i, stop_time_i])
+            if log_t0_index > 0:
+                log_t0_index -= 1  # start one shall be on the left side of found index
+            # print ('[...................DB DAT] Index {} Time {} --> {}'.format(log_t0_index, vec_time[log_t0_index],
+            #                                                                     start_time_i))
+            # print ('[...................DB DAT] Index {} Time {} --> {}'.format(log_tf_index, vec_time[log_tf_index],
+            #                                                                     stop_time_i))
+            vec_time[log_t0_index] = start_time_i
+            vec_time[log_tf_index] = stop_time_i
+            vec_y[log_tf_index] = vec_y[log_tf_index-1]  # shall extend from REAL last value
+        # END-FOR
+
+        return vec_time, vec_y
 
     def reset_raw_log(self):
         if self._curr_log_raw_plot_id is not None:
