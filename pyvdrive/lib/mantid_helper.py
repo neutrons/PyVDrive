@@ -694,6 +694,11 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
         mantidapi.GenerateEventsFilter(**my_arg_dict)
     except RuntimeError as e:
         return False, str(e)
+    except ValueError as value_err:
+        print ('[ERROR] Workspace {} exists = {}'.format(ws_name, workspace_does_exist(ws_name)))
+        if workspace_does_exist(ws_name):
+            print ('[ERROR] Workspace {} ID = {}'.format(ws_name, retrieve_workspace(ws_name).id()))
+        return  False, str(value_err)
 
     return True, ''
 

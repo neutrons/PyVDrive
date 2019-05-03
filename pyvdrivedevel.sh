@@ -10,9 +10,8 @@ done
 # set up mantid path with python path
 MANTIDLOCALPATH=/home/wzz/Mantid_Project/builds/debug-master/bin/
 MANTIDMACPATH=/Users/wzz/MantidBuild/debug-stable/bin/
-MANTIDSNSDEBUGPATH=/SNS/users/wzz/Mantid_Project/builds/debug/bin/
-MANTIDSNSDEBUGPATH=/opt/Mantid/bin/
-MANTIDPATH=$MANTIDMACPATH:$MANTIDLOCALPATH:$MANTIDSNSDEBUGPATH
+MANTIDSNSPATH=/opt/mantidnightly/bin/
+MANTIDPATH=$MANTIDMACPATH:$MANTIDLOCALPATH:$MANTIDSNSPATH
 PYTHONPATH=$MANTIDPATH:$PYTHONPATH
 echo $PYTHONPATH
 
