@@ -198,7 +198,7 @@ class DataArchiveManager(object):
         archived_h5_dir = os.path.join('/SNS/VULCAN/', 'IPTS-{}/shared/pyvdrive_only/{}/'
                                                        ''.format(ipts_number, run_number))
         if not os.path.exists(archived_h5_dir):
-            raise RuntimeError('blabla')
+            raise RuntimeError('Unable to locate hdf5 logs directory {}'.format(archived_h5_dir))
 
         summary_name = os.path.join(archived_h5_dir, 'summary.txt')
         if not os.path.exists(summary_name):

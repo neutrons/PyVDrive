@@ -107,15 +107,33 @@ def load_sample_logs_h5(log_h5_name, log_name=None):
     :return: dictionary: d[log name] = vec_times, vec_values  of numpy arrays
     """
     def is_sample_log(h5_root, log_entry_name):
+        """
+        Check whether a given entry is for sample log
+        :param h5_root:
+        :param log_entry_name:
+        :return:
+        """
         try:
-            is_s_l = h5_root[log_entry_name].has_attribute('sample log')
-        except AttributeError:  # in case the entry is not a Group
+            entry_attr = h5_root[log_entry_name].attrs
+            if 'sample log' in entry_attr.keys():
+                # has such attribute
+                is_s_l = True
+            elif 'type' in  h5_root[log_entry_name].keys() and h5_root[log_entry_name]['type'].value == 'sample log':
+                # no such attribute, then check sub entry 'type'
+                is_s_l = True
+            else:
+                # no such attribute, 'type' is not right
+                is_s_l = False
+        except AttributeError as att_err:  # in case the entry is not a Group
             is_s_l = False
+            print ('[ERROR] File {} Entry {} has error to be a sample log: {}'
+                   ''.format(h5_root.filename, log_entry_name, att_err))
+
         return is_s_l
 
     def read_log(h5_root, log_entry_name):
-        vec_times = h5_root[log_entry_name]['time']
-        vec_value = h5_root[log_entry_name]['value']
+        vec_times = h5_root[log_entry_name]['time'][:]
+        vec_value = h5_root[log_entry_name]['value'][:]
         return vec_times, vec_value
 
     datatypeutility.check_file_name(log_h5_name, True, False, False, 'PyVDRive HDF5 sample log file')
@@ -127,10 +145,12 @@ def load_sample_logs_h5(log_h5_name, log_name=None):
     if log_name is None:
         for log_name in log_h5.keys():
             if not is_sample_log(log_h5, log_name):
+                print ('{} is not a sample log'.format(log_name))
                 continue
             sample_log_dict[log_name] = read_log(log_h5, log_name)
     else:
         sample_log_dict[log_name] = read_log(log_h5, log_name)
+    log_h5.close()
 
     return sample_log_dict
 

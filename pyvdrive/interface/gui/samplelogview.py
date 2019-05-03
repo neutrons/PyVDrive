@@ -545,7 +545,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         return plot_id
 
-    def plot_chopped_log(self, vec_x, vec_y, sample_log_name_x, sample_log_name_y, plot_label):
+    def plot_chopped_log(self, vec_x, vec_y, sample_log_name_x, sample_log_name_y, plot_label, color='red'):
         """
         Plot chopped sample log from archive (just points)
         :param vec_x:
@@ -573,8 +573,9 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         plot_id = self.add_plot_1d(vec_x, vec_y, x_label=sample_log_name_x,
                                    y_label=sample_log_name_y,
-                                   label=plot_label, marker='o', color='red', show_legend=True,
-                                   line_style='')
+                                   label=plot_label, marker='o', marker_size=4,
+                                   color=color, show_legend=True,
+                                   line_style='none')
         self._sizeRegister[plot_id] = (min(vec_x), max(vec_x), min(vec_y), max(vec_y))
 
         # No need to auto resize
