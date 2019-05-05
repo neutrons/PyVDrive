@@ -1000,27 +1000,52 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             for chop_index in sorted(self._sliced_h5_log_dict.keys()):
                 # get data
                 vec_y = self._sliced_h5_log_dict[chop_index][y_log_name][1]
-                vec_splitter_time, vec_splitter_value = self._sliced_h5_log_dict[chop_index]['splitter']
 
                 if x_log_name == 'Time':
                     vec_time = self._sliced_h5_log_dict[chop_index][y_log_name][0]
+                    vec_splitter_time, vec_splitter_value = self._sliced_h5_log_dict[chop_index]['splitter']
                     vec_x, vec_y = self.process_sliced_log(vec_time, vec_y, vec_splitter_time, vec_splitter_value)
+
+                    # add a vector along with splitter
+                    num_splitters = vec_splitter_time.shape[0] - 1
+                    # for step function
+                    max_y = vec_y.max()
+                    min_y = vec_y.min()
+                    step_vec_x = numpy.ndarray(shape=(num_splitters * 2 + 1,), dtype=vec_splitter_time.dtype)
+                    step_vec_y = numpy.ndarray(shape=step_vec_x.shape, dtype='float')
+
+                    # set up step function: times
+                    step_vec_x[::2] = vec_splitter_time  # original splitter time
+                    step_vec_x[1::2] = step_vec_x[2::2] - 0.001  # shorter than a pulse... good enough
+                    step_vec_y[0::4] = step_vec_y[1::4] = min_y
+                    step_vec_y[2::4] = step_vec_y[3::4] = max_y
+
                 else:
                     # plot log vs log
                     vec_x = self._sliced_h5_log_dict[chop_index][y_log_name][1]
                     vec_time_x = self._sliced_h5_log_dict[chop_index][y_log_name][0]
                     vec_time_y = self._sliced_h5_log_dict[chop_index][y_log_name][0]
                     vec_x, vec_y = vulcan_util.map_2_logs(vec_time_x, vec_x, vec_time_y, vec_y)
+
+                    step_vec_x = step_vec_y = None
                 # END-IF-ELSE
 
                 # plot 1 line for all
                 plot_label = '{}: Slice-index = {}'.format(base_plot_label, chop_index)
-                log_plot_id_i = self.ui.graphicsView_logPlot.plot_chopped_log(vec_x, vec_y,
-                                                                              x_log_name, y_log_name,
-                                                                              plot_label,
-                                                                              COLORS[chop_index % COLORSNUM])
+                color_i = COLORS[chop_index % COLORSNUM]
+                if step_vec_x is None:
+                    log_plot_id_i = self.ui.graphicsView_logPlot.plot_chopped_log(vec_x, vec_y,
+                                                                                  x_log_name, y_log_name,
+                                                                                  plot_label,
+                                                                                  color_i)
+                else:
+                    log_plot_id_i = self.ui.graphicsView_logPlot.add_plot_1d(step_vec_x, step_vec_y,
+                                                                             label=plot_label, show_legend=True,
+                                                                             color=color_i, line_style='--')
+                # END-IF-ELSE
                 self._curr_log_sliced_dict[chop_index] = log_plot_id_i
-            # END0FOR
+
+            # END-FOR
 
         else:
             # From memory:
