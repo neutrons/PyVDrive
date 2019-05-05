@@ -367,7 +367,11 @@ class VDriveCommand(QObject):
         # get IPTS from setup
         if 'IPTS' in self._commandArgsDict:
             # ITPS from command as highest priority
-            self._iptsNumber = int(self._commandArgsDict['IPTS'])
+            try:
+                self._iptsNumber = int(self._commandArgsDict['IPTS'])
+            except ValueError as value_err:
+                raise RuntimeError('Unable to set IPTS {} due to {}'
+                                   ''.format(self._commandArgsDict['IPTS'], value_err))
         elif self._iptsNumber is not None:
             # IPTS is previously stored and to be used
             pass

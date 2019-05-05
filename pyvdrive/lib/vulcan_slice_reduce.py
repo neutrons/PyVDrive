@@ -76,6 +76,7 @@ class SliceFocusVulcan(object):
         :return:
         """
         log_names = [log_pair[1] for log_pair in reduce_VULCAN.VulcanSampleLogList]
+        log_names.append('splitter')
         info = ''
 
         for index, ws_name in enumerate(split_ws_names):

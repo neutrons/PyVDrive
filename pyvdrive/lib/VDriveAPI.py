@@ -338,24 +338,24 @@ class VDriveAPI(object):
     #
     #     return True, peak_info_list
 
-    def gen_data_slice_manual(self, run_number, relative_time, time_segment_list, slice_tag):
-        """ generate event slicer for data manually
-        :param run_number:
-        :param relative_time:
-        :param time_segment_list:
-        :param slice_tag: string for slice tag name
-        :return: slice tag. if user gives slice tag as None, then the returned one is the auto-generated.
-        """
-        # TODO FIXME - NIGHT - This method can be removed
-        # get the chopper
-        chopper = self._myProject.get_chopper(run_number)
-
-        status, slice_tag = chopper.generate_events_filter_manual(run_number=run_number,
-                                                                  split_list=time_segment_list,
-                                                                  relative_time=relative_time,
-                                                                  splitter_tag=slice_tag)
-
-        return status, slice_tag
+    # def gen_data_slice_manual(self, run_number, relative_time, time_segment_list, slice_tag):
+    #     """ generate event slicer for data manually
+    #     :param run_number:
+    #     :param relative_time:
+    #     :param time_segment_list:
+    #     :param slice_tag: string for slice tag name
+    #     :return: slice tag. if user gives slice tag as None, then the returned one is the auto-generated.
+    #     """
+    #     # TODO FIXME - NIGHT - This method can be removed
+    #     # get the chopper
+    #     chopper = self._myProject.get_chopper(run_number)
+    #
+    #     status, slice_tag = chopper.generate_events_filter_manual(run_number=run_number,
+    #                                                               split_list=time_segment_list,
+    #                                                               relative_time=relative_time,
+    #                                                               splitter_tag=slice_tag)
+    #
+    #     return status, slice_tag
 
     def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step, raw_nexus_name=None):
         """
@@ -553,11 +553,17 @@ class VDriveAPI(object):
         """
         Get the slicer (in vectors) by run number and slicer ID
         :param run_number:
-        :param slicer_id:
+        :param slicer_id: string or integer???
         :return:  2-tuple.  [1] Boolean [2] (vector time, vector workspace) | error message
         """
-        chopper = self._myProject.get_chopper(run_number)
-        status, ret_obj = chopper.get_slicer_by_id(slicer_tag=slicer_id, relative_time=True)
+        assert slicer_id is not None, 'blabla'
+
+        try:
+            chopper = self._myProject.get_chopper(run_number)
+            status, ret_obj = chopper.get_slicer_by_id(slicer_tag=slicer_id, relative_time=True)
+        except RuntimeError as run_err:
+            status = False
+            ret_obj = 'Unable to get slicer dur to {}'.format(run_err)
 
         return status, ret_obj
 
@@ -1126,7 +1132,13 @@ class VDriveAPI(object):
             # END-IF
 
             file_name = self._myArchiveManager.locate_event_nexus(ipts_number, run_number=run_number)
+            if file_name is None:
+                raise RuntimeError('Unable to find or access NeXus file of IPTS-{} Run-{}'
+                                   ''.format(ipts_number, run_number))
         # END-IF
+
+        # add to project
+        self._myProject.add_run(run_number, file_name, ipts_number)
 
         # load file
         output_ws_name = self._myProject.load_meta_data(ipts_number=ipts_number, run_number=run_number,

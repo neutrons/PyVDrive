@@ -19,6 +19,8 @@ except ImportError:
     from PyQt4.uic import loadUi as load_ui
     from PyQt4 import QtCore
 import gui.GuiUtility as GuiUtility
+from pyvdrive.lib import vulcan_util
+from pyvdrive.lib import file_utilities
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
@@ -123,11 +125,16 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._log_data_key = None
         self._log_display_name_dict = dict()   # [log display name] = log full name (to look up)
         self._sample_log_dict = dict()  # [IPTS][RUN] = {'ProtonCharge': xxx, 'MTS': xxx, ...}
-        self._sliced_log_dict = dict()  # [IPTS][RUN] = {'start': ..., 'mean': ..., 'end': ...}
+        self._sliced_log_dict = dict()  # [RUN] = {'start': ..., 'mean': ..., 'end': ..., 'IPTS': xxx}
+        self._sliced_h5_log_dict = dict()  # [RUN] = {[CHOP-INDEX]: dict(1) , [CHOP-INDEX]:dict(2)...}
+        # dict(i):  {'ProtonCharge': (vec Time, vec Value), ...}
         self._sample_log_name_list = generate_sample_log_list()  # list of sample logs that are viable to plot
         self._sample_log_info_dict = dict()  # [meta_data_key] = ipts, run number
 
-        self._main_log_plot_id = None
+        self._curr_log_raw_plot_id = None   # Plot ID for the raw sample log
+        self._curr_log_x_name = None   # log X-axis name
+        self._curr_log_y_name = None   # log Y-axis name
+        self._curr_log_sliced_dict = dict()  # [slice ID] = Plot ID
         self._chopped_start_log_id = None
         self._nexus_mtd_log_name_map = generate_log_names_map()
 
@@ -174,7 +181,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # section: plot sample log
         self.ui.pushButton_loadLogs.clicked.connect(self.do_load_sample_log)
-        self.ui.pushButton_plotSampleLog.clicked.connect(self.do_plot_sample_logs)
+        self.ui.pushButton_plotSampleLog.clicked.connect(self.do_plot_sample_log_raw)
+        self.ui.pushButton_plotSlicedLog.clicked.connect(self.do_plot_sample_log_sliced)
 
         # plot related
         self.ui.pushButton_clearCanvas.clicked.connect(self.do_clear_canvas)
@@ -230,6 +238,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # read-only line edit
         self.ui.lineEdit_gsasFileName.setEnabled(False)
+
+        # sample log
+        self.ui.radioButton_plotSlicedLogSimple.setChecked(False)
+        self.ui.radioButton_plotDetailedSlicedLog.setChecked(True)
 
         return
 
@@ -431,7 +443,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    # TODO - TODAY 0 - Add UI
+    # TODO - TODAY 190 - Add UI widget to enable this!
     def do_load_sliced_logs(self):
         """
         Load sliced sample logs
@@ -453,7 +465,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             sample_log_names = self._sample_log_name_list
         else:
             try:
-                log_files = self._myController.archive_manager.get_sliced_logs(ipts_number, run_number)
+                log_files = self._myController.archive_manager.locate_sliced_h5_logs(ipts_number, run_number)
             except RuntimeError as any_err:
                 GuiUtility.pop_dialog_error(self, 'Unable to load log files of IPTS-{} Run-{} due to {}'
                                                   ''.format(ipts_number, run_number, any_err))
@@ -485,7 +497,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._set_sample_log_combo_box(self.ui.comboBox_sampleLogsList_x, sample_log_names)
 
         # plot current sample log
-        self.do_plot_sample_logs()
+        self.do_plot_sample_log_raw()
 
         return
 
@@ -911,97 +923,134 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    # TODO - TODAY - TEST!
-    def do_plot_sample_logs(self):
-        """ Plot selected sample logs:
-        Workflow:
-        1. get log X and Y;
-        2. if single: ...
-        3. if chopped: (1) plot original (2) plot the selected section
+    def do_plot_sample_log_sliced(self):
+        """ Plot sliced sample logs from (1) archived ASCII (2) archived h5 (3) memory
         :return:
         """
-        # get sample logs: from display name to log name in workspace.run()
-        # convert from display name to log name
-        display_name_x = str(self.ui.comboBox_sampleLogsList_x.currentText()).strip()
-        if display_name_x == '':
-            GuiUtility.pop_dialog_error(self, 'Log not loaded yet')
+        # get log name to plot
+        x_log_name, y_log_name = self.get_sample_logs_to_plot()
+        if x_log_name != self._curr_log_x_name or y_log_name != self._curr_log_y_name:
+            # different
+            self.reset_raw_log()
+            self.reset_sliced_log()
+            # set again to the current
+            self._curr_log_x_name, self._curr_log_y_name = x_log_name, y_log_name
+        # END-IF
+
+        # Get IPTS and run number of the current plot data
+        try:
+            # use IPTS and run to locate the loaded sample logs
+            ipts_number, run_number = self._sample_log_info_dict[self._log_data_key]
+        except KeyError as key_err:
+            GuiUtility.pop_dialog_error(self, 'Log key {} does not exist (sample log info dict): {}'
+                                              ''.format(self._log_data_key, key_err))
             return
-        elif display_name_x.startswith('Time'):
-            curr_x_log_name = 'Time'
-        else:
-            curr_x_log_name = self._log_display_name_dict[display_name_x]
 
-        display_name_y = str(self.ui.comboBox_sampleLogsList_y.currentText()).strip()
-        curr_y_log_name = self._log_display_name_dict[display_name_y]
+        # plot label
+        base_plot_label = 'Run {}: {} - {}'.format(run_number, x_log_name, y_log_name)
 
-        # case for single run or original of chopped runs
-        if curr_x_log_name == 'Time':
-            # get vec times (i.e., vec_log_x)
-            vec_log_x, vec_log_y = self._myController.get_sample_log_values(data_key=self._log_data_key,
-                                                                            log_name=curr_y_log_name,
-                                                                            start_time=None, stop_time=None,
-                                                                            relative=True)
-        else:
-            vec_times, vec_log_x, vec_log_y = self._myController.get_2_sample_log_values(data_key=self._log_data_key,
-                                                                                         log_name_x=curr_x_log_name,
-                                                                                         log_name_y=curr_y_log_name,
-                                                                                         start_time=None,
-                                                                                         stop_time=None)
-        # END-IF-ELSE
+        # Plot according to user's choice
+        if self.ui.radioButton_plotSlicedLogSimple.isChecked():
+            # Plot in simple (start/stop only) style: the data must be from archived ASCII CVS log file
+            # load data if not loaded yet
+            if run_number not in self._sliced_log_dict:
+                log_header, log_set = vulcan_util.import_sample_log_record(ipts_number, run_number, is_chopped=True,
+                                                                           record_type='start')
+                self.set_chopped_logs(ipts_number, run_number, log_header, log_set, 'start')
+            # END-IF
 
-        # plot
-        plot_label = '{} {}'.format(self._iptsNumber, self._currRunNumber)
-        self._main_log_plot_id = self.ui.graphicsView_logPlot.plot_sample_log(vec_log_x, vec_log_y,
-                                                                              plot_label=plot_label,
-                                                                              sample_log_name_x=curr_x_log_name,
-                                                                              sample_log_name=curr_y_log_name)
+            # convert log name from display name to MTS log name
+            print ('[DB...BAT] Display Y name: {}'.format(y_log_name))
+            y_log_name = self._nexus_mtd_log_name_map[y_log_name]
+            print ('[DB...BAT] Mapped to {}'.format(y_log_name))
+            if x_log_name != 'Time':
+                x_log_name = self._nexus_mtd_log_name_map[x_log_name]
 
-        # For sliced sample logs
-        # TODO - TODAY 0 - Need a flag to find out whether the current meta data and chopped data is from
-        # TODO - ... ... - memory or GSAS
-        if self.ui.checkBox_plotSlicedRun.isChecked() and True:
-            # for sliced data from archive
+            # get data: X and Y
+            if x_log_name == 'Time':
+                start_vec_x = self._sliced_log_dict[run_number]['start'][1]['Time [sec]'].values
+            else:
+                start_vec_x = self._sliced_log_dict[run_number]['start'][1][x_log_name].values
+            # END-IF-ELSE
+            start_vec_y = self._sliced_log_dict[run_number]['start'][1][y_log_name].values
+
+            # plot 1 line for all
+            plot_label = '{}: Start'.format(base_plot_label)
+            self._chopped_start_log_id = self.ui.graphicsView_logPlot.plot_chopped_log(start_vec_x, start_vec_y,
+                                                                                       x_log_name, y_log_name,
+                                                                                       plot_label)
+
+        elif self.ui.radioButton_plotDetailedSlicedLog.isChecked() and True:  # Data not in memory
+            # Plot sliced sample logs in details (all data points)
             try:
-                # use IPTS and run to locate the loaded sample logs
-                ipts_number, run_number = self._sample_log_info_dict[self._log_data_key]
-            except KeyError as key_err:
-                GuiUtility.pop_dialog_error(self, '{} is not loaded (sample log info dict): {}'
-                                                  ''.format(self._log_data_key, key_err))
+                log_file_tuples = self._myController.archive_manager.locate_sliced_h5_logs(ipts_number, run_number)
+                log_value_dict = self.load_chopped_h5_logs(log_file_tuples)
+                self.set_sliced_h5_logs(log_value_dict)
+            except RuntimeError as run_err:
+                GuiUtility.pop_dialog_error(self, 'IPTS-{} Run-{} is not sliced with supported to h5-log files'
+                                                  ': {}.'
+                                                  ''.format(ipts_number, run_number, run_err))
                 return
 
-            try:
-                if ipts_number not in self._sliced_log_dict or run_number in self._sliced_log_dict[ipts_number]:
-                    from pyvdrive.lib import vulcan_util
-                    # load sample log file
-                    log_header, log_set = vulcan_util.import_sample_log_record(ipts_number, run_number, is_chopped=True,
-                                                                               record_type='start')
-                    self.set_chopped_logs(ipts_number, run_number, log_header, log_set, 'start')
+            # Note: there is no need to convert name as the display name is same as sample log name (nexus name)
 
-                # start_log_set = self._sample_log_dict[ipts_number][run_number]['start']
-                # print (self._sample_log_dict[ipts_number][run_number])
-                # print (type(self._sample_log_dict[ipts_number][run_number]))
+            COLORS = ['red', 'black', 'green', 'yellow', 'black', 'magenta', 'cyan']
+            COLORSNUM = len(COLORS)
 
-                if curr_x_log_name == 'Time':
-                    start_vec_x = self._sliced_log_dict[ipts_number][run_number]['start'][1]['Time [sec]'].values
+            for chop_index in sorted(self._sliced_h5_log_dict.keys()):
+                # get data
+                vec_y = self._sliced_h5_log_dict[chop_index][y_log_name][1]
+
+                if x_log_name == 'Time':
+                    vec_time = self._sliced_h5_log_dict[chop_index][y_log_name][0]
+                    vec_splitter_time, vec_splitter_value = self._sliced_h5_log_dict[chop_index]['splitter']
+                    vec_x, vec_y = self.process_sliced_log(vec_time, vec_y, vec_splitter_time, vec_splitter_value)
+
+                    # add a vector along with splitter
+                    num_splitters = vec_splitter_time.shape[0] - 1
+                    # for step function
+                    max_y = vec_y.max()
+                    min_y = vec_y.min()
+                    step_vec_x = numpy.ndarray(shape=(num_splitters * 2 + 1,), dtype=vec_splitter_time.dtype)
+                    step_vec_y = numpy.ndarray(shape=step_vec_x.shape, dtype='float')
+
+                    # set up step function: times
+                    step_vec_x[::2] = vec_splitter_time  # original splitter time
+                    step_vec_x[1::2] = step_vec_x[2::2] - 0.001  # shorter than a pulse... good enough
+                    step_vec_y[0::4] = step_vec_y[1::4] = min_y
+                    step_vec_y[2::4] = step_vec_y[3::4] = max_y
+
                 else:
-                    mts_log_name_x = self._nexus_mtd_log_name_map[curr_x_log_name]
-                    start_vec_x = self._sliced_log_dict[ipts_number][run_number]['start'][1][mts_log_name_x].values
+                    # plot log vs log
+                    vec_x = self._sliced_h5_log_dict[chop_index][y_log_name][1]
+                    vec_time_x = self._sliced_h5_log_dict[chop_index][y_log_name][0]
+                    vec_time_y = self._sliced_h5_log_dict[chop_index][y_log_name][0]
+                    vec_x, vec_y = vulcan_util.map_2_logs(vec_time_x, vec_x, vec_time_y, vec_y)
 
-                mts_log_name_y = self._nexus_mtd_log_name_map[curr_y_log_name]
-                start_vec_y = self._sliced_log_dict[ipts_number][run_number]['start'][1][mts_log_name_y].values
+                    step_vec_x = step_vec_y = None
+                # END-IF-ELSE
 
-                self._chopped_start_log_id = self.ui.graphicsView_logPlot.plot_chopped_log(start_vec_x, start_vec_y,
-                                                                                           curr_x_log_name,
-                                                                                           curr_y_log_name,
-                                                                                           plot_label)
-            except RuntimeError as key_err:
-                GuiUtility.pop_dialog_error(self, 'Unable to find {} for IPTS {} Run {}: Available keys are'
-                                                  '{}'.format(key_err, ipts_number, run_number,
-                                                              self._sliced_log_dict[ipts_number][run_number].keys()))
+                # plot 1 line for all
+                plot_label = '{}: Slice-index = {}'.format(base_plot_label, chop_index)
+                color_i = COLORS[chop_index % COLORSNUM]
+                if step_vec_x is None:
+                    log_plot_id_i = self.ui.graphicsView_logPlot.plot_chopped_log(vec_x, vec_y,
+                                                                                  x_log_name, y_log_name,
+                                                                                  plot_label,
+                                                                                  color_i)
+                else:
+                    log_plot_id_i = self.ui.graphicsView_logPlot.add_plot_1d(step_vec_x, step_vec_y,
+                                                                             label=plot_label, show_legend=True,
+                                                                             color=color_i, line_style='--')
+                # END-IF-ELSE
+                self._curr_log_sliced_dict[chop_index] = log_plot_id_i
 
-        elif self.ui.checkBox_plotSlicedRun.isChecked() and False:
-            # TODO - TODAY 191 - Need to develop!
-            # for sliced data from memory
+            # END-FOR
+
+        else:
+            # From memory:
+            raise NotImplementedError('It has not been implemented to load sliced logs from memory/workspaces')
+
             workspace_key = str(self.ui.comboBox_chopSeq.currentText())
             workspace_key_list = [workspace_key]
 
@@ -1022,6 +1071,121 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 # END-FOR
         # END-FOR
 
+        return
+
+    # TODO - TODAY - TEST!
+    def do_plot_sample_log_raw(self):
+        """ Plot selected sample logs:
+        Workflow:
+        1. get log X and Y;
+        2. if single: ...
+        3. if chopped: (1) plot original (2) plot the selected section
+        :return:
+        """
+        # get log name to plot and reset the sliced log if necessary
+        x_log_name, y_log_name = self.get_sample_logs_to_plot()
+        if x_log_name != self._curr_log_x_name or y_log_name != self._curr_log_y_name:
+            # different
+            self.reset_sliced_log()
+
+        # case for single run or original of chopped runs
+        if x_log_name == 'Time':
+            # get vec times (i.e., vec_log_x)
+            vec_log_x, vec_log_y = self._myController.get_sample_log_values(data_key=self._log_data_key,
+                                                                            log_name=y_log_name,
+                                                                            start_time=None, stop_time=None,
+                                                                            relative=True)
+        else:
+            vec_times, vec_log_x, vec_log_y = self._myController.get_2_sample_log_values(data_key=self._log_data_key,
+                                                                                         log_name_x=x_log_name,
+                                                                                         log_name_y=y_log_name,
+                                                                                         start_time=None,
+                                                                                         stop_time=None)
+        # END-IF-ELSE
+
+        # plot
+        plot_label = '{} {}'.format(self._iptsNumber, self._currRunNumber)
+        self._curr_log_raw_plot_id = self.ui.graphicsView_logPlot.plot_sample_log(vec_log_x, vec_log_y,
+                                                                                  plot_label=plot_label,
+                                                                                  sample_log_name_x=x_log_name,
+                                                                                  sample_log_name=y_log_name)
+        self._curr_log_x_name = x_log_name
+        self._curr_log_y_name = y_log_name
+
+        return
+
+    def get_sample_logs_to_plot(self):
+        # get sample logs: from display name to log name in workspace.run()
+        # convert from display name to log name
+        display_name_x = str(self.ui.comboBox_sampleLogsList_x.currentText()).strip()
+        if display_name_x == '':
+            GuiUtility.pop_dialog_error(self, 'Log not loaded yet')
+            return
+        elif display_name_x.startswith('Time'):
+            curr_x_log_name = 'Time'
+        else:
+            curr_x_log_name = self._log_display_name_dict[display_name_x]
+
+        display_name_y = str(self.ui.comboBox_sampleLogsList_y.currentText()).strip()
+        curr_y_log_name = self._log_display_name_dict[display_name_y]
+
+        return curr_x_log_name, curr_y_log_name
+
+    @staticmethod
+    def process_sliced_log_v2(vec_time, vec_y, vec_splitter_time, vec_splitter_value):
+        # TODO - TONIGHT 0 -
+        # TODO ... (1) plot a step function of splitter with height as start/stop data sample logs!
+
+        return
+
+    @staticmethod
+    def process_sliced_log(vec_time, vec_y, vec_splitter_time, vec_splitter_value):
+        """
+        Split log from Mantid will have 1 entry before split start time and 1 entry after split stop time.
+        It has a bad effect on plotting especially when there are very few data points, because
+        a large portion of sample points overlap between two sliced data sets.
+        Therefore, use the True/False from splitter (log) to clearly define the first and last value of the splitter
+        :param vec_time:
+        :param vec_y:
+        :param vec_splitter_time:
+        :param vec_splitter_value:
+        :return:
+        """
+        # filter out the cases that are not considered
+        if vec_splitter_value.shape[0] % 2 != 1 or vec_splitter_value[0] > 0.1:
+            raise NotImplementedError('Case not considered')
+
+        for i_splitter in range(vec_splitter_time.shape[0]/2):
+            # splitter start time
+            start_time_i = vec_splitter_time[i_splitter*2+1]
+            stop_time_i = vec_splitter_time[i_splitter*2+2]
+
+            log_t0_index, log_tf_index = numpy.searchsorted(vec_time, [start_time_i, stop_time_i])
+            if log_t0_index > 0:
+                log_t0_index -= 1  # start one shall be on the left side of found index
+            # print ('[...................DB DAT] Index {} Time {} --> {}'.format(log_t0_index, vec_time[log_t0_index],
+            #                                                                     start_time_i))
+            # print ('[...................DB DAT] Index {} Time {} --> {}'.format(log_tf_index, vec_time[log_tf_index],
+            #                                                                     stop_time_i))
+            vec_time[log_t0_index] = start_time_i
+            vec_time[log_tf_index] = stop_time_i
+            vec_y[log_tf_index] = vec_y[log_tf_index-1]  # shall extend from REAL last value
+        # END-FOR
+
+        return vec_time, vec_y
+
+    def reset_raw_log(self):
+        if self._curr_log_raw_plot_id is not None:
+            self.ui.graphicsView_logPlot.remove_line(self._curr_log_raw_plot_id)
+            self._curr_log_raw_plot_id = None
+
+        return
+
+    def reset_sliced_log(self):
+        for slice_id in self._curr_log_sliced_dict:
+            if self._curr_log_sliced_dict[slice_id] is not None:
+                self.ui.graphicsView_logPlot.remove_line(self._curr_log_sliced_dict[slice_id])
+                del self._curr_log_raw_plot_id[slice_id]
         return
 
     def do_refresh_existing_runs(self):
@@ -1596,7 +1760,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             total_pc = pc_vec[row_index]
         else:
             chop_index = chop_seq - 1
-            total_pc = self._sliced_log_dict[ipts_number][run_number]['start'][1]['ProtonCharge'][chop_index]
+            total_pc = self._sliced_log_dict[run_number]['start'][1]['ProtonCharge'][chop_index]
 
         return total_pc
 
@@ -1733,6 +1897,29 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # vdrive_constants.run_ipts_dict[run_number] = ipts_number
 
         return data_key, load_seq_list
+
+    @staticmethod
+    def load_chopped_h5_logs(log_h5_gda_tuples):
+        """ Load a list of chopped files
+        :param log_h5_gda_tuples:
+        :return:
+        """
+        datatypeutility.check_list('Sample log (h5) and gda file tuples', log_h5_gda_tuples)
+
+        sample_log_dict = dict()
+        for log_file, gda_file in log_h5_gda_tuples:
+            base_gda = gda_file.split('.')[0]
+            if base_gda.isdigit():
+                chop_index = int(base_gda)
+            else:
+                chop_index = base_gda
+
+            log_dict_i = file_utilities.load_sample_logs_h5(log_file, None)
+
+            sample_log_dict[chop_index] = log_dict_i
+        # END-FOR
+
+        return sample_log_dict
 
     def retrieve_loaded_reduced_data(self, data_key, ipts_number, run_number, chop_seq_index, bank_id, unit, pc_norm, van_run):
         """
@@ -2228,11 +2415,20 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     def set_chopped_logs(self, ipts_number, run_number, log_header, log_set, log_id='start'):
-        if ipts_number not in self._sliced_log_dict:
-            self._sliced_log_dict[ipts_number] = dict()
+        # TODO - TONIGHT 0 - Document! & consider the case of hdf5 logs!
         if run_number not in self._sliced_log_dict[ipts_number]:
-            self._sliced_log_dict[ipts_number][run_number] = {'start': None, 'mean': None, 'end': None}
-        self._sliced_log_dict[ipts_number][run_number][log_id] = log_header, log_set
+            self._sliced_log_dict[run_number] = {'start': None, 'mean': None, 'end': None, 'IPTS': ipts_number}
+        self._sliced_log_dict[run_number][log_id] = log_header, log_set
+
+        return
+
+    def set_sliced_h5_logs(self, sliced_sample_log_dict):
+        """
+
+        :param sliced_sample_log_dict:
+        :return:
+        """
+        self._sliced_h5_log_dict = sliced_sample_log_dict
 
         return
 

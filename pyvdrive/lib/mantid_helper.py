@@ -268,14 +268,13 @@ def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
     convert SplittersWorkspace to vectors of time and target workspace index
     :param split_ws:
     :param run_start_time:
-    :return: three tuple
+    :return: 2-tuple: numpy.array, numpy.array (times, target_ws)... [t_i, t_{i+1}] --> ws_i
     """
     # check inputs
     if isinstance(split_ws, str):
         # in case user input split workspace name
         split_ws = retrieve_workspace(split_ws)
 
-    # TODO - TODAY 0 TEST - Make this method work with Table/Splitters/Matrix
     is_splitter_ws = False
     is_arb_table_ws = False
     if split_ws.id() == 'TableWorkspace':
@@ -294,41 +293,51 @@ def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
         # splitters workspace
         #  go over rows
         num_rows = split_ws.rowCount()
+        print ('Splitter/table workspace {} has {} rows'
+               ''.format(split_ws, num_rows))
         time_list = list()
         ws_list = list()
         for row_index in range(num_rows):
             # get start time and end time in int64
             start_time = split_ws.cell(row_index, 0)
-        end_time = split_ws.cell(row_index, 1)
-        ws_index = split_ws.cell(row_index, 2)
+            end_time = split_ws.cell(row_index, 1)
+            ws_index = split_ws.cell(row_index, 2)
 
-        # convert units of time from int64/nanoseconds to float/seconds
-        if is_splitter_ws:
-            start_time = float(start_time) * 1.0E-9
-            end_time = float(end_time) * 1.0E-9
+            # convert units of time from int64/nanoseconds to float/seconds
+            if is_splitter_ws:
+                start_time = float(start_time) * 1.0E-9
+                end_time = float(end_time) * 1.0E-9
 
-        if row_index == 0:
-            # first splitter, starting with start_time[0]
-            time_list.append(start_time)
-        elif start_time > time_list[-1]:
-            # middle splitter, there is a gap between 2 splitters, fill in with -1
-            ws_list.append(-1)
-            time_list.append(start_time)
+            if row_index == 0:
+                # first splitter, starting with start_time[0]
+                time_list.append(start_time)
+            elif start_time > time_list[-1]:
+                # middle splitter, there is a gap between 2 splitters, fill in with -1
+                ws_list.append(-1)
+                time_list.append(start_time)
 
-        ws_list.append(ws_index)
-        time_list.append(end_time)
-    # END-FOR
+            # append workspace index and end time
+            ws_list.append(ws_index)
+            time_list.append(end_time)
+        # END-FOR
 
-    # get the numpy arrays
-    vec_times = numpy.array(time_list)
-    vec_ws = numpy.array(ws_list)
+        # get the numpy arrays
+        vec_times = numpy.array(time_list)
+        vec_ws = numpy.array(ws_list)
+    else:
+        # for matrix workspace splitter
+        # TODO - TONIGHT -1 - Make this method work with Matrix
+        raise RuntimeError('TODO FUTURE Implement matrix parser')
 
-    if run_start_time is not None:
+    # reset to run start time
+    if run_start_time is not None and is_splitter_ws:
         # run start time is of float in unit of seconds
-        assert isinstance(run_start_time, float), 'Starting time must be a float'
+        datatypeutility.check_float_variable('Run start', run_start_time, (None, None))
         vec_times -= run_start_time
-
-    print '[DB...BAT] size of output vectors: ', len(vec_times), len(vec_ws)
+    elif run_start_time is not None and is_arb_table_ws:
+        # it is assumed that TableWorkspace is relative time and in seconds already
+        pass
+    # END-IF
 
     return vec_times, vec_ws
 
@@ -558,7 +567,7 @@ def generate_event_filters_arbitrary(split_list, relative_time, tag, auto_target
             target = '{0}'.format(index + 1)
         else:
             # not allowing auto target, then must have a coding error
-            raise RuntimeError('Splitter tuple has only 2 entries!')
+            raise RuntimeError('Splitter tuple has only 2 entries but auto target is turned on!')
 
         # add splitter
         splitter_ws.addRow([start_time, stop_time, target])
@@ -685,6 +694,11 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
         mantidapi.GenerateEventsFilter(**my_arg_dict)
     except RuntimeError as e:
         return False, str(e)
+    except ValueError as value_err:
+        print ('[ERROR] Workspace {} exists = {}'.format(ws_name, workspace_does_exist(ws_name)))
+        if workspace_does_exist(ws_name):
+            print ('[ERROR] Workspace {} ID = {}'.format(ws_name, retrieve_workspace(ws_name).id()))
+        return  False, str(value_err)
 
     return True, ''
 
@@ -921,32 +935,55 @@ def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, 
     :return: 2-tuple.  vector of epoch time in unit of second. vector of log value
     """
     # Check
-    # assert workspace_does_exist(src_workspace)
-    assert isinstance(sample_log_name, str)
+    datatypeutility.check_string_variable('Sample log name', sample_log_name)
+    if isinstance(src_workspace, str):
+        src_workspace = retrieve_workspace(src_workspace, True)
 
-    # Form args
-    args = dict()
-    if start_time is not None:
-        args['StartTime'] = start_time
-    if stop_time is not None:
-        args['StopTime'] = stop_time
+    if start_time is None and stop_time is None:
+        # access sample log directly
+        try:
+            log_property = src_workspace.run().getProperty(sample_log_name)
+        except KeyError as key_err:
+            raise RuntimeError('Unable to locate sample log {}: {}'.format(sample_log_name, key_err))
 
-    # Call
-    temp_out_ws_name = str(src_workspace) + '_' + sample_log_name
-    mantidapi.ExportTimeSeriesLog(InputWorkspace=src_workspace,
-                                  OutputWorkspace=temp_out_ws_name,
-                                  LogName=sample_log_name,
-                                  UnitOfTime='Seconds',
-                                  OutputAbsoluteTime=not relative,
-                                  IsEventWorkspace=False,
-                                  **args)
+        vec_times = log_property.times
+        vec_value = log_property.value
 
-    out_ws = mantid.AnalysisDataService.retrieve(temp_out_ws_name)
+        if relative:
+            # relative time: get run 0
+            run_start = src_workspace.run().getProperty('proton_charge').times[0]
+            vec_times = (vec_times - run_start).astype('float') * 1.E-9
+        else:
+            vec_times = vec_times[:]
+        # END-IF
+        vec_value = vec_value[:]  # copy data for reference safe
 
-    # copy the vector of X (time) and Y (value) for returning
-    # FUTURE - what if the returned values are the reference to the vectors in workspace?
-    vec_times = out_ws.readX(0)[:]
-    vec_value = out_ws.readY(0)[:]
+    else:
+        # need part of sample logs
+        # Form args
+        args = dict()
+        if start_time is not None:
+            args['StartTime'] = start_time
+        if stop_time is not None:
+            args['StopTime'] = stop_time
+
+        # Call
+        temp_out_ws_name = str(src_workspace) + '_' + sample_log_name
+        mantidapi.ExportTimeSeriesLog(InputWorkspace=src_workspace,
+                                      OutputWorkspace=temp_out_ws_name,
+                                      LogName=sample_log_name,
+                                      UnitOfTime='Seconds',
+                                      OutputAbsoluteTime=not relative,
+                                      IsEventWorkspace=False,
+                                      **args)
+
+        out_ws = mantid.AnalysisDataService.retrieve(temp_out_ws_name)
+
+        # copy the vector of X (time) and Y (value) for returning
+        # FUTURE - what if the returned values are the reference to the vectors in workspace?
+        vec_times = out_ws.readX(0)[:]
+        vec_value = out_ws.readY(0)[:]
+    # END-IF-ELSE
 
     return vec_times, vec_value
 
@@ -1682,22 +1719,32 @@ def load_nexus(data_file_name, output_ws_name, meta_data_only, max_time=None):
     :param max_time: relative max time (stop time) to load from Event Nexus file in unit of seconds
     :return: 2-tuple
     """
-    try:
-        if not data_file_name.endswith('.h5'):
-            out_ws = mantidapi.Load(Filename=data_file_name,
-                                    OutputWorkspace=output_ws_name,
-                                    MetaDataOnly=meta_data_only)
-        elif max_time is None:
-            out_ws = mantidapi.LoadEventNexus(Filename=data_file_name,
-                                              OutputWorkspace=output_ws_name,
-                                              MetaDataOnly=meta_data_only)
-        else:
-            out_ws = mantidapi.LoadEventNexus(Filename=data_file_name,
-                                              OutputWorkspace=output_ws_name,
-                                              FilterByTimeStop=max_time)
+    if meta_data_only:
+        # load logs to an empty workspace
+        out_ws = mantidapi.CreateWorkspace(DataX=[0], DataY=[0], DataE=[0], NSpec=1, OutputWorkspace=output_ws_name)
+        try:
+            mantidapi.LoadNexusLogs(Workspace=output_ws_name, Filename=data_file_name, OverwriteLogs=True)
+        except RuntimeError as run_err:
+            return False, 'Unable to load Nexus (log) file {} due to {}'.format(data_file_name, run_err)
+    else:
+        # regular workspace with data
+        try:
+            if not data_file_name.endswith('.h5'):
+                out_ws = mantidapi.Load(Filename=data_file_name,
+                                        OutputWorkspace=output_ws_name,
+                                        MetaDataOnly=False)
+            elif max_time is None:
+                out_ws = mantidapi.LoadEventNexus(Filename=data_file_name,
+                                                  OutputWorkspace=output_ws_name,
+                                                  MetaDataOnly=False)
+            else:
+                out_ws = mantidapi.LoadEventNexus(Filename=data_file_name,
+                                                  OutputWorkspace=output_ws_name,
+                                                  FilterByTimeStop=max_time)
 
-    except RuntimeError as e:
-        return False, 'Unable to load Nexus file %s due to %s' % (data_file_name, str(e))
+        except RuntimeError as e:
+            return False, 'Unable to load Nexus file %s due to %s' % (data_file_name, str(e))
+    # END-IF-ELSE
 
     return True, out_ws
 

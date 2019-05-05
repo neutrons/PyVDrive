@@ -446,6 +446,29 @@ def export_standard_sample_log(ipts_number, run_number, ws_name, standard_sample
     return status, error_message
 
 
+def search_sorted_nearest(vector, values):  # NOTE: SAME as separate_log_cooling.search_sorted_nearest()
+    """
+    search a sorted numpy array to the nearest value
+    :param vector:
+    :param values:
+    :return:
+    """
+    index_list = np.searchsorted(vector, values, side='left', sorter=None)
+    for i, index_i in enumerate(index_list):
+        if index_i == 0:
+            pass  # already out of left boundary
+        elif index_i == vector.shape[0]:
+            pass  # already out of right boundary
+        else:
+            print ('[DB...BAT...1] For {}: Selected vector (+/- 1): {}'
+                   ''.format(values[i], vector[index_i-1:index_i+2]))
+            if values[i] - vector[index_i-1] < vector[index_i] - values[i]:
+                # v_i is closer to left value
+                index_list[i] = index_i - 1
+    # END-FOR
+
+    return index_list
+
 
 if __name__ == '__main__':
     time_str1 = '2016-04-27 09:19:50.094796666-EDT'

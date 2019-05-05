@@ -97,6 +97,7 @@ def import_detector_efficiency(h5_name):
     return pid_vec, det_eff_factor_vec
 
 
+# TODO - TONIGHT 0 - Clean up this method!  It has never been used/tested
 def load_sample_logs_h5(log_h5_name, log_name=None):
     """
     Load standard sample log (TimeSeriesProperty) from an HDF file
@@ -105,56 +106,99 @@ def load_sample_logs_h5(log_h5_name, log_name=None):
     :param log_name: specified log name to load.  If None, then load all the sample logs
     :return: dictionary: d[log name] = vec_times, vec_values  of numpy arrays
     """
-    def is_sample_log(log_entry_name):
-        return log_h5[log_entry_name].has_attribute('sample log')
+    def is_sample_log(h5_root, log_entry_name):
+        """
+        Check whether a given entry is for sample log
+        :param h5_root:
+        :param log_entry_name:
+        :return:
+        """
+        try:
+            entry_attr = h5_root[log_entry_name].attrs
+            if 'sample log' in entry_attr.keys():
+                # has such attribute
+                is_s_l = True
+            elif 'type' in  h5_root[log_entry_name].keys() and h5_root[log_entry_name]['type'].value == 'sample log':
+                # no such attribute, then check sub entry 'type'
+                is_s_l = True
+            else:
+                # no such attribute, 'type' is not right
+                is_s_l = False
+        except AttributeError as att_err:  # in case the entry is not a Group
+            is_s_l = False
+            print ('[ERROR] File {} Entry {} has error to be a sample log: {}'
+                   ''.format(h5_root.filename, log_entry_name, att_err))
 
-    def read_log(log_entry_name):
-        vec_times = log_h5[log_entry_name]['time']
-        vec_value = log_h5[log_entry_name]['value']
+        return is_s_l
+
+    def read_log(h5_root, log_entry_name):
+        vec_times = h5_root[log_entry_name]['time'][:]
+        vec_value = h5_root[log_entry_name]['value'][:]
         return vec_times, vec_value
 
     datatypeutility.check_file_name(log_h5_name, True, False, False, 'PyVDRive HDF5 sample log file')
 
     log_h5 = h5py.File(log_h5_name, 'r')
+    print ('[DB...BAT] Open {}'.format(log_h5_name))
 
     sample_log_dict = dict()
     if log_name is None:
         for log_name in log_h5.keys():
-            if not is_sample_log(log_name):
+            if not is_sample_log(log_h5, log_name):
+                print ('{} is not a sample log'.format(log_name))
                 continue
-            sample_log_dict[log_name] = read_log(log_name)
+            sample_log_dict[log_name] = read_log(log_h5, log_name)
     else:
-        sample_log_dict[log_name] = read_log(log_name)
+        sample_log_dict[log_name] = read_log(log_h5, log_name)
+    log_h5.close()
 
     return sample_log_dict
 
 
 # TODO/NEXT - If parse_time_segmenets works for data slicer file too, then remove parse_data_slicer_file()
-def parse_data_slicer_file(file_name):
-    """
-    parse data slicer file
+def load_event_slicers_file(file_name):
+    """ Load and parse data/events slicer file
     :param file_name:
-    :return:
+    :return: list (3-tuple, start time, stop time, target)
     """
-    slicer_file = open(file_name, 'r')
-    raw_lines = slicer_file.readlines()
-    slicer_file.close()
+    # check
+    datatypeutility.check_file_name(file_name, True, False, False, 'Event data slicers/splitters setup file')
+
+    # load all the file content
+    try:
+        slicer_file = open(file_name, 'r')
+        raw_lines = slicer_file.readlines()
+        slicer_file.close()
+    except IOError as io_err:
+        raise RuntimeError('Unable to open file {0} due to {1}.'.format(file_name, io_err))
+    except OSError as os_err:
+        raise RuntimeError('Unable to import file {0} due to {1}.'.format(file_name, os_err))
 
     slicer_list = list()
-    for line in raw_lines:
-        # print '[DB...BAT] Line: {0}'.format(line)
+    error_message = ''
+    for line_number, line in enumerate(raw_lines):
         line = line.strip()
+
+        # skip empty line and comment line
         if len(line) == 0 or line[0] == '#':
             continue
 
         terms = line.split()
-        # print '[DB...BAT] Line split to {0}'.format(terms)
-        if len(terms) < 3:
+        if len(terms) < 2:
             continue
-        start_time = float(terms[0])
-        stop_time = float(terms[1])
-        target_ws = str(terms[2])
-        slicer_list.append((start_time, stop_time, target_ws))
+
+        try:
+            start_time = float(terms[0])
+            stop_time = float(terms[1])
+            if len(terms) >= 3:
+                target_ws = str(terms[2])
+            else:
+                target_ws = None
+
+            slicer_list.append((start_time, stop_time, target_ws))
+        except ValueError as val_err:
+            error_message += 'Skip line {} due to {}\n'.format(line_number, val_err)
+
     # END-FOR
 
     return slicer_list
@@ -169,12 +213,19 @@ def parse_multi_run_slicer_file(file_name):
     # starting of a block
     [RUN] 123456
     # start_time    end_time   target_workspace_name/index
-    0     -1     1     #  from relative 0 to end of run, target is 12345_1, NO CHOPPING
+    0     -1     1   # from relative 0 to end of run, target is 12345_1, NO CHOPPING]
     [RUN] 123457
-    0     200    1     #  from relative 0 to 200, target is 123457_1
+    0     200    1   #  from relative 0 to 200, target is 123457_1
     200   420    2
     [RUN] 123458
     0     100    123456_1    # from relative 0 to 100, target will be combined with RUN-123456's WS-1
+
+    Acceptable line format
+    - start_time stop_time          : auto index
+    - start_time stop_time integer  : (index fro this run) ... final name: run_chopindex
+    - start_time stop_time string   : string not to be confused with integer... universal among runs
+    - start_time stop_time # ...    : auto index with comment after #
+
     :param file_name:
     :return:
     """
@@ -189,7 +240,8 @@ def parse_multi_run_slicer_file(file_name):
 
     slicer_dict = dict()
 
-    for line in raw_lines:
+    curr_run_number = None
+    for line_no, line in enumerate(raw_lines):
         line = line.strip()
         if line == '' or line.startswith('#'):
             # empty line or comment
@@ -201,18 +253,37 @@ def parse_multi_run_slicer_file(file_name):
             try:
                 curr_run_number = int(line.split('[RUN]')[1].strip().split()[0])
             except ValueError as value_err:
-                raise RuntimeError('Starting block line: "{}" is not valid to parse run number'.format(line))
+                raise RuntimeError('Starting block line: "{}" is not valid to parse run number: {}'
+                                   ''.format(line, value_err))
 
             slicer_dict[curr_run_number] = list()
 
         else:
             # slicer line
-            blabla
-            # TODO - TONIGHT 0 - [ASAP] continue from here!
+            contents = line.split()
+            if len(contents) < 2:
+                raise RuntimeError('{}-th line\n{}\nhas too few information'.format(line_no, line))
 
+            try:
+                start_time_curr = float(contents[0])
+                stop_time_curr = float(contents[1])
+            except ValueError as value_err:
+                raise RuntimeError(balbla)
 
+            if len(contents) == 2 or contents[2] == '#':
+                # only
+                target_ws = None
 
+            else:
+                target_ws = contents[2]
+                if target_ws.isdigit():
+                    target_ws = '{}_{:-05}'.format(curr_run_number, int(target_ws))
+    # END-FOR
 
+    # TODO - TONIGHT 0 - continue from here - check slicer formats and fill the ignored
+    slicer_dict = format_user_splitters()
+
+    return slicer_dict
 
 # TODO - TONIGHT 0 - Whether there is a similar method in chop/PICKDATA?
 def parse_time_segments(file_name):

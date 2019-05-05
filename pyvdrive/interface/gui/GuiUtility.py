@@ -218,7 +218,14 @@ def get_load_file_by_dialog(parent, title, default_dir, file_filter):
         file_filter += ';;All files (*.*)'
 
     # get file name
-    file_name = str(QFileDialog.getOpenFileName(parent, title, default_dir, file_filter)).strip()
+    returns = QFileDialog.getOpenFileName(parent, title, default_dir, file_filter)
+    if isinstance(returns, tuple):
+        file_name = str(returns[0])
+    else:
+        file_name = str(returns).strip()
+    file_name = file_name.strip()
+
+    print ('[DB...BAT] Splitter file: {}'.format(file_name))
 
     return file_name
 

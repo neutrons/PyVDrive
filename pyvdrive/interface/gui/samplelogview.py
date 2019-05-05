@@ -10,6 +10,7 @@ except ImportError:
     from PyQt4.QtGui import QMenu, QAction, QCursor
 import mplgraphicsview
 from pyvdrive.lib import datatypeutility
+from pyvdrive.lib import vdrivehelper
 
 COLOR_LIST = ['red', 'green', 'black', 'cyan', 'magenta', 'yellow']
 
@@ -57,6 +58,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         # current plot IDs
         self._currPlotID = None
+        self._curr_log_name = None  # real sample log name can be traced to log file/bundled with currPlotID
         self._currentSelectedPicker = None
         self._currMousePosX = None
         self._currMousePosY = None
@@ -137,14 +139,21 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         return nearest_picker_distance, nearest_picker_id
 
-    def _remove_picker_from_range_dictionary(self, value_to_remove):
+    def _remove_picker_from_range_dictionary(self, picker_id_to_remove):
         """
         remove an entry in the dictionary by value
-        :param value_to_remove:
+        :param picker_id_to_remove:
         :return:
         """
-        self._pickerRangeDict = {pos_x: picker_id for pos_x, picker_id in
-                                 self._pickerRangeDict.items() if picker_id != value_to_remove}
+        if False:
+            # TODO - TODAY 190 - Remove after testing
+            self._pickerRangeDict = {pos_x: picker_id for pos_x, picker_id in
+                                     self._pickerRangeDict.items() if picker_id != picker_id_to_remove}
+        else:
+            for pos_x, picker_id in self._pickerRangeDict.items():
+                if picker_id == picker_id_to_remove:
+                    del self._pickerRangeDict[pos_x]
+        # ...
 
         return
 
@@ -166,6 +175,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         # update the new list to parent window
         picker_pos_list = list()
+        print ('[DB...BAT] Clear picker: emit signal with empty position list')
         self.mySlicerUpdatedSignal.emit(picker_pos_list)
 
         return
@@ -214,12 +224,17 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         get the positions of all pickers on canvas
         :return: a list of floats
         """
-        picker_pos_list = list()
-        for p_id in self._currentLogPickerList:
-            pos = self.get_indicator_position(p_id)[0]
-            picker_pos_list.append(pos)
-
+        picker_pos_list = self._pickerRangeDict.keys()
         picker_pos_list.sort()
+
+        if True:
+            # TODO - TODAY 190 - Remove after testing
+            picker_pos_list2 = list()
+            for p_id in self._currentLogPickerList:
+                pos = self.get_indicator_position(p_id)[0]
+                picker_pos_list2.append(pos)
+            if set(picker_pos_list) != set(picker_pos_list2):
+                raise ArithmeticError('Picker: {} vs {}'.format(picker_pos_list, picker_pos_list2))
 
         return picker_pos_list
 
@@ -229,37 +244,13 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         :return:
         """
         self.add_picker(self._currMousePosX)
-        # # add a picker
-        # indicator_id = self.add_vertical_indicator(self._currMousePosX, color='red', line_width='2')
-        # # add to dictionary
-        # self._currentLogPickerList.append(indicator_id)
-        # # add the picker to the dictionary
-        # self._pickerRangeDict[self._currMousePosX] = indicator_id
-        #
-        # # update the new list to parent window
-        # picker_pos_list = self.get_pickers_positions()
-        # self.mySlicerUpdatedSignal.emit(picker_pos_list)
 
-        return
-
-    def add_picker(self, pos_x):
-        """
-        add a log picker
-        :return:
-        """
-        # add a picker
-        indicator_id = self.add_vertical_indicator(pos_x, color='red', line_width='2')
-        # add to dictionary
-        self._currentLogPickerList.append(indicator_id)
-        # add the picker to the dictionary
-        # self._pickerRangeDict[self._currMousePosX] = indicator_id
-        self._pickerRangeDict[pos_x] = indicator_id
-
-        # TODO - TONIGHT -
-
+        # update to parent window
         # update the new list to parent window
         picker_pos_list = self.get_pickers_positions()
         self.mySlicerUpdatedSignal.emit(picker_pos_list)
+
+        return
 
     def menu_delete_picker(self):
         """
@@ -383,23 +374,31 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # check status
         if self._mouseLeftButtonHold:
             # mouse button is hold with a picker is selected
+            # algorithms: if current mouse position is within boundary:
+            # 1. update selected indicator (line)'s position AND
+            # 2. update the pickerRangeDict
             assert self._currentSelectedPicker is not None, 'In mouse-left-button-hold mode, a picker must be selected.'
 
             # check whether the selected picker can move
-            print '[DB...BAT] Left limit = ', self._leftPickerLimit, ', Range = ', self._pickerRange
+            # print '[DB...BAT] Left limit = ', self._leftPickerLimit, ', Range = ', self._pickerRange
             left_bound = self._leftPickerLimit + self._pickerRange
             right_bound = self._rightPickerLimit - self._pickerRange
             if left_bound < self._currMousePosX < right_bound:
                 # free to move
-                self.set_indicator_position(self._currentSelectedPicker, pos_x=self._currMousePosX,
-                                            pos_y=self._currMousePosY)
-                # update the position dictionary
-                self._remove_picker_from_range_dictionary(self._currentSelectedPicker)
-                self._pickerRangeDict[self._currMousePosX] = self._currentSelectedPicker
+                if False:
+                    # TODO - TODAY 190 - Remove after testing
+                    self.set_indicator_position(self._currentSelectedPicker, pos_x=self._currMousePosX,
+                                                pos_y=self._currMousePosY)
+                    # update the position dictionary
+                    self._remove_picker_from_range_dictionary(self._currentSelectedPicker)
+                    self._pickerRangeDict[self._currMousePosX] = self._currentSelectedPicker
+                else:
+                    self.update_splitter_picker(self._currentSelectedPicker, self._currMousePosX,
+                                                self._currMousePosY)
 
                 # update the pickers' positions with parent window
-                picker_pos_list = self.get_pickers_positions()
-                self.mySlicerUpdatedSignal.emit(picker_pos_list)
+                updated_picker_positions = self.get_pickers_positions()
+                self.mySlicerUpdatedSignal.emit(updated_picker_positions)
 
             else:
                 # unable to move anymore: quit the hold and select to move mode
@@ -419,6 +418,40 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
                 self.deselect_picker()
             # END-IF-ELSE
         # END-IF-ELSE
+
+        return
+
+    def add_picker(self, pos_x):
+        """
+        add a log picker
+        :return:
+        """
+        # add a picker
+        indicator_id = self.add_vertical_indicator(pos_x, color='red', line_width='2')
+        # add to dictionary
+        self._currentLogPickerList.append(indicator_id)
+        # add the picker to the dictionary
+        self._pickerRangeDict[pos_x] = indicator_id
+
+        return
+
+    # TODO - TODAY 2019 - In Test
+    def update_splitter_picker(self, picker_id, position_x, position_y):
+        """
+        Update a splitter picker position (existed)
+        This operation is not synchronized with its parent' manual splitter setup
+        :param picker_id:
+        :param position_x:
+        :param position_y:
+        :return:
+        """
+        # update the EXISTING indicator position on the figure
+        self.set_indicator_position(picker_id, pos_x=position_x, pos_y=position_y)
+
+        # update the position dictionary
+        self._remove_picker_from_range_dictionary(picker_id)
+        # add back the entry with new position
+        self._pickerRangeDict[position_x] = picker_id
 
         return
 
@@ -508,10 +541,11 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         # update
         self._currPlotID = plot_id
+        self._curr_log_name = sample_log_name
 
         return plot_id
 
-    def plot_chopped_log(self, vec_x, vec_y, sample_log_name_x, sample_log_name_y, plot_label):
+    def plot_chopped_log(self, vec_x, vec_y, sample_log_name_x, sample_log_name_y, plot_label, color='red'):
         """
         Plot chopped sample log from archive (just points)
         :param vec_x:
@@ -539,8 +573,9 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         plot_id = self.add_plot_1d(vec_x, vec_y, x_label=sample_log_name_x,
                                    y_label=sample_log_name_y,
-                                   label=plot_label, marker='o', color='red', show_legend=True,
-                                   line_style='')
+                                   label=plot_label, marker='o', marker_size=4,
+                                   color=color, show_legend=True,
+                                   line_style='none')
         self._sizeRegister[plot_id] = (min(vec_x), max(vec_x), min(vec_y), max(vec_y))
 
         # No need to auto resize
@@ -585,6 +620,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # clear all lines
         self.clear_all_lines()
         self._currPlotID = None
+        self._curr_log_name = None
 
         return
 
@@ -658,67 +694,237 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
                 self._currentSelectedPicker = None
             self._currMousePosX = None
             self._currMousePosY = None
+            self.clear_picker()
 
         return
 
-    def show_slicers(self, vec_times, vec_target_ws):
+    # TODO - TONIGHT 190 - It is meant to replace show_slicers
+    def show_slicers_repetitions(self, vec_slicers_times, vec_target_ws):
+
+        # TODO - FIXME - TODAY 190 - Need a use case for target as REAL string
+        vec_target_ws = vec_target_ws.astype('int16')
+        unique_target_ws_set = set(vec_target_ws)
+        num_segments = len(unique_target_ws_set)
+        segment_list = sorted(list(unique_target_ws_set))
+        if -1 in segment_list:
+            minus_one_index = segment_list.index(-1)
+            segment_list.pop(minus_one_index)
+
+        print ('[DB...BAT] Segments: {}'.format(segment_list))
+
+        # construct the data sets for each segments
+        seg_dict = dict()
+        for seg_id in segment_list:
+            seg_dict[seg_id] = None
+        # END-FOR
+
+        vec_log_times, vec_log_value = self.canvas().get_data(self._currPlotID)
+
+        print ('[DEBUG...BAT] Log X and Y: size = {}, {}'.format(vec_log_times.shape, vec_log_value.shape))
+
+        for i_target in range(vec_target_ws.shape[0] - 1):
+            # ignore the non-interesting section
+            if vec_target_ws[i_target] == -1:
+                continue
+            else:
+                target_name_i = vec_target_ws[i_target]
+
+            # from start and stop time to get the index for the current (plotted) log
+            t_start = vec_slicers_times[i_target]
+            t_stop = vec_slicers_times[i_target + 1]
+
+            # time_index_list = np.searchsorted(vec_log_times, [t_start, t_stop])  # TODO-TEST - replaced!
+            time_index_list = vdrivehelper.search_sorted_nearest(vec_log_times, [t_start, t_stop])
+            log_time0_index, log_timef_index = time_index_list
+
+            # # find the nearest
+            # if t_start - vec_log_times[log_time0_index-1] < vec_log_times[log_time0_index] - t_start:
+            #     log_time0_index -= 1
+            # if t_stop - vec_log_times[log_timef_index-1] < vec_log_times[log_timef_index] - t_stop:
+            #     log_timef_index -= 1
+
+            # construct the vector: get the partial for plot
+            vec_x_i = vec_log_times[log_time0_index:log_timef_index+1]
+            vec_y_i = vec_log_value[log_time0_index:log_timef_index+1]
+
+            print ('[DB...BAT] Locate: Time range {}, {} @ ({}, {}) and ({}, {})'
+                   ''.format(t_start, t_stop, vec_log_times[log_time0_index], vec_log_value[log_time0_index],
+                             vec_log_times[log_timef_index], vec_log_value[log_time0_index]))
+
+            if seg_dict[target_name_i] is None:
+                seg_dict[target_name_i] = vec_x_i, vec_y_i
+            else:
+                new_vec_x = np.concatenate([seg_dict[target_name_i][0], vec_x_i])
+                new_vec_y = np.concatenate([seg_dict[target_name_i][1], vec_y_i])
+                seg_dict[target_name_i] = new_vec_x, new_vec_y
+        # END-FOR
+
+        # Plot
+        num_color = len(COLOR_LIST)  # ['red', 'green', 'black', 'cyan', 'magenta', 'yellow']
+        for seg_index, target_index in enumerate(segment_list):
+            color_i = COLOR_LIST[seg_index % num_color]
+            vec_x_plot, vec_y_plot = seg_dict[seg_index]
+
+            # plot
+            seg_plot_index = self.add_plot_1d(vec_x_plot, vec_y_plot, color=color_i,
+                                              marker='o', marker_size=3,
+                                              line_style='none', line_width=2)
+            self._splitterSegmentsList.append(seg_plot_index)
+        # END-FOR
+
+        return
+
+    def highlight_cyclic_slicers(self, vec_times, vec_targets, target_color_dict):
+        """ Use the input time/target vectors to calculate the segment on current plotted data
+        :param vec_times:
+        :param vec_targets:
+        :param target_color_dict:
+        :return:
         """
-        show slicers on the canvas
+        # TODO - TODAY 0 - Implement this in order not to mess up with highlight_slicers()
+        # check state
+        if self._currPlotID is None:
+            raise RuntimeError('No sample log is plot now')
+
+        if len(vec_times) != len(vec_targets) + 1:
+            raise RuntimeError('Assumption that input is a histogram! Now vec x size = {},'
+                               'vec y size = {}'.format(vec_times.shape, vec_targets.shape))
+
+        # get data from the figure
+        # Note: remove_all_lines() is nevered call in this class and LogPickerWindow
+        if False:
+            # this is incorrect as the data points on the plot is fewer than real data for fast plotting
+            curr_vec_x, curr_vec_y = self.canvas().get_data(self._currPlotID)
+        else:
+            # TODO - TONIGHT 0 - Make this work!  This is where the bug coming from!
+            full_log_vec_x, full_log_vec_y = self._myParent.get_sample_log_data(self._curr_log_name)
+            curr_vec_x, curr_vec_y = full_log_vec_x, full_log_vec_y
+        # END-IF
+
+        num_seg_to_show = vec_targets.shape[0]
+
+        for i_seg in range(num_seg_to_show):
+            # get start time and stop time
+            # skip the ignored ones
+            if vec_targets[i_seg] == '-1' or vec_targets[i_seg] == -1:
+                continue  # skip
+
+            # from start and stop time to get the index for the current (plotted) log
+            t_start = vec_times[i_seg]
+            t_stop = vec_times[i_seg + 1]
+
+            time_index_list = vdrivehelper.search_sorted_nearest(curr_vec_x, [t_start, t_stop])
+            log_time0_index, log_timef_index = time_index_list
+
+            # construct the vector: get the partial for plot
+            vec_x_i = curr_vec_x[log_time0_index:log_timef_index+1]
+            vec_y_i = curr_vec_y[log_time0_index:log_timef_index+1]
+
+            print ('[DB...BAT] Locate: Time range {}, {} @ ({}, {}) and ({}, {})'
+                   ''.format(t_start, t_stop, curr_vec_x[log_time0_index], curr_vec_y[log_time0_index],
+                             curr_vec_x[log_timef_index], curr_vec_y[log_timef_index]))
+
+            # plot
+            target_name = vec_targets[i_seg]
+            color_i = target_color_dict[target_name]
+
+            seg_plot_index = self.add_plot_1d(vec_x_i, vec_y_i, marker=None, line_style='-', color=color_i,
+                                              line_width=2)
+
+            self._splitterSegmentsList.append(seg_plot_index)
+        # END-FOR
+
+        return
+
+    def highlight_slicers(self, vec_times, vec_target_ws, color=None, max_segment_to_show=20):
+        """
+        show slicers on the canvas by plotting segment of sample logs
         :param vec_times:
         :param vec_target_ws:
         :return:
         """
+        print ('[DB...BAT] Vector of times: {}'.format(vec_times))
+
         # check state
         if self._currPlotID is None:
             return True, 'No plot on the screen yet.'
 
-        assert len(vec_times) == len(vec_target_ws) + 1, 'Assumption that input is a histogram!'
+        if len(vec_times) != len(vec_target_ws) + 1:
+            raise NotImplementedError('Assumption that input is a histogram! Now vec x size = {},'
+                                      'vec y size = {}'.format(vec_times.shape, vec_target_ws.shape))
 
         # get data from the figure
+        # TODO - TODAY 190 - Check whether remove_all_lines() is ever called
+        print ('[DB...BAT] Current Plot ID = {}'.format(self._currPlotID))
         vec_x, vec_y = self.canvas().get_data(self._currPlotID)
+
+        print ('[DB...BAT] Sample log vector X range: {}, {}'.format(vec_x[0], vec_x[-1]))
+        print ('[DB...BAT] Slicer times range: {}, {}'.format(vec_times[0], vec_times[-1]))
 
         num_color = len(COLOR_LIST)
 
         # if there are too many slicing segments, then only shows the first N segments
-        MAX_SEGMENT_TO_SHOW = 20
-        num_seg_to_show = min(len(vec_target_ws), MAX_SEGMENT_TO_SHOW)
+        if max_segment_to_show is None:
+            num_seg_to_show = len(vec_target_ws)
+        else:
+            datatypeutility.check_int_variable('Maximum segment to show', max_segment_to_show, (1, 100000))
+            num_seg_to_show = min(len(vec_target_ws), max_segment_to_show)
 
         for i_seg in range(num_seg_to_show):
             # get start time and stop time
+            # skip the ignored ones
+            if vec_target_ws[i_seg] == '-1' or vec_target_ws[i_seg] == -1:
+                continue  # skip
+
             x_start = vec_times[i_seg]
             x_stop = vec_times[i_seg+1]
-            color_index = vec_target_ws[i_seg]
+            print ('[DB...BAT] Segment {}: Time range = {}, {}'.format(i_seg, x_start, x_stop))
 
             # get start time and stop time's index
             i_start = (np.abs(vec_x - x_start)).argmin()
             i_stop = (np.abs(vec_x - x_stop)).argmin()
             if i_start == i_stop:
                 # empty!
-                print '[SampleLogView WARNING] Range: %d to %d  (%f to %f) cannot generate any vector. ' \
-                      '' % (i_start, i_stop, vec_x[i_start], vec_x[i_stop])
+                print '[SampleLogView WARNING] splitter start @ {} ({}), stop @ {} ({}). Unable to generate ' \
+                      'time segment vector. FYI from index {} to {}: {}' \
+                      ''.format(x_start, i_start, x_stop, i_stop, i_start-1, i_stop+1,
+                                vec_x[i_start-1:i_stop+2])
                 continue
             elif i_start > i_stop:
                 raise RuntimeError('It is impossible to have start index {0} > stop index {1}'
                                    ''.format(i_start, i_stop))
 
+            print ('[DB...BAT] Segment {}: Index range = {}, {}'.format(i_seg, i_start, i_stop))
+
             # get the partial for plot
-            vec_x_i = vec_x[i_start:i_stop]
-            vec_y_i = vec_y[i_start:i_stop]
+            vec_x_i = vec_x[i_start:i_stop+1]
+            vec_y_i = vec_y[i_start:i_stop+1]
 
             # plot
-            color_i = COLOR_LIST[color_index % num_color]
+            color_index = vec_target_ws[i_seg]
+            if color is None:
+                if isinstance(color_index, int):
+                    color_i = COLOR_LIST[color_index % num_color]
+                else:
+                    color_i = COLOR_LIST[i_seg % num_color]
+            else:
+                color_i = color
+
             seg_plot_index = self.add_plot_1d(vec_x_i, vec_y_i, marker=None, line_style='-', color=color_i,
                                               line_width=2)
 
             self._splitterSegmentsList.append(seg_plot_index)
-
         # END-FOR
 
         status = True
         error_msg = None
-        if len(vec_target_ws) > MAX_SEGMENT_TO_SHOW:
+        if len(vec_target_ws) > num_seg_to_show:
             status = False
             error_msg = 'There are too many (%d) segments in the slicers.  Only show the first %d.' \
-                        '' % (len(vec_target_ws), MAX_SEGMENT_TO_SHOW)
+                        '' % (len(vec_target_ws), max_segment_to_show)
 
         return status, error_msg
+
+    # TODO - TODAY 0 0 0 - Starting from here!  how to highlight/de-highlight slicers!!!
+    def remove_slicers_highlights(self, target_name):
+        return

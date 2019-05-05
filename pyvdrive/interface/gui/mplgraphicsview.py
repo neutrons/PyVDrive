@@ -442,7 +442,7 @@ class MplGraphicsView(QWidget):
         return key_list
 
     def add_plot_1d(self, vec_x, vec_y, y_err=None, color=None, label='', x_label=None, y_label=None,
-                    marker=None, line_style=None, line_width=1, show_legend=True):
+                    marker=None, marker_size=None, line_style=None, line_width=1, show_legend=True):
         """
         Add a 1-D plot to canvas
         :param vec_x:
@@ -468,7 +468,8 @@ class MplGraphicsView(QWidget):
             RuntimeError('X vector has a different size {} to Y vector\'s {}.'
                          .format(len(vec_x), len(vec_y)))
 
-        line_key = self._myCanvas.add_plot_1d(vec_x[:len(vec_y)], vec_y, y_err, color, label, x_label, y_label, marker,
+        line_key = self._myCanvas.add_plot_1d(vec_x[:len(vec_y)], vec_y, y_err, color, label, x_label, y_label,
+                                              marker, marker_size,
                                               line_style, line_width, show_legend)
 
         # record min/max
@@ -1164,9 +1165,8 @@ class Qt4MplCanvas(FigureCanvas):
         return
 
     def add_plot_1d(self, vec_x, vec_y, y_err=None, color=None, label="", x_label=None, y_label=None,
-                    marker=None, line_style=None, line_width=1, show_legend=True):
+                    marker=None, marker_size=None, line_style=None, line_width=1, show_legend=True):
         """
-
         :param vec_x: numpy array X
         :param vec_y: numpy array Y
         :param y_err:
@@ -1204,18 +1204,21 @@ class Qt4MplCanvas(FigureCanvas):
             self.axes.set_ylabel(y_label, fontsize=8)
 
         # process inputs and defaults
+        # color must be RGBA (4-tuple)
         if color is None:
             color = (0, 1, 0, 1)
-        if marker is None:
-            marker = 'None'
+
         if line_style is None:
             line_style = '-'
 
-        # color must be RGBA (4-tuple)
-        if marker == 'o':
-            marker_size = 3
-        else:
-            marker_size = 1
+        if marker is None:
+            marker = 'None'
+        if marker_size is None:
+            if marker == 'o':
+                marker_size = 3
+            else:
+                marker_size = 1
+
         if plot_error is False:
             # return: list of matplotlib.lines.Line2D object
             r = self.axes.plot(vec_x, vec_y, color=color, marker=marker, markersize=marker_size, linestyle=line_style,

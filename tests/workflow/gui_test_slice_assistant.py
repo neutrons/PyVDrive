@@ -69,6 +69,26 @@ class EventFilteringAssistantTestEnvironment(object):
 
         return
 
+    def test_issue_190(self):
+        """
+        plot strain vs stress
+        :return:
+        """
+        # set x and y sample logs
+        GuiUtility.set_combobox_current_item(self._slice_window.ui.comboBox_logNames, 'loadframe.furnace1',
+                                             match_beginning=True)
+
+        # plot
+        self._slice_window.do_plot_sample_log_raw()  # 'push' button: pushButton_setXAxis()
+
+        # set up slicer
+        self._slice_window.ui.radioButton_manualSlicer.setChecked(True)
+
+        # load data
+        self._slice_window.do_load_splitter_file('tests/data/cyclic_data/upslope_slicer.dat')
+
+        # load data
+
     def test_issue_164(self):
         """
         plot strain vs stress
@@ -81,7 +101,7 @@ class EventFilteringAssistantTestEnvironment(object):
                                              match_beginning=True)
 
         # plot
-        self._slice_window.do_plot_sample_logs()  # 'push' button: pushButton_setXAxis()
+        self._slice_window.do_plot_sample_log_raw()  # 'push' button: pushButton_setXAxis()
 
         # smooth
         self._slice_window.smooth_sample_log_curve()
@@ -105,6 +125,15 @@ def test_main():
         # strain/stress chop
         slice_ui_tester.set_ipts_run(21381, 163411)  # ISSUE 164
         slice_ui_tester.test_issue_164()
+
+    elif True:
+        # cyclic/load slicers  # ISSUE 190 and #172
+        ipts_number = 22862
+        run_number = 172282
+        sample_log_name = 'loadframe.furnace2'
+
+        slice_ui_tester.set_ipts_run(ipts_number, run_number)  # ISSUE 164
+        slice_ui_tester.test_issue_190()
 
     else:
         # regular

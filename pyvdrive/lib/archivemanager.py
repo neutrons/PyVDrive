@@ -180,6 +180,53 @@ class DataArchiveManager(object):
         return gsas_file_name
 
     @staticmethod
+    def locate_sliced_h5_logs(ipts_number, run_number):
+        """
+        get the file names of the sliced logs in HDF5 format
+        Example:
+        [wzz@analysis-node09 172282]$ cat summary.txt
+        0  	/SNS/VULCAN/IPTS-22862/shared/pyvdrive_only/172282/1.hdf5  	1.gda
+        1  	/SNS/VULCAN/IPTS-22862/shared/pyvdrive_only/172282/2.hdf5  	2.gda
+        ... ...
+        :param ipts_number:
+        :param run_number:
+        :return: list of 2-tuple (log h5 name, gsas file name)
+        """
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
+
+        archived_h5_dir = os.path.join('/SNS/VULCAN/', 'IPTS-{}/shared/pyvdrive_only/{}/'
+                                                       ''.format(ipts_number, run_number))
+        if not os.path.exists(archived_h5_dir):
+            raise RuntimeError('Unable to locate hdf5 logs directory {}'.format(archived_h5_dir))
+
+        summary_name = os.path.join(archived_h5_dir, 'summary.txt')
+        if not os.path.exists(summary_name):
+            raise RuntimeError('Unable to locate {} for sliced logs\' summary')
+
+        # parse sliced log file
+        log_file_names_tuple = list()
+        summary_file = open(summary_name, 'r')
+        raw_lines = summary_file.readlines()
+        summary_file.close()
+
+        for line in raw_lines:
+            line = line.strip()
+            if line == '' or line[0] == '#':
+                continue  # ignore empty line and comment line
+
+            items = line.split()
+            if len(items) < 3:
+                continue  # invalid line
+            else:
+                log_h5_i = items[1]
+                gsas_i = items[2]
+                log_file_names_tuple.append((log_h5_i, gsas_i))
+        # END-FOR
+
+        return log_file_names_tuple
+
+    @staticmethod
     def locate_chopped_nexus(ipts_number, run_number, chop_child_list):
         """
         get the default directory for chopped NeXus file from SNS archive
@@ -226,7 +273,10 @@ class DataArchiveManager(object):
             # might be a pre-nED
             base_name = 'VULCAN_{0}_event.nxs'.format(run_number)
             sub_path = os.path.join('IPTS-{0}/0/{1}/NeXus'.format(ipts_number, run_number), base_name)
+            raw_event_file_name_h5 = raw_event_file_name
             raw_event_file_name = os.path.join(self._archiveRootDirectory, sub_path)
+        else:
+            raw_event_file_name_h5 = '<Logic Error>'
         # END-IF
 
         # early return
@@ -236,6 +286,8 @@ class DataArchiveManager(object):
         else:
             # return for nothing
             raw_event_file_name = None
+            print ('[INFO] For IPTS-{} Run-{}, neither {} nor {} exists.'
+                   ''.format(ipts_number, run_number, raw_event_file_name_h5, raw_event_file_name))
         # END-IF-ELSE
 
         return raw_event_file_name

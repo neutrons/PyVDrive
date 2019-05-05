@@ -976,7 +976,7 @@ class WriteSlicedLogs(object):
         header_file.close()
 
         if mts_columns.count('ProtonCharge') > 1:
-            raise blabla
+            raise NotImplementedError('MTS has more than 1 column as "ProtonCharge"')
 
         print '[INFO] Chopped log files are written to %s, %s and %s.' % (start_file_name, mean_file_name,
                                                                           end_file_name)

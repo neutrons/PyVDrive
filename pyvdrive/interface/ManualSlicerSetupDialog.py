@@ -55,6 +55,11 @@ class ManualSlicerSetupTableDialog(QDialog):
 
         self.ui.pushButton_deselectAll.clicked.connect(self.do_set_target)
 
+        # tab-plot cyclic slicers
+        self.ui.pushButton_set1.clicked.connect(self.do_set_show_target_1)
+        self.ui.pushButton_showSlicers.clicked.connect(self.do_show_cyclic_slicers)
+        self.ui.pushButton_hideSlicers.clicked.connect(self.do_hide_cyclic_slicers)
+
         # FIXME / FUTURE : it is not well defined to remove a slicer from table and reflected to pickers on plotting
         # self.connect(self.ui.pushButton_deleteSlicer, QtCore.SIGNAL('clicked()'),
         #              self.do_delete_slicer)
@@ -84,6 +89,11 @@ class ManualSlicerSetupTableDialog(QDialog):
         # radio buttons
         self.ui.radioButton_timeStep.setChecked(True)
 
+        # add colors
+        for color_combo_box in [self.ui.comboBox_color1]:
+            for color_i in ['green', 'red', 'blue', 'yellow', 'black']:
+                color_combo_box.addItem(color_i)
+
         return
 
     @property
@@ -102,7 +112,7 @@ class ManualSlicerSetupTableDialog(QDialog):
         generate the time slicers in controller/memory from this table
         :return:
         """
-        # Get splitters
+        # Get splitters: splitters will be retrieved from table
         try:
             split_tup_list = self.ui.tableWidget_segments.get_splitter_list()
         except RuntimeError as e:
@@ -219,7 +229,7 @@ class ManualSlicerSetupTableDialog(QDialog):
         Load data slicers from a csv-like file
         :return:
         """
-        self._myParent.do_import_slicer_file()
+        self._myParent.do_load_splitter_file()
 
         return
 
@@ -255,6 +265,85 @@ class ManualSlicerSetupTableDialog(QDialog):
                 GuiUtil.pop_dialog_error(self, err_msg)
                 return
         # END-IF
+
+        return
+
+    def do_show_cyclic_slicers(self):
+        """
+        blabla
+        :return:
+        """
+        import numpy
+
+        # disable control from main window
+        self._myParent.ui.checkBox_showSlicer.setChecked(False)
+
+        # apply
+        # TODO - TONIGHT 0 - Need a mechanism for checking whether the current slicers being applied!
+        self.do_apply_slicers()
+        slicer_time_vec, slicer_ws_vec = self._myParent.get_current_slicer()
+
+        # print ('A', slicer_time_vec.shape, slicer_time_vec)
+        # print ('B', slicer_ws_vec.shape, slicer_ws_vec)
+
+        # get value now
+        try:
+            for i in range(1):
+                target_ws_1 = str(self.ui.lineEdit_target1.text()).strip()
+                color_ws_1 = str(self.ui.comboBox_color1.currentText())
+
+                num_slicers = (slicer_ws_vec == target_ws_1).sum()
+                location_indexes = numpy.where(slicer_ws_vec == target_ws_1)
+                # print ('C', type(location_indexes), location_indexes)
+
+                location_indexes = location_indexes[0]
+                assert num_slicers == location_indexes.shape[0], 'must be same!'
+
+                # print ('D', type(location_indexes))
+                stop_indexes = location_indexes + 1
+                # print ('E', stop_indexes)
+                # if stop_indexes[-1] == slicer_time_vec.shape[0]:
+                #     print ('End of slicers')
+                # else:
+                #     print ('EE',  stop_indexes[-1], slicer_time_vec.shape[0])
+                # print ('F', slicer_ws_vec[location_indexes])
+
+                single_ws_time_vec = numpy.ndarray((num_slicers*2,), dtype=slicer_time_vec.dtype)
+                single_ws_name_vec = numpy.ndarray((num_slicers*2-1,), dtype=slicer_ws_vec.dtype)
+
+                single_ws_time_vec[0::2] = slicer_time_vec[location_indexes]
+                single_ws_time_vec[1::2] = slicer_time_vec[stop_indexes]
+
+                single_ws_name_vec[0::2] = target_ws_1
+                single_ws_name_vec[1::2] = '-1'
+
+                print ('G: ', single_ws_time_vec)
+                print ('H: ', single_ws_name_vec)
+
+                self.ui.label_numSegment1.setText('{}'.format(num_slicers))
+
+                self._myParent.ui.graphicsView_main.highlight_cyclic_slicers(single_ws_time_vec, single_ws_name_vec,
+                                                                             {target_ws_1: color_ws_1})
+
+        except Exception as e:
+            GuiUtil.pop_dialog_error(self, 'blabla 1: {}'.format(e))
+            return
+
+
+
+        return
+
+    # TODO - TONIGHT 0 - Implement!
+    def do_hide_cyclic_slicers(self):
+        """ Hide (or remove) the cyclic slicers' high lights
+        :return:
+        """
+        # manage slicers by some keys!
+        target_name = str(self.ui.lineEdit_target1.text())
+        if target_name == '':
+            return
+
+        self._myParent.remove_slicers_highlights(target_name)
 
         return
 
@@ -296,6 +385,31 @@ class ManualSlicerSetupTableDialog(QDialog):
             target = str(target)
 
         self.ui.tableWidget_segments.rename_chop_target(row_list, target)
+
+        return
+
+    def do_set_show_target_1(self):
+        """
+        set target 1''s slicers to plot
+        :return:
+        """
+        try:
+            target_ws = str(self.ui.lineEdit_target1.text()).strip()
+        except Exception as e:
+            GuiUtil.pop_dialog_error(self, 'blabla 2: {}'.format(e))
+            return
+
+        slicer_time_vec, slicer_ws_vec = self._myParent.get_current_slicer()
+
+        # These are debug information
+        # print ('A', slicer_ws_vec, type(slicer_ws_vec))
+        # print ('B', target_ws, type(target_ws))
+        # print ('C', slicer_ws_vec == target_ws)
+        # print ('D', type(slicer_ws_vec == target_ws))
+
+        num_slicers = (slicer_ws_vec == target_ws).sum()
+
+        self.ui.label_numSegment1.setText('{}'.format(num_slicers))
 
         return
 
@@ -357,11 +471,13 @@ class ManualSlicerSetupTableDialog(QDialog):
         return self.ui.tableWidget_segments.get_splitter_list()
 
     def write_table(self, slicers_list):
-        """
-
-        :param slicers_list:
+        """ write something to a table!
+        :param slicers_list: a list of 2-tuple or 3-tuple
         :return:
         """
-        self.ui.tableWidget_segments.set_time_slicers(slicers_list)
+        try:
+            self.ui.tableWidget_segments.set_time_slicers(slicers_list)
+        except RuntimeError as run_err:
+            print ('[WARNING] Writing slicer table: {}'.format(run_err))
 
         return
