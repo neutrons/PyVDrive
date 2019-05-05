@@ -618,6 +618,9 @@ class VdriveChop(VDriveCommand):
             return False, 'Both run start {} and run end {} must be integer' \
                           ''.format(run_start, run_end)
 
+        # TODO - TONIGHT 0 - START FROM HERE - add a method to load proton charge and check down time and report
+        # ... ...
+
         try:
             is_dry_run = self._is_dry_run()
 
