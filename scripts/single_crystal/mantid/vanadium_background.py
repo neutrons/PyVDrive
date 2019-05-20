@@ -84,7 +84,7 @@ def main():
     LoadEventNexus(Filename=van_nxs, OutputWorkspace=van_ws_name)
     ConvertUnits(InputWorkspace=van_ws_name, OutputWorkspace=van_ws_name,
                  Target='Wavelength', AlignBins=True)
-    Rebin(InputWorkspace=van_ws_name, OutputWorkspace=van_ws_name, Params='-0.001', FullBinsOnly=True,
+    Rebin(InputWorkspace=van_ws_name, OutputWorkspace=van_ws_name, Params='-0.05', FullBinsOnly=True,
           IgnoreBinErrors=True)
 
     # Sum spectra by grouping detectors
@@ -94,8 +94,7 @@ def main():
 
     # solve the linear equations
     # TODO - TONIGHT 0 - Resume from here!
-    # use vector operation
-    # TODO - same: create another script/prototype/ to group workspace by 2theta value and normalize
+
 
     return
 
