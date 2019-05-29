@@ -1386,7 +1386,7 @@ class WindowLogPicker(QMainWindow):
     def get_sample_log_data(self, log_name):
         """
         get sample log data: time and value vector
-        :param sample_log_name:
+        :param log_name:
         :return:
         """
         # get the sample log data

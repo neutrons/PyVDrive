@@ -67,6 +67,45 @@ def test_group(group_ws=None):
     return
 
 
+def load_process_run(nexus_name, event_ws_name, norm_by_proton_charge):
+    """
+    Load, binning in d-space and group detectors
+    :param nexus_name:
+    :param event_ws_name:
+    :return:
+    """
+    LoadEventNexus(Filename=nexus_name, OutputWorkspace=event_ws_name)
+    ConvertUnits(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name,
+                 Target='Wavelength', AlignBins=True)
+    Rebin(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name, Params='-0.05', FullBinsOnly=True,
+          IgnoreBinErrors=True)
+
+    # Sum spectra by grouping detectors
+    grouped_ws_name = event_ws_name + '_grouped'
+    GroupDetectors(InputWorkspace=event_ws_name, OutputWorkspace=grouped_ws_name,
+                   CopyGroupingFromWorkspace='vulcan_group')
+
+    if norm_by_proton_charge:
+        event_ws = mtd[event_ws_name]
+        event_ws_pc = event_ws.run().getProperty('proton_charge').value.sum()
+        grouped_ws = mtd[grouped_ws_name]
+        grouped_ws /= event_ws_pc
+
+    return grouped_ws_name
+
+
+def remove_background(grouped_van_ws_name, grouped_bkgd_ws_name):
+
+    # remove background
+    no_bkgd_ws_name = grouped_van_ws_name + '_bkgd_removed'
+    Minus(LHSWorkspace=grouped_van_ws_name,
+          RHSWorkspace=grouped_bkgd_ws_name,
+          OutputWorkspace=no_bkgd_ws_name)
+
+    # return
+    return no_bkgd_ws_name
+
+
 def main():
     """
     main
@@ -81,16 +120,26 @@ def main():
     # Load data and rebin
     van_nxs = '/SNS/VULCAN/IPTS-22752/nexus/VULCAN_172254.nxs.h5'
     van_ws_name = 'van_172254'
-    LoadEventNexus(Filename=van_nxs, OutputWorkspace=van_ws_name)
-    ConvertUnits(InputWorkspace=van_ws_name, OutputWorkspace=van_ws_name,
-                 Target='Wavelength', AlignBins=True)
-    Rebin(InputWorkspace=van_ws_name, OutputWorkspace=van_ws_name, Params='-0.05', FullBinsOnly=True,
-          IgnoreBinErrors=True)
 
-    # Sum spectra by grouping detectors
-    grouped_van_name = van_ws_name + '_grouped'
-    GroupDetectors(InputWorkspace=van_ws_name, OutputWorkspace=grouped_van_name,
-                   CopyGroupingFromWorkspace='vulcan_group')
+    bkgd_nxs = ' /SNS/VULCAN/IPTS-22753/nexus/VULCAN_172362.nxs.h5'
+    bkgd_ws_name = 'bkgd_172362'
+
+    grouped_van_ws_name = load_process_run(van_nxs, van_ws_name, True)
+    grouped_bkgd_ws_name = load_process_run(bkgd_nxs, bkgd_ws_name, True)
+
+    # remove background
+    van_nb_ws_name = remove_background(grouped_van_ws_name, grouped_bkgd_ws_name)
+
+    # LoadEventNexus(Filename=van_nxs, OutputWorkspace=van_ws_name)
+    # ConvertUnits(InputWorkspace=van_ws_name, OutputWorkspace=van_ws_name,
+    #              Target='Wavelength', AlignBins=True)
+    # Rebin(InputWorkspace=van_ws_name, OutputWorkspace=van_ws_name, Params='-0.05', FullBinsOnly=True,
+    #       IgnoreBinErrors=True)
+    #
+    # # Sum spectra by grouping detectors
+    # grouped_van_name = van_ws_name + '_grouped'
+    # GroupDetectors(InputWorkspace=van_ws_name, OutputWorkspace=grouped_van_name,
+    #                CopyGroupingFromWorkspace='vulcan_group')
 
     # solve the linear equations
     # TODO - TONIGHT 0 - Resume from here!

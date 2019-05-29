@@ -8,12 +8,10 @@ RUN_NUMBER = 158581
 
 TWO_THETA_RANGE = [80, 101]  # inclusive on both side
 TWO_THETA_STEP = 1.5
-RESULT_NAME = 'West-Panel-3'
+RESULT_NAME = 'East-Panel'
 # West Bank:  79.21308206662684 to 100.87821654680079, 1771 distinct value
 # East Bank:
 # High Angle Bank:
-
-
 """============================================="""
 
 
@@ -70,7 +68,7 @@ def main(argv):
     source = event_ws.getInstrument().getSource().getPos()
     sample = event_ws.getInstrument().getSample().getPos()
     # Calculate 2theta for each detectors
-    for iws in range(3234/3*2, 4*3234/3):
+    for iws in range(3234, 6468):
         det_i = event_ws.getDetector(iws).getPos()
         two_theta_i = (det_i - sample).angle(sample - source) * 180. / numpy.pi
         i_2theta = numpy.searchsorted(two_theta_array, [two_theta_i])[0]
