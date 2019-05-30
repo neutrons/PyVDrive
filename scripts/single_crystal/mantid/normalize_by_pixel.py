@@ -72,7 +72,7 @@ def load_process_run(nexus_name, event_ws_name, norm_by_proton_charge, clean_van
     group1_norm_vec = clean_van_ws.readY(3)
     group2_norm_vec = clean_van_ws.readY(4)
 
-    clean_van_count = clean_van_count_ws.readY(0)
+    clean_van_count = clean_van_count_ws.readY(1)
 
     for ws_index in range(6468, 24900):
         vec_y_i = event_ws.dataY(ws_index)
@@ -80,6 +80,8 @@ def load_process_run(nexus_name, event_ws_name, norm_by_proton_charge, clean_van
         group_id = get_tube_group_id(ws_index)
         if group_id == -1:
             vec_y_i /= 1.E10
+        elif clean_van_count[ws_index] < 1.E-20:
+            print ('ws-index {} has zero count'.format(ws_index))
         elif group_id == 1:
             vec_y_i /= (group1_norm_vec * clean_van_count[ws_index])
         else:
@@ -99,8 +101,8 @@ def load_process_run(nexus_name, event_ws_name, norm_by_proton_charge, clean_van
 
 def main():
     # set the previously generated workspaces for normalization
-    clean_van_ws = mtd['']
-    clean_van_count_ws = mtd['']
+    clean_van_ws = mtd['van_172254_grouped_bkgd_removed']
+    clean_van_count_ws = mtd['van_172254_clean_count']
 
     # diamond/general run
     # IPTS-22753, Run 172361, 172362 (background)

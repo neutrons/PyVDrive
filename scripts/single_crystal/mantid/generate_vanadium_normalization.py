@@ -57,7 +57,7 @@ def load_process_run(nexus_name, event_ws_name, norm_by_proton_charge):
     LoadEventNexus(Filename=nexus_name, OutputWorkspace=event_ws_name)
     ConvertUnits(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name,
                  Target='Wavelength', AlignBins=True)
-    Rebin(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name, Params='-0.05', FullBinsOnly=True,
+    Rebin(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name, Params='0.1, -0.05, 5.0', FullBinsOnly=True,
           IgnoreBinErrors=True)
 
     # Sum spectra by grouping detectors
@@ -184,18 +184,21 @@ def main():
     main
     :return:
     """
-    # set up the grouping workspace by template
-    group_ws_name = create_template_group_ws()
-    group_ws = mtd[group_ws_name]
-    set_group_tube(group_ws)
-    test_group(group_ws)
-
-    # Load data and rebin
+    # Input setup
     van_nxs = '/SNS/VULCAN/IPTS-22752/nexus/VULCAN_172254.nxs.h5'
     van_ws_name = 'van_172254'
 
     bkgd_nxs = ' /SNS/VULCAN/IPTS-22753/nexus/VULCAN_172362.nxs.h5'
     bkgd_ws_name = 'bkgd_172362'
+
+    min_lambda = 1.0
+    max_lambda = 3.0
+    
+    # set up the grouping workspace by template
+    group_ws_name = create_template_group_ws()
+    group_ws = mtd[group_ws_name]
+    set_group_tube(group_ws)
+    test_group(group_ws)
 
     grouped_van_ws_name = load_process_run(van_nxs, van_ws_name, True)
     grouped_bkgd_ws_name = load_process_run(bkgd_nxs, bkgd_ws_name, True)
@@ -204,6 +207,8 @@ def main():
     clean_van_ws_name = remove_background(grouped_van_ws_name, grouped_bkgd_ws_name)
     
     # generate the clean-vanadium counts array
+    print (van_ws_name, bkgd_ws_name)
+    calculate_vanadium_counts(van_ws_name, bkgd_ws_name, min_lambda, max_lambda)
 
     return
 
