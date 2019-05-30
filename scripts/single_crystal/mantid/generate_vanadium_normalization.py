@@ -86,7 +86,6 @@ def remove_background(grouped_van_ws_name, grouped_bkgd_ws_name):
     return no_bkgd_ws_name
 
 
-
 def set_group_tube(group_ws):
     """ set the group along tubes """
     # west
@@ -130,30 +129,54 @@ def test_group(group_ws=None):
     return
     
     
-def get_counts():
-
+def calculate_vanadium_counts(van_ws_name, bkgd_ws_name, min_lambda, max_lambda):
+    """
+    calculate the cleaned vanadium counts per pixels within a given range of wave length
+    :param van_ws_name:
+    :param bkgd_ws_name:
+    :param min_lambda:
+    :param max_lambda
+    :return: name of a MatrixWorkspace containing counts
+    """
     def calculate_counts(ws_name, min_wl, max_wl):
-        ConvertUnits(InputWorkspace='van_172254', OutputWorkspace='van_172254', Target='Wavelength', AlignBins=True)
-        Rebin(InputWorkspace='van_172254', OutputWorkspace='van_172254',
+        """
+        calculate counts of each pixel within a given range of wave length
+        and normalized by proton charge
+        :param ws_name: workspace name
+        :param min_wl:
+        :param max_wl:
+        :return:
+        """
+        out_ws_name = '{}_counts'.format(ws_name)
+
+        # rebin in range of given wave length
+        ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='Wavelength', AlignBins=True)
+        Rebin(InputWorkspace=ws_name, OutputWorkspace=ws_name,
               Params='0.3,{0},{1},{2},{3},{4},5'.format(min_wl - 0.3, min_wl, max_wl - min_wl, max_wl, 5. - max_wl),
               FullBinsOnly=True, IgnoreBinErrors=True)
-        ConvertToMatrixWorkspace(InputWorkspace='masked_van', OutputWorkspace='masked_van')
-        Transpose(InputWorkspace='masked_van', OutputWorkspace='masked_van')
+        ConvertToMatrixWorkspace(InputWorkspace=ws_name, OutputWorkspace=out_ws_name)
+        Transpose(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name)
 
-        counts_vec = ws.readY(1) / sum_pc   # sum of proton charges
+        # normalize by counts
+        sum_pc = mtd[ws_name].run().getProperty('proton_charge').value.sum()
 
-        return counts_vec, ws_name
+        count_ws = mtd[out_ws_name]
+        count_ws /= sum_pc
 
-    LoadEventNexus(Filename='/SNS/VULCAN/IPTS-22752/nexus/VULCAN_172254.nxs.h5', OutputWorkspace='van_172254')
-    ConvertUnits(InputWorkspace='van_172254', OutputWorkspace='van_172254', Target='Wavelength', AlignBins=True)
-    Rebin(InputWorkspace='van_172254', OutputWorkspace='van_172254', Params='-0.05', FullBinsOnly=True,
-          IgnoreBinErrors=True)
-    Rebin(InputWorkspace='van_172254', OutputWorkspace='van_172254', Params='0.3,0.7,1,2,3,2,5', FullBinsOnly=True,
-          IgnoreBinErrors=True)
-    MaskBins(InputWorkspace='van_172254', InputWorkspaceIndexType='WorkspaceIndex', OutputWorkspace='masked_van',
-             XMin=1, XMax=3)
-    ConvertToMatrixWorkspace(InputWorkspace='masked_van', OutputWorkspace='masked_van')
-    Transpose(InputWorkspace='masked_van', OutputWorkspace='masked_van')
+        return out_ws_name
+
+    van_count_ws_name = calculate_counts(van_ws_name, min_lambda, max_lambda)
+    bkgd_count_ws_name = calculate_counts(bkgd_ws_name, min_lambda, max_lambda)
+
+    # clean counts
+    van_count_ws = mtd[van_count_ws_name]
+    bkgd_count_ws = mtd[bkgd_count_ws_name]
+    clean_van_count_ws = van_count_ws - bkgd_count_ws
+
+    clean_van_count_name = '{}_clean_count'.format(van_ws_name)
+    RenameWorkspace(InputWorkspace=clean_van_count_ws, OutputWorkspace=clean_van_count_name)
+
+    return clean_van_count_name
 
 
 def main():
