@@ -12,6 +12,9 @@ except (ImportError, RuntimeError) as import_err:
     from PyQt4.QtCore import pyqtSignal
 
 
+Panel_2Theta_Ranges = {'WEST': ()}
+
+
 class BinBy2Theta(VDriveCommand):
     """
     Process command MERGE
@@ -47,6 +50,58 @@ class BinBy2Theta(VDriveCommand):
 
         return
 
+    def _get_van_run(self):
+        """
+        get vanadium run number
+        :return:
+        """
+        # RUNV
+        if 'RUNV' in self._commandArgsDict:
+            van_run = int(self._commandArgsDict['RUNV'])
+            if van_run < 0:
+                return False, 'Vanadium run number {0} must be positive.'.format(van_run)
+        else:
+            van_run = None
+
+        return van_run
+
+    def _get_gsas_iparm_name(self):
+        """
+        get GSAS instrument parameter file
+        :return:
+        """
+        return 'vulcan.prm'
+
+    def parse_vulcan_panels(self):
+        """
+        parse
+        :return:
+        """
+        if 'PANEL' in self._commandArgsDict:
+            panel = str(self._commandArgsDict['PANEL'])
+            panel = panel.upper()
+            if panel not in ['WL, WM, WU, EL, EM, EU, WEST, EAST']:
+                raise RuntimeError('Panel name {} is not recognized. ]'
+                                   'Allowed panel names are WL, WM, WU, EL, EM, EU, WEST, EAST'.format(panel))
+        else:
+            raise RuntimeError('PANEL must be specified.')
+
+        return panel
+
+    def parse_2theta_range(self, panel_name):
+        """ Parse 2theta range
+        :param panel_name:
+        :return:
+        """
+        two_theta_min = self.get_argument_value('MIN', float, allow_default=True,
+                                                default_value=Panel_2Theta_Ranges[panel_name][0])
+        two_theta_max = self.get_argument_value('MAX', float, allow_default=True,
+                                                default_value=Panel_2Theta_Ranges[panel_name][1])
+        two_theta_step = self.get_argument_value('STEP', float, allow_default=False,
+                                                 default_value=None)
+
+        return two_theta_min, two_theta_max, two_theta_step
+
     def exec_cmd(self):
         """
         Execute input command (override)
@@ -70,8 +125,8 @@ class BinBy2Theta(VDriveCommand):
             iparm_name = self._get_gsas_iparm_name()
 
             # 2theta parameters
-            vulcan_panel_list = self.parse_vulcan_panels()
-            two_theta_min, two_theta_max, two_theta_step = self.parse_2theta_range()
+            vulcan_panel = self.parse_vulcan_panel()
+            two_theta_min, two_theta_max, two_theta_step = self.parse_2theta_range(vulcan_panel)
 
             # output
             output_dir = self._process_output_directory()
@@ -81,18 +136,18 @@ class BinBy2Theta(VDriveCommand):
         # Dry run
         if self._is_dry_run():
             message = 'IPTS-{} RUN {} Panel {} Group pixels by 2theta {}:{} with step {}' \
-                      ''.format(self._iptsNumber, run_number_list, vulcan_panel_list, two_theta_min, two_theta_max,
+                      ''.format(self._iptsNumber, run_number_list, vulcan_panel, two_theta_min, two_theta_max,
                                 two_theta_step)
             return True, message
 
         # Reduce
         two_theta_params = {'min': two_theta_min, 'max': two_theta_max, 'step': two_theta_step}
         try:
-            self._controller.reduce_runs_2theta(self._iptsNumber, run_number_list, two_theta_params,
-                                                (use_default_binning, binning_parameters),
-                                                vanadium=van_run_number,
-                                                gsas_iparam=iparm_name,
-                                                output_dir=output_dir)
+            self._controller.project.reduce_runs_2theta(self._iptsNumber, run_number_list, two_theta_params,
+                                                        (use_default_binning, binning_parameters),
+                                                        vanadium=van_run_number,
+                                                        gsas_iparam=iparm_name,
+                                                        output_dir=output_dir)
         except RuntimeError as run_err:
             return False, 'Unable to reduce by 2theta: {}'.format(run_err)
 

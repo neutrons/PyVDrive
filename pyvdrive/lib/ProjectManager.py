@@ -1303,6 +1303,35 @@ class ProjectManager(object):
 
         return reduce_all_success, message
 
+    def reduce_runs_2theta(self, ipts_number, run_number, two_theta_params,
+                           binning_tuple, vanadium, gsas_iparam, output_dir):
+        """ Reduce runs in 2theta. This is a prototype method that is converted from
+        :param ipts_number:
+        :param run_number:
+        :param two_theta_params:
+        :param binning_tuple:
+        :param vanadium:
+        :param gsas_iparam:
+        :param output_dir:
+        :return:
+        """
+        print ('[INFO] Reduction VULCAN By 2Theta is Called')
+
+        # check inputs
+        out_ws_name, msg = self._reductionManager.reduce_event_nexus(ipts_number=ipts_number,
+                                                                     run_number=run_number,
+                                                                     event_nexus_name=raw_file_name,
+                                                                     target_unit=unit,
+                                                                     binning_parameters=binning_parameters,
+                                                                     num_banks=number_banks,
+                                                                     roi_list=roi_list,
+                                                                     mask_list=mask_list,
+                                                                     no_cal_mask=no_cal_mask)
+
+
+
+
+
     def reduce_vulcan_runs_v2(self, run_number_list, output_directory, d_spacing, binning_parameters,
                               number_banks, gsas, vanadium_run, merge_runs,
                               roi_list, mask_list, no_cal_mask):
@@ -1322,8 +1351,6 @@ class ProjectManager(object):
         :param mask_list:
         :return: 2-tuple: list (run number), list (error message for each run reduced)
         """
-        print ('[INFO] Reduction (Single Run) VULCAN Version 2 is Called')
-
         # check inputs
         datatypeutility.check_list('Run numbers', run_number_list)
         datatypeutility.check_file_name(output_directory, check_exist=True, is_dir=True)
