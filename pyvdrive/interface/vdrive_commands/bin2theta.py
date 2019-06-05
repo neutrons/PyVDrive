@@ -12,7 +12,18 @@ except (ImportError, RuntimeError) as import_err:
     from PyQt4.QtCore import pyqtSignal
 
 
-Panel_2Theta_Ranges = {'WEST': ()}
+Panel_2Theta_Ranges = {'WEST': (),
+                       'WL': (79., 101),  # 79.17292440985112,  100.82707559014888
+                       }
+
+"""
+0:  98.3182068458, 80.8399046696
+1:  97.5990601545, 80.154144241
+2:  98.3182068458, 80.8399046696
+3:  97.5990601044, 82.9455123216
+4:  97.5990601545, 80.154144241
+5:  97.5990601044, 82.9455123216
+"""
 
 
 class BinBy2Theta(VDriveCommand):
@@ -44,7 +55,7 @@ class BinBy2Theta(VDriveCommand):
         super(BinBy2Theta, self).__init__(controller, command_args)
 
         # set up my name
-        self._commandName = 'BINBY2THETA'
+        self._commandName = '2THETABIN'
         # check argument
         self.check_command_arguments(self.SupportedArgs)
 
@@ -72,7 +83,7 @@ class BinBy2Theta(VDriveCommand):
         """
         return 'vulcan.prm'
 
-    def parse_vulcan_panels(self):
+    def parse_vulcan_panel(self):
         """
         parse
         :return:
@@ -80,13 +91,23 @@ class BinBy2Theta(VDriveCommand):
         if 'PANEL' in self._commandArgsDict:
             panel = str(self._commandArgsDict['PANEL'])
             panel = panel.upper()
-            if panel not in ['WL, WM, WU, EL, EM, EU, WEST, EAST']:
+            if panel not in ['WL', 'WM', 'WU', 'EL', 'EM', 'EU', 'WEST', 'EAST']:
                 raise RuntimeError('Panel name {} is not recognized. ]'
                                    'Allowed panel names are WL, WM, WU, EL, EM, EU, WEST, EAST'.format(panel))
         else:
             raise RuntimeError('PANEL must be specified.')
 
         return panel
+
+    def get_argument_value(self, arg_name, arg_type, allow_default, default_value=None):
+        if arg_name in self._commandArgsDict:
+            arg_value = arg_type(self._commandArgsDict[arg_name])
+        elif allow_default:
+            arg_value = default_value
+        else:
+            raise RuntimeError('{} must be specified'.format(arg_name))
+
+        return arg_value
 
     def parse_2theta_range(self, panel_name):
         """ Parse 2theta range

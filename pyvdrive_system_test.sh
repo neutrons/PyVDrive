@@ -20,6 +20,7 @@ else
     CMD=
     echo "Options: (1) vbin (2) chop (3) view  (4) vpeak  (5) merge  (6) performance test  (7) Chopping UI test"
     echo "(8) Peak processing UI test"
+    echo "(101) Group pixels by 2theta and bin"
     echo "Options: Test all commands: \"all\""
 fi
 
@@ -65,3 +66,7 @@ if [ "$1" = "8" ]; then
         PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH ./build/scripts-2.7/gui_test_peak_process.py
 fi
 
+if [ "$1" = "101" ] || [ "$1" = "all" ] || [ "$1" = "vbin" ]; then
+	echo "Test 2THETABIN: Group pixels by 2theta and bin to GSAS (101)"
+    PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH ./build/scripts-2.7/idl_bin2theta_test.py
+fi

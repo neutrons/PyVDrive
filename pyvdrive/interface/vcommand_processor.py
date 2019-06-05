@@ -44,7 +44,7 @@ class VdriveCommandProcessor(object):
 
         # set up the commands
         self._commandList = ['CHOP', 'VBIN', 'VDRIVE', 'MERGE', 'AUTO', 'VIEW', 'VDRIVEVIEW', 'VPEAK',
-                             'INFO']
+                             'INFO', '2THETABIN']
 
         self._view_chop_run_name_map = dict()  # [run number (int)] = chop run name (in Reduced Data View)
 
@@ -188,6 +188,10 @@ class VdriveCommandProcessor(object):
             # bin
             status, err_msg = self._process_vbin(arg_dict)
 
+        elif command == '2THETABIN':
+            # group pixels by 2theta and reduce to GSAS
+            status, err_msg = self._process_2theta_bin(arg_dict)
+
         elif command == 'VDRIVEVIEW' or command == 'VIEW':
             # view
             status, err_msg = self._process_view(arg_dict)
@@ -212,6 +216,22 @@ class VdriveCommandProcessor(object):
             raise RuntimeError('Impossible situation!')
 
         return status, err_msg
+
+    def _process_2theta_bin(self, arg_dict):
+        """ Group pixels by 2theta and reduce to a series of GSAS file
+        :param arg_dict:
+        :return:
+        """
+        from vdrive_commands import bin2theta
+
+        try:
+            processor = bin2theta.BinBy2Theta(self._myController, arg_dict)
+        except vdrive_commands.process_vcommand.CommandKeyError as comm_err:
+            return False, 'Bin-by-2theta encountered command argument error: {}'.format(comm_err)
+
+        status, message = self._process_command(processor, arg_dict)
+
+        return status, message
 
     def _process_auto_reduction(self, arg_dict):
         """
