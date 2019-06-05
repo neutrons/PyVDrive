@@ -12,14 +12,14 @@ except (ImportError, RuntimeError) as import_err:
     from PyQt4.QtCore import pyqtSignal
 
 
-Panel_2Theta_Ranges = {'WEST': (),
-                       'WL': (79., 101),  # 79.17292440985112,  100.82707559014888
-                       'WM': (),  #
-                       'WU': (),  #
-                       'EAST': (),  #
-                       'EL': (),  #
-                       'EM': (),  #
-                       'EU': ()   #
+Panel_2Theta_Ranges = {'WEST': (79., 101),
+                       'WL': (79., 101),  # (79.17292440985112, 3), (100.82707559014888, 1074)
+                       'WM': (79., 101),  # (79.17292445065065, 1081), (100.82707554934935, 2152)
+                       'WU': (79., 101),  # (79.17292440985112, 2159), (100.82707559014888, 3230)
+                       'EAST': (79., 101),  #
+                       'EL': (79., 101),  # (79.17292440985112, 4308), (100.82707559014888, 3237)
+                       'EM': (79., 101),  # (79.17292445065065, 5386), (100.82707554934935, 4315)
+                       'EU': (79., 101)   # (79.17292440985112, 6464), (100.82707559014888, 5393)
                        }
 
 
@@ -147,12 +147,13 @@ class BinBy2Theta(VDriveCommand):
             two_theta_min, two_theta_max, two_theta_step = self.parse_2theta_range(vulcan_panel)
 
             # output
-            output_dir = self._process_output_directory()
+            output_dir = self.get_argument_value('BINFOLDER', str, True, None)
         except RuntimeError as run_err:
             return False, 'Error in parsing BINBY2THETA parameters: {0}'.format(run_err)
 
         # Dry run
-        if self._is_dry_run():
+        is_dry_run = self.get_argument_value('DRYRUN', int, True, 0) == 1
+        if is_dry_run:
             message = 'IPTS-{} RUN {} Panel {} Group pixels by 2theta {}:{} with step {}' \
                       ''.format(self._iptsNumber, run_number_list, vulcan_panel, two_theta_min, two_theta_max,
                                 two_theta_step)
