@@ -175,8 +175,8 @@ class BinBy2Theta(VDriveCommand):
         # Reduce
         two_theta_params = {'min': two_theta_min, 'max': two_theta_max, 'step': two_theta_step}
         try:
-            self._controller.project.reduce_runs_2theta(self._iptsNumber, run_number_list, two_theta_params,
-                                                        ws_index_range, (use_default_binning, binning_parameters),
+            self._controller.project.reduce_runs_2theta(self._iptsNumber, run_number_list[0], ws_index_range,
+                                                        two_theta_params, (use_default_binning, binning_parameters),
                                                         vanadium=van_run_number,
                                                         gsas_iparam=iparm_name,
                                                         output_dir=output_dir)

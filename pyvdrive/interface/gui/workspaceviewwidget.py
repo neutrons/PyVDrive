@@ -648,7 +648,10 @@ class WorkspaceGraphicView(MplGraphicsView):
         :param data_label:
         :return:
         """
-        line_color = WorkspaceGraphicView.BankColorDict[bank_id]
+        if bank_id not in WorkspaceGraphicView.BankColorDict:
+            line_color = 'blue'
+        else:
+            line_color = WorkspaceGraphicView.BankColorDict[bank_id]
 
         # TODO - FUTURE - Shall the reference to line be handled somewhere?
         self.add_plot_1d(vec_x, vec_y, color=line_color, label=data_label)

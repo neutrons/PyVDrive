@@ -5,6 +5,7 @@ import os
 import math
 import numpy
 import mantid_helper
+from mantid.simpleapi import CreateGroupingWorkspace
 import datatypeutility
 import pandas as pd
 import reduce_VULCAN
@@ -344,12 +345,15 @@ def group_pixels_2theta(vulcan_ws_name, tth_group_ws_name, start_iws, end_iws,
             two_theta_i = (det_i - sample).angle(sample - source) * 180. / numpy.pi
             if two_theta_i < two_theta_array[0] or two_theta_i >= two_theta_array[-1]:
                 group_ws.dataY(iws)[0] = 0
+            elif two_theta_i == two_theta_array[0]:
+                group_ws.dataY(iws)[0] = 1
+                num_pixels_array[0] += 1
             else:
                 i_2theta = numpy.searchsorted(two_theta_array, [two_theta_i])[0]
-                if i_2theta < 0 or i_2theta >= num_2theta:
+                if i_2theta <= 0 or i_2theta >= num_2theta:
                     raise RuntimeError('Programming error!')
                 group_ws.dataY(iws)[0] = i_2theta
-                num_pixels_array[i_2theta] += 1
+                num_pixels_array[i_2theta-1] += 1
         # END-IF-ELSE
     # END-FOR
 
@@ -357,6 +361,25 @@ def group_pixels_2theta(vulcan_ws_name, tth_group_ws_name, start_iws, end_iws,
     num_pixels_array[numpy.where(num_pixels_array < 0.1)] = -1
 
     return two_theta_array, group_ws, num_pixels_array
+
+
+def group_pixels_2theta_geometry(template_virtual_geometry_dict, ws_index_range, num_2theta):
+
+    if ws_index_range[1] <= 3234:
+        bank = 1
+    elif ws_index_range[1] < 6468:
+        bank = 2
+    else:
+        bank = 3
+
+    print (template_virtual_geometry_dict.keys())
+
+    group_geometry_dict = {'L1': template_virtual_geometry_dict['L1']}
+    for geom_item in ['Polar', 'SpectrumIDs', 'L2', 'Azimuthal']:
+        item_value = template_virtual_geometry_dict[geom_item][bank-1]
+        group_geometry_dict[geom_item] = [item_value] * num_2theta
+
+    return group_geometry_dict
 
 
 def import_vulcan_log(log_file_name, header=0):

@@ -1276,16 +1276,23 @@ class ProjectManager(object):
         assert os.path.exists(raw_file_name), '{} must exist'.format(raw_file_name)
 
         # set default inputs
+        print (binning_tuple)
+        print (type(binning_tuple))
+        print (two_theta_params)
+        results = self._reductionManager.reduce_event_2theta_group(run_number, raw_file_name,
+                                                                   ws_index_range,
+                                                                   two_theta_range=(two_theta_params['min'],
+                                                                                    two_theta_params['max']),
+                                                                   two_theta_step=two_theta_params['step'],
+                                                                   binning_parameters=binning_tuple[1],
+                                                                   van_run_number=vanadium,
+                                                                   iparam_name=gsas_iparam,
+                                                                   output_dir=output_dir)
 
-        out_ws_name, msg = self._reductionManager.reduce_event_2theta_group(run_number, raw_file_name,
-                                                                            ws_index_range,
-                                                                            two_theta_range=(two_theta_params['min'],
-                                                                                             two_theta_params['max']),
-                                                                            two_theta_step=two_theta_params['step'],
-                                                                            binning_parameters=binning_tuple[1],
-                                                                            van_run_number=vanadium,
-                                                                            iparam_name=gsas_iparam,
-                                                                            output_dir=output_dir)
+        out_ws_name, tth_array, msg = results
+
+        # reduce the output workspace to
+        print (out_ws_name, tth_array)
 
         return
 

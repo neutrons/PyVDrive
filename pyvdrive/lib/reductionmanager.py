@@ -1756,8 +1756,7 @@ class ReductionManager(object):
         calib_ws_name, no_use_grp, mask_ws_name = self._get_calibration_workspaces_names(event_ws_name, 3)
         template_virtual_geometry_dict = self._calibrationFileManager.get_focused_instrument_parameters(3)
         virtual_geometry_dict = vulcan_util.group_pixels_2theta_geometry(template_virtual_geometry_dict,
-                                                                         ws_index_range)
-
+                                                                         ws_index_range, num_pixels_array.shape[0])
 
         # Reduce to Rietveld
         red_message = self.diffraction_focus_workspace(event_ws_name=event_ws_name,
@@ -1769,9 +1768,7 @@ class ReductionManager(object):
                                                        virtual_instrument_geometry=virtual_geometry_dict,
                                                        keep_raw_ws=False)
 
-        return two_theta_array,
-
-
+        return event_ws_name, two_theta_array, red_message
 
     # TODO - TONIGHT 0 - Code Quality - 20180713 - Find out how to reuse codes from vulcan_slice_reduce.SliceFocusVulcan
     def reduce_event_nexus(self, ipts_number, run_number, event_nexus_name, target_unit, binning_parameters,
