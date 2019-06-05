@@ -1123,52 +1123,6 @@ class ProjectManager(object):
         """
         return self._reductionManager
 
-    # NOTE : reduce_nexus_files() is merged into VDriveAPI.reduced_chopped_data_set
-    # def reduce_nexus_files(self, raw_file_list, output_directory, vanadium, gsas, binning_parameters, use_idl_bin,
-    #                        merge_banks, align_to_vdrive_bin, vanadium_tuple=None, standard_sample_tuple=None,
-    #                        num_banks=3):
-    #     """
-    #     Reduce a list of NeXus files
-    #     This could be similar to reduce runs
-    #     :param raw_file_list:
-    #     :param output_directory:
-    #     :param vanadium:
-    #     :param gsas:
-    #     :param binning_parameters:
-    #     :param use_idl_bin: bool as the flag to use IDL-VDRIVE bins. It will override binning parameters
-    #     :param align_to_vdrive_bin:
-    #     :param vanadium_tuple:
-    #     :param standard_sample_tuple:
-    #     :param num_banks:  number of banks focused to.  Now only 3, 7 and 27 are allowed.
-    #     :return:
-    #     """
-    #     # check inputs
-    #     datatypeutility.check_list('Raw Nexus files', raw_file_list)
-    #
-    #     # prepare
-    #     sum_status = True
-    #     sum_message = ''
-    #
-    #     for nexus_file_name in raw_file_list:
-    #         status, sub_message = \
-    #             self._reductionManager.process_vulcan_ipts_run(ipts_number=None, run_number=None,
-    #                                                            event_file=nexus_file_name,
-    #                                                            output_directory=output_directory,
-    #                                                            merge_banks=merge_banks,
-    #                                                            vanadium=vanadium,
-    #                                                            vanadium_tuple=vanadium_tuple,
-    #                                                            gsas=gsas,
-    #                                                            standard_sample_tuple=standard_sample_tuple,
-    #                                                            binning_parameters=binning_parameters,
-    #                                                            use_idl_bin=use_idl_bin,
-    #                                                            num_banks=num_banks)
-    #         if not status:
-    #             sum_status = False
-    #             sum_message += '{0}\n'.format(sum_message)
-    #     # END-FOR
-    #
-    #     return sum_status, sum_message
-
     def reduce_runs(self, run_number_list, output_directory, background,
                     vanadium, gsas, fullprof, record_file,
                     sample_log_file, standard_sample_tuple,
@@ -1316,6 +1270,8 @@ class ProjectManager(object):
         :return:
         """
         print ('[INFO] Reduction VULCAN By 2Theta is Called')
+
+
 
         # check inputs
         out_ws_name, msg = self._reductionManager.reduce_event_nexus(ipts_number=ipts_number,

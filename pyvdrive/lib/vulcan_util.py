@@ -311,6 +311,54 @@ def getLogsList(vandbfile):
     return titlelist, examples
 
 
+def group_pixels_2theta(vulcan_ws_name, tth_group_ws_name, start_iws, end_iws,
+                        two_theta_bin_range, two_theta_step):
+
+
+    # create group workspace
+    CreateGroupingWorkspace(InputWorkspace=vulcan_ws_name, GroupDetectorsBy='All',
+                            OutputWorkspace=tth_group_ws_name)
+
+    # Get workspace
+    vulcan_ws = mantid_helper.retrieve_workspace(vulcan_ws_name, True)
+    group_ws = mantid_helper.retrieve_workspace(tth_group_ws_name, True)
+
+    # Calculate 2theta for each pixels that is interested
+    two_theta_array = numpy.arange(two_theta_bin_range[0], two_theta_bin_range[1] + two_theta_step,
+                                   two_theta_step, dtype='float')
+    num_2theta = two_theta_array.shape[0]
+    num_pixels_array = numpy.zeros(shape=two_theta_array.shape, dtype='int')
+
+    # source and sample position
+    source = vulcan_ws.getInstrument().getSource().getPos()
+    sample = vulcan_ws.getInstrument().getSample().getPos()
+    # Calculate 2theta for each detectors
+    for iws in range(0, vulcan_ws.getNumberHistograms()):
+        if iws < start_iws or iws >= end_iws:
+            # set to group 0 to ignore
+            group_ws.dataY(iws)[0] = 0
+
+        else:
+            # interested
+            det_i = vulcan_ws.getDetector(iws).getPos()
+            two_theta_i = (det_i - sample).angle(sample - source) * 180. / numpy.pi
+            if two_theta_i < two_theta_array[0] or two_theta_i >= two_theta_array[-1]:
+                group_ws.dataY(iws)[0] = 0
+            else:
+                i_2theta = numpy.searchsorted(two_theta_array, [two_theta_i])[0]
+                if i_2theta < 0 or i_2theta >= num_2theta:
+                    raise RuntimeError('Programming error!')
+                group_ws.dataY(iws)[0] = i_2theta
+                num_pixels_array[i_2theta] += 1
+        # END-IF-ELSE
+    # END-FOR
+
+    # deal with zero-count-instance
+    num_pixels_array[numpy.where(num_pixels_array < 0.1)] = -1
+
+    return two_theta_array, group_ws, num_pixels_array
+
+
 def import_vulcan_log(log_file_name, header=0):
     """
     Import VULCAN's standard log file in CSV format

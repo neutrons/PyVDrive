@@ -10,6 +10,7 @@ import datatypeutility
 import datetime
 import numpy
 import save_vulcan_gsas
+import vulcan_util
 import mantid.simpleapi as mantid_api
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
@@ -1730,6 +1731,46 @@ class ReductionManager(object):
         mask_ws_name = workspaces.mask
 
         return calib_ws_name, group_ws_name, mask_ws_name
+
+    def reduce_event_2theta_group(self, run_number, event_nexus_name, ws_index_range,
+                                  two_theta_range, two_theta_step,
+                                  binning_parameters):
+        # reduce a workspace with pixels grouped by 2theta
+
+        # Load data
+        event_ws_name = self.get_event_workspace_name(run_number=run_number)
+        mantid_helper.load_nexus(event_nexus_name, event_ws_name, meta_data_only=False)
+
+        # Generate a group workspace for given 2theta range
+        group_ws_name = '{}_2theta_group'.format(event_ws_name)
+        results = vulcan_util.group_pixels_2theta(vulcan_ws_name=event_ws_name,
+                                                  tth_group_ws_name=group_ws_name,
+                                                  start_iws=ws_index_range[0],
+                                                  end_iws=ws_index_range[1],
+                                                  two_theta_bin_range=two_theta_range,
+                                                  two_theta_step=two_theta_step)
+        two_theta_array, group_ws, num_pixels_array = results
+
+        # Regular calibration workspace
+        calib_ws_name, no_use_grp, mask_ws_name = self._get_calibration_workspaces_names(event_ws_name, 3)
+        template_virtual_geometry_dict = self._calibrationFileManager.get_focused_instrument_parameters(3)
+        virtual_geometry_dict = vulcan_util.group_pixels_2theta_geometry(template_virtual_geometry_dict,
+                                                                         ws_index_range)
+
+
+        # Reduce to Rietveld
+        red_message = self.diffraction_focus_workspace(event_ws_name=event_ws_name,
+                                                       output_ws_name=event_ws_name,  # keep the workspace name
+                                                       binning_params=binning_parameters,
+                                                       target_unit='TOF',
+                                                       calibration_workspace=calib_ws_name,
+                                                       grouping_workspace=group_ws_name,
+                                                       virtual_instrument_geometry=virtual_geometry_dict,
+                                                       keep_raw_ws=False)
+
+        return two_theta_array,
+
+
 
     # TODO - TONIGHT 0 - Code Quality - 20180713 - Find out how to reuse codes from vulcan_slice_reduce.SliceFocusVulcan
     def reduce_event_nexus(self, ipts_number, run_number, event_nexus_name, target_unit, binning_parameters,
