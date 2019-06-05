@@ -96,6 +96,18 @@ class BinBy2Theta(VDriveCommand):
 
         return panel
 
+    def get_panel_ws_index_range(self, panel_name):
+
+        if panel_name == 'WEST':
+            ws_index_range = (0, 3234)   # [...)
+        elif panel_name == 'EAST':
+            ws_index_range = (3234, 6468)
+        else:
+            index = ['WL', 'WM', 'WU', 'EL', 'EM', 'EU'].index(panel_name)
+            ws_index_range = 3234/3 * index, 3234/3 * (index+1)
+
+        return ws_index_range
+
     def get_argument_value(self, arg_name, arg_type, allow_default, default_value=None):
         if arg_name in self._commandArgsDict:
             arg_value = arg_type(self._commandArgsDict[arg_name])
@@ -144,6 +156,7 @@ class BinBy2Theta(VDriveCommand):
 
             # 2theta parameters
             vulcan_panel = self.parse_vulcan_panel()
+            ws_index_range = self.get_panel_ws_index_range(vulcan_panel)
             two_theta_min, two_theta_max, two_theta_step = self.parse_2theta_range(vulcan_panel)
 
             # output
@@ -163,7 +176,7 @@ class BinBy2Theta(VDriveCommand):
         two_theta_params = {'min': two_theta_min, 'max': two_theta_max, 'step': two_theta_step}
         try:
             self._controller.project.reduce_runs_2theta(self._iptsNumber, run_number_list, two_theta_params,
-                                                        (use_default_binning, binning_parameters),
+                                                        ws_index_range, (use_default_binning, binning_parameters),
                                                         vanadium=van_run_number,
                                                         gsas_iparam=iparm_name,
                                                         output_dir=output_dir)

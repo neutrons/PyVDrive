@@ -1734,7 +1734,8 @@ class ReductionManager(object):
 
     def reduce_event_2theta_group(self, run_number, event_nexus_name, ws_index_range,
                                   two_theta_range, two_theta_step,
-                                  binning_parameters):
+                                  binning_parameters, van_run_number,
+                                  iparam_name, output_dir):
         # reduce a workspace with pixels grouped by 2theta
 
         # Load data

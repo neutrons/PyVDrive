@@ -1257,7 +1257,7 @@ class ProjectManager(object):
 
         return reduce_all_success, message
 
-    def reduce_runs_2theta(self, ipts_number, run_number, two_theta_params,
+    def reduce_runs_2theta(self, ipts_number, run_number, ws_index_range, two_theta_params,
                            binning_tuple, vanadium, gsas_iparam, output_dir):
         """ Reduce runs in 2theta. This is a prototype method that is converted from
         :param ipts_number:
@@ -1271,22 +1271,23 @@ class ProjectManager(object):
         """
         print ('[INFO] Reduction VULCAN By 2Theta is Called')
 
+        # FIXME - TODAY - There must be a method to dig out the file
+        raw_file_name = '/SNS/VULCAN/IPTS-{}/nexus/VULCAN_{}.nxs.h5'.format(ipts_number, run_number)
+        assert os.path.exists(raw_file_name), '{} must exist'.format(raw_file_name)
 
+        # set default inputs
 
-        # check inputs
-        out_ws_name, msg = self._reductionManager.reduce_event_nexus(ipts_number=ipts_number,
-                                                                     run_number=run_number,
-                                                                     event_nexus_name=raw_file_name,
-                                                                     target_unit=unit,
-                                                                     binning_parameters=binning_parameters,
-                                                                     num_banks=number_banks,
-                                                                     roi_list=roi_list,
-                                                                     mask_list=mask_list,
-                                                                     no_cal_mask=no_cal_mask)
+        out_ws_name, msg = self._reductionManager.reduce_event_2theta_group(run_number, raw_file_name,
+                                                                            ws_index_range,
+                                                                            two_theta_range=(two_theta_params['min'],
+                                                                                             two_theta_params['max']),
+                                                                            two_theta_step=two_theta_params['step'],
+                                                                            binning_parameters=binning_tuple[1],
+                                                                            van_run_number=vanadium,
+                                                                            iparam_name=gsas_iparam,
+                                                                            output_dir=output_dir)
 
-
-
-
+        return
 
     def reduce_vulcan_runs_v2(self, run_number_list, output_directory, d_spacing, binning_parameters,
                               number_banks, gsas, vanadium_run, merge_runs,
