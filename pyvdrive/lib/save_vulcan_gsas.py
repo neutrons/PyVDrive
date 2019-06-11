@@ -354,7 +354,8 @@ class SaveVulcanGSS(object):
 
         return two_theta * 180. / math.pi, difc
 
-    def _write_slog_bank_gsas(self, ws_name, bank_id, vulcan_tof_vector, van_ws):
+    def _write_slog_bank_gsas(self, ws_name, bank_id, vulcan_tof_vector, van_ws, gsas_bank_id=None,
+                              norm_factor=None, scale_factor=10000.):
         """
         1. X: format to VDRIVE tradition (refer to ...)
         2. Y: native value
@@ -363,7 +364,7 @@ class SaveVulcanGSS(object):
         :param bank_id: target (output) bank ID
         :param vulcan_tof_vector: If None, then use vector X of workspace
         :param ...
-        :param source_bank_id: source bank ID to copy to the target
+        :param norm_factor: normalization factor
         :return:
         """
         # check vanadium: if not None, assume that number of bins and bin edges are correct
@@ -385,6 +386,16 @@ class SaveVulcanGSS(object):
         else:
             vec_x = vulcan_tof_vector
         vec_y = diff_ws.readY(bank_id - 1)  # convert to workspace index
+        # print ('[DB...BAT] Bank {}  Max Y = {}'.format(bank_id, vec_y.max()))
+        # normalization
+        if norm_factor is not None:
+            # print ('[DB...BAT] Bank {}  Norm Factor = {}'.format(bank_id, norm_factor))
+            if norm_factor <= 0.00000001:
+                vec_y = vec_y * 0
+            else:
+                vec_y = vec_y / (1. * norm_factor) * scale_factor
+        # END-IF-ELSE
+
         vec_e = diff_ws.readE(bank_id - 1)
         data_size = len(vec_y)
 
@@ -399,12 +410,11 @@ class SaveVulcanGSS(object):
         # Total flight path 45.754m, tth 90deg, DIFC 16356.3
         # Data for spectrum :0
         bank_buffer += '%-80s\n' % '# Total flight path {}m, tth {}deg, DIFC {}'.format(l1, two_theta, difc)
-        bank_buffer += '%-80s\n' % '# Data for spectrum :{}'.format(bank_id - 1)
-
-        # ws.getInstrument().getSource().getPos()
-        # ws.getDetector(2).getPos(): Out[15]: [0.845237,0,-1.81262]
-        # math.sqrt(0.845237**2 + 1.81262**2)
-        # 2theta = acos(v1 dot v2 / abs(v1) / abs(v2)
+        if norm_factor is None:
+            bank_buffer += '%-80s\n' % '# Data for spectrum :{}'.format(bank_id - 1)
+        else:
+            bank_buffer += '%-80s\n' % '# Data for spectrum :{}.  Inverse Norm factor = {}  Scale Factor = {}' \
+                                       ''.format(bank_id - 1, norm_factor, scale_factor)
 
         # bank header: min TOF, max TOF, delta TOF
         bc1 = '%.1f' % (vec_x[0])
@@ -414,7 +424,9 @@ class SaveVulcanGSS(object):
         if bc1 < 0:
             raise RuntimeError('Cannot write out logarithmic data starting at zero or less')
 
-        bank_header = 'BANK %d %d %d %s %s %s %s 0 FXYE' % (bank_id, data_size, data_size, 'SLOG', bc1, bc2, bc3)
+        if gsas_bank_id is None:
+            gsas_bank_id = bank_id
+        bank_header = 'BANK %d %d %d %s %s %s %s 0 FXYE' % (gsas_bank_id, data_size, data_size, 'SLOG', bc1, bc2, bc3)
         bank_buffer += '%-80s\n' % bank_header
 
         # write lines: not multiplied by bin width
@@ -522,7 +534,8 @@ class SaveVulcanGSS(object):
         return
 
     def save_2theta_group(self, diff_ws_name, output_dir, run_date_time, ipts_number, run_number,
-                          gsas_param_file_name, van_ws_name, two_theta_array, target_bank_id):
+                          gsas_param_file_name, van_ws_name, two_theta_array, tth_pixels_num_array,
+                          target_bank_id, scale_factor):
         """ Save workspace from 2theta grouped
         :param diff_ws_name:
         :param output_dir:
@@ -532,7 +545,8 @@ class SaveVulcanGSS(object):
         :param gsas_param_file_name:
         :param van_ws_name:
         :param two_theta_array:
-        :param bank_id:
+        :param tth_pixels_num_array: array of integers for number of pixels of 2theta range for normalization
+        :param target_bank_id:
         :return:
         """
         # process input workspaces
@@ -591,11 +605,17 @@ class SaveVulcanGSS(object):
                     if bank_id_i == target_bank_id:
                         # target bank to write: east/west
                         source_bank_id = tth_id + 1
+                        norm_factor = tth_pixels_num_array[tth_id]
                     else:
                         source_bank_id = bank_id_i
+                        norm_factor = -1
 
-                    gsas_section_i = self._write_slog_bank_gsas(diff_ws_name, source_bank_id, tof_vector, van_ws)
+                    gsas_section_i = self._write_slog_bank_gsas(diff_ws_name, source_bank_id, tof_vector, van_ws,
+                                                                gsas_bank_id=bank_id_i,
+                                                                norm_factor=norm_factor,
+                                                                scale_factor=scale_factor)
                     gsas_bank_buffer_dict[bank_id_i] = gsas_section_i
+                    print ('[DB...BAT] Write bank {} to GSAS bank {}'.format(source_bank_id, bank_id_i))
             # END-FOR
 
             # header

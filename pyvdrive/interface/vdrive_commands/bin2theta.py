@@ -27,8 +27,8 @@ class BinBy2Theta(VDriveCommand):
     """
     Process command MERGE
     """
-    SupportedArgs = ['HELP', 'IPTS', 'RUNS', 'RUNE', 'RUNV', 'IPARM',
-                     'PANEL', 'MIN', 'MAX', 'STEP',
+    SupportedArgs = ['HELP', 'IPTS', 'RUNS','RUNV', 'IPARM',
+                     'PANEL', 'MIN', 'MAX', 'STEP', 'SCALE',
                      'BINFOLDER', 'DRYRUN', 'FULLPROF']
 
     reduceSignal = QtCore.pyqtSignal(str)  # signal to send out
@@ -36,8 +36,12 @@ class BinBy2Theta(VDriveCommand):
     ArgsDocDict = {
         'IPTS': 'IPTS number',
         'RUNS': 'First run number',
-        'RUNE': 'Last run number (if not specified, then only 1 run will be processed)',
+        'PANEL': "Detector to get 2theta: 'WL', 'WM', 'WU', 'EL', 'EM', 'EU', 'WEST', 'EAST'",
+        'MIN': 'Minimum 2theta',
+        'MAX': 'Maximum 2theta',
+        'STEP': '2theta step (delta 2theta)',
         'RUNV': 'Run number for vanadium file (file in instrument directory)',
+        'SCALE': 'Scale factor for low counts.  Default=10000',
         'BINFOLDER': 'User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin',
         'DRYRUN': 'Check inputs and display the supposed output result without reducing data'
     }
@@ -79,6 +83,27 @@ class BinBy2Theta(VDriveCommand):
         :return:
         """
         return 'vulcan.prm'
+
+    def get_help(self):
+        """
+        override base class
+        :return:
+        """
+        help_str = 'Chop runs\n'
+
+        for arg_str in self.SupportedArgs:
+            help_str += '  %-10s: ' % arg_str
+            if arg_str in self.ArgsDocDict:
+                help_str += '%s\n' % self.ArgsDocDict[arg_str]
+            else:
+                help_str += '\n'
+        # END-FOR
+
+        help_str += 'Examples:\n'
+        help_str += 'Group pixels on panel West-Middle with 2theta range 80 to 101 with step 1.5 degree \n'
+        help_str += ' > 2THETABIN,IPTS=19079,RUNS=158581,PANEL=WM,MIN=80,MAX=101,STEP=1.5,Scale=20000\n'
+
+        return help_str
 
     def parse_vulcan_panel(self):
         """
@@ -159,6 +184,9 @@ class BinBy2Theta(VDriveCommand):
             ws_index_range = self.get_panel_ws_index_range(vulcan_panel)
             two_theta_min, two_theta_max, two_theta_step = self.parse_2theta_range(vulcan_panel)
 
+            scale_factor = self.get_argument_value('SCALE', float, allow_default=True,
+                                                   default_value=10000.)
+
             # output
             output_dir = self.get_argument_value('BINFOLDER', str, True, None)
         except RuntimeError as run_err:
@@ -177,6 +205,7 @@ class BinBy2Theta(VDriveCommand):
         try:
             self._controller.project.reduce_runs_2theta(self._iptsNumber, run_number_list[0], ws_index_range,
                                                         two_theta_params, (use_default_binning, binning_parameters),
+                                                        scale_factor=scale_factor,
                                                         vanadium=van_run_number,
                                                         gsas_iparam=iparm_name,
                                                         output_directory=output_dir)

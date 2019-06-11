@@ -18,7 +18,7 @@ def test_yuan_case(tester):
     command_test_setup.set_test_dir(test_dir)
 
     # run command
-    idl_command = "2THETABIN,IPTS=19079,RUNS=158581,PANEL=WM,MIN=80,MAX=101,STEP=1.5,binfolder=\'{}\'".format(test_dir)
+    idl_command = "2THETABIN,IPTS=19079,RUNS=158581,PANEL=WM,MIN=80,MAX=101,STEP=1.5,Scale=10000,binfolder=\'{}\'".format(test_dir)
     tester.run_command(idl_command)
 
     # output summary

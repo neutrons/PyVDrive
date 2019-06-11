@@ -1258,7 +1258,7 @@ class ProjectManager(object):
         return reduce_all_success, message
 
     def reduce_runs_2theta(self, ipts_number, run_number, ws_index_range, two_theta_params,
-                           binning_tuple, vanadium, gsas_iparam, output_directory):
+                           binning_tuple, scale_factor, vanadium, gsas_iparam, output_directory):
         """ Reduce runs in 2theta. This is a prototype method that is converted from
         :param ipts_number:
         :param run_number:
@@ -1277,9 +1277,6 @@ class ProjectManager(object):
         assert os.path.exists(raw_file_name), '{} must exist'.format(raw_file_name)
 
         # set default inputs
-        print (binning_tuple)
-        print (type(binning_tuple))
-        print (two_theta_params)
         results = self._reductionManager.reduce_event_2theta_group(run_number, raw_file_name,
                                                                    ws_index_range,
                                                                    two_theta_range=(two_theta_params['min'],
@@ -1290,13 +1287,10 @@ class ProjectManager(object):
                                                                    iparam_name=gsas_iparam,
                                                                    output_dir=output_directory)
 
-        out_ws_name, tth_array, msg = results
+        out_ws_name, tth_array, tth_num_pixels_array, msg = results
 
         # reduce the output workspace to
-        print ('Output workspaces: ')
-        print (out_ws_name, tth_array)
-        out_ws = mantid_helper.retrieve_workspace(out_ws_name)
-        print ('Number of histograms = {},  Number of 2theta = {}'.format(out_ws.getNumberHistograms(), tth_array.shape))
+        # out_ws = mantid_helper.retrieve_workspace(out_ws_name)
 
         # process reduced data
         if vanadium is not None:
@@ -1330,7 +1324,16 @@ class ProjectManager(object):
                                                              gsas_param_file_name=iparam_file_name,
                                                              van_ws_name=van_ws_name,
                                                              two_theta_array=tth_array,
+                                                             tth_pixels_num_array=tth_num_pixels_array,
+                                                             scale_factor=scale_factor,
                                                              target_bank_id=bank_id)
+
+        # generate logs
+        import reduce_adv_chop
+        log_type = 'loadframe'
+        log_writer = reduce_adv_chop.WriteSlicedLogs(chopped_data_dir=output_directory, run_number=run_number)
+        workspace_name_list = [out_ws_name] * tth_num_pixels_array.shape[0]
+        log_writer.generate_sliced_logs(workspace_name_list, log_type)
 
         return
 

@@ -1057,8 +1057,7 @@ class ReductionManager(object):
                         output_directory, reduce_data_flag, save_chopped_nexus, number_banks,
                         tof_correction, user_binning_parameter,
                         roi_list, mask_list, no_cal_mask, van_gda_name, gsas_parm_name='vulcan.prm',
-                        fullprof=False,
-                        bin_overlap_mode=False, gda_file_start=1):
+                        fullprof=False, bin_overlap_mode=False, gda_file_start=1):
         """
         Latest version: version 3
         :param ipts_number:
@@ -1768,7 +1767,7 @@ class ReductionManager(object):
                                                        virtual_instrument_geometry=virtual_geometry_dict,
                                                        keep_raw_ws=False)
 
-        return event_ws_name, two_theta_array, red_message
+        return event_ws_name, two_theta_array, num_pixels_array, red_message
 
     # TODO - TONIGHT 0 - Code Quality - 20180713 - Find out how to reuse codes from vulcan_slice_reduce.SliceFocusVulcan
     def reduce_event_nexus(self, ipts_number, run_number, event_nexus_name, target_unit, binning_parameters,
