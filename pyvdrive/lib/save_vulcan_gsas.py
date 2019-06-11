@@ -149,7 +149,7 @@ class SaveVulcanGSS(object):
         return total_nanosecond_start, total_nanosecond_stop
 
     def _generate_vulcan_gda_header(self, gsas_workspace, gsas_file_name, ipts, run_number,
-                                    gsas_param_file_name, from_sliced_ws):
+                                    gsas_param_file_name, from_sliced_ws, extra_info=None):
         """
         generate a VDRIVE compatible GSAS file's header
         :param gsas_workspace:
@@ -187,6 +187,8 @@ class SaveVulcanGSS(object):
         if run_number is not None:
             new_header += "%-80s\n" % ("#RUN: %s" % str(run_number))
         new_header += "%-80s\n" % ("#binned by: Mantid. From refrence workspace: {})".format(str(gsas_workspace)))
+        if extra_info:
+            new_header += "%-80s\n" % ("#%s" % extra_info)
         new_header += "%-80s\n" % ("#GSAS file name: %s" % os.path.basename(gsas_file_name))
         new_header += "%-80s\n" % ("#GSAS IPARM file: %s" % gsas_param_file_name)
         new_header += "%-80s\n" % ("#Pulsestart:    %d" % total_nanosecond_start)
@@ -358,9 +360,10 @@ class SaveVulcanGSS(object):
         2. Y: native value
         3. Z: error bar
         :param ws_name:
-        :param bank_id:
+        :param bank_id: target (output) bank ID
         :param vulcan_tof_vector: If None, then use vector X of workspace
         :param ...
+        :param source_bank_id: source bank ID to copy to the target
         :return:
         """
         # check vanadium: if not None, assume that number of bins and bin edges are correct
@@ -515,6 +518,107 @@ class SaveVulcanGSS(object):
         g_file = open(gsas_file_name, 'w')
         g_file.write(gsas_buffer)
         g_file.close()
+
+        return
+
+    def save_2theta_group(self, diff_ws_name, output_dir, run_date_time, ipts_number, run_number,
+                          gsas_param_file_name, van_ws_name, two_theta_array, target_bank_id):
+        """ Save workspace from 2theta grouped
+        :param diff_ws_name:
+        :param output_dir:
+        :param run_date_time:
+        :param ipts_number:
+        :param run_number:
+        :param gsas_param_file_name:
+        :param van_ws_name:
+        :param two_theta_array:
+        :param bank_id:
+        :return:
+        """
+        # process input workspaces
+        diff_ws = mantid_helper.retrieve_workspace(diff_ws_name)
+
+        # set the unit to TOF
+        if diff_ws.getAxis(0).getUnit() != 'TOF':
+            ConvertUnits(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name, Target='TOF',
+                         EMode='Elastic')
+            diff_ws = mantid_helper.retrieve_workspace(diff_ws_name)
+
+        # convert to Histogram Data
+        if not diff_ws.isHistogramData():
+            ConvertToHistogram(diff_ws_name, diff_ws_name)
+
+        # vanadium
+        if isinstance(van_ws_name, str) and len(van_ws_name) > 0:
+            van_ws = mantid_helper.retrieve_workspace(van_ws_name)
+        else:
+            van_ws = None
+
+        # get the binning parameters
+        bin_params_set = self._get_tof_bin_params(self._get_vulcan_phase(run_date_time), 3)
+
+        # check output directory
+        if not os.path.exists(output_dir):
+            os.mkdir(output_dir)
+
+        # For each 2theta bin / spectrum, create a GSAS file
+        for tth_id in range(diff_ws.getNumberHistograms()):
+            # rebin and then write output
+            gsas_bank_buffer_dict = dict()
+            num_bank_sets = len(bin_params_set)
+
+            for bank_set_index in range(num_bank_sets):
+                # get value
+                bank_id_list, bin_params, tof_vector = bin_params_set[bank_set_index]
+
+                # Rebin to these banks' parameters (output = Histogram)
+                if bin_params is not None:
+                    Rebin(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name,
+                          Params=bin_params, PreserveEvents=True)
+
+                # Create output
+                for bank_id_i in bank_id_list:
+                    # check vanadium bin edges
+                    if van_ws is not None:
+                        # check whether the bins are same between GSAS workspace and vanadium workspace
+                        unmatched, reason = self._compare_workspaces_dimension(van_ws, bank_id_i, tof_vector)
+                        if unmatched:
+                            raise RuntimeError('Vanadium GSAS workspace {} does not match workspace {}: {}'
+                                               ''.format(van_ws_name, diff_ws_name, reason))
+                    # END-IF
+
+                    # write GSAS head considering vanadium
+                    if bank_id_i == target_bank_id:
+                        # target bank to write: east/west
+                        source_bank_id = tth_id + 1
+                    else:
+                        source_bank_id = bank_id_i
+
+                    gsas_section_i = self._write_slog_bank_gsas(diff_ws_name, source_bank_id, tof_vector, van_ws)
+                    gsas_bank_buffer_dict[bank_id_i] = gsas_section_i
+            # END-FOR
+
+            # header
+            diff_ws = mantid_helper.retrieve_workspace(diff_ws_name)
+            gsas_file_name = os.path.join(output_dir, '{}.gda'.format(tth_id+1))
+            extra_info = '2theta {} to {}'.format(two_theta_array[tth_id], two_theta_array[[tth_id+1]])
+            gsas_header = self._generate_vulcan_gda_header(diff_ws, gsas_file_name, ipts_number, run_number,
+                                                           gsas_param_file_name, True, extra_info)
+
+            # form to a big string
+            gsas_buffer = gsas_header
+            for bank_id in sorted(gsas_bank_buffer_dict.keys()):
+                gsas_buffer += gsas_bank_buffer_dict[bank_id]
+
+            # write to HDD
+            datatypeutility.check_file_name(gsas_file_name, check_exist=False,
+                                            check_writable=True, is_dir=False, note='Output GSAS file')
+            g_file = open(gsas_file_name, 'w')
+            g_file.write(gsas_buffer)
+            g_file.close()
+
+        # END-FOR (tth_id)
+
 
         return
 

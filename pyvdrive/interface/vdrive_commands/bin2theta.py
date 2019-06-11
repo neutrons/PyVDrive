@@ -179,7 +179,7 @@ class BinBy2Theta(VDriveCommand):
                                                         two_theta_params, (use_default_binning, binning_parameters),
                                                         vanadium=van_run_number,
                                                         gsas_iparam=iparm_name,
-                                                        output_dir=output_dir)
+                                                        output_directory=output_dir)
         except RuntimeError as run_err:
             return False, 'Unable to reduce by 2theta: {}'.format(run_err)
 

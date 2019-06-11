@@ -1258,15 +1258,16 @@ class ProjectManager(object):
         return reduce_all_success, message
 
     def reduce_runs_2theta(self, ipts_number, run_number, ws_index_range, two_theta_params,
-                           binning_tuple, vanadium, gsas_iparam, output_dir):
+                           binning_tuple, vanadium, gsas_iparam, output_directory):
         """ Reduce runs in 2theta. This is a prototype method that is converted from
         :param ipts_number:
         :param run_number:
+        :param ws_index_range:
         :param two_theta_params:
         :param binning_tuple:
         :param vanadium:
         :param gsas_iparam:
-        :param output_dir:
+        :param output_directory:
         :return:
         """
         print ('[INFO] Reduction VULCAN By 2Theta is Called')
@@ -1287,12 +1288,49 @@ class ProjectManager(object):
                                                                    binning_parameters=binning_tuple[1],
                                                                    van_run_number=vanadium,
                                                                    iparam_name=gsas_iparam,
-                                                                   output_dir=output_dir)
+                                                                   output_dir=output_directory)
 
         out_ws_name, tth_array, msg = results
 
         # reduce the output workspace to
+        print ('Output workspaces: ')
         print (out_ws_name, tth_array)
+        out_ws = mantid_helper.retrieve_workspace(out_ws_name)
+        print ('Number of histograms = {},  Number of 2theta = {}'.format(out_ws.getNumberHistograms(), tth_array.shape))
+
+        # process reduced data
+        if vanadium is not None:
+            # load vanadium to workspace workspace and get calculation prm file
+            van_gsas_name, iparam_file_name = \
+                self._parent.archive_manager.locate_process_vanadium(vanadium)
+            van_ws_name = self._reductionManager.gsas_writer.import_vanadium(van_gsas_name)
+        else:
+            # default
+            van_ws_name = None
+            iparam_file_name = 'vulcan.prm'
+        # END-IF-ELSE
+
+        # save to GSAS
+        run_date_time = vulcan_util.get_run_date(out_ws_name, raw_file_name)
+        output_directory = os.path.join(output_directory, '{}'.format(run_number))
+
+        # find out bank ID
+        if ws_index_range[1] <= 3234:
+            bank_id = 1
+        elif ws_index_range[0] >= 3234 and ws_index_range[1] <= 6468:
+            bank_id = 2
+        else:
+            bank_id = 3
+
+        self._reductionManager.gsas_writer.save_2theta_group(out_ws_name,
+                                                             run_date_time=run_date_time,
+                                                             output_dir=output_directory,
+                                                             ipts_number=ipts_number,
+                                                             run_number=run_number,
+                                                             gsas_param_file_name=iparam_file_name,
+                                                             van_ws_name=van_ws_name,
+                                                             two_theta_array=tth_array,
+                                                             target_bank_id=bank_id)
 
         return
 
