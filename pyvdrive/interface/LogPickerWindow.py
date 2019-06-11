@@ -1386,7 +1386,7 @@ class WindowLogPicker(QMainWindow):
     def get_sample_log_data(self, log_name):
         """
         get sample log data: time and value vector
-        :param sample_log_name:
+        :param log_name:
         :return:
         """
         # get the sample log data
@@ -1399,7 +1399,7 @@ class WindowLogPicker(QMainWindow):
             self._sampleLogDict[self._curr_run_number][log_name] = vec_x, vec_y
             # END-IF
 
-        return  vec_x, vec_y
+        return vec_x, vec_y
 
     def plot_nexus_log(self, log_name, x_axis_log='Time'):
         """

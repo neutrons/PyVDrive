@@ -618,6 +618,26 @@ class VdriveChop(VDriveCommand):
             return False, 'Both run start {} and run end {} must be integer' \
                           ''.format(run_start, run_end)
 
+        # Auto check the
+        if not self._user_know_beam_down:
+            has_beam_down = False
+            message = ''
+            for run_number in sorted(self._runNumberList):
+                proton_charges = self._load_sample_log(self._iptsNumber, self._runNumberList[run_number])
+                has_down_i = vulcan_util.analyze_beam_down(proton_charges, beam_down_tolerance)
+                if has_beam_i:
+                    has_beam_down = True
+                    message += 'IPTS-{} Run-{} has beam down with tolerance {} seconds\n' \
+                               ''.format()
+            # END-FOR
+
+            if has_beam_down:
+                message += 'User must specify: ProcessBeamDown as 0, 1 or 2 ' \
+                           '(0: include all events; 1: exclude down time events and include downtime in output order; ' \
+                           '2: exclude downtime events and exclude downtime from output GSAS)'
+                return False, message
+        # END-IF
+
         try:
             is_dry_run = self._is_dry_run()
 

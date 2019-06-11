@@ -122,6 +122,7 @@ if __name__ == "__main__":
                'scripts/single_crystal/chop_single_crystal_run.py',
                'scripts/single_crystal/focus_single_crystal_run.py']
     test_scripts = ["tests/workflow/command_test_setup.py",
+                    'tests/workflow/idl_bin2theta_test.py',
                     'tests/workflow/idl_vbin_test.py',
                     "tests/workflow/idl_chop_test.py",
                     'tests/workflow/idl_view_test.py',

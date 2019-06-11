@@ -1123,52 +1123,6 @@ class ProjectManager(object):
         """
         return self._reductionManager
 
-    # NOTE : reduce_nexus_files() is merged into VDriveAPI.reduced_chopped_data_set
-    # def reduce_nexus_files(self, raw_file_list, output_directory, vanadium, gsas, binning_parameters, use_idl_bin,
-    #                        merge_banks, align_to_vdrive_bin, vanadium_tuple=None, standard_sample_tuple=None,
-    #                        num_banks=3):
-    #     """
-    #     Reduce a list of NeXus files
-    #     This could be similar to reduce runs
-    #     :param raw_file_list:
-    #     :param output_directory:
-    #     :param vanadium:
-    #     :param gsas:
-    #     :param binning_parameters:
-    #     :param use_idl_bin: bool as the flag to use IDL-VDRIVE bins. It will override binning parameters
-    #     :param align_to_vdrive_bin:
-    #     :param vanadium_tuple:
-    #     :param standard_sample_tuple:
-    #     :param num_banks:  number of banks focused to.  Now only 3, 7 and 27 are allowed.
-    #     :return:
-    #     """
-    #     # check inputs
-    #     datatypeutility.check_list('Raw Nexus files', raw_file_list)
-    #
-    #     # prepare
-    #     sum_status = True
-    #     sum_message = ''
-    #
-    #     for nexus_file_name in raw_file_list:
-    #         status, sub_message = \
-    #             self._reductionManager.process_vulcan_ipts_run(ipts_number=None, run_number=None,
-    #                                                            event_file=nexus_file_name,
-    #                                                            output_directory=output_directory,
-    #                                                            merge_banks=merge_banks,
-    #                                                            vanadium=vanadium,
-    #                                                            vanadium_tuple=vanadium_tuple,
-    #                                                            gsas=gsas,
-    #                                                            standard_sample_tuple=standard_sample_tuple,
-    #                                                            binning_parameters=binning_parameters,
-    #                                                            use_idl_bin=use_idl_bin,
-    #                                                            num_banks=num_banks)
-    #         if not status:
-    #             sum_status = False
-    #             sum_message += '{0}\n'.format(sum_message)
-    #     # END-FOR
-    #
-    #     return sum_status, sum_message
-
     def reduce_runs(self, run_number_list, output_directory, background,
                     vanadium, gsas, fullprof, record_file,
                     sample_log_file, standard_sample_tuple,
@@ -1303,6 +1257,86 @@ class ProjectManager(object):
 
         return reduce_all_success, message
 
+    def reduce_runs_2theta(self, ipts_number, run_number, ws_index_range, two_theta_params,
+                           binning_tuple, scale_factor, vanadium, gsas_iparam, output_directory):
+        """ Reduce runs in 2theta. This is a prototype method that is converted from
+        :param ipts_number:
+        :param run_number:
+        :param ws_index_range:
+        :param two_theta_params:
+        :param binning_tuple:
+        :param vanadium:
+        :param gsas_iparam:
+        :param output_directory:
+        :return:
+        """
+        print ('[INFO] Reduction VULCAN By 2Theta is Called')
+
+        # FIXME - TODAY - There must be a method to dig out the file
+        raw_file_name = '/SNS/VULCAN/IPTS-{}/nexus/VULCAN_{}.nxs.h5'.format(ipts_number, run_number)
+        assert os.path.exists(raw_file_name), '{} must exist'.format(raw_file_name)
+
+        # set default inputs
+        results = self._reductionManager.reduce_event_2theta_group(run_number, raw_file_name,
+                                                                   ws_index_range,
+                                                                   two_theta_range=(two_theta_params['min'],
+                                                                                    two_theta_params['max']),
+                                                                   two_theta_step=two_theta_params['step'],
+                                                                   binning_parameters=binning_tuple[1],
+                                                                   van_run_number=vanadium,
+                                                                   iparam_name=gsas_iparam,
+                                                                   output_dir=output_directory)
+
+        out_ws_name, tth_array, tth_num_pixels_array, msg = results
+
+        # reduce the output workspace to
+        # out_ws = mantid_helper.retrieve_workspace(out_ws_name)
+
+        # process reduced data
+        if vanadium is not None:
+            # load vanadium to workspace workspace and get calculation prm file
+            van_gsas_name, iparam_file_name = \
+                self._parent.archive_manager.locate_process_vanadium(vanadium)
+            van_ws_name = self._reductionManager.gsas_writer.import_vanadium(van_gsas_name)
+        else:
+            # default
+            van_ws_name = None
+            iparam_file_name = 'vulcan.prm'
+        # END-IF-ELSE
+
+        # save to GSAS
+        run_date_time = vulcan_util.get_run_date(out_ws_name, raw_file_name)
+        output_directory = os.path.join(output_directory, '{}'.format(run_number))
+
+        # find out bank ID
+        if ws_index_range[1] <= 3234:
+            bank_id = 1
+        elif ws_index_range[0] >= 3234 and ws_index_range[1] <= 6468:
+            bank_id = 2
+        else:
+            bank_id = 3
+
+        self._reductionManager.gsas_writer.save_2theta_group(out_ws_name,
+                                                             run_date_time=run_date_time,
+                                                             output_dir=output_directory,
+                                                             ipts_number=ipts_number,
+                                                             run_number=run_number,
+                                                             gsas_param_file_name=iparam_file_name,
+                                                             van_ws_name=van_ws_name,
+                                                             two_theta_array=tth_array,
+                                                             tth_pixels_num_array=tth_num_pixels_array,
+                                                             scale_factor=scale_factor,
+                                                             target_bank_id=bank_id)
+
+        # generate logs
+        import reduce_adv_chop
+        log_type = 'loadframe'
+        log_writer = reduce_adv_chop.WriteSlicedLogs(chopped_data_dir=output_directory, run_number=run_number)
+        workspace_name_list = [out_ws_name] * tth_num_pixels_array.shape[0]
+        log_writer.generate_sliced_logs(workspace_name_list, log_type)
+
+        return
+
     def reduce_vulcan_runs_v2(self, run_number_list, output_directory, d_spacing, binning_parameters,
                               number_banks, gsas, vanadium_run, merge_runs,
                               roi_list, mask_list, no_cal_mask):
@@ -1322,8 +1356,6 @@ class ProjectManager(object):
         :param mask_list:
         :return: 2-tuple: list (run number), list (error message for each run reduced)
         """
-        print ('[INFO] Reduction (Single Run) VULCAN Version 2 is Called')
-
         # check inputs
         datatypeutility.check_list('Run numbers', run_number_list)
         datatypeutility.check_file_name(output_directory, check_exist=True, is_dir=True)
