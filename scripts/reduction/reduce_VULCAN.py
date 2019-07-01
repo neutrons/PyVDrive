@@ -52,18 +52,10 @@ import sys
 import numpy
 import bisect
 import pandas as pd
+import h5py
 import save_vulcan_gsas
 
-for i, pth in enumerate(sys.path):
-    if pth.startswith('/opt/Mantid/bin'):
-        print ('Path[{}| = {}... pop'.format(i, pth))
-        sys.path.pop(i)
-
-
-sys.path.insert(0, '/SNS/users/wzz/Mantid_Project/builds/release/bin')
-sys.path.insert(1, '/SNS/users/wzz/Mantid_Project/mantid/Framework/PythonInterface/')
-sys.path.append('/SNS/users/wzz/Mantid_Project/builds/release/bin')
-sys.path.append('/SNS/users/wzz/Mantid_Project/mantid/Framework/PythonInterface/')
+sys.path.append("/opt/mantidnightly/bin")
 #sys.path.append("/opt/mantid313/bin")
 import mantid.simpleapi as mantidsimple
 import mantid
@@ -74,7 +66,8 @@ from mantid.kernel import DateAndTime
 CalibrationFilesList = [['/SNS/VULCAN/shared/CALIBRATION/2011_1_7/vulcan_foc_all_2bank_11p.cal',
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7/VULCAN_Characterization_2Banks_v2.txt',
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7/vdrive_log_bin.dat'],
-                        ['/SNS/VULCAN/shared/CALIBRATION/2019_1_20/VULCAN_calibrate_2019_01_21.h5',
+                        [#'/SNS/VULCAN/shared/CALIBRATION/2019_1_20/VULCAN_calibrate_2019_01_21.h5',
+                         '/SNS/VULCAN/shared/CALIBRATION/2019_6_27/VULCAN_calibrate_2019_06_27.h5',
                          '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
                          '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5']
                         ]
@@ -114,12 +107,12 @@ RecordBase = [
     ("IPTS",            "experiment_identifier", None),
     ("Title",           "run_title", None),
     ("Notes",           "file_notes", None),
-    ("Sample",          "SampleInfo", None),  # stored on sample object
+    ("Sample",          None, None),  # HDF5 Patch
     ('ITEM',            'items.id', '0'),
     ("StartTime",       "run_start", "time"),
     ("Duration",        "duration", None),
     ("ProtonCharge",    "proton_charge", "sum"),
-    ("TotalCounts",     "das.counts", "sum"),
+    ("TotalCounts",     None, None),  # HDF5 Patch
     ("Monitor1",        "das.monitor2counts", "sum"),
     ("Monitor2",        "das.monitor3counts", "sum"),
     ("X",               "X", "0"),
@@ -137,7 +130,7 @@ RecordBase = [
     ("IZ",              "IZ",   "average"),
     ("IHA",             "IHA",  "average"),
     ("IVA",             "IVA",  "average"),
-    ("Collimator",      "Vcollimator", None),
+    ("Collimator",      None, None),  # HDF Patch
     ("MTSDisplacement", "loadframe.displacement",   "average"),
     ("MTSForce",        "loadframe.force",          "average"),
     ("MTSStrain",       "loadframe.strain",         "average"),
@@ -1351,15 +1344,16 @@ class PatchRecord:
 
 class PatchRecordHDF5(object):
     """Get the missing information in the loaded workspace from original hdf5 file
+    Sample:  ['entry']['DASlogs']['SampleName']['value'][0][0]
     """
-    H5Path = {'Sample': ('entry', 'sample', 'name', 0, 0),
-              'ITEM': ('entry', 'sample', 'identifier', 0, 0),
-              'Monitor1': ('entry', 'monitor1', 'total_counts', 0),
-              'Monitor2': ('entry', 'monitor2', 'total_counts', 0),
-              'Comment': ('entry', 'DASlogs', 'comments', 'value', 0, 0),
-              'NOTES': ('entry', 'notes', 0),
-              'Collimator': ('entry', 'DASlogs', 'East_Collimator', 'average_value', 0),
-              'TotalCounts': ('entry', 'total_counts', 0)
+    H5Path = {'Sample': ('entry', 'DASlogs', 'SampleName', 'value', 0, 0, str),
+              'ITEM': ('entry', 'sample', 'identifier', 0, 0, str),
+              'Monitor1': ('entry', 'monitor1', 'total_counts', 0, int),
+              'Monitor2': ('entry', 'monitor2', 'total_counts', 0, int),
+              'Comment': ('entry', 'DASlogs', 'comments', 'value', 0, 0, str),
+              'NOTES': ('entry', 'notes', 0, str),
+              'Collimator': ('entry', 'DASlogs', 'East_Collimator', 'value_strings', 0, 0, str),
+              'TotalCounts': ('entry', 'total_counts', 0, int)   # nexus['entry']['total_counts'][0]
               }
 
     def __init__(self, h5name, sample_log_names):
@@ -1383,8 +1377,6 @@ class PatchRecordHDF5(object):
         """search the HDF5 for the sample logs
         :return:
         """
-        import h5py
-
         try:
             h5file = h5py.File(self._h5name, 'r')
         except IOError as io_err:
@@ -1399,10 +1391,16 @@ class PatchRecordHDF5(object):
                 node = h5file
                 try:
                     for item in h5_path:
-                        if isinstance(item, str):
+                        if isinstance(item, type):
+                            node = item(node)
+                            break
+                        elif isinstance(item, str):
                             node = node[item]
                         elif isinstance(item, int):
                             node = node[item]
+                        else:
+                            raise RuntimeError('Node key {} of type {} is not supported'
+                                               ''.format(item, type(item)))
                     # END-FOR
                 except KeyError as key_err:
                     if log_name == 'Notes':
@@ -1414,12 +1412,14 @@ class PatchRecordHDF5(object):
                         # use -1 for monitor and etc
                         node = -1
                 except IndexError as index_err:
-                    error_msg += 'Integer item {0} for log {1} cannot be retrieved due to {2}\n'.format(item, log_name, index_err)
+                    error_msg += 'Integer item {0} for log {1} cannot be retrieved due to {2}\n' \
+                                 ''.format(item, log_name, index_err)
                     # maybe 'node' is already the correct value
                 # END-TRY-EXCEPT
-                log_value_dict[log_name] = str(node)
+                log_value_dict[log_name] = node
         # END-FOR
 
+        # close file
         h5file.close()
 
         # convert to list
@@ -2246,84 +2246,30 @@ class ReduceVulcanData(object):
 
         self._myLogInfo += gsas_message + '\n'
 
-        from mantid.simpleapi import AlignDetectors, LoadEventNexus, LoadDiffCal, SortEvents, DiffractionFocussing
-        from mantid.simpleapi import CompressEvents, EditInstrumentGeometry, Rebin
-
         # reduce data
         try:
-            # mantidsimple.SNSPowderReduction(Filename=raw_event_file,
-            #                                 PreserveEvents=True,
-            #                                 CalibrationFile=self._reductionSetup.get_focus_file(),
-            #                                 CharacterizationRunsFile=self._reductionSetup.get_characterization_file(),
-            #                                 Binning=binning_parameter,
-            #                                 BinInDspace=bin_in_d,
-            #                                 SaveAS="",
-            #                                 OutputDirectory=self._reductionSetup.get_gsas_dir(),
-            #                                 NormalizeByCurrent=False,
-            #                                 FilterBadPulses=0,
-            #                                 CompressTOFTolerance=0.,
-            #                                 FrequencyLogNames="skf1.speed",
-            #                                 WaveLengthLogNames="lambda",
-            #                                 FinalDataUnits='dSpacing')
-
-            event_ws_name = '{}'.format(os.path.basename(raw_event_file).split('.')[0])
-            try:
-                LoadEventNexus(Filename=raw_event_file, OutputWorkspace=event_ws_name, LoadNexusInstrumentXML=False, LoadLogs=True)
-            except RuntimeError:
-                LoadEventNexus(Filename=raw_event_file, OutputWorkspace=event_ws_name, LoadLogs=True)   # default
-
-            # Load diff calibration
-            outputs = LoadDiffCal(InputWorkspace=event_ws_name,
-                                  Filename=self._reductionSetup.get_focus_file(),
-                                  WorkspaceName='VULCAN')
-            grouping_ws = outputs.OutputGroupingWorkspace
-            calib_ws = outputs.OutputCalWorkspace
-            mask_ws = outputs.OutputMaskWorkspace
-
-            diff_cal_ws_name = calib_ws.name()
-            grouping_ws_name = grouping_ws.name()
-
-            AlignDetectors(InputWorkspace=event_ws_name,
-                           OutputWorkspace=event_ws_name,
-                           CalibrationWorkspace=diff_cal_ws_name)
-
-            SortEvents(InputWorkspace=event_ws_name, SortBy='X Value')
-
-            reduced_ws_name = 'VULCAN_%d' % self._reductionSetup.get_run_number()
-            DiffractionFocussing(InputWorkspace=event_ws_name,
-                                 OutputWorkspace=reduced_ws_name,
-                                 GroupingWorkspace=grouping_ws_name,
-                                 PreserveEvents=True)
-
-            SortEvents(InputWorkspace=reduced_ws_name,
-                       SortBy='X Value')
-
-            CompressEvents(InputWorkspace=reduced_ws_name,
-                           OutputWorkspace=reduced_ws_name,
-                           Tolerance=1.E-5)
-
-            reduction_params_dict = dict()
-            reduction_params_dict['L1'] = 43.753999999999998
-            # 3 bank
-            reduction_params_dict['L2'] = [2., 2., 2.]
-            reduction_params_dict['Polar'] = [-90, 90., 150.]
-            reduction_params_dict['Azimuthal'] = [0., 0, 0.]
-            reduction_params_dict['SpectrumIDs'] = [1, 2, 3]
-            EditInstrumentGeometry(Workspace=reduced_ws_name,
-                                   PrimaryFlightPath=reduction_params_dict['L1'],
-                                   SpectrumIDs=reduction_params_dict['SpectrumIDs'],
-                                   L2=reduction_params_dict['L2'],
-                                   Polar=reduction_params_dict['Polar'],
-                                   Azimuthal=reduction_params_dict['Azimuthal'])
-
-            Rebin(InputWorkspace=reduced_ws_name, OutputWorkspace=reduced_ws_name,
-                  Params=binning_parameter,
-                  PreserveEvents=False)
+            mantidsimple.SNSPowderReduction(Filename=raw_event_file,
+                                            PreserveEvents=True,
+                                            CalibrationFile=self._reductionSetup.get_focus_file(),
+                                            CharacterizationRunsFile=self._reductionSetup.get_characterization_file(),
+                                            Binning=binning_parameter,
+                                            BinInDspace=bin_in_d,
+                                            SaveAS="",
+                                            OutputDirectory=self._reductionSetup.get_gsas_dir(),
+                                            NormalizeByCurrent=False,
+                                            FilterBadPulses=0,
+                                            CompressTOFTolerance=0.,
+                                            FrequencyLogNames="skf1.speed",
+                                            WaveLengthLogNames="lambda",
+                                            FinalDataUnits='dSpacing')
 
             # reduced workspace should be in unit as dSpacing
+            reduced_ws_name = 'VULCAN_%d' % self._reductionSetup.get_run_number()
             if AnalysisDataService.doesExist(reduced_ws_name) is False:
                 # special case for random event file
-                raise RuntimeError('Unable to locate {} in ADS'.format(reduced_ws_name))
+                reduced_ws_name = os.path.basename(raw_event_file).split('_event.nxs')[0]
+            assert AnalysisDataService.doesExist(reduced_ws_name), 'Reduced workspace %s is not in ' \
+                                                                   'ADS.' % reduced_ws_name
 
         except RuntimeError as run_err:
             self._myLogInfo += '[Error] Unable to reduce workspace %s due to %s.\n' \
