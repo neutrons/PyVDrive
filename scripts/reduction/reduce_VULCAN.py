@@ -4,7 +4,8 @@
 # Version 3.0 for both auto reduction service and manual
 # Version 4.0 (in test) for new nED (071_vbin_improve)
 #
-# Last version: reduce_VULCAN_20170723.py
+# Last version: reduce_VULCAN.py.20190701
+# Last time modified:
 #
 # Input
 # - Event file name with path
@@ -1423,13 +1424,20 @@ class PatchRecordHDF5(object):
         h5file.close()
 
         # convert to list
-        patch_list = []
+        patch_list = list()
         for log_name in log_value_dict:
             patch_list.append(log_name)
             patch_list.append(log_value_dict[log_name])
 
         if len(error_msg) > 0:
             print ('[Error Patch Sample Logs from {0}]\n{1}'.format(self._h5name, error_msg))
+
+        # Debug print patch list
+        wbuf = '(HDF5) Log Patch List:\n'
+        for pindex in range(len(patch_list)/2):
+            wbuf += '{} = {} ({})\n'.format(patch_list[2*pindex], patch_list[2*pindex+1],
+                                            type(patch_list[2*pindex+1]))
+        print (wbuf)
 
         return patch_list
 
@@ -1769,7 +1777,7 @@ class ReduceVulcanData(object):
         sample_title_list, sample_name_list, sample_operation_list = self.generate_record_file_format()
 
         # Patch for logs that do not exist in event NeXus yet
-        sample_log_list = ['Comment', 'Sample', 'ITEM', 'Monitor1', 'Monitor2']
+        sample_log_list = ['Comment', 'Sample', 'ITEM', 'Monitor1', 'Monitor2', 'NOTES', 'Collimator', 'TotalCounts']
         if self._reductionSetup.get_event_file().endswith('.h5'):
             # HDF5 file
             patcher = PatchRecordHDF5(self._reductionSetup.get_event_file(), sample_log_list)
