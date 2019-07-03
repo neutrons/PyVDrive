@@ -111,7 +111,7 @@ RecordBase = [
     ("Sample",          None, None),  # HDF5 Patch
     ('ITEM',            'sampleId', '0'),
     ("StartTime",       "run_start", "time"),
-    ("Duration",        "duration", None),
+    ("Duration(sec)",   "duration", None),
     ("ProtonCharge",    "proton_charge", "sum"),
     ("TotalCounts",     None, None),  # HDF5 Patch
     ("Monitor1",        "das.monitor2counts", "sum"),
@@ -138,20 +138,20 @@ RecordBase = [
     ("MTSStress",       "loadframe.stress",         "average"),
     ("MTSAngle",        "loadframe.rot_angle",      "average"),
     ("MTSTorque",       "loadframe.torque",         "average"),
-    ("MTSLaser",        "loadframe.laser",          "average"),
-    ("MTSlaserstrain",  "loadframe.laserstrain",    "average"),
-    ("MTSDisplaceoffset","loadframe.x_offset",      "average"),
-    ("MTSAngleceoffset", "loadframe.rot_offset",    "average"),
-    ("MTST1",           "loadframe.furnace1",       "average"),
-    ("MTST2",           "loadframe.furnace2",       "average"),
-    ("MTST3",           "loadframe.extTC3",         "average"),
-    ("MTST4",           "loadframe.extTC4",         "average"),
-    ("MTSHighTempStrain", "loadframe.strain_hightemp", "average"),
+    # ("MTSLaser",        "loadframe.laser",          "average"),
+    # ("MTSlaserstrain",  "loadframe.laserstrain",    "average"),
+    ("MTSDisplaceoffset", "loadframe.displacement_offset", "average"),  # ... TODO CHECK
+    ("MTSAngleceoffset",  "loadframe.angle_offset",  "average"),      # ... TODO CHECK
+    ("MTSFurnace",        "loadframe.furnace",       "average"),      # ... TODO CHECK
+    ("MTSCryo",           "loadframe.cryo",          "average"),      # ... TODO CHECK
+    ("MTST3",             "loadframe.extTC3",         "average"),
+    ("MTST4",             "loadframe.extTC4",         "average"),
+    ("MTSHTStrain",       "loadframe.strain_hightemp", "average"),
     ("FurnaceT",          "furnace.temp1",  "average"),
     ("FurnaceOT",         "furnace.temp2",  "average"),
     ("FurnacePower",      "furnace.power",  "average"),
-    ("VacT",              "partlow1.temp",  "average"),
-    ("VacOT",             "partlow2.temp",  "average"),
+    # ("VacT",              "partlow1.temp",  "average"),
+    # ("VacOT",             "partlow2.temp",  "average"),
     ('EuroTherm1Powder', 'eurotherm1.power', 'average'),
     ('EuroTherm1SP',     'eurotherm1.sp',    'average'),
     ('EuroTherm1Temp',   'eurotherm1.temp',  'average'),
@@ -159,6 +159,14 @@ RecordBase = [
     ('EuroTherm2SP',     'eurotherm2.sp',    'average'),
     ('EuroTherm2Temp',   'eurotherm2.temp',  'average'),
 ]
+
+"""
+RUN	IPTS	Title	Notes	Sample	ITEM	StartTime	Duration(sec)	ProntonCharge	TotalCounts	Monitor1	Monitor2	
+X	Y	Z	O	HROT	VROT	BandCenter	BandWidth	Frequency	Guide	IX	IY	IZ	IHA	IVA	Collimator	
+MTSDisplacement	MTSForce	MTSStrain	MTSStress	MTSAngle	MTSTorque	MTSDisplaceoffset	MTSAngleceoffset	
+MTSFurnace	MTSCryo	MTST3	MTST4	MTSHTStrain	FurnaceT	FurnaceOT	FurnacePower	EuroTherm1Power	EuroTherm1SP	
+EuroTherm1Temp	EuroTherm2Power	EuroTherm2SP	EuroTherm2Temp
+"""
 
 
 # Standard Vulcan sample log file header
