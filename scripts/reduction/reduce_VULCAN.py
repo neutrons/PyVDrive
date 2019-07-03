@@ -109,7 +109,7 @@ RecordBase = [
     ("Title",           "run_title", None),
     ("Notes",           "file_notes", None),
     ("Sample",          None, None),  # HDF5 Patch
-    ('ITEM',            'items.id', '0'),
+    ('ITEM',            'sampleId', '0'),
     ("StartTime",       "run_start", "time"),
     ("Duration",        "duration", None),
     ("ProtonCharge",    "proton_charge", "sum"),
@@ -1348,7 +1348,7 @@ class PatchRecordHDF5(object):
     Sample:  ['entry']['DASlogs']['SampleName']['value'][0][0]
     """
     H5Path = {'Sample': ('entry', 'DASlogs', 'SampleName', 'value', 0, 0, str),
-              'ITEM': ('entry', 'sample', 'identifier', 0, 0, str),
+              'ITEM': ('entry', 'DASlogs', 'SampleId', 'value', 0, str),
               'Monitor1': ('entry', 'monitor1', 'total_counts', 0, int),
               'Monitor2': ('entry', 'monitor2', 'total_counts', 0, int),
               'Comment': ('entry', 'DASlogs', 'comments', 'value', 0, 0, str),
