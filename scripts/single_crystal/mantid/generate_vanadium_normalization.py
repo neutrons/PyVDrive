@@ -33,13 +33,16 @@ back_set.sort()
 tube_group_dict = {1: front_set,
                    2: back_set}
 
+VANADIUM_NEXUS_FILE = '/SNS/VULCAN/IPTS-22752/nexus/VULCAN_172254.nxs.h5'
+EMPTY_NEXUS_FILE = '/SNS/VULCAN/IPTS-22753/nexus/VULCAN_172362.nxs.h5'
 
-def create_template_group_ws():
-    """ create a template grouping workspace
+
+def create_template_group_ws(vulcan_nexus_file):
+    """ create a template grouping workspace for future manipulation
     :return:
     """
     # Load
-    LoadEventNexus(Filename='/SNS/VULCAN/IPTS-22752/nexus/VULCAN_172254.nxs.h5',
+    LoadEventNexus(Filename=vulcan_nexus_file,
                    OutputWorkspace='vulcan_template', MetaDataOnly=True, LoadLogs=False)
     group_ws_name = 'vulcan_group'
     CreateGroupingWorkspace(InputWorkspace='vulcan_template', GroupDetectorsBy='All',
@@ -86,8 +89,17 @@ def remove_background(grouped_van_ws_name, grouped_bkgd_ws_name):
     return no_bkgd_ws_name
 
 
-def set_group_tube(group_ws):
-    """ set the group along tubes """
+def set_high_angle_front_back_group(group_ws):
+    """
+    Set the pixels to group according to whether they are at front or back columns
+    Rule:
+     - West: 10
+     - East: 11
+     - High angle front: 20
+     - High angle back: 21
+    :param group_ws:
+    :return:
+    """
     # west
     for iws in range(0, 3234):
         group_ws.dataY(iws)[0] = 10
@@ -109,7 +121,7 @@ def set_group_tube(group_ws):
 
 def test_group(group_ws=None):
     """
-    check the grouping file
+    check the grouping file by printing out the number of pixels of each group
     :return:
     """
     if group_ws is None:
@@ -179,28 +191,29 @@ def calculate_vanadium_counts(van_ws_name, bkgd_ws_name, min_lambda, max_lambda)
     return clean_van_count_name
 
 
-def main():
-    """
-    main
+def generate_normalization():
+    """ Generate normalization workspace/file from vanadium and background (empty)
     :return:
     """
     # Input setup
-    van_nxs = '/SNS/VULCAN/IPTS-22752/nexus/VULCAN_172254.nxs.h5'
+    van_nxs = VANADIUM_NEXUS_FILE
     van_ws_name = 'van_172254'
 
-    bkgd_nxs = ' /SNS/VULCAN/IPTS-22753/nexus/VULCAN_172362.nxs.h5'
+    bkgd_nxs = EMPTY_NEXUS_FILE
     bkgd_ws_name = 'bkgd_172362'
 
     min_lambda = 1.0
     max_lambda = 3.0
     
     # set up the grouping workspace by template
-    group_ws_name = create_template_group_ws()
+    group_ws_name = create_template_group_ws(van_nxs)
     group_ws = mtd[group_ws_name]
-    set_group_tube(group_ws)
+    set_high_angle_front_back_group(group_ws)
     test_group(group_ws)
 
+    # load vanadium and group
     grouped_van_ws_name = load_process_run(van_nxs, van_ws_name, True)
+    # load background and group
     grouped_bkgd_ws_name = load_process_run(bkgd_nxs, bkgd_ws_name, True)
 
     # remove background
@@ -212,4 +225,5 @@ def main():
 
     return
 
-main()
+
+generate_normalization()
