@@ -83,6 +83,7 @@ class VdriveChop(VDriveCommand):
 
         # others
         self._write_to_fullprof = False
+        self._user_know_beam_down = True
 
         # define signal
         # TODO - NIGHT - Do this one step by one step: Long exec separate thread
