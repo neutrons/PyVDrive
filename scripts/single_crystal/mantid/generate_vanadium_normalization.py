@@ -50,21 +50,25 @@ def create_template_group_ws(vulcan_nexus_file):
     return group_ws_name
 
 
-def load_process_run(nexus_name, event_ws_name, norm_by_proton_charge):
+def load_process_run(nexus_name, event_ws_name, calib_ws_name, norm_by_proton_charge):
     """
     Load, binning in d-space and group detectors
     :param nexus_name:
     :param event_ws_name:
+    :param norm_by_proton_charge:
     :return:
     """
+    # Load, convert to dSpacing and rebin
     LoadEventNexus(Filename=nexus_name, OutputWorkspace=event_ws_name)
+    AlignDetectors(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name,
+                   CalibrationWorkspace=calib_ws_name)
     ConvertUnits(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name,
                  Target='Wavelength', AlignBins=True)
     Rebin(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name, Params='0.1, -0.05, 5.0', FullBinsOnly=True,
           IgnoreBinErrors=True)
 
     # Sum spectra by grouping detectors
-    grouped_ws_name = event_ws_name + '_grouped'
+    grouped_ws_name = event_ws_name.replace('Raw', 'Grouped')
     GroupDetectors(InputWorkspace=event_ws_name, OutputWorkspace=grouped_ws_name,
                    CopyGroupingFromWorkspace='vulcan_group')
 
@@ -80,7 +84,7 @@ def load_process_run(nexus_name, event_ws_name, norm_by_proton_charge):
 def remove_background(grouped_van_ws_name, grouped_bkgd_ws_name):
 
     # remove background
-    no_bkgd_ws_name = grouped_van_ws_name + '_bkgd_removed'
+    no_bkgd_ws_name = grouped_van_ws_name + '_Clean'
     Minus(LHSWorkspace=grouped_van_ws_name,
           RHSWorkspace=grouped_bkgd_ws_name,
           OutputWorkspace=no_bkgd_ws_name)
@@ -142,8 +146,7 @@ def test_group(group_ws=None):
     
     
 def calculate_vanadium_counts(van_ws_name, bkgd_ws_name, min_lambda, max_lambda):
-    """
-    calculate the cleaned vanadium counts per pixels within a given range of wave length
+    """ Calculate the cleaned vanadium counts per pixels within a given range of wave length
     :param van_ws_name:
     :param bkgd_ws_name:
     :param min_lambda:
@@ -197,14 +200,21 @@ def generate_normalization():
     """
     # Input setup
     van_nxs = VANADIUM_NEXUS_FILE
-    van_ws_name = 'van_172254'
+    van_ws_name = 'Vanadium_Raw'
 
     bkgd_nxs = EMPTY_NEXUS_FILE
-    bkgd_ws_name = 'bkgd_172362'
+    bkgd_ws_name = 'Background_Raw'
 
+    # define the range of wavelength for valid counts
     min_lambda = 1.0
     max_lambda = 3.0
-    
+
+    # Load calibration
+    LoadDiffCal(InstrumentName='vulcan',
+                Filename='/SNS/VULCAN/shared/CALIBRATION/2019_1_20/VULCAN_calibrate_2019_01_21.h5',
+                WorkspaceName='vulcan')
+    calibration_ws_name = 'vulcan_cal'
+
     # set up the grouping workspace by template
     group_ws_name = create_template_group_ws(van_nxs)
     group_ws = mtd[group_ws_name]
@@ -212,16 +222,19 @@ def generate_normalization():
     test_group(group_ws)
 
     # load vanadium and group
-    grouped_van_ws_name = load_process_run(van_nxs, van_ws_name, True)
+    grouped_van_ws_name = load_process_run(van_nxs, van_ws_name, calibration_ws_name, True)
     # load background and group
-    grouped_bkgd_ws_name = load_process_run(bkgd_nxs, bkgd_ws_name, True)
+    grouped_bkgd_ws_name = load_process_run(bkgd_nxs, bkgd_ws_name, calibration_ws_name, True)
 
     # remove background
     clean_van_ws_name = remove_background(grouped_van_ws_name, grouped_bkgd_ws_name)
+    print ('[OUT] Grouped vanadium with background removed: {}'.format(clean_van_ws_name))
     
     # generate the clean-vanadium counts array
-    print (van_ws_name, bkgd_ws_name)
-    calculate_vanadium_counts(van_ws_name, bkgd_ws_name, min_lambda, max_lambda)
+    # print (van_ws_name, bkgd_ws_name)
+    clean_van_count_name = calculate_vanadium_counts(van_ws_name, bkgd_ws_name, min_lambda, max_lambda)
+    print ('[OUT] {} Spectrum 2 contains counts on each pixels between 1 and 3 A (normalized)'
+           .format(clean_van_count_name))
 
     return
 
