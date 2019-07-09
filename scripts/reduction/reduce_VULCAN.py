@@ -67,12 +67,17 @@ from mantid.kernel import DateAndTime
 CalibrationFilesList = [['/SNS/VULCAN/shared/CALIBRATION/2011_1_7/vulcan_foc_all_2bank_11p.cal',
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7/VULCAN_Characterization_2Banks_v2.txt',
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7/vdrive_log_bin.dat'],
-                        [#'/SNS/VULCAN/shared/CALIBRATION/2019_1_20/VULCAN_calibrate_2019_01_21.h5',
-                         '/SNS/VULCAN/shared/CALIBRATION/2019_6_27/VULCAN_calibrate_2019_06_27.h5',
+                        ['/SNS/VULCAN/shared/CALIBRATION/2019_1_20/VULCAN_calibrate_2019_01_21.h5',
+                         '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
+                         '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5'],
+                        ['/SNS/VULCAN/shared/CALIBRATION/2019_6_27/VULCAN_calibrate_2019_06_27.h5',
                          '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
                          '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5']
                         ]
-ValidDateList = [datetime.datetime(2000, 1, 1), datetime.datetime(2017, 7, 1), datetime.datetime(2100, 1, 1)]
+ValidDateList = [datetime.datetime(2000, 1, 1),
+                 datetime.datetime(2017, 7, 1),
+                 datetime.datetime(2019, 6, 1),  # calibration: 2019_6_27
+                 datetime.datetime(2100, 1, 1)]
 
 
 def get_auto_reduction_calibration_files(nexus_file_name):
@@ -109,7 +114,7 @@ RecordBase = [
     ("Title",           "run_title", None),
     ("Notes",           "file_notes", None),
     ("Sample",          None, None),  # HDF5 Patch
-    ('ITEM',            'sampleId', '0'),
+    ('ITEM',            None, None),
     ("StartTime",       "run_start", "time"),
     ("Duration(sec)",   "duration", None),
     ("ProtonCharge",    "proton_charge", "sum"),
@@ -140,10 +145,10 @@ RecordBase = [
     ("MTSTorque",       "loadframe.torque",         "average"),
     # ("MTSLaser",        "loadframe.laser",          "average"),
     # ("MTSlaserstrain",  "loadframe.laserstrain",    "average"),
-    ("MTSDisplaceoffset", "loadframe.displacement_offset", "average"),  # ... TODO CHECK
-    ("MTSAngleceoffset",  "loadframe.angle_offset",  "average"),      # ... TODO CHECK
-    ("MTSFurnace",        "loadframe.furnace",       "average"),      # ... TODO CHECK
-    ("MTSCryo",           "loadframe.cryo",          "average"),      # ... TODO CHECK
+    ("MTSDisplaceoffset", "loadframe.displacement_offset", "average"),
+    ("MTSAngleceoffset",  "loadframe.angle_offset",  "average"),
+    ("MTSFurnace",        "loadframe.furnace",       "average"),
+    ("MTSCryo",           "loadframe.cryo",          "average"),
     ("MTST3",             "loadframe.extTC3",         "average"),
     ("MTST4",             "loadframe.extTC4",         "average"),
     ("MTSHTStrain",       "loadframe.strain_hightemp", "average"),
