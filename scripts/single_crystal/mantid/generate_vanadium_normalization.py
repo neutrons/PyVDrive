@@ -1,3 +1,5 @@
+import numpy
+
 # Task: Generate normalization factor/spectra from measured vanadium
 # Date: 2019.05.29
 # Version: 1.0
@@ -50,7 +52,7 @@ def create_template_group_ws(vulcan_nexus_file):
     return group_ws_name
 
 
-def load_process_run(nexus_name, event_ws_name, calib_ws_name, norm_by_proton_charge):
+def load_process_run(nexus_name, event_ws_name, calib_ws_name, norm_by_proton_charge, pixel_weight_ws_name):
     """
     Load, binning in d-space and group detectors
     :param nexus_name:
@@ -59,17 +61,27 @@ def load_process_run(nexus_name, event_ws_name, calib_ws_name, norm_by_proton_ch
     :return:
     """
     # Load, convert to dSpacing and rebin
-    LoadEventNexus(Filename=nexus_name, OutputWorkspace=event_ws_name)
-    AlignDetectors(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name,
-                   CalibrationWorkspace=calib_ws_name)
+    if nexus_name:
+        LoadEventNexus(Filename=nexus_name, OutputWorkspace=event_ws_name)
+    if calib_ws_name:
+        AlignDetectors(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name,
+                       CalibrationWorkspace=calib_ws_name)
     ConvertUnits(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name,
                  Target='Wavelength', AlignBins=True)
     Rebin(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name, Params='0.1, -0.05, 5.0', FullBinsOnly=True,
           IgnoreBinErrors=True)
 
+    # weight
+    if pixel_weight_ws_name:
+        curr_ws_name = event_ws_name + '_Weighted'
+        Normalize_Workspace_Pixel_Counts(event_ws_name, curr_ws_name, pixel_weight_ws_name)
+
+    else:
+        curr_ws_name = event_ws_name
+
     # Sum spectra by grouping detectors
-    grouped_ws_name = event_ws_name.replace('Raw', 'Grouped')
-    GroupDetectors(InputWorkspace=event_ws_name, OutputWorkspace=grouped_ws_name,
+    grouped_ws_name = curr_ws_name.replace('Raw', 'Grouped')
+    GroupDetectors(InputWorkspace=curr_ws_name, OutputWorkspace=grouped_ws_name,
                    CopyGroupingFromWorkspace='vulcan_group')
 
     if norm_by_proton_charge:
@@ -194,6 +206,27 @@ def calculate_vanadium_counts(van_ws_name, bkgd_ws_name, min_lambda, max_lambda)
     return clean_van_count_name
 
 
+def calculate_pixel_count_weight(clean_van_count_name):
+    """
+    Calculate per pixel's weight based on pure/clean vanadium counts.
+    The maximum count (per pixel) in high angle bank is defined as 1.
+    :param clean_van_count_name:
+    :return:
+    """
+    clean_van_ws = mtd[clean_van_count_name]
+    counts_vec = clean_van_ws[1]  # spectrum 2 (ws-index 1) is the count from 1A to 3A
+    max_count = numpy.max(counts_vec[6468:])
+
+    weight_vec = max_count / (counts_vec + 1E-15)
+
+    # FIXME TODO - need to determine a threshold to mask the pixels
+    # ... ...
+
+    CreateWorkspace(DataX=clean_van_ws.readX(0), DataY=weight_vec, NSpec=1, OutputWorkspace='Pixel_Weights')
+
+    return 'Pixel_Weights'
+
+
 def generate_normalization():
     """ Generate normalization workspace/file from vanadium and background (empty)
     :return:
@@ -222,9 +255,9 @@ def generate_normalization():
     test_group(group_ws)
 
     # load vanadium and group
-    grouped_van_ws_name = load_process_run(van_nxs, van_ws_name, calibration_ws_name, True)
+    grouped_van_ws_name = load_process_run(van_nxs, van_ws_name, calibration_ws_name, True, None)
     # load background and group
-    grouped_bkgd_ws_name = load_process_run(bkgd_nxs, bkgd_ws_name, calibration_ws_name, True)
+    grouped_bkgd_ws_name = load_process_run(bkgd_nxs, bkgd_ws_name, calibration_ws_name, True, None)
 
     # remove background
     clean_van_ws_name = remove_background(grouped_van_ws_name, grouped_bkgd_ws_name)
@@ -235,6 +268,11 @@ def generate_normalization():
     clean_van_count_name = calculate_vanadium_counts(van_ws_name, bkgd_ws_name, min_lambda, max_lambda)
     print ('[OUT] {} Spectrum 2 contains counts on each pixels between 1 and 3 A (normalized)'
            .format(clean_van_count_name))
+
+    # Normalize each pixels by counts and re-group
+    counts_weight_ws_name = calculate_pixel_count_weight(clean_van_count_name)
+
+    load_process_run(None, 'Vanadium_RAW', None, True, 'Pixel_Weights')
 
     return
 
