@@ -27,7 +27,7 @@ class CalibrationManager(object):
         # important dates
         self._ned_date = '2017-06-01'  # string only
 
-        self._calibration_dict = None
+        self._calibration_dict = None  # [starting date] = {bank number: file name}
 
         # binning
         self._vdrive_bin_ref_file_dict = dict()  # [date (standard)][num banks] = file name
@@ -135,11 +135,16 @@ class CalibrationManager(object):
                           7: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_7bank.h5'),
                           27: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_27bank.h5')}
 
+        ned_2019B_setup = {3: os.path.join(base_calib_dir, '2019_6_27/VULCAN_calibrate_2019_06_27.h5'),
+                           7: os.path.join(base_calib_dir, '2019_6_27/VULCAN_calibrate_2019_06_27_07banks.h5'),
+                           27: os.path.join(base_calib_dir, '2019_6_27/VULCAN_calibrate_2019_06_27_27banks.h5')}
+
         self._calibration_dict = dict()
         self._calibration_dict[datetime.datetime(2010, 1, 1)] = pre_ned_setup
         self._calibration_dict[datetime.datetime(2017, 6, 1)] = ned_2017_setup
         self._calibration_dict[datetime.datetime(2018, 5, 30)] = ned_2018_setup
         self._calibration_dict[datetime.datetime(2019, 1, 1)] = ned_2019_setup
+        self._calibration_dict[datetime.datetime(2019, 6, 1)] = ned_2019_setup
 
         return
 
@@ -201,11 +206,9 @@ class CalibrationManager(object):
             raise RuntimeError('Input VULCAN run date {0} is too early comparing to {1}'
                                ''.format(vulcan_run_date, date_list[0]))
 
-        # do a brute force search (as there are only very few of them)
+        # do a brute force search (as there are only very few of them) against starting date of calibration
         cal_date_index = None
         for i_date in range(len(date_list)-1, -1, -1):
-            print ('[DB...BAT] Searching calibration file date: {} against run date {}'
-                   ''.format(date_list[i_date], vulcan_run_date))
             if vulcan_run_date > date_list[i_date]:
                 cal_date_index = date_list[i_date]
                 break
