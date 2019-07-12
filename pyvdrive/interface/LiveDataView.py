@@ -271,15 +271,18 @@ class VulcanLiveDataView(QMainWindow):
         Take a snap shot for the window
         :return:
         """
-        date = datetime.now()
-        time_message = date.strftime('%Y-%m-%d_%H-%M-%S')
-        p = QPixmap.grabWindow(self.winId())
-
         if self._enable_snap_shot:
-            p.save(self._snap_shot_image, 'png')  # or jpg
-            print ('[DB...BAT] shot taken at {} and saved to {}'.format(time_message, self._snap_shot_image))
+            try:
+                p = QPixmap.grabWindow(self.winId())
+            except AttributeError as att_err:
+                print ('[ERROR] Unable to save screen shot due to {}'.format(att_err))
+            else:
+                p.save(self._snap_shot_image, 'png')  # or jpg
+                # print ('[DB...BAT] shot taken at {} and saved to {}'.format(time_message, self._snap_shot_image))
         else:
-            print ('[DB...BAT] shot taken at {} and but not saved'.format(time_message))
+            date = datetime.now()
+            time_message = date.strftime('%Y-%m-%d_%H-%M-%S')
+            print ('[DB...BAT] {}: Snap show it not take or saved is not saved'.format(time_message))
 
         return
 
@@ -1636,11 +1639,9 @@ class VulcanLiveDataView(QMainWindow):
             # plot
             if len(data_set_dict) > 1:
                 if bank_id in bank_id_list:
-                    # self._2dUpdater.set_new_plot(self._contourFigureDict[bank_id], data_set_dict)
                     self._contourFigureDict[bank_id].plot_contour(data_set_dict)
                 else:
                     pass
-                    # self._contourFigureDict[bank_id].plot_image(data_set_dict)
             # END-IF
         # END-FOR
 
@@ -1763,23 +1764,15 @@ class TwoDimPlotUpdateThread(QtCore.QThread):
 
             # update
             if self._update:
-                self._currFigure.plot_contour(self.data_set_dict)
-                self._update = False
+                pass
+                # self._currFigure.plot_contour(self.data_set_dict)
+                # self._update = False
 
             # release
             self._mutex = False
         # END-WHILE
 
         return
-
-    def set_new_plot(self, figure, data_set_dict):
-        """
-
-        :return:
-        """
-        self._update = True
-        self._currFigure = figure
-        self.data_set_dict = data_set_dict
 
     def stop(self):
         """ stop the timer by turn off _continueTimeLoop (flag)            :return:

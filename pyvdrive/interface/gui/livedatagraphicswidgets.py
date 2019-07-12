@@ -4,6 +4,7 @@ import numpy
 from mplgraphicsview import MplGraphicsView
 from mplgraphicsview1d import MplGraphicsView1D
 from mplgraphicsview2d import MplGraphicsView2D
+from pyvdrive.lib import datatypeutility
 
 
 class GeneralPurpose1DView(MplGraphicsView1D):
@@ -378,8 +379,8 @@ class Live2DView(MplGraphicsView2D):
         :return:
         """
         # Check inputs
-        assert isinstance(data_set_dict, dict), 'Input data must be in a dictionary but not a {0}' \
-                                                ''.format(type(data_set_dict))
+        # Check inputs
+        datatypeutility.check_dict('Input data set', data_set_dict)
 
         # TEST/TODO - Find out the status in real time test
         print ('[DB...FIND] About to plot contour... Is Zoom From Home = {}, Home XY Limit = {}, '
@@ -388,7 +389,6 @@ class Live2DView(MplGraphicsView2D):
 
         # record current setup
         if self.has_image_on_canvas():
-            #
             print '[DB...BAT] Do I have Image? {}'.format(self.has_image_on_canvas())
             self._zoomInXRange = self.canvas.getXLimit()
 
@@ -410,8 +410,10 @@ class Live2DView(MplGraphicsView2D):
                                    'than first size {2}'.format(index, len(vec_x_i), size_x))
             # END-IF
             # vector Y: each row will have the value of a pattern
-            matrix_y[matrix_index:] = data_set_dict[index][1]  #
+
+            matrix_y[matrix_index] = data_set_dict[index][1]
             matrix_index += 1
+
         # END-FOR
 
         # plot
