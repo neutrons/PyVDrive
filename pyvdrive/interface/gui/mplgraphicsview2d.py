@@ -488,12 +488,13 @@ class Qt4Mpl2DCanvas(FigureCanvas):
 
         return arrow
 
-    def add_contour_plot(self, vec_x, vec_y, matrix_z):
+    def add_contour_plot(self, vec_x, vec_y, matrix_z, use_contour=True):
         """ add a contour plot
         Example: reduced data: vec_x: d-values, vec_y: run numbers, matrix_z, matrix for intensities
         :param vec_x: a list of a vector for X axis
         :param vec_y: a list of a vector for Y axis
         :param matrix_z:
+        :param use_contour: Flag to plot with contourf. otherwise, plot with imshow() without interpolation
         :return:
         """
         # check input
@@ -518,7 +519,7 @@ class Qt4Mpl2DCanvas(FigureCanvas):
 
         # Do plot: resolution on Z axis (color bar is set to 100)
         self.axes.clear()
-        if False:
+        if use_contour:
             contour_plot = self.axes.contourf(grid_x, grid_y, matrix_z, 100)
         else:
             self._imagePlot = self.axes.imshow(matrix_z,
