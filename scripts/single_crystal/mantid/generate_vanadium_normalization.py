@@ -55,17 +55,24 @@ def create_template_group_ws(vulcan_nexus_file):
 def load_process_run(nexus_name, event_ws_name, calib_ws_name, norm_by_proton_charge, pixel_weight_ws_name):
     """
     Load, binning in d-space and group detectors
-    :param nexus_name:
+    :param nexus_name: Workspace will be aligned with unit conversion and rebinning (optionally)
     :param event_ws_name:
-    :param norm_by_proton_charge:
+    :param norm_by_proton_charge: proton charge normalization will be only run upon focused workspace
+    :param pixel_weight_ws_name: name of workspace containing pixel weight
     :return:
     """
     # Load, convert to dSpacing and rebin
     if nexus_name:
         LoadEventNexus(Filename=nexus_name, OutputWorkspace=event_ws_name)
+
+    # Print out information for input workspace
+    input_ws = mtd[event_ws_name]
+    print ('[INFO] Input {} has {} spectra'.format(event_ws_name, input_ws.getNumberHistograms()))
+
     if calib_ws_name:
         AlignDetectors(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name,
                        CalibrationWorkspace=calib_ws_name)
+
     ConvertUnits(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name,
                  Target='Wavelength', AlignBins=True)
     Rebin(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name, Params='0.1, -0.05, 5.0', FullBinsOnly=True,
@@ -206,7 +213,7 @@ def calculate_vanadium_counts(van_ws_name, bkgd_ws_name, min_lambda, max_lambda)
     return clean_van_count_name
 
 
-def calculate_pixel_count_weight(clean_van_count_name):
+def calculate_pixel_count_weight(clean_van_count_name, group_ws_name):
     """
     Calculate per pixel's weight based on pure/clean vanadium counts.
     The maximum count (per pixel) in high angle bank is defined as 1.
@@ -214,14 +221,33 @@ def calculate_pixel_count_weight(clean_van_count_name):
     :return:
     """
     clean_van_ws = mtd[clean_van_count_name]
-    counts_vec = clean_van_ws[1]  # spectrum 2 (ws-index 1) is the count from 1A to 3A
-    max_count = numpy.max(counts_vec[6468:])
+    counts_vec = clean_van_ws.readY(1)  # spectrum 2 (ws-index 1) is the count from 1A to 3A
+    group_ws = mtd[group_ws_name]
 
-    weight_vec = max_count / (counts_vec + 1E-15)
+    # calculate the weight
+    max_count = numpy.max(counts_vec[6468:])  # minimum factor will be 1
 
-    # FIXME TODO - need to determine a threshold to mask the pixels
-    # ... ...
+    weight_vec = numpy.zeros(shape=(24900,), dtype='float')
 
+    # do not touch east and west bank (weight = 1)
+    weight_vec[:6468] += 1.
+
+    # do it high angle bank
+    counts = 0
+    for iws in range(6468, 24900):
+        if group_ws.readY(iws)[0] < 0.5:  # flagged
+            weight_vec[iws] = 0.  # mask
+        elif counts_vec[iws] < 1.E-21:
+            print ('{} is too small or close to zero'.format(iws))
+            counts += 1
+        else:
+            # TODO - Still working on this
+            weight_vec[iws] = 1. / counts_vec[iws]
+    # END-FOR
+
+    print ('{} pixels are masked'.format(counts))
+    print (clean_van_ws.readX(0).shape)
+    print (weight_vec.shape)
     CreateWorkspace(DataX=clean_van_ws.readX(0), DataY=weight_vec, NSpec=1, OutputWorkspace='Pixel_Weights')
 
     return 'Pixel_Weights'
@@ -271,8 +297,10 @@ def generate_normalization():
 
     # Normalize each pixels by counts and re-group
     counts_weight_ws_name = calculate_pixel_count_weight(clean_van_count_name)
+    # whether counts_weight_ws_name is Pixel_Weights???
 
-    load_process_run(None, 'Vanadium_RAW', None, True, 'Pixel_Weights')
+    # Process vanadium raw again
+    load_process_run(None, 'Vanadium_RAW', None, True, counts_weight_ws_name)
 
     return
 
