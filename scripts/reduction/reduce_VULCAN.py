@@ -4,8 +4,8 @@
 # Version 3.0 for both auto reduction service and manual
 # Version 4.0 (in test) for new nED (071_vbin_improve)
 #
-# Last version: reduce_VULCAN.py.20190701
-# Last time modified:
+# Last version: reduce_VULCAN.py.20190718
+# Last time modified: 2019.07.18
 #
 # Input
 # - Event file name with path
@@ -102,14 +102,15 @@ def get_auto_reduction_calibration_files(nexus_file_name):
 TIMEZONE1 = 'America/New_York'
 TIMEZONE2 = 'UTC'
 
-# record file header list: list of 3-tuples
+# Record file header list: list of 3-tuples
+# NOTE: If any path to sample log is changed, synchronize it with VulcanSampleLogList and MTS_Header_List
 RecordBase = [
     ("RUN",             "run_number", None),
     ("IPTS",            "experiment_identifier", None),
     ("Title",           "run_title", None),
     ("Notes",           "file_notes", None),
     ("Sample",          None, None),  # HDF5 Patch
-    ('ITEM',            'sampleId', '0'),
+    ('ITEM',            None, None),  # HDF5 Patch
     ("StartTime",       "run_start", "time"),
     ("Duration(sec)",   "duration", None),
     ("ProtonCharge",    "proton_charge", "sum"),
@@ -136,22 +137,17 @@ RecordBase = [
     ("MTSForce",        "loadframe.force",          "average"),
     ("MTSStrain",       "loadframe.strain",         "average"),
     ("MTSStress",       "loadframe.stress",         "average"),
-    ("MTSAngle",        "loadframe.rot_angle",      "average"),
+    ("MTSAngle",        "loadframe.angle",      "average"),
     ("MTSTorque",       "loadframe.torque",         "average"),
-    # ("MTSLaser",        "loadframe.laser",          "average"),
-    # ("MTSlaserstrain",  "loadframe.laserstrain",    "average"),
-    ("MTSDisplaceoffset", "loadframe.displacement_offset", "average"),  # ... TODO CHECK
-    ("MTSAngleceoffset",  "loadframe.angle_offset",  "average"),      # ... TODO CHECK
-    ("MTSFurnace",        "loadframe.furnace",       "average"),      # ... TODO CHECK
-    ("MTSCryo",           "loadframe.cryo",          "average"),      # ... TODO CHECK
+    ("MTSDisplaceoffset", "loadframe.displacement_offset", "average"),
+    ("MTSAngleceoffset",  "loadframe.angle_offset",  "average"),
+    ("MTSFurnace",        "loadframe.furnace",       "average"),
+    ("MTSCryo",           "loadframe.cryo",          "average"),
     ("MTST3",             "loadframe.extTC3",         "average"),
     ("MTST4",             "loadframe.extTC4",         "average"),
-    ("MTSHTStrain",       "loadframe.strain_hightemp", "average"),
     ("FurnaceT",          "furnace.temp1",  "average"),
     ("FurnaceOT",         "furnace.temp2",  "average"),
     ("FurnacePower",      "furnace.power",  "average"),
-    # ("VacT",              "partlow1.temp",  "average"),
-    # ("VacOT",             "partlow2.temp",  "average"),
     ('EuroTherm1Powder', 'eurotherm1.power', 'average'),
     ('EuroTherm1SP',     'eurotherm1.sp',    'average'),
     ('EuroTherm1Temp',   'eurotherm1.temp',  'average'),
@@ -179,32 +175,27 @@ VulcanSampleLogList = [("TimeStamp           ", ""),
                        ("O", "OMEGA"),
                        ("HROT", "HROT"),
                        ("VROT", "VROT"),
-                       ("MTSDisplacement", "loadframe.displacement"),
-                       ("MTSForce", "loadframe.force"),
-                       ("MTSStrain", "loadframe.strain"),
-                       ("MTSStress", "loadframe.stress"),
-                       ("MTSAngle", "loadframe.rot_angle"),
-                       ("MTSTorque", "loadframe.torque"),
-                       ("MTSLaser", "loadframe.laser"),
-                       ("MTSlaserstrain", "loadframe.laserstrain"),
-                       ("MTSDisplaceoffset", "loadframe.x_offset"),
-                       ("MTSAngleceoffset", "loadframe.rot_offset"),
-                       ("MTS1", "loadframe.furnace1"),
-                       ("MTS2", "loadframe.furnace2"),
-                       ("MTS3", "loadframe.extTC3"),
-                       ("MTS4", "loadframe.extTC4"),
-                       ("MTSHighTempStrain", "loadframe.strain_hightemp"),
-                       ("FurnaceT", "furnace.temp1"),
-                       ("FurnaceOT", "furnace.temp2"),
-                       ("FurnacePower", "furnace.power"),
-                       ("VacT", "partlow1.temp"),
-                       ("VacOT", "partlow2.temp"),
-                       ('EuroTherm1Powder', 'eurotherm1.power'),
-                       ('EuroTherm1SP', 'eurotherm1.sp'),
-                       ('EuroTherm1Temp', 'eurotherm1.temp'),
-                       ('EuroTherm2Powder', 'eurotherm2.power'),
-                       ('EuroTherm2SP', 'eurotherm2.sp'),
-                       ('EuroTherm2Temp', 'eurotherm2.temp')]
+                       ("MTSDisplacement", "loadframe.displacement", "average"),
+                       ("MTSForce", "loadframe.force", "average"),
+                       ("MTSStrain", "loadframe.strain", "average"),
+                       ("MTSStress", "loadframe.stress", "average"),
+                       ("MTSAngle", "loadframe.angle", "average"),
+                       ("MTSTorque", "loadframe.torque", "average"),
+                       ("MTSDisplaceoffset", "loadframe.displacement_offset", "average"),
+                       ("MTSAngleceoffset", "loadframe.angle_offset", "average"),
+                       ("MTSFurnace", "loadframe.furnace", "average"),
+                       ("MTSCryo", "loadframe.cryo", "average"),
+                       ("MTST3", "loadframe.extTC3", "average"),
+                       ("MTST4", "loadframe.extTC4", "average"),
+                       ("FurnaceT", "furnace.temp1", "average"),
+                       ("FurnaceOT", "furnace.temp2", "average"),
+                       ("FurnacePower", "furnace.power", "average"),
+                       ('EuroTherm1Powder', 'eurotherm1.power', 'average'),
+                       ('EuroTherm1SP', 'eurotherm1.sp', 'average'),
+                       ('EuroTherm1Temp', 'eurotherm1.temp', 'average'),
+                       ('EuroTherm2Powder', 'eurotherm2.power', 'average'),
+                       ('EuroTherm2SP', 'eurotherm2.sp', 'average'),
+                       ('EuroTherm2Temp', 'eurotherm2.temp', 'average')]
 
 
 MTS_Header_List = [
@@ -217,32 +208,27 @@ MTS_Header_List = [
     ("O", "OMEGA"),
     ("HROT", "HROT"),
     ("VROT", "VROT"),
-    ("MTSDisplacement", "loadframe.displacement"),
-    ("MTSForce", "loadframe.force"),
-    ("MTSStrain", "loadframe.strain"),
-    ("MTSStress", "loadframe.stress"),
-    ("MTSAngle", "loadframe.rot_angle"),
-    ("MTSTorque", "loadframe.torque"),
-    ("MTSLaser", "loadframe.laser"),
-    ("MTSlaserstrain", "loadframe.laserstrain"),
-    ("MTSDisplaceoffset", "loadframe.x_offset"),
-    ("MTSAngleceoffset", "loadframe.rot_offset"),
-    ("MTS1", "loadframe.furnace1"),
-    ("MTS2", "loadframe.furnace2"),
-    ("MTS3", "loadframe.extTC3"),
-    ("MTS4", "loadframe.extTC4"),
-    ("MTSHighTempStrain", "loadframe.strain_hightemp"),
-    ("FurnaceT", "furnace.temp1"),
-    ("FurnaceOT", "furnace.temp2"),
-    ("FurnacePower", "furnace.power"),
-    ("VacT", "partlow1.temp"),
-    ("VacOT", "partlow2.temp"),
-    ('EuroTherm1Powder', 'eurotherm1.power'),
-    ('EuroTherm1SP', 'eurotherm1.sp'),
-    ('EuroTherm1Temp', 'eurotherm1.temp'),
-    ('EuroTherm2Powder', 'eurotherm2.power'),
-    ('EuroTherm2SP', 'eurotherm2.sp'),
-    ('EuroTherm2Temp', 'eurotherm2.temp')]
+    ("MTSDisplacement", "loadframe.displacement",   "average"),
+    ("MTSForce",        "loadframe.force",          "average"),
+    ("MTSStrain",       "loadframe.strain",         "average"),
+    ("MTSStress",       "loadframe.stress",         "average"),
+    ("MTSAngle",        "loadframe.angle",      "average"),
+    ("MTSTorque",       "loadframe.torque",         "average"),
+    ("MTSDisplaceoffset", "loadframe.displacement_offset", "average"),
+    ("MTSAngleceoffset",  "loadframe.angle_offset",  "average"),
+    ("MTSFurnace",        "loadframe.furnace",       "average"),
+    ("MTSCryo",           "loadframe.cryo",          "average"),
+    ("MTST3",             "loadframe.extTC3",         "average"),
+    ("MTST4",             "loadframe.extTC4",         "average"),
+    ("FurnaceT",          "furnace.temp1",  "average"),
+    ("FurnaceOT",         "furnace.temp2",  "average"),
+    ("FurnacePower",      "furnace.power",  "average"),
+    ('EuroTherm1Powder', 'eurotherm1.power', 'average'),
+    ('EuroTherm1SP',     'eurotherm1.sp',    'average'),
+    ('EuroTherm1Temp',   'eurotherm1.temp',  'average'),
+    ('EuroTherm2Powder', 'eurotherm2.power', 'average'),
+    ('EuroTherm2SP',     'eurotherm2.sp',    'average'),
+    ('EuroTherm2Temp',   'eurotherm2.temp',  'average')]
 
 Furnace_Header_List = ["furnace.temp1", "furnace.temp2", "furnace.power"]
 
