@@ -212,13 +212,27 @@
     <item>
      <layout class="QGridLayout" name="gridLayout">
       <item row="0" column="0">
-<widget class="QFrame" name="frame_graphicsView_currentViewB1"/>
+       <widget class="QFrame" name="frame_graphicsView_currentViewB1"/>
       </item>
       <item row="4" column="0">
-<widget class="QFrame" name="frame_graphicsView_2DBank1"/>
+       <widget class="QFrame" name="frame_graphicsView_2DBank1"/>
+      </item>
+      <item row="2" column="0">
+       <widget class="QCheckBox" name="checkBox_roiSyncB1B2">
+        <property name="text">
+         <string>ROI Sync Bank 1 and Bank 2</string>
+        </property>
+       </widget>
       </item>
       <item row="1" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="QPushButton" name="pushButton_setROIb2">
+          <property name="text">
+           <string>Set ROI</string>
+          </property>
+         </widget>
+        </item>
         <item>
          <widget class="QLineEdit" name="lineEdit_bank2RoiStart">
           <property name="sizePolicy">
@@ -226,6 +240,9 @@
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If user pushes 'Set ROI', this is the minimum TOF/dSpacing&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;If user pushes 'Fit', this is the left boundary of the fit window&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
          </widget>
         </item>
@@ -237,12 +254,8 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pushButton_setROIb2">
-          <property name="text">
-           <string>Set ROI</string>
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If user pushes 'Set ROI', this is the maximum TOF/dSpacing&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;If user pushes 'Fit', this is the right boundary of the fit window&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
          </widget>
         </item>
@@ -269,10 +282,10 @@
        </layout>
       </item>
       <item row="4" column="1">
-<widget class="QFrame" name="frame_graphicsView_2DBank2"/>
+       <widget class="QFrame" name="frame_graphicsView_2DBank2"/>
       </item>
       <item row="4" column="2">
-<widget class="QFrame" name="frame_graphicsView_2DBank3"/>
+       <widget class="QFrame" name="frame_graphicsView_2DBank3"/>
       </item>
       <item row="3" column="2">
        <widget class="QCheckBox" name="checkBox_normByVanadium">
@@ -287,7 +300,7 @@
        </widget>
       </item>
       <item row="0" column="1">
-<widget class="QFrame" name="frame_graphicsView_currentViewB2"/>
+       <widget class="QFrame" name="frame_graphicsView_currentViewB2"/>
       </item>
       <item row="5" column="0">
        <layout class="QHBoxLayout" name="horizontalLayout_7">
@@ -354,15 +367,23 @@
       <item row="1" column="2">
        <layout class="QHBoxLayout" name="horizontalLayout_3">
         <item>
-         <widget class="QLineEdit" name="lineEdit_bank3RoiStart"/>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="lineEdit_bank3RoiEnd"/>
-        </item>
-        <item>
          <widget class="QPushButton" name="pushButton_setROIb3">
           <property name="text">
            <string>Set ROI</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="lineEdit_bank3RoiStart">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If user pushes 'Set ROI', this is the minimum TOF/dSpacing&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;If user pushes 'Fit', this is the left boundary of the fit window&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="lineEdit_bank3RoiEnd">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If user pushes 'Set ROI', this is the maximum TOF/dSpacing&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;If user pushes 'Fit', this is the right boundary of the fit window&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
          </widget>
         </item>
@@ -389,20 +410,28 @@
        </layout>
       </item>
       <item row="0" column="2">
-<widget class="QFrame" name="frame_graphicsView_currentViewB3"/>
+       <widget class="QFrame" name="frame_graphicsView_currentViewB3"/>
       </item>
       <item row="1" column="0">
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
-         <widget class="QLineEdit" name="lineEdit_bank1RoiStart"/>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="lineEdit_bank1RoiEnd"/>
-        </item>
-        <item>
          <widget class="QPushButton" name="pushButton_setROIb1">
           <property name="text">
            <string>Set ROI</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="lineEdit_bank1RoiStart">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If user pushes 'Set ROI', this is the minimum TOF/dSpacing&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;If user pushes 'Fit', this is the left boundary of the fit window&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="lineEdit_bank1RoiEnd">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If user pushes 'Set ROI', this is the maximum TOF/dSpacing&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;If user pushes 'Fit', this is the right boundary of the fit window&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
          </widget>
         </item>
@@ -427,13 +456,6 @@
          </spacer>
         </item>
        </layout>
-      </item>
-      <item row="2" column="0">
-       <widget class="QCheckBox" name="checkBox_roiSyncB1B2">
-        <property name="text">
-         <string>ROI Sync Bank 1 and Bank 2</string>
-        </property>
-       </widget>
       </item>
       <item row="2" column="2">
        <layout class="QHBoxLayout" name="horizontalLayout_5">
@@ -561,7 +583,7 @@
    <widget class="QWidget" name="dockWidgetContents_2">
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
-<widget class="QFrame" name="frame_graphicsView_comparison">
+      <widget class="QFrame" name="frame_graphicsView_comparison">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>0</horstretch>
@@ -959,23 +981,6 @@
    </property>
   </action>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>SingleBankView</class>
-   <extends>QGraphicsView</extends>
-   <header>livedatagraphicswidgets.h</header>
-  </customwidget>
-  <customwidget>
-   <class>GeneralPurpose1DView</class>
-   <extends>QGraphicsView</extends>
-   <header>livedatagraphicswidgets.h</header>
-  </customwidget>
-  <customwidget>
-   <class>Live2DView</class>
-   <extends>QGraphicsView</extends>
-   <header>livedatagraphicswidgets.h</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

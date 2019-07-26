@@ -436,6 +436,11 @@ class VulcanLiveDataView(QMainWindow):
 
         :return:
         """
+        # TODO - NOW TONIGHT 125 - Fit peak shall not be an instant action but a flag such that
+        # TODO                   - (1) whenever an accumulation run is finished, peak fit will be followed
+        # TODO                   - (2) all the runs in the cyclic buffer shall be fitted with such peak
+        # TODO                   - (3) Indicate the peak fit is in progress. Next operation is to stop it explicitly
+
         bank_id = 1
         self.fit_single_peak(bank_id, self.ui.graphicsView_currentViewB1, self.ui.lineEdit_bank1RoiStart,
                              self.ui.lineEdit_bank1RoiEnd)
@@ -446,6 +451,9 @@ class VulcanLiveDataView(QMainWindow):
         self.ui.pushButton_fitB1.setText('Stop Fit')
         if self.ui.checkBox_peakFitSyncB1B2.isChecked():
             self.ui.pushButton_fitB2.setText('Stop Fit')
+
+    # TODO - NOW TONIGHT 215 - Add fit for bank2 and bank3
+    # TODO - ... ...
 
     def fit_single_peak(self, bank_id, graphics_view, x_min_widget, x_max_widget):
         """
@@ -477,13 +485,14 @@ class VulcanLiveDataView(QMainWindow):
             self.write_log('error', err_msg)
             return
 
-        # TODO - ASAP : need a use case to continue
-        # FIXME - the data obtained is current or previous?
+        # TODO - NOW TONIGHT 215 - data shall be retrieved from cyclic buffer
         vec_x, vec_y = graphics_view.get_data(x_min, x_max)
         coeff, model_y = optimize_utilities.fit_gaussian(vec_x, vec_y)
 
         # plot the fitted data
         graphics_view.plot_fitted_peak(vec_x, model_y)
+
+        # TODO - NOW TONIGHT 215 - where to store for historical record???
 
         return
 
