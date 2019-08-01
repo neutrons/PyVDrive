@@ -52,12 +52,11 @@ import xml.etree.ElementTree as ET
 import sys
 import numpy
 import bisect
-import pandas as pd
 import h5py
 import save_vulcan_gsas
+import reduce_VULCAN_logs
 
 sys.path.append("/opt/mantidnightly/bin")
-#sys.path.append("/opt/mantid313/bin")
 import mantid.simpleapi as mantidsimple
 import mantid
 from mantid.api import AnalysisDataService
@@ -109,60 +108,59 @@ TIMEZONE2 = 'UTC'
 
 # record file header list: list of 3-tuples
 RecordBase = [
-    ("RUN",             "run_number", None),
-    ("IPTS",            "experiment_identifier", None),
-    ("Title",           "run_title", None),
-    ("Notes",           "file_notes", None),
-    ("Sample",          None, None),  # HDF5 Patch
-    ('ITEM',            None, None),
-    ("StartTime",       "run_start", "time"),
-    ("Duration(sec)",   "duration", None),
-    ("ProtonCharge",    "proton_charge", "sum"),
-    ("TotalCounts",     None, None),  # HDF5 Patch
-    ("Monitor1",        "das.monitor2counts", "sum"),
-    ("Monitor2",        "das.monitor3counts", "sum"),
-    ("X",               "X", "0"),
-    ("Y",               "Y", "0"),
-    ("Z",               "Z", "0"),
-    ("O",               "Omega", "0"),
-    ("HROT",            "HROT", "0"),
-    ("VROT",            "VROT", "0"),
-    ("BandCentre",      "lambda", "0"),
-    ("BandWidth",       "bandwidth", "0"),
-    ("Frequency",       "skf1.speed", "0"),
-    ("Guide",           "Guide", "0"),
-    ("IX",              "IX",   "average"),
-    ("IY",              "IY",   "average"),
-    ("IZ",              "IZ",   "average"),
-    ("IHA",             "IHA",  "average"),
-    ("IVA",             "IVA",  "average"),
-    ("Collimator",      None, None),  # HDF Patch
-    ("MTSDisplacement", "loadframe.displacement",   "average"),
-    ("MTSForce",        "loadframe.force",          "average"),
-    ("MTSStrain",       "loadframe.strain",         "average"),
-    ("MTSStress",       "loadframe.stress",         "average"),
-    ("MTSAngle",        "loadframe.rot_angle",      "average"),
-    ("MTSTorque",       "loadframe.torque",         "average"),
-    # ("MTSLaser",        "loadframe.laser",          "average"),
-    # ("MTSlaserstrain",  "loadframe.laserstrain",    "average"),
+    ("RUN", "run_number", None),
+    ("IPTS", "experiment_identifier", None),
+    ("Title", "run_title", None),
+    ("Notes", "file_notes", None),
+    ("Sample", None, None),  # HDF5 Patch
+    ('ITEM', None, None),  # HDF5 Patch
+    ("StartTime", "run_start", "time"),
+    ("Duration(sec)", "duration", None),
+    ("ProtonCharge", "proton_charge", "sum"),
+    ("TotalCounts", None, None),  # HDF5 Patch
+    ("Monitor1", "das.monitor2counts", "sum"),
+    ("Monitor2", "das.monitor3counts", "sum"),
+    ("X", "X", "0"),
+    ("Y", "Y", "0"),
+    ("Z", "Z", "0"),
+    ("O", "Omega", "0"),
+    ("HROT", "HROT", "0"),
+    ("VROT", "VROT", "0"),
+    ("BandCentre", "lambda", "0"),
+    ("BandWidth", "bandwidth", "0"),
+    ("Frequency", "skf1.speed", "0"),
+    ("Guide", "Guide", "0"),
+    ("IX", "IX", "average"),
+    ("IY", "IY", "average"),
+    ("IZ", "IZ", "average"),
+    ("IHA", "IHA", "average"),
+    ("IVA", "IVA", "average"),
+    ("Collimator", None, None),  # HDF Patch
+    ("MTSDisplacement", "loadframe.displacement", "average"),
+    ("MTSForce", "loadframe.force", "average"),
+    ("MTSStrain", "loadframe.strain", "average"),
+    ("MTSStress", "loadframe.stress", "average"),
+    ("MTSAngle", "loadframe.angle", "average"),
+    ("MTSTorque", "loadframe.torque", "average"),
     ("MTSDisplaceoffset", "loadframe.displacement_offset", "average"),
-    ("MTSAngleceoffset",  "loadframe.angle_offset",  "average"),
-    ("MTSFurnace",        "loadframe.furnace",       "average"),
-    ("MTSCryo",           "loadframe.cryo",          "average"),
-    ("MTST3",             "loadframe.extTC3",         "average"),
-    ("MTST4",             "loadframe.extTC4",         "average"),
-    ("MTSHTStrain",       "loadframe.strain_hightemp", "average"),
-    ("FurnaceT",          "furnace.temp1",  "average"),
-    ("FurnaceOT",         "furnace.temp2",  "average"),
-    ("FurnacePower",      "furnace.power",  "average"),
-    # ("VacT",              "partlow1.temp",  "average"),
-    # ("VacOT",             "partlow2.temp",  "average"),
+    ("MTSAngleceoffset", "loadframe.angle_offset", "average"),
+    ("MTSFurnace", "loadframe.furnace", "average"),
+    ("MTSCryo", "loadframe.cryo", "average"),
+    ("MTST3", "loadframe.extTC3", "average"),
+    ("MTST4", "loadframe.extTC4", "average"),
+    ("FurnaceT", "furnace.temp1", "average"),
+    ("FurnaceOT", "furnace.temp2", "average"),
+    ("FurnacePower", "furnace.power", "average"),
     ('EuroTherm1Powder', 'eurotherm1.power', 'average'),
-    ('EuroTherm1SP',     'eurotherm1.sp',    'average'),
-    ('EuroTherm1Temp',   'eurotherm1.temp',  'average'),
+    ('EuroTherm1SP', 'eurotherm1.sp', 'average'),
+    ('EuroTherm1Temp', 'eurotherm1.temp', 'average'),
     ('EuroTherm2Powder', 'eurotherm2.power', 'average'),
-    ('EuroTherm2SP',     'eurotherm2.sp',    'average'),
-    ('EuroTherm2Temp',   'eurotherm2.temp',  'average'),
+    ('EuroTherm2SP', 'eurotherm2.sp', 'average'),
+    ('EuroTherm2Temp', 'eurotherm2.temp', 'average'),
+    ('Volt1', 'BL7:SE:Potentiostat:E', 'average'),
+    ('Current1', 'BL7:SE:Potentiostat:I', 'average'),
+    ('Volt2', 'BL7:SE:Potentiostat:E2', 'average'),
+    ('Current1', 'BL7:SE:Potentiostat:I2', 'average'),
 ]
 
 """
@@ -184,32 +182,41 @@ VulcanSampleLogList = [("TimeStamp           ", ""),
                        ("O", "OMEGA"),
                        ("HROT", "HROT"),
                        ("VROT", "VROT"),
-                       ("MTSDisplacement", "loadframe.displacement"),
-                       ("MTSForce", "loadframe.force"),
-                       ("MTSStrain", "loadframe.strain"),
-                       ("MTSStress", "loadframe.stress"),
-                       ("MTSAngle", "loadframe.rot_angle"),
-                       ("MTSTorque", "loadframe.torque"),
-                       ("MTSLaser", "loadframe.laser"),
-                       ("MTSlaserstrain", "loadframe.laserstrain"),
-                       ("MTSDisplaceoffset", "loadframe.x_offset"),
-                       ("MTSAngleceoffset", "loadframe.rot_offset"),
-                       ("MTS1", "loadframe.furnace1"),
-                       ("MTS2", "loadframe.furnace2"),
-                       ("MTS3", "loadframe.extTC3"),
-                       ("MTS4", "loadframe.extTC4"),
-                       ("MTSHighTempStrain", "loadframe.strain_hightemp"),
-                       ("FurnaceT", "furnace.temp1"),
-                       ("FurnaceOT", "furnace.temp2"),
-                       ("FurnacePower", "furnace.power"),
-                       ("VacT", "partlow1.temp"),
-                       ("VacOT", "partlow2.temp"),
-                       ('EuroTherm1Powder', 'eurotherm1.power'),
-                       ('EuroTherm1SP', 'eurotherm1.sp'),
-                       ('EuroTherm1Temp', 'eurotherm1.temp'),
-                       ('EuroTherm2Powder', 'eurotherm2.power'),
-                       ('EuroTherm2SP', 'eurotherm2.sp'),
-                       ('EuroTherm2Temp', 'eurotherm2.temp')]
+                       ("MTSDisplacement", "loadframe.displacement", "average"),
+                       ("MTSForce", "loadframe.force", "average"),
+                       ("MTSStrain", "loadframe.strain", "average"),
+                       ("MTSStress", "loadframe.stress", "average"),
+                       ("MTSAngle", "loadframe.angle", "average"),
+                       ("MTSTorque", "loadframe.torque", "average"),
+                       ("MTSDisplaceoffset", "loadframe.displacement_offset", "average"),
+                       ("MTSAngleceoffset", "loadframe.angle_offset", "average"),
+                       ("MTSFurnace", "loadframe.furnace", "average"),
+                       ("MTSCryo", "loadframe.cryo", "average"),
+                       ("MTST3", "loadframe.extTC3", "average"),
+                       ("MTST4", "loadframe.extTC4", "average"),
+                       ("FurnaceT", "furnace.temp1", "average"),
+                       ("FurnaceOT", "furnace.temp2", "average"),
+                       ("FurnacePower", "furnace.power", "average"),
+                       ('EuroTherm1Powder', 'eurotherm1.power', 'average'),
+                       ('EuroTherm1SP', 'eurotherm1.sp', 'average'),
+                       ('EuroTherm1Temp', 'eurotherm1.temp', 'average'),
+                       ('EuroTherm2Powder', 'eurotherm2.power', 'average'),
+                       ('EuroTherm2SP', 'eurotherm2.sp', 'average'),
+                       ('EuroTherm2Temp', 'eurotherm2.temp', 'average'),
+                       ('Volt1',            'BL7:SE:Potentiostat:E', 'average'),
+                       ('Current1',         'BL7:SE:Potentiostat:I', 'average'),
+                       ('Volt2',            'BL7:SE:Potentiostat:E2', 'average'),
+                       ('Current1',         'BL7:SE:Potentiostat:I2', 'average'),
+                       ('Analog1 ', 'BL7:SE:GC:AI1', 'average'),
+                       ('Analog2 ', 'BL7:SE:GC:AI2', 'average'),
+                       ('Analog3 ', 'BL7:SE:GC:AI3', 'average'),
+                       ('Analog4 ', 'BL7:SE:GC:AI4', 'average'),
+                       ('Analog5 ', 'BL7:SE:GC:AI5', 'average'),
+                       ('Analog6 ', 'BL7:SE:GC:AI6', 'average'),
+                       ('Analog7 ', 'BL7:SE:GC:AI7', 'average'),
+                       ('Analog8 ', 'BL7:SE:GC:AI8', 'average'),
+                       ('Analog9 ', 'BL7:SE:GC:AI9', 'average'),
+                       ('Analog10', 'BL7:SE:GC:AI10', 'average')]
 
 
 MTS_Header_List = [
@@ -222,41 +229,37 @@ MTS_Header_List = [
     ("O", "OMEGA"),
     ("HROT", "HROT"),
     ("VROT", "VROT"),
-    ("MTSDisplacement", "loadframe.displacement"),
-    ("MTSForce", "loadframe.force"),
-    ("MTSStrain", "loadframe.strain"),
-    ("MTSStress", "loadframe.stress"),
-    ("MTSAngle", "loadframe.rot_angle"),
-    ("MTSTorque", "loadframe.torque"),
-    ("MTSLaser", "loadframe.laser"),
-    ("MTSlaserstrain", "loadframe.laserstrain"),
-    ("MTSDisplaceoffset", "loadframe.x_offset"),
-    ("MTSAngleceoffset", "loadframe.rot_offset"),
-    ("MTS1", "loadframe.furnace1"),
-    ("MTS2", "loadframe.furnace2"),
-    ("MTS3", "loadframe.extTC3"),
-    ("MTS4", "loadframe.extTC4"),
-    ("MTSHighTempStrain", "loadframe.strain_hightemp"),
-    ("FurnaceT", "furnace.temp1"),
-    ("FurnaceOT", "furnace.temp2"),
-    ("FurnacePower", "furnace.power"),
-    ("VacT", "partlow1.temp"),
-    ("VacOT", "partlow2.temp"),
-    ('EuroTherm1Powder', 'eurotherm1.power'),
-    ('EuroTherm1SP', 'eurotherm1.sp'),
-    ('EuroTherm1Temp', 'eurotherm1.temp'),
-    ('EuroTherm2Powder', 'eurotherm2.power'),
-    ('EuroTherm2SP', 'eurotherm2.sp'),
-    ('EuroTherm2Temp', 'eurotherm2.temp')]
+    ("MTSDisplacement", "loadframe.displacement",   "average"),
+    ("MTSForce",        "loadframe.force",          "average"),
+    ("MTSStrain",       "loadframe.strain",         "average"),
+    ("MTSStress",       "loadframe.stress",         "average"),
+    ("MTSAngle",        "loadframe.angle",      "average"),
+    ("MTSTorque",       "loadframe.torque",         "average"),
+    ("MTSDisplaceoffset", "loadframe.displacement_offset", "average"),
+    ("MTSAngleceoffset",  "loadframe.angle_offset",  "average"),
+    ("MTSFurnace",        "loadframe.furnace",       "average"),
+    ("MTSCryo",           "loadframe.cryo",          "average"),
+    ("MTST3",             "loadframe.extTC3",         "average"),
+    ("MTST4",             "loadframe.extTC4",         "average"),
+    ("FurnaceT",          "furnace.temp1",  "average"),
+    ("FurnaceOT",         "furnace.temp2",  "average"),
+    ("FurnacePower",      "furnace.power",  "average"),
+    ('EuroTherm1Powder', 'eurotherm1.power', 'average'),
+    ('EuroTherm1SP',     'eurotherm1.sp',    'average'),
+    ('EuroTherm1Temp',   'eurotherm1.temp',  'average'),
+    ('EuroTherm2Powder', 'eurotherm2.power', 'average'),
+    ('EuroTherm2SP',     'eurotherm2.sp',    'average'),
+    ('EuroTherm2Temp',   'eurotherm2.temp',  'average')]
 
 Furnace_Header_List = ["furnace.temp1", "furnace.temp2", "furnace.power"]
 
 
+# 2019.07.31: Generic DAQ is removed from output
 # Generic DAQ log output.  first: head title; second: unit
-Generic_DAQ_List = [("TimeStamp", ""),
-                    ("Time [sec]", ""),
-                    ("Current", "Current"),
-                    ("Voltage", "Voltage")]
+# Generic_DAQ_List = [("TimeStamp", ""),
+#                     ("Time [sec]", ""),
+#                     ("Current", "Current"),
+#                     ("Voltage", "Voltage")]
 
 
 class ReductionSetup(object):
@@ -1937,8 +1940,8 @@ class ReduceVulcanData(object):
         # export Furnace log
         self.export_furnace_log(self._dataWorkspaceName, log_dir, run_number)
 
-        # Export Generic DAQ log
-        self.export_generic_daq_log(log_dir, ipts, run_number)
+        # Export Generic DAQ log:  20190731: Ke disabled IPTS-22988 Run 174500
+        # self.export_generic_daq_log(log_dir, ipts, run_number)
 
         # Export load frame /MTS log
         self.export_mts_log()
@@ -1971,38 +1974,39 @@ class ReduceVulcanData(object):
 
         return
 
-    def export_generic_daq_log(self, output_directory, ipts, run_number):
-        """
-        Export the generic DAQ log
-        :param output_directory:
-        :param ipts:
-        :param run_number:
-        :return:
-        """
-        # organized by dictionary
-        if run_number >= 69214:
-            for ilog in xrange(1, 17):
-                Generic_DAQ_List.append(("tc.user%d" % ilog, "tc.user%d" % ilog))
-
-        # Format to lists for input
-        sample_log_name_list = list()
-        header_item_list = list()
-        for i in xrange(len(Generic_DAQ_List)):
-            title = Generic_DAQ_List[i][0]
-            log_name = Generic_DAQ_List[i][1]
-
-            header_item_list.append(title)
-            if len(log_name) > 0:
-                sample_log_name_list.append(log_name)
-
-        header_str = ""
-        for title in header_item_list:
-            header_str += "%s\t" % title
-
-        output_file_name = os.path.join(output_directory, 'IPTS-%d-GenericDAQ-%d.txt' % (ipts, run_number))
-        self.generate_csv_log(output_file_name, sample_log_name_list, header_str)
-
-        return
+    #  20190731: Ke disabled IPTS-22988 Run 174500
+    # def export_generic_daq_log(self, output_directory, ipts, run_number):
+    #     """
+    #     Export the generic DAQ log
+    #     :param output_directory:
+    #     :param ipts:
+    #     :param run_number:
+    #     :return:
+    #     """
+    #     # organized by dictionary
+    #     if run_number >= 69214:
+    #         for ilog in xrange(1, 17):
+    #             Generic_DAQ_List.append(("tc.user%d" % ilog, "tc.user%d" % ilog))
+    #
+    #     # Format to lists for input
+    #     sample_log_name_list = list()
+    #     header_item_list = list()
+    #     for i in xrange(len(Generic_DAQ_List)):
+    #         title = Generic_DAQ_List[i][0]
+    #         log_name = Generic_DAQ_List[i][1]
+    #
+    #         header_item_list.append(title)
+    #         if len(log_name) > 0:
+    #             sample_log_name_list.append(log_name)
+    #
+    #     header_str = ""
+    #     for title in header_item_list:
+    #         header_str += "%s\t" % title
+    #
+    #     output_file_name = os.path.join(output_directory, 'IPTS-%d-GenericDAQ-%d.txt' % (ipts, run_number))
+    #     self.generate_csv_log(output_file_name, sample_log_name_list, header_str)
+    #
+    #     return
 
     def export_sample_environment_log(self, output_dir, ipts, run_number):
         """ Export Vulcan sample environment log

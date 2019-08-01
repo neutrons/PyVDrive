@@ -1,0 +1,148 @@
+# This module will include several dictionaries for VULCAN sample logs to be exported in auto reduction
+
+# Sample logs that will be always written AutoRecord.txt
+CommonRecords = [
+    ("RUN", "run_number", None),
+    ("IPTS", "experiment_identifier", None),
+    ("Title", "run_title", None),
+    ("Notes", "file_notes", None),
+    ("Sample", None, None),  # HDF5 Patch
+    ('ITEM', None, None),  # HDF5 Patch
+    ("StartTime", "run_start", "time"),
+    ("Duration(sec)", "duration", None),
+    ("ProtonCharge", "proton_charge", "sum"),
+    ("TotalCounts", None, None),  # HDF5 Patch
+    ("Monitor1", "das.monitor2counts", "sum"),
+    ("Monitor2", "das.monitor3counts", "sum"),
+    ("X", "X", "0"),
+    ("Y", "Y", "0"),
+    ("Z", "Z", "0"),
+    ("O", "Omega", "0"),
+    ("HROT", "HROT", "0"),
+    ("VROT", "VROT", "0"),
+    ("BandCentre", "lambda", "0"),
+    ("BandWidth", "bandwidth", "0"),
+    ("Frequency", "skf1.speed", "0"),
+    ("Guide", "Guide", "0"),
+    ("IX", "IX", "average"),
+    ("IY", "IY", "average"),
+    ("IZ", "IZ", "average"),
+    ("IHA", "IHA", "average"),
+    ("IVA", "IVA", "average"),
+    ("Collimator", None, None),  # HDF Patch
+    ("MTSDisplacement", "loadframe.displacement", "average"),
+    ("MTSForce", "loadframe.force", "average"),
+    ("MTSStrain", "loadframe.strain", "average"),
+    ("MTSStress", "loadframe.stress", "average"),
+    ("MTSAngle", "loadframe.angle", "average"),
+    ("MTSTorque", "loadframe.torque", "average"),
+    ("MTSDisplaceoffset", "loadframe.displacement_offset", "average"),
+    ("MTSAngleceoffset", "loadframe.angle_offset", "average"),
+    ("MTSFurnace", "loadframe.furnace", "average"),
+    ("MTSCryo", "loadframe.cryo", "average"),
+    ("MTST3", "loadframe.extTC3", "average"),
+    ("MTST4", "loadframe.extTC4", "average"),
+    ("FurnaceT", "furnace.temp1", "average"),
+    ("FurnaceOT", "furnace.temp2", "average"),
+    ("FurnacePower", "furnace.power", "average"),
+    ('EuroTherm1Powder', 'eurotherm1.power', 'average'),
+    ('EuroTherm1SP', 'eurotherm1.sp', 'average'),
+    ('EuroTherm1Temp', 'eurotherm1.temp', 'average'),
+    ('EuroTherm2Powder', 'eurotherm2.power', 'average'),
+    ('EuroTherm2SP', 'eurotherm2.sp', 'average'),
+    ('EuroTherm2Temp', 'eurotherm2.temp', 'average'),
+    ('Volt1', 'BL7:SE:Potentiostat:E', 'average'),
+    ('Current1', 'BL7:SE:Potentiostat:I', 'average'),
+    ('Volt2', 'BL7:SE:Potentiostat:E2', 'average'),
+    ('Current1', 'BL7:SE:Potentiostat:I2', 'average'),
+]
+
+
+# List of sample logs that can be related to MTS devices.
+# This list shall be kept stable from run to run
+# Note - Only first item of the tuple: sample log name (in file), is used in code
+MTS_Header_List = [
+    ("TimeStamp", ""),
+    ("Time [sec]", ""),
+    ("MPTIndex", "loadframe.MPTIndex"),
+    ("X", "X"),
+    ("Y", "Y"),
+    ("Z", "Z"),
+    ("O", "OMEGA"),
+    ("HROT", "HROT"),
+    ("VROT", "VROT"),
+    ("MTSDisplacement", "loadframe.displacement",   "average"),
+    ("MTSForce",        "loadframe.force",          "average"),
+    ("MTSStrain",       "loadframe.strain",         "average"),
+    ("MTSStress",       "loadframe.stress",         "average"),
+    ("MTSAngle",        "loadframe.angle",      "average"),
+    ("MTSTorque",       "loadframe.torque",         "average"),
+    ("MTSDisplaceoffset", "loadframe.displacement_offset", "average"),
+    ("MTSAngleceoffset",  "loadframe.angle_offset",  "average"),
+    ("MTSFurnace",        "loadframe.furnace",       "average"),
+    ("MTSCryo",           "loadframe.cryo",          "average"),
+    ("MTST3",             "loadframe.extTC3",         "average"),
+    ("MTST4",             "loadframe.extTC4",         "average"),
+    ("FurnaceT",          "furnace.temp1",  "average"),
+    ("FurnaceOT",         "furnace.temp2",  "average"),
+    ("FurnacePower",      "furnace.power",  "average"),
+    ('EuroTherm1Powder', 'eurotherm1.power', 'average'),
+    ('EuroTherm1SP',     'eurotherm1.sp',    'average'),
+    ('EuroTherm1Temp',   'eurotherm1.temp',  'average'),
+    ('EuroTherm2Powder', 'eurotherm2.power', 'average'),
+    ('EuroTherm2SP',     'eurotherm2.sp',    'average'),
+    ('EuroTherm2Temp',   'eurotherm2.temp',  'average')]
+
+
+# Standard Vulcan sample log file header
+VulcanCommonSampleLogList = [("TimeStamp           ", ""),
+("Time [sec]          ", ""),
+                       ("MPTIndex            ", "loadframe.MPTIndex"),
+                       ("X                   ", "X"),
+                       ("Y                   ", "Y"),
+                       ("Z                   ", "Z"),
+                       ("O", "OMEGA"),
+                       ("HROT", "HROT"),
+                       ("VROT", "VROT"),
+                       ("MTSDisplacement", "loadframe.displacement", "average"),
+                       ("MTSForce", "loadframe.force", "average"),
+                       ("MTSStrain", "loadframe.strain", "average"),
+                       ("MTSStress", "loadframe.stress", "average"),
+                       ("MTSAngle", "loadframe.angle", "average"),
+                       ("MTSTorque", "loadframe.torque", "average"),
+                       ("MTSDisplaceoffset", "loadframe.displacement_offset", "average"),
+                       ("MTSAngleceoffset", "loadframe.angle_offset", "average"),
+                       ("MTSFurnace", "loadframe.furnace", "average"),
+                       ("MTSCryo", "loadframe.cryo", "average"),
+                       ("MTST3", "loadframe.extTC3", "average"),
+                       ("MTST4", "loadframe.extTC4", "average"),
+                       ("FurnaceT", "furnace.temp1", "average"),
+                       ("FurnaceOT", "furnace.temp2", "average"),
+                       ("FurnacePower", "furnace.power", "average"),
+                       ('EuroTherm1Powder', 'eurotherm1.power', 'average'),
+                       ('EuroTherm1SP', 'eurotherm1.sp', 'average'),
+                       ('EuroTherm1Temp', 'eurotherm1.temp', 'average'),
+                       ('EuroTherm2Powder', 'eurotherm2.power', 'average'),
+                       ('EuroTherm2SP', 'eurotherm2.sp', 'average'),
+                       ('EuroTherm2Temp', 'eurotherm2.temp', 'average')]
+
+
+# Generic sample log dict: Various due to experiment setup
+GenericSampleLogDict = dict()  # key = run number (to start)  value = list of tuples
+                               # tuple = (Print name, log name, operation, (optional) extra info log name, (optional) value path
+GenericSampleLogDict[229832] = [('Volt1',            'BL7:SE:Potentiostat:E', 'average', None, None),
+                                ('Current1',         'BL7:SE:Potentiostat:I', 'average', None, None),
+                                ('Volt2',            'BL7:SE:Potentiostat:E2', 'average', None, None),
+                                ('Current1',         'BL7:SE:Potentiostat:I2', 'average', None, None),
+                                ('Analog1 ', 'BL7:SE:GC:AI1', 'average', 'xxxx', 'xx.xxx.xx'),
+                                ('Analog2 ', 'BL7:SE:GC:AI2', 'average', 'xxxx', 'xx.xxx.xx'),
+                                ('Analog3 ', 'BL7:SE:GC:AI3', 'average'),
+                                ('Analog4 ', 'BL7:SE:GC:AI4', 'average'),
+                                ('Analog5 ', 'BL7:SE:GC:AI5', 'average'),
+                                ('Analog6 ', 'BL7:SE:GC:AI6', 'average'),
+                                ('Analog7 ', 'BL7:SE:GC:AI7', 'average'),
+                                ('Analog8 ', 'BL7:SE:GC:AI8', 'average'),
+                                ('Analog9 ', 'BL7:SE:GC:AI9', 'average'),
+                                ('Analog10', 'BL7:SE:GC:AI10', 'average')
+                                ]
+
