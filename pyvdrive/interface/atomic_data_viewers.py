@@ -381,6 +381,7 @@ class AtomicReduced1DViewer(QMainWindow):
 class AtomicReduction2DViewer(QMainWindow):
     """ Class for 2D reduced data viewer
     """
+    # TODO - NOW TONIGHT - #216 - Add log scale selector in UI and then implement in this method!
     def __init__(self, parent=None):
         """
         Init
