@@ -396,10 +396,19 @@ def group_pixels_2theta_geometry(template_virtual_geometry_dict, ws_index_range,
 
     print (template_virtual_geometry_dict.keys())
 
-    group_geometry_dict = {'L1': template_virtual_geometry_dict['L1']}
-    for geom_item in ['Polar', 'SpectrumIDs', 'L2', 'Azimuthal']:
+    group_geometry_dict = dict()
+
+    group_geometry_dict['L1'] = template_virtual_geometry_dict['L1']
+
+    # Set spectrum numbers
+    group_geometry_dict['SpectrumIDs'] = numpy.arange(num_2theta) + 1
+
+    # Parameters with same value for every spectrum
+    for geom_item in ['Polar', 'L2', 'Azimuthal']:
         item_value = template_virtual_geometry_dict[geom_item][bank-1]
         group_geometry_dict[geom_item] = [item_value] * num_2theta
+
+    # Fix
 
     return group_geometry_dict
 

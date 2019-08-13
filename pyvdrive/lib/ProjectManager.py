@@ -1281,10 +1281,7 @@ class ProjectManager(object):
                                                                    two_theta_range=(two_theta_params['min'],
                                                                                     two_theta_params['max']),
                                                                    two_theta_step=two_theta_params['step'],
-                                                                   binning_parameters=binning_tuple[1],
-                                                                   van_run_number=vanadium,
-                                                                   iparam_name=gsas_iparam,
-                                                                   output_dir=output_directory)
+                                                                   binning_parameters=binning_tuple[1])
 
         out_ws_name, tth_array, tth_num_pixels_array, msg = results
 
