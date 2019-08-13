@@ -2212,6 +2212,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             """ retrieve data for a single bank
             :return:
             """
+            # TODO - #216 - Doc & Check!
             # TODO - FIXME - TONIGHT 0 - unit as TOF shall be passed to this level with evt_unit_changed...
             vec_data_x, vec_data_y = self._myController.project.get_chopped_sequence_data(chop_run_key,
                                                                                           curr_seq_index,
@@ -2347,13 +2348,19 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             MAX_BANK = 3
             for bank_id in range(1, MAX_BANK+1):
                 child_window = self.launch_single_run_view()
-                vec_x, vec_y = get_single_bank_data(chop_run_key=chop_key,
-                                                    curr_seq_index=curr_seq,
-                                                    bank_id_i=bank_id,
-                                                    do_pc_norm=pc_norm,
-                                                    proton_charge=pc_seq,
-                                                    do_van_norm=van_norm,
-                                                    van_vector_bank_i=van_vec_y_dict[bank_id])
+                try:
+                    vec_x, vec_y = get_single_bank_data(chop_run_key=chop_key,
+                                                        curr_seq_index=curr_seq,
+                                                        bank_id_i=bank_id,
+                                                        do_pc_norm=pc_norm,
+                                                        proton_charge=pc_seq,
+                                                        do_van_norm=van_norm,
+                                                        van_vector_bank_i=van_vec_y_dict[bank_id])
+                except RuntimeError as run_err:
+                    print ('[ERROR] Unable to retrieve bank {} data in plot_chopped_run() due to {}'
+                           ''.format(bank_id, run_err))
+                    continue
+                # END-TRY-EXCEPT
 
                 # run number
                 if isinstance(chop_key, tuple):

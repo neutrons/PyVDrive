@@ -1046,8 +1046,10 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         num_specs = get_number_spectra(workspace)
         required_workspace_index = bank_id - start_bank_id
         if not 0 <= required_workspace_index < num_specs:
-            raise RuntimeError('Bank ID {0}, aka workspace index {1} is out of spectra of workspace {2}.'
-                               ''.format(bank_id, required_workspace_index, workspace_name))
+            raise RuntimeError('Bank ID {0}, aka workspace index {1} is out of spectra of workspace {2}, which has '
+                               '{3} spectra.'
+                               ''.format(bank_id, required_workspace_index, workspace_name,
+                                         num_specs))
     # END-IF-ELSE
 
     # if is_a_workspace(workspace_name):

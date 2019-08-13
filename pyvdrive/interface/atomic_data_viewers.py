@@ -443,7 +443,7 @@ class AtomicReduction2DViewer(QMainWindow):
         datatypeutility.check_list('Y axis indexes', y_indexes)
 
         # Get from UI
-        log_scale = self.ui.checkBox_intensityLogScale.ischecked()
+        log_scale = self.ui.checkBox_intensityLogScale.isChecked()
 
         size_set = set()
         for data_set in data_set_list:

@@ -463,7 +463,7 @@ class VdriveCommandProcessor(object):
                 message = 'Unable to load GSAS file of IPTS-{} Run-{}'.format(ipts_number, run_number)
         else:
             # multiple but none chopped run
-            raise NotImplementedError('ASAP')
+            raise NotImplementedError('Implement plotting multiple runs ASAP')
 
         # write out the peak parameters
         if processor.do_calculate_peak_parameter:
