@@ -1738,11 +1738,19 @@ class ReductionManager(object):
 
     def reduce_event_2theta_group(self, run_number, event_nexus_name, ws_index_range,
                                   two_theta_range, two_theta_step,
-                                  binning_parameters, van_run_number,
-                                  iparam_name, output_dir):
-        # TODO - #216 - Doc & Check
-        # reduce a workspace with pixels grouped by 2theta
+                                  binning_parameters):
 
+        """
+        Diffraction focus event workspace with the GroupingWorkspace based on detectors' 2theta angle.
+        Events on all the pixels, of which the 2theta angle are in same 2theta bin, will be focused to same spectrum.
+        :param run_number: run number (for information)
+        :param event_nexus_name: event NeXus file
+        :param ws_index_range: range of spectra to be grouped by detectors' 2theta
+        :param two_theta_range:
+        :param two_theta_step:
+        :param binning_parameters: dSpacing binning parameters
+        :return:
+        """
         # Load data
         event_ws_name = self.get_event_workspace_name(run_number=run_number)
         mantid_helper.load_nexus(event_nexus_name, event_ws_name, meta_data_only=False)

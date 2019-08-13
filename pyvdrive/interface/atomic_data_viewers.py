@@ -381,7 +381,6 @@ class AtomicReduced1DViewer(QMainWindow):
 class AtomicReduction2DViewer(QMainWindow):
     """ Class for 2D reduced data viewer
     """
-    # TODO - NOW TONIGHT - #216 - Add log scale selector in UI and then implement in this method!
     def __init__(self, parent=None):
         """
         Init
@@ -394,7 +393,12 @@ class AtomicReduction2DViewer(QMainWindow):
         self.ui = load_ui(ui_path, baseinstance=self)
         self._promote_widgets()
 
+        # event handlers
         self.ui.pushButton_setXrange.clicked.connect(self.do_set_x_range)
+        # TODO TEST - #216
+        self.ui.checkBox_intensityLogScale.stateChanged.connect(self.do_plot_contour)
+
+        # TODO - #216 - label_title : need value!
 
         return
 
@@ -421,7 +425,14 @@ class AtomicReduction2DViewer(QMainWindow):
 
         return
 
-    def plot_contour(self, y_indexes, data_set_list):
+    def do_plot_contour(self):
+        """
+
+        :return:
+        """
+
+    # TODO - #216 - Refactor this method into (1) API method (2) plotting method
+    def plot_contour(self, y_indexes, data_set_list, log_scale=False):
         """
         plot 2D contour figure
         :param y_indexes: Indexes for Y axis.  It can be (1) run numbers  (2) chop sequences
@@ -430,6 +441,9 @@ class AtomicReduction2DViewer(QMainWindow):
         """
         # check
         datatypeutility.check_list('Y axis indexes', y_indexes)
+
+        # Get from UI
+        log_scale = self.ui.checkBox_intensityLogScale.ischecked()
 
         size_set = set()
         for data_set in data_set_list:
@@ -446,6 +460,13 @@ class AtomicReduction2DViewer(QMainWindow):
         matrix_y = np.ndarray(grid_x.shape, dtype='float')
         for i in range(len(y_indexes)):
             matrix_y[i] = data_set_list[i][1]
+
+        # Log scale
+        if log_scale:
+            # avoid NAN by set all the negative and zoro value to infinitesimally positive value
+            print ('[DB...BAT] There are {} elements are zero or negative'.format(len(np.where(matrix_y < 1.E-20))))
+            matrix_y[np.where(matrix_y < 1.E-20)] = 1.E-20
+        # END-IF
 
         n = len(y_indexes)
         vec_y = np.ndarray(shape=(n,), dtype='int')

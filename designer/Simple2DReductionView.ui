@@ -16,6 +16,13 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
+     <widget class="QLabel" name="label_title">
+      <property name="text">
+       <string>(Title)</string>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="QFrame" name="frame_mainPlot">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -68,6 +75,16 @@
        </widget>
       </item>
       <item>
+       <widget class="QCheckBox" name="checkBox_intensityLogScale">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Diffraction intensity in contour plot will be plot in log scale if this checkbox is checked.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="text">
+         <string>Log Scale</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -97,7 +114,7 @@
      <x>0</x>
      <y>0</y>
      <width>683</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

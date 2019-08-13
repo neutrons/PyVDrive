@@ -314,7 +314,22 @@ def getLogsList(vandbfile):
 
 def group_pixels_2theta(vulcan_ws_name, tth_group_ws_name, start_iws, end_iws,
                         two_theta_bin_range, two_theta_step):
-
+    """
+    Group pixels by their 2theta value
+    :param vulcan_ws_name: name of any MatrixWorkspace containing VULCAN instrument
+    :param tth_group_ws_name: name of the OUTPUT grouping workspace for 2theta
+    :param start_iws: workspace index for starting spectrum
+    :param end_iws: workspace index for ending spctrum
+    :param two_theta_bin_range: detectors 2-theta position range
+    :param two_theta_step: detectors 2-theta bin size
+    :return: 3-tuple (numpy array for 2theta; instance of GroupingWorkspace,
+                      numpy array for number of pixels in each 2-theta bins)
+    """
+    # Check inputs
+    datatypeutility.check_string_variable('Name of MatrixWorkspace having VULCAN instrument', vulcan_ws_name)
+    assert mantid_helper.is_a_workspace(vulcan_ws_name), '{} is not the name of any workspace in ADS' \
+                                                         ''.format(vulcan_ws_name)
+    datatypeutility.check_float_variable('Bin step of 2theta', two_theta_step, (1.E-6, None))
 
     # create group workspace
     CreateGroupingWorkspace(InputWorkspace=vulcan_ws_name, GroupDetectorsBy='All',
@@ -328,7 +343,7 @@ def group_pixels_2theta(vulcan_ws_name, tth_group_ws_name, start_iws, end_iws,
     two_theta_array = numpy.arange(two_theta_bin_range[0], two_theta_bin_range[1] + two_theta_step,
                                    two_theta_step, dtype='float')
     num_2theta = two_theta_array.shape[0]
-    num_pixels_array = numpy.zeros(shape=two_theta_array.shape, dtype='int')
+    num_pixels_array = numpy.zeros(shape=(num_2theta-1,), dtype='int')
 
     # source and sample position
     source = vulcan_ws.getInstrument().getSource().getPos()
@@ -364,6 +379,13 @@ def group_pixels_2theta(vulcan_ws_name, tth_group_ws_name, start_iws, end_iws,
 
 
 def group_pixels_2theta_geometry(template_virtual_geometry_dict, ws_index_range, num_2theta):
+    """
+    Create a set of geometry parameters for EditInstrument used in focusing workspace with pixel-2theta-grouping
+    :param template_virtual_geometry_dict:
+    :param ws_index_range:
+    :param num_2theta:
+    :return: dictionary of parameters 'Polar', 'SpectrumIDs', 'L2', 'Azimuthal']:
+    """
 
     if ws_index_range[1] <= 3234:
         bank = 1
@@ -404,12 +426,23 @@ def import_vulcan_log(log_file_name, header=0):
     return log_set
 
 
-# TODO - TONIGHT - QA
 def import_auto_record(ipts_number, run_number):
+    """
+    Import auto record
+    :param ipts_number:
+    :param run_number:
+    :return:
+    """
+    # Check inputs
+    datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
+    datatypeutility.check_int_variable('Run number', run_number, (1, None))
+
+    # Form file name
     log_file_name = '/SNS/VULCAN/IPTS-{}/shared/AutoRecord.txt'.format(ipts_number)
     if not os.path.exists(log_file_name):
         raise RuntimeError('Not existing {}'.format(log_file_name))
 
+    # Import
     log_data_set = import_vulcan_log(log_file_name)
 
     return log_data_set
