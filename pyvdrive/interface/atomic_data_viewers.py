@@ -398,8 +398,6 @@ class AtomicReduction2DViewer(QMainWindow):
         # TODO TEST - #216
         self.ui.checkBox_intensityLogScale.stateChanged.connect(self.do_plot_contour)
 
-        # TODO - #216 - label_title : need value!
-
         return
 
     def _promote_widgets(self):
@@ -430,6 +428,11 @@ class AtomicReduction2DViewer(QMainWindow):
 
         :return:
         """
+        # TODO - #216 - Implement
+        plot_in_log_scale = self.ui.checkBox_intensityLogScale.isChecked()
+        print ('[DB...BAT...216] Plot same contour in log scale? = {}'.format(plot_in_log_scale))
+
+        return
 
     # TODO - #216 - Refactor this method into (1) API method (2) plotting method
     def plot_contour(self, y_indexes, data_set_list, log_scale=False):
@@ -474,6 +477,12 @@ class AtomicReduction2DViewer(QMainWindow):
             vec_y[i] = y_indexes[i]
 
         self.ui.graphicsView_mainPlot.canvas.add_contour_plot(vec_x, np.array(y_indexes), matrix_y)
+
+        return
+
+    def set_info(self, info):
+        # 216 TODO Doc & Test
+        self.ui.label_title.setText(info)
 
         return
 

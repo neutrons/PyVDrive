@@ -551,14 +551,10 @@ class SaveVulcanGSS(object):
         """
         # process input workspaces
         diff_ws = mantid_helper.retrieve_workspace(diff_ws_name)
-        print ('[DB...BAT...216] 2-theta diffraction workspace has unit: {}'
-               ''.format(mantid_helper.get_workspace_unit(diff_ws_name)))
 
         # set the unit to TOF
         if diff_ws.getAxis(0).getUnit() != 'TOF':
             # Convert from d-Spacing to TOF
-            print ('[DB...BAT...216] Number of spectra = {}'.format(diff_ws.getNumberHistograms()))
-
             ConvertUnits(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name, Target='TOF',
                          EMode='Elastic')
             diff_ws = mantid_helper.retrieve_workspace(diff_ws_name)

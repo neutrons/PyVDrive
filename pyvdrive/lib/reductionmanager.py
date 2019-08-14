@@ -1546,14 +1546,10 @@ class ReductionManager(object):
         self._diff_focus_params['EditInstrumentGeometry'] = virtual_instrument_geometry
 
         # align and focus
-        print ('[DB...PROGRESS...] ReductionManager: align and focus workspace from {} to {} with binning {}'
-               ''.format(event_ws_name, output_ws_name, binning_params))
         red_msg = mantid_reduction.align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
                                                             calibration_workspace, grouping_workspace,
                                                             reduction_params_dict=self._diff_focus_params,
                                                             convert_to_matrix=False)
-        print ('[DB...BAT...216] Workspace created {} is with unit {}'
-               ''.format(output_ws_name, mantid_helper.get_workspace_unit(output_ws_name)))
 
         # remove input event workspace
         if output_ws_name != event_ws_name and keep_raw_ws is False:

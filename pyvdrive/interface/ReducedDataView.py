@@ -2396,6 +2396,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 # 2D Contours
                 child_2d_window = self.launch_contour_view()
                 child_2d_window.set_x_range(min_x, max_x)
+                child_2d_window.set_info('Bank {}'.format(bank_id))
                 child_2d_window.plot_contour(seq_list, data_set_list)
 
                 # 3D Line
