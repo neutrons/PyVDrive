@@ -189,6 +189,10 @@ class BinBy2Theta(VDriveCommand):
 
             # output
             output_dir = self.get_argument_value('BINFOLDER', str, True, None)
+            if output_dir is None:
+                # default output directory
+                output_dir = os.path.join('/SNS/VULCAN/IPTS-{}/shared/'.format(self._iptsNumber),
+                                          'binned_data/'.format(run_number_list[0]))
         except RuntimeError as run_err:
             return False, 'Error in parsing BINBY2THETA parameters: {0}'.format(run_err)
 
