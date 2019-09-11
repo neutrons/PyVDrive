@@ -5,7 +5,6 @@ import shutil
 import random
 from chop_utility import DataChopper
 import datatypeutility
-import mantid_reduction
 import mantid_helper
 import reductionmanager as prl
 import archivemanager
@@ -13,10 +12,10 @@ import loaded_data_manager
 import vanadium_utility
 import peak_util
 import vulcan_util
+import reduce_adv_chop
 
 
-# TODO... NEED A DOC FOR HOW TO STORE DATA KEY (WORKSPACE NAME) ...
-
+# TODO... NEED A DOC FOR HOW TO STORE DATA KEY (WORKSPACE NAME) ..
 
 class ProjectManager(object):
     """ VDrive Project
@@ -1329,7 +1328,6 @@ class ProjectManager(object):
                                                              target_bank_id=bank_id)
 
         # generate logs
-        import reduce_adv_chop
         log_type = 'loadframe'
         log_writer = reduce_adv_chop.WriteSlicedLogs(chopped_data_dir=output_directory, run_number=run_number)
         workspace_name_list = [out_ws_name] * tth_num_pixels_array.shape[0]
