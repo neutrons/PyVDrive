@@ -156,7 +156,8 @@ class WindowLogPicker(QMainWindow):
         self._currMousePosY = 0.
 
         # Experiment-related variables
-        self._currLogType = None   # where log loaded from: nexus or mts        self._currLogName = None
+        self._curr_log_type = None   # where log loaded from: nexus or mts        self._currLogName = None
+        self._curr_log_name = None
 
         self._currentBlockIndex = None
         self._currentFrameUnit = str(self.ui.comboBox_logFrameUnit.currentText())
@@ -692,7 +693,7 @@ class WindowLogPicker(QMainWindow):
         # load
         self.load_plot_mts_log(reset_canvas=True)
 
-        self._currLogType = 'mts'
+        self._curr_log_type = 'mts'
 
         return
 
@@ -792,7 +793,7 @@ class WindowLogPicker(QMainWindow):
             self.ui.graphicsView_main.clear_picker()
 
         # set the type of file
-        self._currLogType = 'nexus'
+        self._curr_log_type = 'nexus'
 
         # Load log names to combo box _logNames
         self.load_log_names()
@@ -801,7 +802,7 @@ class WindowLogPicker(QMainWindow):
         log_name = str(self.ui.comboBox_logNames.currentText())
         log_name = log_name.replace(' ', '').split('(')[0]
         self.plot_nexus_log(log_name)
-        self._currLogName = log_name
+        self._curr_log_name = log_name
 
         return
 
@@ -821,14 +822,14 @@ class WindowLogPicker(QMainWindow):
         sample_log_name = sample_log_name.split('(')[0].strip()
 
         # Plot
-        if self._currLogType == 'nexus':
+        if self._curr_log_type == 'nexus':
             self.plot_nexus_log(log_name=sample_log_name)
         else:
             self.plot_mts_log(log_name=sample_log_name,
                               reset_canvas=not self.ui.checkBox_overlay.isChecked())
 
         # Update
-        self._currLogName = sample_log_name
+        self._curr_log_name = sample_log_name
 
         return
 
@@ -849,14 +850,14 @@ class WindowLogPicker(QMainWindow):
         sample_log_name = sample_log_name.split('(')[0].strip()
 
         # Plot
-        if self._currLogType == 'nexus':
+        if self._curr_log_type == 'nexus':
             self.plot_nexus_log(log_name=sample_log_name)
         else:
             self.plot_mts_log(log_name=sample_log_name,
                               reset_canvas=not self.ui.checkBox_overlay.isChecked())
 
         # Update
-        self._currLogName = sample_log_name
+        self._curr_log_name = sample_log_name
 
         return
 
@@ -943,10 +944,10 @@ class WindowLogPicker(QMainWindow):
         """ Resize canvas
         :return:
         """
-        if self._currLogType == 'nexus':
-            self.plot_nexus_log(self._currLogName)
+        if self._curr_log_type == 'nexus':
+            self.plot_nexus_log(self._curr_log_name)
         else:
-            self.plot_mts_log(self._currLogName, reset_canvas=True)
+            self.plot_mts_log(self._curr_log_name, reset_canvas=True)
 
         return
 
@@ -1083,14 +1084,14 @@ class WindowLogPicker(QMainWindow):
 
         # get current log name
         log_name = str(self.ui.comboBox_logNames.currentText())
-        if self._currLogType == 'nexus':
+        if self._curr_log_type == 'nexus':
             log_name = log_name.replace(' ', '').split('(')[0]
 
         # set class variables
-        self._currLogName = log_name
+        self._curr_log_name = log_name
 
         # plot
-        if self._currLogType == 'nexus':
+        if self._curr_log_type == 'nexus':
             # nexus log
             self.plot_nexus_log(log_name)
         else:

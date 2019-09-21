@@ -891,7 +891,10 @@ def get_sample_log_names(src_workspace, smart=False):
 
     for item in property_list:
         # rule out any Non-FloatTimeSeriesProperty
+        print('[DEBUG] Item: {}; Type: {}'.format(item, type(item)))
+
         if not isinstance(item, mantid.kernel.FloatTimeSeriesProperty):
+            print('[DEBUG]  skip due to type')
             continue
 
         # get log name
@@ -907,6 +910,8 @@ def get_sample_log_names(src_workspace, smart=False):
                 single_value_log_list.append('%s (1)' % log_name)
         # END-IF-ELSE
     # END-FOR
+
+    raise RuntimeError('blabla12322')
 
     name_list.extend(single_value_log_list)
 
