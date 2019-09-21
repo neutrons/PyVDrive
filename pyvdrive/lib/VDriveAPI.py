@@ -958,7 +958,7 @@ class VDriveAPI(object):
 
         return exp_info
 
-    def get_sample_log_names(self, run_number, smart=False, limited=True):
+    def get_sample_log_names(self, run_number, smart=False, limited=False):
         """
         Get names of sample log with time series property
         :param run_number: run number (integer/string) or workspace name

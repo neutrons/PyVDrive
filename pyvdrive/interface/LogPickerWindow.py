@@ -774,6 +774,7 @@ class WindowLogPicker(QMainWindow):
             self._logNameList, run_info_str = self._myParent.load_sample_run(ipts_number, run_number, None,
                                                                              smart=True)
             self._logNameList.sort()
+            print('DEBUG log names: {}'.format(self._logNameList))
 
             # Update class variables, add a new entry to sample log value holder
             self._curr_ipts_number = ipts_number

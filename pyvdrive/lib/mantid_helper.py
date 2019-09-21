@@ -891,10 +891,8 @@ def get_sample_log_names(src_workspace, smart=False):
 
     for item in property_list:
         # rule out any Non-FloatTimeSeriesProperty
-        print('[DEBUG] Item: {}; Type: {}'.format(item, type(item)))
 
         if not isinstance(item, mantid.kernel.FloatTimeSeriesProperty):
-            print('[DEBUG]  skip due to type')
             continue
 
         # get log name
@@ -903,6 +901,7 @@ def get_sample_log_names(src_workspace, smart=False):
             # non-smart mode, just simply log name
             name_list.append(log_name)
         else:
+            # smart
             log_size = item.size()
             if log_size > 1:
                 name_list.append('%s (%d)' % (log_name, log_size))
@@ -911,9 +910,9 @@ def get_sample_log_names(src_workspace, smart=False):
         # END-IF-ELSE
     # END-FOR
 
-    raise RuntimeError('blabla12322')
-
     name_list.extend(single_value_log_list)
+    if smart:
+        print(name_list)
 
     return name_list
 
