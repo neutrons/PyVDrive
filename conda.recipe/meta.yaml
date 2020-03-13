@@ -1,7 +1,7 @@
 {% set data = load_setup_py_data() %}
 
 package:
-  name: "pyrs"
+  name: "pyvdrive"
   version: "{{ data['version'] }}"
 
 source:
@@ -31,17 +31,15 @@ requirements:
 
 test:
   imports:
-    - pyrs
+    - pyvdrive
 
 about:
-  home: https://github.com/neutrons/PyRS
+  home: https://github.com/neutrons/PyVDRive
   license: GPL (version 3)
   license_family: GPL3
   license_file:
-  summary: Reduction and visualization software for Stress Residual (HB2B)
+  summary: Reduction and visualization software for VULCAN
 
 extra:
   recipe-maintainers:
-    - JeanBilheux
-    - peterfpeterson
     - wdzhou
