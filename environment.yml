@@ -1,0 +1,7 @@
+name: PyVDRive
+dependencies:
+- configparser
+- mantid-workbench
+- psutil
+- python
+- setuptools

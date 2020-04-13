@@ -1,0 +1,45 @@
+{% set data = load_setup_py_data() %}
+
+package:
+  name: "pyvdrive"
+  version: "{{ data['version'] }}"
+
+source:
+  path: ..
+
+build:
+  string: py{{py}}
+  script: python setup.py install --single-version-externally-managed --record=record.txt
+
+requirements:
+  build:
+    - configparser
+    - mantid-workbench
+    - psutil
+    - pylint
+    - python
+    - setuptools
+    - pytest-runner
+    - lmfit
+
+  run:
+    - configparser
+    - mantid-workbench
+    - psutil
+    - python
+    - lmfit
+
+test:
+  imports:
+    - pyvdrive
+
+about:
+  home: https://github.com/neutrons/PyVDRive
+  license: GPL (version 3)
+  license_family: GPL3
+  license_file:
+  summary: Reduction and visualization software for VULCAN
+
+extra:
+  recipe-maintainers:
+    - wdzhou
