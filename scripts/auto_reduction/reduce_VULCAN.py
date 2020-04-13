@@ -56,13 +56,13 @@ import numpy
 import bisect
 import pandas as pd
 import h5py
-import save_vulcan_gsas
 sys.path.insert(0, "/opt/mantid50/bin")
 sys.path.insert(1, "/opt/mantid50/lib")
 import mantid.simpleapi as mantidsimple
 import mantid
 from mantid.api import AnalysisDataService
 from mantid.kernel import DateAndTime
+import save_vulcan_gsas
 
 
 CalibrationFilesList = [['/SNS/VULCAN/shared/CALIBRATION/2011_1_7/vulcan_foc_all_2bank_11p.cal',
@@ -1449,7 +1449,7 @@ class PatchRecordHDF5(object):
 
         # Debug print patch list
         wbuf = '(HDF5) Log Patch List:\n'
-        for pindex in range(len(patch_list)/2):
+        for pindex in range(len(patch_list) // 2):
             wbuf += '{} = {} ({})\n'.format(patch_list[2*pindex], patch_list[2*pindex+1],
                                             type(patch_list[2*pindex+1]))
 
@@ -1977,13 +1977,13 @@ class ReduceVulcanData(object):
         """
         # organized by dictionary
         if run_number >= 69214:
-            for ilog in xrange(1, 17):
+            for ilog in range(1, 17):
                 Generic_DAQ_List.append(("tc.user%d" % ilog, "tc.user%d" % ilog))
 
         # Format to lists for input
         sample_log_name_list = list()
         header_item_list = list()
-        for i in xrange(len(Generic_DAQ_List)):
+        for i in range(len(Generic_DAQ_List)):
             title = Generic_DAQ_List[i][0]
             log_name = Generic_DAQ_List[i][1]
 
@@ -2013,7 +2013,7 @@ class ReduceVulcanData(object):
         # each element is a 2-tuple of string as (log name in output log file, log name in workspace)
         sample_log_name_list = []
         header_title_list = []
-        for i in xrange(len(VulcanSampleLogList)):
+        for i in range(len(VulcanSampleLogList)):
             title = VulcanSampleLogList[i][0].strip()
             log_name = VulcanSampleLogList[i][1].strip()
 
@@ -2044,7 +2044,7 @@ class ReduceVulcanData(object):
         # Format to lists for input
         sample_log_names_list = list()
         header = list()
-        for i in xrange(len(MTS_Header_List)):
+        for i in range(len(MTS_Header_List)):
             title = MTS_Header_List[i][0]
             log_name = MTS_Header_List[i][1]
 
@@ -2075,7 +2075,7 @@ class ReduceVulcanData(object):
         sample_title_list = list()
         sample_name_list = list()
         sample_operation_list = list()
-        for i_sample in xrange(len(RecordBase)):
+        for i_sample in range(len(RecordBase)):
             sample_title_list.append(RecordBase[i_sample][0])
             sample_name_list.append(RecordBase[i_sample][1])
             sample_operation_list.append(RecordBase[i_sample][2])
@@ -2587,7 +2587,7 @@ def check_point_data_log_binning(ws_name, standard_bin_size=0.01, tolerance=1.E-
         temp_ws_name = None
 
     # check logarithm binning
-    bins = (vec_x[1:] - vec_x[:-1])/vec_x[:-1]
+    bins = (vec_x[1:] - vec_x[:-1]) / vec_x[:-1]
     bin_size = numpy.average(bins)
     bin_std = numpy.std(bins)
 
