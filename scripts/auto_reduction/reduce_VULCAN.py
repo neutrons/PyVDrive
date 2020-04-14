@@ -1621,7 +1621,7 @@ class ReduceVulcanData(object):
                 os.remove(target_file_name)
             shutil.copy(source_gsas_file_name, target_directory)
             new_gsas_file_name = os.path.join(target_directory, os.path.basename(source_gsas_file_name))
-            os.chmod(new_gsas_file_name, )
+            os.chmod(new_gsas_file_name, 0o666)
         except IOError as io_err:
             raise RuntimeError('Unable to cropy {0} to {1} due to {2}.'
                                ''.format(source_gsas_file_name, target_file_name, io_err))
