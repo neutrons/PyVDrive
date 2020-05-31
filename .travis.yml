@@ -69,7 +69,7 @@ script:
   # - conda install -c mantid/label/nightly mantid-workbench=4.0.20190416.1125
 
   # lint the code and generate an error if a warning is introduced
-  - flake8 . --count
+  - flake8 . --max-line-length=120 --count
   # run some basic import tests to confirm things are working
   - python -c "import mantid"
   - python -c "import qtpy"
