@@ -50,7 +50,7 @@ script:
     sleep 3
 
   # lint the code and generate an error if a warning is introduced
-  - flake8 . --count
+  - flake8 --max-line-length=120 . --count
   # static analysis for typing
   - mypy pyvdrive scripts tests
 
