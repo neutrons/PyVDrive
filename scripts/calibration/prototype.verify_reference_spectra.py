@@ -12,17 +12,20 @@ ws = mtd['full_diamond']
 # west bank
 for ws_index in [535, 1613, 2691]:
     detector = ws.getDetector(ws_index)
-    print ('WorkspaceIndex = {0}.  Detector ID = {1}.  Detector @ {2}'.format(ws_index, detector.getID(), detector.getPos()))
-    
-    
+    print('WorkspaceIndex = {0}.  Detector ID = {1}.  Detector @ {2}'.format(
+        ws_index, detector.getID(), detector.getPos()))
+
+
 # east bank
 for ws_index in [3769, 4847, 5925]:
     detector = ws.getDetector(ws_index)
-    print ('WorkspaceIndex = {0}.  Detector ID = {1}.  Detector @ {2}'.format(ws_index, detector.getID(), detector.getPos()))
-    
-    
+    print('WorkspaceIndex = {0}.  Detector ID = {1}.  Detector @ {2}'.format(
+        ws_index, detector.getID(), detector.getPos()))
+
+
 # high angle bank
 # panel 6: ws-index = 15555, detid = 71587
 for ws_index in [15555]:
     detector = ws.getDetector(ws_index)
-    print ('WorkspaceIndex = {0}.  Detector ID = {1}.  Detector @ {2}'.format(ws_index, detector.getID(), detector.getPos()))
+    print('WorkspaceIndex = {0}.  Detector ID = {1}.  Detector @ {2}'.format(
+        ws_index, detector.getID(), detector.getPos()))

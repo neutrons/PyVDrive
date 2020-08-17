@@ -37,7 +37,8 @@ def get_idf_difc(ws):
     for irow in range(0, 3234):
         west_difc_vec[irow] = calcualte_difc(ws, irow)
 
-    CreateWorkspace(DataX=west_spec_vec, DataY=west_difc_vec, NSpec=1, OutputWorkspace='west_idf_difc')
+    CreateWorkspace(DataX=west_spec_vec, DataY=west_difc_vec,
+                    NSpec=1, OutputWorkspace='west_idf_difc')
 
     # east bank
     east_spec_vec = numpy.arange(3234, 6468)
@@ -45,7 +46,8 @@ def get_idf_difc(ws):
     for irow in range(3234, 6468):
         east_difc_vec[irow-3234] = calcualte_difc(ws, irow)
 
-    CreateWorkspace(DataX=east_spec_vec, DataY=east_difc_vec, NSpec=1, OutputWorkspace='east_idf_difc')
+    CreateWorkspace(DataX=east_spec_vec, DataY=east_difc_vec,
+                    NSpec=1, OutputWorkspace='east_idf_difc')
 
     # high angle bank
     highangle_spec_vec = numpy.arange(6468, 24900)
@@ -53,7 +55,8 @@ def get_idf_difc(ws):
     for irow in range(6468, 24900):
         highangle_difc_vec[irow-6468] = calcualte_difc(ws, irow)
 
-    CreateWorkspace(DataX=highangle_spec_vec, DataY=highangle_difc_vec, NSpec=1, OutputWorkspace='high_angle_idf_difc')
+    CreateWorkspace(DataX=highangle_spec_vec, DataY=highangle_difc_vec,
+                    NSpec=1, OutputWorkspace='high_angle_idf_difc')
 
     # This is the theoretical DIFC FIXME Output is disabled
     # for i in range(ws.getNumberHistograms()):
@@ -98,14 +101,16 @@ def get_calibrated_difc(cal_ws_name):
     for irow in range(6468, 24900):
         highangle_difc_vec[irow-6468] = cal_table_ws.cell(irow, difc_col_index)
 
-    CreateWorkspace(DataX=highangle_spec_vec, DataY=highangle_difc_vec, NSpec=1, OutputWorkspace='hig_angle_difc')
+    CreateWorkspace(DataX=highangle_spec_vec, DataY=highangle_difc_vec,
+                    NSpec=1, OutputWorkspace='hig_angle_difc')
 
     return
 
 
 def main():
     if 'diamond' not in mtd:
-        diamond_ws = Load(Filename='/SNS/VULCAN/IPTS-19576/nexus/VULCAN_160457.nxs.h5', OutputWorkspace='diamond')
+        diamond_ws = Load(
+            Filename='/SNS/VULCAN/IPTS-19576/nexus/VULCAN_160457.nxs.h5', OutputWorkspace='diamond')
     else:
         diamond_ws = mtd['diamond']
 
@@ -121,5 +126,5 @@ def main():
     get_calibrated_difc('vulcan_27_cal')
     get_idf_difc(diamond_ws)
 
-main()
 
+main()

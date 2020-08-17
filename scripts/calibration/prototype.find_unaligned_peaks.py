@@ -87,9 +87,9 @@ spectra_list = range(1, 31)
 
 # for iws in range(1078, midindex):
 #     group_ws.dataY(iws)[0] = 28
-#     
-#     
-#     
+#
+#
+#
 # for iws in range(1085, 1092):
 #     group_ws.dataY(iws)[0] = 29
 # for iws in range(1092, 1099):
@@ -107,6 +107,6 @@ AlignAndFocusPowder(InputWorkspace='diamond', OutputWorkspace='focus2',
                     L2=vulcan_l2_list,
                     Polar=vulcan_2theta_list,
                     Azimuthal=vulcan_azimulth_list)
-ConvertUnits(InputWorkspace='focus2', OutputWorkspace='focus2', Target='dSpacing', ConvertFromPointData=False)
+ConvertUnits(InputWorkspace='focus2', OutputWorkspace='focus2',
+             Target='dSpacing', ConvertFromPointData=False)
 Rebin(InputWorkspace='focus2', OutputWorkspace='focus2', Params='0.5,-0.001,2', FullBinsOnly=True)
-

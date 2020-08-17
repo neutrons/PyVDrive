@@ -30,7 +30,7 @@ def parse_inputs(argv):
         elif items[0] == '--output':
             arg_dict['output'] = str(items[1])
         else:
-            print ('Argument {} is not supported'.format(items[0]))
+            print('Argument {} is not supported'.format(items[0]))
     # END-FOR
 
     return arg_dict
@@ -41,7 +41,7 @@ def print_help(script_name):
     print out help information
     :return:
     """
-    print ('Format: {} --ipts=xxx --run=xxx --nexus=blabla.nxs --calib=balbal.h5'.format(script_name))
+    print('Format: {} --ipts=xxx --run=xxx --nexus=blabla.nxs --calib=balbal.h5'.format(script_name))
 
     return
 
@@ -53,7 +53,7 @@ def main(argv):
     :return:
     """
     if len(argv) == 1:
-        print ('Help: {} --help'.format(argv[0]))
+        print('Help: {} --help'.format(argv[0]))
         sys.exit(0)
 
     # help
@@ -70,7 +70,8 @@ def main(argv):
     else:
         ipts_number = input_arg_dict['ipts']
         run_number = input_arg_dict['run']
-        event_nexus_name = '/SNS/VULCAN/IPTS-{}/nexus/VULCAN_{}.nxs.h5'.format(ipts_number, run_number)
+        event_nexus_name = '/SNS/VULCAN/IPTS-{}/nexus/VULCAN_{}.nxs.h5'.format(
+            ipts_number, run_number)
     event_ws_name = os.path.basename(event_nexus_name).split('.')[0] + '_event'
     status, event_ws = mantid_helper.load_nexus(data_file_name=event_nexus_name,
                                                 output_ws_name=event_ws_name,
@@ -81,7 +82,7 @@ def main(argv):
     outputs, offset_ws = mantid_helper.load_calibration_file(calib_file_name=input_arg_dict['calib_file'],
                                                              output_name=base_cal_name,
                                                              ref_ws_name=event_ws_name)
-    print ('[DB...BAT] Outputs: {}'.format(outputs))
+    print('[DB...BAT] Outputs: {}'.format(outputs))
     grouping_ws = outputs.OutputGroupingWorkspace
     calib_ws = outputs.OutputCalWorkspace
     mask_ws = outputs.OutputMaskWorkspace

@@ -1,4 +1,5 @@
 # this is a standalone, but not standard, script to stitch several calibration file together
+import datetime
 import mantid.simpleapi as mantid_api
 from mantid.api import AnalysisDataService as mtd
 
@@ -6,7 +7,7 @@ from mantid.api import AnalysisDataService as mtd
 dir1 = '/home/wzz/Projects/VULCAN/DetectorCalibration/20180910'
 
 west_bank_cal_file = os.path.join(dir1, 'VULCAN_calibrate_2018_06_01.h5')
-east_bank_cal_file =  os.path.join(dir1, 'VULCAN_calibrate_2018_06_01.h5')
+east_bank_cal_file = os.path.join(dir1, 'VULCAN_calibrate_2018_06_01.h5')
 high_angle_bank_cal_file = os.path.join(dir1, 'VULCAN_calibrate_2018_09_12.h5')
 ref_nexus = '/SNS/VULCAN/IPTS-20863/nexus/VULCAN_165026.nxs.h5'  # any small-enough sized nexus file
 
@@ -39,7 +40,7 @@ for iws in range(3234, 6468):
     cal_ws_dict['high_angle'].setCell(iws, 1, cal_ws_dict['east'].cell(iws, 1))
 
 # stitch mask workspace
-for iws in range(0, 3234): #, 6468):
+for iws in range(0, 3234):  # , 6468):
     # east bank
     mask_ws_dict['high_angle'].dataY(iws)[0] = mask_ws_dict['west'].readY(iws)[0]
 for iws in range(3234, 6468):
@@ -60,8 +61,8 @@ num_ha_masked = 0
 for iws in range(6468, 24900):
     if mask_ws_dict['high_angle'].readY(iws)[0] > 0.5:
         num_ha_masked += 1
-print ('# Masked West = {}\n# Masked East = {}\n# Masked High Angle = {}\n# Masked In Total = {}'
-       ''.format(num_west_masked, num_east_masked, num_ha_masked, num_west_masked+num_east_masked+num_ha_masked))
+print('# Masked West = {}\n# Masked East = {}\n# Masked High Angle = {}\n# Masked In Total = {}'
+      ''.format(num_west_masked, num_east_masked, num_ha_masked, num_west_masked+num_east_masked+num_ha_masked))
 
 # for iws in range(24900):
 #     if mask_ws_dict['west'].readY(iws)[0] < 0.5:
@@ -70,10 +71,8 @@ print ('# Masked West = {}\n# Masked East = {}\n# Masked High Angle = {}\n# Mask
 #         mask_ws_dict['west'].maskDetector(iws, -1)
 
 # export
-import datetime
 today = datetime.datetime.now()
 mantid_api.SaveDiffCal(CalibrationWorkspace=cal_ws_dict['high_angle'],
                        MaskWorkspace=mask_ws_dict['high_angle'],
                        GroupingWorkspace=group_ws_dict['high_angle'],
                        Filename='VULCAN_calibrate_{}_{:02}_{:02}.h5'.format(today.year, today.month, today.day))
-

@@ -8,8 +8,6 @@ import lib_cross_correlation as ccl
 # sys.path.insert(1, '/SNS/users/wzz/Mantid_Project/vulcan-build/bin/')
 
 
-
-
 def plot_difc_diff(idf_difc_vec, cal_difc_vec, start_index, mask_ws):
     """
 
@@ -19,8 +17,6 @@ def plot_difc_diff(idf_difc_vec, cal_difc_vec, start_index, mask_ws):
     # TODO - 20180911 - how to remove elements in numpy array
     # difference between IDF and calibrated DIFC
     difc_diff_vec = idf_difc_vec - cal_difc_vec
-
-
 
     return
 
@@ -33,24 +29,28 @@ def analyze_result():
     # WEST
     calculate_model('cc_vulcan_diamond_west', 1755, 'offset_vulcan_diamond_west_FitResult')
     # plot cost list
-    cost_list, west_bad = evaluate_cc_quality('cc_vulcan_diamond_west', 'offset_vulcan_diamond_west_FitResult')
+    cost_list, west_bad = evaluate_cc_quality(
+        'cc_vulcan_diamond_west', 'offset_vulcan_diamond_west_FitResult')
     cost_array = numpy.array(cost_list).transpose()
     CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1], NSpec=1, OutputWorkspace='West_Cost')
-    
-    
+
     # East
     # plot cost list
-    cost_list, east_bad = evaluate_cc_quality('cc_vulcan_diamond_east', 'offset_vulcan_diamond_east_FitResult')
+    cost_list, east_bad = evaluate_cc_quality(
+        'cc_vulcan_diamond_east', 'offset_vulcan_diamond_east_FitResult')
     cost_array = numpy.array(cost_list).transpose()
-    print (cost_array)
+    print(cost_array)
     CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1], NSpec=1, OutputWorkspace='East_Cost')
-    
+
     # HIGH ANGLE
-    calculate_model('cc_vulcan_diamond_high_angle', 12200, 'offset_vulcan_diamond_high_angle_FitResult')
+    calculate_model('cc_vulcan_diamond_high_angle', 12200,
+                    'offset_vulcan_diamond_high_angle_FitResult')
     # plot cost list
-    cost_list, high_angle_bad = evaluate_cc_quality('cc_vulcan_diamond_high_angle', 'offset_vulcan_diamond_high_angle_FitResult')
+    cost_list, high_angle_bad = evaluate_cc_quality(
+        'cc_vulcan_diamond_high_angle', 'offset_vulcan_diamond_high_angle_FitResult')
     cost_array = numpy.array(cost_list).transpose()
-    CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1], NSpec=1, OutputWorkspace='HighAngle_Cost')
+    CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1],
+                    NSpec=1, OutputWorkspace='HighAngle_Cost')
 
 
 # Default diamond runs
@@ -69,7 +69,7 @@ def parse_inputs(arg_list):
     arg_dict = dict()
 
     for arg_i in arg_list:
-        print ('arg: {}'.format(arg_i))
+        print('arg: {}'.format(arg_i))
         items = arg_i.split('=')
         arg_name = str(items[0]).strip()
         arg_str = str(items[1]).strip()
@@ -77,7 +77,7 @@ def parse_inputs(arg_list):
         if arg_name == '--diamond':
             arg_dict['diamond_file'] = arg_str
         else:
-            print ('Error: Unknown argument {}'.format(arg_name))
+            print('Error: Unknown argument {}'.format(arg_name))
     # END-FOR
 
     return arg_dict
@@ -110,7 +110,7 @@ def main(argv):
     ccl.check_correct_difcs(ws_name='vulcan_diamond')
 
     # save calibration file
-    for num_banks in [3]:#[3, 7, 27]:
+    for num_banks in [3]:  # [3, 7, 27]:
         ccl.export_diff_cal_h5(ref_ws_name='vulcan_diamond', offset_ws='vulcan_diamond_2fit_offset,',
                                mask_ws='vulcan_diamond_2fit_mask',
                                num_groups=num_banks)
@@ -125,5 +125,3 @@ def main(argv):
 if __name__ == '__main__':
     # main
     main(sys.argv)
-
-

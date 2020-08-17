@@ -28,7 +28,7 @@ def parse_inputs(argv):
         elif items[0] == '--mask':
             arg_dict['mask_file'] = str(items[1])
         else:
-            print ('Argument {} is not supported'.format(items[0]))
+            print('Argument {} is not supported'.format(items[0]))
     # END-FOR
 
     return arg_dict
@@ -41,7 +41,7 @@ def main(argv):
     :return:
     """
 
-    print ('Example: --nexus=small_nexus_file  --h5=source.h5  --mask=mask_ws_indexes.txt  --output=target.h5')
+    print('Example: --nexus=small_nexus_file  --h5=source.h5  --mask=mask_ws_indexes.txt  --output=target.h5')
 
     input_args = parse_inputs(argv)
 
