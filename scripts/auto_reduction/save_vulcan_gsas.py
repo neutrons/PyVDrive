@@ -1,4 +1,6 @@
 # THIS IS A DEBUGGING VERSION TO IDENTIFY THE ISSUES IN PYVDRIVE
+from mantid.api import AnalysisDataService as ADS
+import mantid.simpleapi as api
 from datetime import datetime
 import os
 import os.path
@@ -6,8 +8,6 @@ import numpy
 import sys
 sys.path.append("/opt/mantidnightly/bin")
 sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')
-import mantid.simpleapi as api
-from mantid.api import AnalysisDataService as ADS
 
 
 def align_to_vdrive_bin(input_ws, vec_ref_tof, output_ws_name):
@@ -36,7 +36,8 @@ def align_to_vdrive_bin(input_ws, vec_ref_tof, output_ws_name):
     params.extend([x0, 2 * dx, xf])
 
     # Rebin
-    tempws = api.Rebin(InputWorkspace=input_ws, Params=params, PreserveEvents=True)
+    tempws = api.Rebin(InputWorkspace=input_ws,
+                       Params=params, PreserveEvents=True)
 
     # Map to a new workspace with 'vdrive-bin', which is the integer value of log bins
     numhist = tempws.getNumberHistograms()
@@ -67,9 +68,11 @@ def reformat_gsas_bank(bank_line_list):
     :return:
     """
     # check input
-    assert isinstance(bank_line_list, list), 'Bank lines must be given by list.'
+    assert isinstance(
+        bank_line_list, list), 'Bank lines must be given by list.'
     if len(bank_line_list) < 4:
-        raise RuntimeError('Number of lines in bank data {0} is too small.'.format(len(bank_line_list)))
+        raise RuntimeError(
+            'Number of lines in bank data {0} is too small.'.format(len(bank_line_list)))
 
     # init
     bank_data = ''
@@ -143,14 +146,18 @@ def generate_vulcan_gda_header(gsas_workspace, gsas_file_name, ipts, gsas_param_
     :return: string : multiple lines
     """
     # check
-    assert isinstance(gsas_workspace, str) is False, 'GSAS workspace must not be a string.'
-    assert isinstance(gsas_file_name, str), 'GSAS file name {0} must be a string.'.format(gsas_file_name)
+    assert isinstance(
+        gsas_workspace, str) is False, 'GSAS workspace must not be a string.'
+    assert isinstance(
+        gsas_file_name, str), 'GSAS file name {0} must be a string.'.format(gsas_file_name)
     assert isinstance(ipts, int) or isinstance(ipts, str), 'IPTS number {0} must be either string or integer.' \
                                                            ''.format(ipts)
     assert isinstance(gsas_param_file_name, str), 'GSAS iparm file name {0} must be an integer.' \
-                                                  ''.format(gsas_param_file_name)
+                                                  ''.format(
+                                                      gsas_param_file_name)
     if isinstance(ipts, str):
-        assert ipts.isdigit(), 'IPTS {0} must be convertible to an integer.'.format(ipts)
+        assert ipts.isdigit(
+        ), 'IPTS {0} must be convertible to an integer.'.format(ipts)
 
     # Get necessary information
     title = gsas_workspace.getTitle()
@@ -170,10 +177,12 @@ def generate_vulcan_gda_header(gsas_workspace, gsas_file_name, ipts, gsas_param_
 
         delta = utctime - time0
         try:
-            total_nanosecond_start = int(delta.total_seconds() * int(1.0E9)) + int(runstart_ns)
+            total_nanosecond_start = int(
+                delta.total_seconds() * int(1.0E9)) + int(runstart_ns)
         except AttributeError:
             total_seconds = delta.days * 24 * 3600 + delta.seconds
-            total_nanosecond_start = total_seconds * int(1.0E9) + int(runstart_ns)
+            total_nanosecond_start = total_seconds * \
+                int(1.0E9) + int(runstart_ns)
         total_nanosecond_stop = total_nanosecond_start + int(duration * 1.0E9)
     else:
         # not both property is found
@@ -187,13 +196,15 @@ def generate_vulcan_gda_header(gsas_workspace, gsas_file_name, ipts, gsas_param_
         title = title[0:80]
     newheader += "%-80s\n" % title
 
-    newheader += "%-80s\n" % ("Instrument parameter file: %s" % gsas_param_file_name)
+    newheader += "%-80s\n" % ("Instrument parameter file: %s" %
+                              gsas_param_file_name)
 
     newheader += "%-80s\n" % ("#IPTS: %s" % str(ipts))
 
     newheader += "%-80s\n" % "#binned by: Mantid"
 
-    newheader += "%-80s\n" % ("#GSAS file name: %s" % os.path.basename(gsas_file_name))
+    newheader += "%-80s\n" % ("#GSAS file name: %s" %
+                              os.path.basename(gsas_file_name))
 
     newheader += "%-80s\n" % ("#GSAS IPARM file: %s" % gsas_param_file_name)
 
@@ -210,9 +221,11 @@ def read_gsas_file(gsas_file_name):
     :return: 2-tuple (1) list as headers (2) a dictionary: key = bank ID, value = list of strings (lines)
     """
     # check input
-    assert isinstance(gsas_file_name, str), 'Input GSAS file name {0} must be a string.'.format(gsas_file_name)
+    assert isinstance(
+        gsas_file_name, str), 'Input GSAS file name {0} must be a string.'.format(gsas_file_name)
     if os.path.exists(gsas_file_name) is False:
-        raise RuntimeError('GSAS file {0} cannot be found.'.format(gsas_file_name))
+        raise RuntimeError(
+            'GSAS file {0} cannot be found.'.format(gsas_file_name))
 
     # read file to lines
     g_file = open(gsas_file_name, 'r')
@@ -271,7 +284,8 @@ def read_gsas_file(gsas_file_name):
 
     if len(curr_bank_lines) > 0:
         bank_data_dict[curr_bank_id] = curr_bank_lines
-        print('[DB...BAT] Read back GSAS: Bank {}:\n{}'.format(curr_bank_id, curr_bank_lines[0:5]))
+        print('[DB...BAT] Read back GSAS: Bank {}:\n{}'.format(
+            curr_bank_id, curr_bank_lines[0:5]))
     else:
         raise NotImplementedError("Impossible to have this")
 
@@ -294,19 +308,24 @@ def save_mantid_gsas(gsas_ws_name, gda_file_name, binning_parameters):
 
     if isinstance(binning_parameters, numpy.ndarray):
         # align to VDRIVE
-        align_to_vdrive_bin(gsas_ws_name, binning_parameters, aligned_gss_ws_name)
+        align_to_vdrive_bin(
+            gsas_ws_name, binning_parameters, aligned_gss_ws_name)
     elif binning_parameters is not None:
-        api.Rebin(InputWorkspace=gsas_ws_name, OutputWorkspace=aligned_gss_ws_name, Params=binning_parameters)
+        api.Rebin(InputWorkspace=gsas_ws_name,
+                  OutputWorkspace=aligned_gss_ws_name, Params=binning_parameters)
     # END-IF (rebin)
 
     aws = ADS.retrieve(aligned_gss_ws_name)
-    print('[DB...INFO] Save Mantid GSS: {} is histogram: {}'.format(aligned_gss_ws_name, aws.isHistogramData()))
+    print('[DB...INFO] Save Mantid GSS: {} is histogram: {}'.format(
+        aligned_gss_ws_name, aws.isHistogramData()))
 
     # Convert from PointData to Histogram
-    api.ConvertToHistogram(InputWorkspace=aligned_gss_ws_name, OutputWorkspace=aligned_gss_ws_name)
+    api.ConvertToHistogram(InputWorkspace=aligned_gss_ws_name,
+                           OutputWorkspace=aligned_gss_ws_name)
 
     # Save
-    print('[DB...VERY IMPORTANT] Save to GSAS File {0} as a temporary output'.format(gda_file_name))
+    print('[DB...VERY IMPORTANT] Save to GSAS File {0} as a temporary output'.format(
+        gda_file_name))
     curr_ws = ADS.retrieve(aligned_gss_ws_name)
     print('[DB...INFO] Into SaveGSS: number of histograms = {}, Bank 1/2 size = {}, Bank3 size = {}'
           ''.format(curr_ws.getNumberHistograms(), len(curr_ws.readX(0)), len(curr_ws.readX(2))))
@@ -327,7 +346,8 @@ def save_vanadium_gss(vanadium_workspace_dict, out_file_name, ipts_number, gsas_
     :return:
     """
     # check input
-    assert isinstance(vanadium_workspace_dict, dict), 'vanadium workspaces must be given by dictionary.'
+    assert isinstance(vanadium_workspace_dict,
+                      dict), 'vanadium workspaces must be given by dictionary.'
     if len(vanadium_workspace_dict) == 0:
         raise RuntimeError('Vanadium workspace dictionary is empty.')
 
@@ -367,7 +387,8 @@ def save_vanadium_gss(vanadium_workspace_dict, out_file_name, ipts_number, gsas_
         gsas_file.write(vulcan_gss_buffer)
         gsas_file.close()
     except OSError as os_err:
-        raise RuntimeError('Unable to write to {0} due to {1}'.format(out_file_name, os_err))
+        raise RuntimeError(
+            'Unable to write to {0} due to {1}'.format(out_file_name, os_err))
 
     return
 
@@ -389,10 +410,13 @@ def save_vulcan_gss(diffraction_workspace_name, binning_parameter_list, output_f
 
     # check
     assert isinstance(diffraction_workspace_name, str), 'Diffraction workspace name {0} must be a string.' \
-                                                        ''.format(diffraction_workspace_name)
+                                                        ''.format(
+                                                            diffraction_workspace_name)
     assert isinstance(binning_parameter_list, list), 'Binning parameters {0} must be given in a list.' \
-                                                     ''.format(binning_parameter_list)
-    assert isinstance(output_file_name, str), 'Output file name {0} must be a string.'.format(output_file_name)
+                                                     ''.format(
+                                                         binning_parameter_list)
+    assert isinstance(output_file_name, str), 'Output file name {0} must be a string.'.format(
+        output_file_name)
     output_dir = os.path.dirname(output_file_name)
     if os.path.exists(output_dir) is False:
         raise RuntimeError('Directory {0} for output GSAS file {1} does not exist.'
@@ -401,7 +425,8 @@ def save_vulcan_gss(diffraction_workspace_name, binning_parameter_list, output_f
         raise RuntimeError('Output GSAS file {0} exists and current user has not priviledge to overwrite it.'
                            ''.format(output_file_name))
     elif os.access(output_dir, os.W_OK) is False:
-        raise RuntimeError('Current user has no writing priviledge to directory {0}'.format(output_dir))
+        raise RuntimeError(
+            'Current user has no writing priviledge to directory {0}'.format(output_dir))
 
     # save to a general GSAS files and load back for the data portion
     bank_buffer_dict = dict()
@@ -411,9 +436,11 @@ def save_vulcan_gss(diffraction_workspace_name, binning_parameter_list, output_f
         bank_id_list, binning_parameters = binning_parameter_list[i_bin_param]
         # save GSAS to single bank temporary file
         assert isinstance(bank_id_list, list), 'Bank IDs {0} must be given by list but not {1}.' \
-                                               ''.format(bank_id_list, type(bank_id_list))
+                                               ''.format(
+                                                   bank_id_list, type(bank_id_list))
 
-        save_mantid_gsas(diffraction_workspace_name, output_file_name, binning_parameters)
+        save_mantid_gsas(diffraction_workspace_name,
+                         output_file_name, binning_parameters)
         header_lines, gsas_bank_dict = read_gsas_file(output_file_name)
 
         # load the GSAS file and convert the header
@@ -446,6 +473,7 @@ def save_vulcan_gss(diffraction_workspace_name, binning_parameter_list, output_f
         gsas_file.write(vulcan_gss_buffer)
         gsas_file.close()
     except OSError as os_err:
-        raise RuntimeError('Unable to write to {0} due to {1}'.format(output_file_name, os_err))
+        raise RuntimeError('Unable to write to {0} due to {1}'.format(
+            output_file_name, os_err))
 
     return
