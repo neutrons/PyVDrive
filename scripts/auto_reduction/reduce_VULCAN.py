@@ -161,11 +161,12 @@ RecordBase = [
 ]
 
 """
-RUN	IPTS	Title	Notes	Sample	ITEM	StartTime	Duration(sec)	ProntonCharge	TotalCounts	Monitor1	Monitor2	
+RUN	IPTS	Title	Notes	Sample	ITEM	StartTime	Duration(sec)	ProntonCharge	TotalCounts	Monitor1
+	Monitor2	
 X	Y	Z	O	HROT	VROT	BandCenter	BandWidth	Frequency	Guide	IX	IY	IZ	IHA	IVA	Collimator	
 MTSDisplacement	MTSForce	MTSStrain	MTSStress	MTSAngle	MTSTorque	MTSDisplaceoffset	MTSAngleceoffset	
-MTSFurnace	MTSCryo	MTST3	MTST4	MTSHTStrain	FurnaceT	FurnaceOT	FurnacePower	EuroTherm1Power	EuroTherm1SP	
-EuroTherm1Temp	EuroTherm2Power	EuroTherm2SP	EuroTherm2Temp
+MTSFurnace	MTSCryo	MTST3	MTST4	MTSHTStrain	FurnaceT	FurnaceOT	FurnacePower	EuroTherm1Power
+EuroTherm1SP	EuroTherm1Temp	EuroTherm2Power	EuroTherm2SP	EuroTherm2Temp
 """
 
 
@@ -379,7 +380,8 @@ class ReductionSetup(object):
         :param user_specified_dir: if it is not specified, change to .../logs/ as default
         """
         # Check validity
-        assert isinstance(original_directory, str), 'Directory must be string but not %s.' % type(original_directory)
+        assert isinstance(original_directory, str), 'Directory must be string but not %s.' \
+                                                    '' % type(original_directory)
 
         # Change path from ..../autoreduce/ to .../logs/
         if original_directory.endswith("/"):
@@ -841,8 +843,9 @@ class ReductionSetup(object):
                                            ''.format(min_tof, type(min_tof))
         assert isinstance(min_tof, float), 'Minimum TOF value {0} must be a float but not a {1}.' \
                                            ''.format(max_tof, type(max_tof))
-        assert isinstance(bin_size, float) or bin_size is None, 'Bin size {0} must be either a float or ' \
-                                                                'a None but not a {1}.'.format(bin_size, type(bin_size))
+        assert isinstance(bin_size, float) or bin_size is None,\
+            'Bin size {0} must be either a float or a None but not a {1}.' \
+            ''.format(bin_size, type(bin_size))
 
         if bin_size is None:
             bin_size = self._defaultBinSize
@@ -995,7 +998,8 @@ class ReductionSetup(object):
         :param event_file_path:
         :return:
         """
-        assert isinstance(event_file_path, str), 'Event file must be a string but not %s.' % type(event_file_path)
+        assert isinstance(event_file_path, str), 'Event file must be a string but not %s.' \
+                                                 '' % type(event_file_path)
         assert os.path.exists(event_file_path), 'Event file %s does not exist.' % event_file_path
 
         self._eventFileFullPath = event_file_path
@@ -1464,8 +1468,8 @@ class ReduceVulcanData(object):
         """
         Initialization
         """
-        assert isinstance(reduce_setup, ReductionSetup), 'Reduction setup must be a ReductionSetup instance but not ' \
-                                                         '%s.' % type(reduce_setup)
+        assert isinstance(reduce_setup, ReductionSetup),\
+            'Reduction setup must be a ReductionSetup instance but not %s.' % type(reduce_setup)
 
         self._reductionSetup = reduce_setup
 
@@ -1598,7 +1602,8 @@ class ReduceVulcanData(object):
             self._myLogInfo += "[Warning]  Input file is not file but directory.\n"
             return
         if os.path.isabs(source_gsas_file_name) is not True:
-            self._myLogInfo += '[Warning] Source file name {0} is not an absolute path.\n'.format(source_gsas_file_name)
+            self._myLogInfo += '[Warning] Source file name {0} is not an absolute path.\n' \
+                               ''.format(source_gsas_file_name)
             return
 
         # Create directory if it does not exist
@@ -1796,7 +1801,8 @@ class ReduceVulcanData(object):
         sample_title_list, sample_name_list, sample_operation_list = self.generate_record_file_format()
 
         # Patch for logs that do not exist in event NeXus yet
-        sample_log_list = ['Comment', 'Sample', 'ITEM', 'Monitor1', 'Monitor2', 'NOTES', 'Collimator', 'TotalCounts']
+        sample_log_list = ['Comment', 'Sample', 'ITEM', 'Monitor1', 'Monitor2',
+                           'NOTES', 'Collimator', 'TotalCounts']
         if self._reductionSetup.get_event_file().endswith('.h5'):
             # HDF5 file
             patcher = PatchRecordHDF5(self._reductionSetup.get_event_file(), sample_log_list)
@@ -1964,39 +1970,6 @@ class ReduceVulcanData(object):
 
         furnace_log_file_name = os.path.join(output_directory, "furnace%d.txt" % run_number)
         self.generate_csv_log(furnace_log_file_name, Furnace_Header_List, None)
-
-        return
-
-    def export_generic_daq_log(self, output_directory, ipts, run_number):
-        """
-        Export the generic DAQ log
-        :param output_directory:
-        :param ipts:
-        :param run_number:
-        :return:
-        """
-        # organized by dictionary
-        if run_number >= 69214:
-            for ilog in range(1, 17):
-                Generic_DAQ_List.append(("tc.user%d" % ilog, "tc.user%d" % ilog))
-
-        # Format to lists for input
-        sample_log_name_list = list()
-        header_item_list = list()
-        for i in range(len(Generic_DAQ_List)):
-            title = Generic_DAQ_List[i][0]
-            log_name = Generic_DAQ_List[i][1]
-
-            header_item_list.append(title)
-            if len(log_name) > 0:
-                sample_log_name_list.append(log_name)
-
-        header_str = ""
-        for title in header_item_list:
-            header_str += "%s\t" % title
-
-        output_file_name = os.path.join(output_directory, 'IPTS-%d-GenericDAQ-%d.txt' % (ipts, run_number))
-        self.generate_csv_log(output_file_name, sample_log_name_list, header_str)
 
         return
 
@@ -2302,8 +2275,7 @@ class ReduceVulcanData(object):
                             gsas_file_name=gsas_file_name,
                             gsas_iparm_file_name='vulcan.prm',
                             delete_exist_gsas_file=del_exist,
-                            east_west_binning_parameters='5000.,-0.001,70000.',
-                            high_angle_binning_parameters='5000.,-0.0003,70000.')
+                            east_west_binning_parameters='5000.,-0.001,70000.')
 
         if output_access_error:
             error_message = 'Code001: Unable to write GSAS file to {0}. Write to {1} instead.\n' \
@@ -2313,7 +2285,7 @@ class ReduceVulcanData(object):
         return True, self._myLogInfo, reduced_ws_name
 
     def export_to_gsas(self, reduced_workspace, gsas_file_name, gsas_iparm_file_name, delete_exist_gsas_file,
-                       east_west_binning_parameters, high_angle_binning_parameters):
+                       east_west_binning_parameters):
         """Export reduced workspace to GSAS file
 
         Parameters
@@ -2323,8 +2295,7 @@ class ReduceVulcanData(object):
         gsas_iparm_file_name: str
             default '"Vulcan.prm"'
         delete_exist_gsas_file
-        east_west_binning_parameters
-        high_angle_binning_parameters
+        east_west_binning_parameters: only used for pre-NeD
 
         Returns
         -------
@@ -2470,9 +2441,14 @@ class ReduceVulcanData(object):
         :return:
         """
         # check inputs and get input workspace
-        assert isinstance(reduced_gss_ws_name, str), 'Reduced GSAS workspace name {0} must be a string but not a {1}.' \
-                                                     ''.format(reduced_gss_ws_name, type(reduced_gss_ws_name))
+        assert isinstance(reduced_gss_ws_name, str),\
+            'Reduced GSAS workspace name {0} must be a string but not a {1}' \
+            ''.format(reduced_gss_ws_name, type(reduced_gss_ws_name))
         reduced_gss_ws = AnalysisDataService.retrieve(reduced_gss_ws_name)
+
+        # force to check
+        if is_pre_ned != self._is_nED:
+            raise RuntimeError('Status for NED reduced data is not consistent')
 
         # get vanadium information according to vanadium run number
         van_info_tuple = self._reductionSetup.get_vanadium_info()
@@ -2485,7 +2461,7 @@ class ReduceVulcanData(object):
 
         # align bins
         if not self._is_nED:
-            check_result, message = check_point_data_log_binning(van_ws_name, standard_bin_size=0.01, tolerance=1.E-5)
+            check_point_data_log_binning(van_ws_name, standard_bin_size=0.01, tolerance=1.E-5)
             align_bins(van_ws_name, reduced_gss_ws_name)
         # END-IF
 

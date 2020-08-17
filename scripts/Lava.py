@@ -20,16 +20,6 @@ import pyvdrive.interface.ExperimentRecordView as ev
 
 #  Script used to start the VDrive reduction GUI from MantidPlot
 
-# # a fix to iPython console
-# home_dir = os.path.expanduser('~')
-# if home_dir.startswith('/home/wzz') is False:
-#     # Mac debug build
-#     sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')
-#     # Analysis cluster build
-#     # sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
-#     # sys.path.append('/opt/mantidnightly/bin')
-#     sys.path.append('/SNS/users/wzz/Mantid_Project/builds/debug/bin')
-
 
 class LauncherManager(QDialog):
     """

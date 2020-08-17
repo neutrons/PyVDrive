@@ -40,7 +40,7 @@ def main(argv):
     ws_name = 'VULCAN_{}_events'.format(run_number)
     if not mtd.doesExist(ws_name):
         LoadEventNexus(Filename='/SNS/VULCAN/IPTS-{}/nexus/VULCAN_{}.nxs.h5'.format(ipts_number, run_number),
-                                     OutputWorkspace=ws_name)
+                       OutputWorkspace=ws_name)
 
     # Convert unit and binning
     ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='dSpacing', AlignBins=True)
@@ -52,7 +52,7 @@ def main(argv):
     # Determine the output dimension
     two_theta_array = numpy.arange(two_theta_bin_range[0], two_theta_bin_range[1] + two_theta_step,
                                    two_theta_step, dtype='float')
-    print ('Two theta: {}'.format(two_theta_array))
+    print('Two theta: {}'.format(two_theta_array))
 
     grouped_matrix_x = numpy.ndarray(shape=(two_theta_array.shape[0], len(event_ws.readX(0))))
     grouped_matrix_y = numpy.ndarray(shape=(two_theta_array.shape[0], len(event_ws.readY(0))))
@@ -76,8 +76,8 @@ def main(argv):
             contour_ws.dataY(i_2theta)[:] = contour_ws.readY(i_2theta)[:] + event_ws.readY(iws)[:]
             count_vec += 1.
         else:
-            print ('Spectrum with ws-index {} has 2theta {} (index = {}): out of output contour (2theta) range'
-                   ''.format(iws, two_theta_i, i_2theta))
+            print('Spectrum with ws-index {} has 2theta {} (index = {}): out of output contour (2theta) range'
+                  ''.format(iws, two_theta_i, i_2theta))
     # END-FOR
 
     # deal with zero-count-instance
