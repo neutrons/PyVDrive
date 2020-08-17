@@ -32,7 +32,8 @@ def create_l2_group(vulcan_ws, bank_range_dict, bank_id, l2_resolution, group_ws
     # END-FOR
 
     l2_list.sort()
-    print ('Bank {0}: L2 in ({1}, {2}).  Resolution = {3}'.format(bank_id, l2_list[0][0], l2_list[-1][0], l2_resolution))
+    print('Bank {0}: L2 in ({1}, {2}).  Resolution = {3}'.format(
+        bank_id, l2_list[0][0], l2_list[-1][0], l2_resolution))
 
     l2_min = l2_list[0][0]
     l2_max = l2_list[-1][0]
@@ -58,7 +59,8 @@ def create_7_banks_info():
 
     bank_range_dict = dict()
     for bank_id in range(1, 7):
-        bank_range_dict[bank_id] = (bank_id-1) * ninety_degree_panel_size, bank_id * ninety_degree_panel_size
+        bank_range_dict[bank_id] = (
+            bank_id-1) * ninety_degree_panel_size, bank_id * ninety_degree_panel_size
 
     bank_range_dict[7] = 6468, 24900
 
@@ -83,9 +85,11 @@ def scan_l2_range(vulcan_ws, bank_range_dict):
         # END-FOR
 
         l2_list.sort()
-        print ('Bank {0}: L2 in ({1}, {2})'.format(bank_id, l2_list[0], l2_list[-1]))
+        print('Bank {0}: L2 in ({1}, {2})'.format(
+            bank_id, l2_list[0], l2_list[-1]))
 
     return
+
 
 # Main:
 workspace = mtd['ws']
@@ -98,5 +102,6 @@ start_group_number = 1
 for bank_id in range(1, 8):
     group_ws, stop_group_number = create_l2_group(workspace, bank_spec_range_dict,
                                                   bank_id, 0.004, group_ws, start_group_number)
-    print ('Bank {0} range from group {1} to {2}'.format(bank_id, start_group_number, stop_group_number))
+    print('Bank {0} range from group {1} to {2}'.format(
+        bank_id, start_group_number, stop_group_number))
     start_group_number = stop_group_number + 1

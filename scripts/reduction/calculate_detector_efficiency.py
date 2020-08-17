@@ -17,17 +17,19 @@ van_run = 156473   # 161069: bad  # vulcan_158562
 van_ws_name = 'vanadium_{0}'.format(van_run)
 
 if not mtd.doesExist(van_ws_name):
-    Load(Filename='/SNS/VULCAN/IPTS-19576/nexus/VULCAN_{0}.nxs.h5'.format(van_run), OutputWorkspace=van_ws_name)
+    Load(
+        Filename='/SNS/VULCAN/IPTS-19576/nexus/VULCAN_{0}.nxs.h5'.format(van_run), OutputWorkspace=van_ws_name)
 
 # uniform integration
 if not mtd.doesExist('van_uniform_sum'):
-    Integration(InputWorkspace=van_ws_name, OutputWorkspace='van_uniform_sum', RangeLower=10000, RangeUpper=30000)
+    Integration(InputWorkspace=van_ws_name, OutputWorkspace='van_uniform_sum',
+                RangeLower=10000, RangeUpper=30000)
 
 # integration with fine tune
 van_ws = mtd[van_ws_name]
 start_index = 0
 stop_index = van_ws.getNumberHistograms() - 1
-print ('Range of index: [{0}, {1}]'.format(start_index, stop_index))
+print('Range of index: [{0}, {1}]'.format(start_index, stop_index))
 
 # TOF ranges
 RangeLowerList = [10000] * van_ws.getNumberHistograms()
@@ -38,16 +40,18 @@ for iws in range(van_ws.getNumberHistograms()):
     l2_i = l2_i_pos.norm()
     RangeLowerList[iws] = RangeLowerList[iws] * l2_i * 0.5
     RangeUpperList[iws] = RangeUpperList[iws] * l2_i * 0.5
-    
-print ('Range of lowest TOF among all detectors: {0}, {1}'.format(min(RangeLowerList), max(RangeLowerList)))
-print ('Range of highest TOF among all detectors: {0}, {1}'.format(min(RangeUpperList), max(RangeUpperList)))
+
+print('Range of lowest TOF among all detectors: {0}, {1}'.format(
+    min(RangeLowerList), max(RangeLowerList)))
+print('Range of highest TOF among all detectors: {0}, {1}'.format(
+    min(RangeUpperList), max(RangeUpperList)))
 
 # get the minimum and maximum TOF
 
 
 # Need to cut off all the data
 params = '{0}, -0.001, {1}'.format(10000, max(RangeUpperList))
-print (params)
+print(params)
 
 Rebin(InputWorkspace=van_ws,
       Params='{0},-0.001,{1}'.format(10000, max(RangeUpperList)),

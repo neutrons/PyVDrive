@@ -1,6 +1,5 @@
 # This script is a prototype for grouping detectors by 2theta value and output a contour plot as d-space vs 2theta
 import numpy
-from matplotlib import pyplot as plt
 
 """===========  User Configuration ============="""
 IPTS_NUMBER = 19079

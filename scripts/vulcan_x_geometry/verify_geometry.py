@@ -51,13 +51,13 @@ def main(ws_name):
         corner_ws_index_dict['upper right'] = end_ws_index
         corner_ws_index_dict['lower right'] = end_ws_index - num_tube_pixels + 1
 
-        print ('Bank {} Corners:'.format(bank_id))
+        print('Bank {} Corners:'.format(bank_id))
         for corner in sorted(corner_ws_index_dict.keys()):
             det_id = workspace.getDetector(corner_ws_index_dict[corner]).getID()
             det_pos = workspace.getDetector(corner_ws_index_dict[corner]).getPos()
-            print ('{}: Detector ID = {}  @ X = {}, Y = {}, Z= {}'
-                   ''.format(corner, det_id, det_pos.X(), det_pos.Y(), det_pos.Z()))
-                   
+            print('{}: Detector ID = {}  @ X = {}, Y = {}, Z= {}'
+                  ''.format(corner, det_id, det_pos.X(), det_pos.Y(), det_pos.Z()))
+
         # center from corner
         sum_x = 0
         sum_y = 0
@@ -67,7 +67,8 @@ def main(ws_name):
             sum_x += det_pos.X()
             sum_y += det_pos.Y()
             sum_z += det_pos.Z()
-        print ('\tCenter calculated from corners: X = {}, Y = {}, Z = {}'.format(sum_x*0.25, sum_y*0.25, sum_z*0.25))
+        print('\tCenter calculated from corners: X = {}, Y = {}, Z = {}'.format(
+            sum_x*0.25, sum_y*0.25, sum_z*0.25))
 
         # center 4 pixels: general to N*8-pack case, but not N*8 tube case
         center_ws_index_dict = dict()
@@ -78,10 +79,12 @@ def main(ws_name):
 
             # find center
             center_ws_index_dict['upper left'] = \
-                (8 * num_tube_pixels) * left_pack_id + (num_tube_pixels * 7) + num_tube_pixels / 2 + start_ws_index
+                (8 * num_tube_pixels) * left_pack_id + \
+                (num_tube_pixels * 7) + num_tube_pixels / 2 + start_ws_index
             center_ws_index_dict['lower left'] = center_ws_index_dict['upper left'] - 1
 
-            center_ws_index_dict['upper right'] = (8 * num_tube_pixels) * right_pack_id + num_tube_pixels / 2 + start_ws_index
+            center_ws_index_dict['upper right'] = (
+                8 * num_tube_pixels) * right_pack_id + num_tube_pixels / 2 + start_ws_index
             center_ws_index_dict['lower right'] = center_ws_index_dict['upper right'] - 1
 
         else:
@@ -90,17 +93,18 @@ def main(ws_name):
             start_pack_tube_index = middle_pack_id * 8
 
             # find center
-            center_ws_index_dict['upper left'] =  start_ws_index + (start_pack_tube_index + 3) * num_tube_pixels + num_tube_pixels / 2
+            center_ws_index_dict['upper left'] = start_ws_index + \
+                (start_pack_tube_index + 3) * num_tube_pixels + num_tube_pixels / 2
             center_ws_index_dict['lower left'] = center_ws_index_dict['upper left'] - 1
             center_ws_index_dict['upper right'] = center_ws_index_dict['upper left'] + num_tube_pixels
             center_ws_index_dict['lower right'] = center_ws_index_dict['lower left'] + num_tube_pixels
         # END-IF
-        print ('Bank {} Center:'.format(bank_id))
+        print('Bank {} Center:'.format(bank_id))
         for center in sorted(center_ws_index_dict.keys()):
             det_id = workspace.getDetector(center_ws_index_dict[center]).getID()
             det_pos = workspace.getDetector(center_ws_index_dict[center]).getPos()
-            print ('{}: Detector ID = {}  @ X = {}, Y = {}, Z= {}'
-                   ''.format(center, det_id, det_pos.X(), det_pos.Y(), det_pos.Z()))
+            print('{}: Detector ID = {}  @ X = {}, Y = {}, Z= {}'
+                  ''.format(center, det_id, det_pos.X(), det_pos.Y(), det_pos.Z()))
 
         # calculate the real center
         sum_center_x = 0.
@@ -115,8 +119,8 @@ def main(ws_name):
         center_x = sum_center_x / 4.
         center_y = sum_center_y / 4.
         center_z = sum_center_z / 4.
-        print ('Bank {} center: X = {}, Y = {}, Z = {}  @ 2theta = {}'
-               ''.format(bank_id, center_x, center_y, center_z, cal_2theta(center_x, center_y, center_z)))
+        print('Bank {} center: X = {}, Y = {}, Z = {}  @ 2theta = {}'
+              ''.format(bank_id, center_x, center_y, center_z, cal_2theta(center_x, center_y, center_z)))
 
         # mask
         detector_id_list = list()

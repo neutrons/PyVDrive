@@ -23,7 +23,7 @@ def integrate_single_crystal_peak(ws_name, mask_ws_name, central_d, delta_d, cal
     """
     # get unmasked detector from mask workspace
     roi_det_list = mantid_api.get_detectors_in_roi(mask_ws_name)
-    print ('Detectors are interested: {0}'.format(roi_det_list))
+    print('Detectors are interested: {0}'.format(roi_det_list))
 
     # get the detector id list for rows and columns
     workspace = mantid_api.retrieve_workspace(ws_name, raise_if_not_exist=True)
@@ -66,7 +66,8 @@ def integrate_single_crystal_peak(ws_name, mask_ws_name, central_d, delta_d, cal
         ws_index_list = vulcan_instrument.convert_detectors_to_wsindex(ws_name, detid_list)
         summed_ws_name = ws_name + '_' + file_name
         mantid_api.sum_spectra(ws_name, summed_ws_name, ws_index_list)
-        mantid_api.crop_workspace(summed_ws_name, summed_ws_name, central_d - delta_d, central_d + delta_d)
+        mantid_api.crop_workspace(summed_ws_name, summed_ws_name,
+                                  central_d - delta_d, central_d + delta_d)
         reduction.save_ws_ascii(summed_ws_name, './', file_name + '.dat')
     # ENDFOR
 
@@ -80,51 +81,53 @@ def main(argv):
     :return:
     """
     if len(argv) == 1 or argv[0] == '--help':
-        print ('Integrate single crystal peaks\nRun: "{0} [IPTS] [Run Number] [ROI File] [d-value] [delta d]'
-               '"'.format(argv[0]))
-        print ('Example: > ./integrate_single_crystal_peaks 21356 161394 tests/data/highangle_roi_0607.xml 1.2 0.5')
+        print('Integrate single crystal peaks\nRun: "{0} [IPTS] [Run Number] [ROI File] [d-value] [delta d]'
+              '"'.format(argv[0]))
+        print('Example: > ./integrate_single_crystal_peaks 21356 161394 tests/data/highangle_roi_0607.xml 1.2 0.5')
         sys.exit(0)
 
     # get inputs
     try:
-        print (argv[1])
+        print(argv[1])
         ipts_number = int(argv[1])
-        print ('IPTS = {0}'.format(ipts_number))
+        print('IPTS = {0}'.format(ipts_number))
         run_number = int(argv[2])
-        print ('Run Number = {0}'.format(run_number))
+        print('Run Number = {0}'.format(run_number))
         roi_file_name = str(argv[3])
-        print ('ROI File = {0}'.format(roi_file_name))
+        print('ROI File = {0}'.format(roi_file_name))
         central_d = float(argv[4])
-        print ('Peak Position (d-spacing) = {0}'.format(central_d))
+        print('Peak Position (d-spacing) = {0}'.format(central_d))
         delta_d = float(argv[5])
-        print ('Peak range (d-spacing) = {0}'.format(delta_d))
+        print('Peak range (d-spacing) = {0}'.format(delta_d))
     except IndexError:
-        print ('Integrate single crystal peaks\nRun: "{0} [IPTS] [Run Number] [ROI File] [d-value] [delta d]  (too few arguments)'
-               '"'.format(argv[0]))
+        print('Integrate single crystal peaks\nRun: "{0} [IPTS] [Run Number] [ROI File] [d-value] [delta d]  (too few arguments)'
+              '"'.format(argv[0]))
         sys.exit(1)
     except ValueError:
-        print ('Integrate single crystal peaks\nRun: "{0} [IPTS] [Run Number] [ROI File] [d-value] [delta d] (invalid value)'
-               '"'.format(argv[0]))
+        print('Integrate single crystal peaks\nRun: "{0} [IPTS] [Run Number] [ROI File] [d-value] [delta d] (invalid value)'
+              '"'.format(argv[0]))
         sys.exit(1)
 
     # check
     if delta_d < 0 or central_d < 0 or central_d > 20.:
-        print ('d and delta(d) are not valid')
+        print('d and delta(d) are not valid')
         sys.exit(1)
     if os.path.exists(roi_file_name) is False:
-        print ('ROI file {0} does not exist.'.format(roi_file_name))
+        print('ROI file {0} does not exist.'.format(roi_file_name))
         sys.exit(1)
 
     # load data
     nxs_file_name = vulcan_archive.sns_archive_nexus_path(ipts_number, run_number)
     out_ws_name = 'VULCAN_{0}_events'.format(run_number)
-    mantid_api.load_nexus(data_file_name=nxs_file_name, output_ws_name=out_ws_name, meta_data_only=False)
+    mantid_api.load_nexus(data_file_name=nxs_file_name,
+                          output_ws_name=out_ws_name, meta_data_only=False)
 
     # load geometry
     mask_ws_name = mantid_api.load_roi_xml(out_ws_name, roi_file_name)
 
     # load calibration file
-    mantid_api.load_calibration_file(CALIBRATION_FILE_PATH, output_name='VULCAN_SCX', ref_ws_name=out_ws_name)
+    mantid_api.load_calibration_file(
+        CALIBRATION_FILE_PATH, output_name='VULCAN_SCX', ref_ws_name=out_ws_name)
 
     # integrate
     integrate_single_crystal_peak(out_ws_name, mask_ws_name, central_d, delta_d, 'VULCAN_SCX_cal')

@@ -67,9 +67,9 @@ def make_27_bank_group_workspace():
             group_id = bank_id * 3 + sub_bank_index + 1
 
             # dry run output
-            print ('Bank {0}-{1}: {2:03d}   From {3:04d} to {4:04d}  '
-                   'Number of detectors: {5}'.format(bank_id, sub_bank_index, group_id, sub_start_det_id,
-                                                     sub_stop_det_id - 1, sub_stop_det_id - sub_start_det_id))
+            print('Bank {0}-{1}: {2:03d}   From {3:04d} to {4:04d}  '
+                  'Number of detectors: {5}'.format(bank_id, sub_bank_index, group_id, sub_start_det_id,
+                                                    sub_stop_det_id - 1, sub_stop_det_id - sub_start_det_id))
 
             # set group ID
             for iws in range(sub_start_det_id, sub_stop_det_id):
@@ -84,7 +84,7 @@ def make_27_bank_group_workspace():
     for col in range(3):
         for row in range(3):
             group_id = col * 3 + row + 19
-            print ('High angle bank group ID: {0}'.format(group_id))
+            print('High angle bank group ID: {0}'.format(group_id))
             # 256 rows in a column.  split as 85, 85, 86
             if row < 2:
                 num_sub_rows = 85
@@ -142,7 +142,8 @@ def main(argv):
     :return:
     """
     # define arguments
-    parser = argparse.ArgumentParser(description='Create VULCAN calibration file with various number of groups')
+    parser = argparse.ArgumentParser(
+        description='Create VULCAN calibration file with various number of groups')
     # positional argument
     parser.add_argument('banks', type=int, help='Number of banks in the calibration file')
     # positional argument
@@ -153,7 +154,7 @@ def main(argv):
     # get args
     args = parser.parse_args()
 
-    print (args.banks, args.output, args.calibrate)
+    print(args.banks, args.output, args.calibrate)
 
     # process source calibration file
     if args.calibrate is None:
@@ -163,12 +164,12 @@ def main(argv):
 
     # load a reference/source calibration file
     if os.path.exists(INSTRUMENT_FILE) is False:
-        print ('Instrument file {0} cannot be found.'.format(INSTRUMENT_FILE))
+        print('Instrument file {0} cannot be found.'.format(INSTRUMENT_FILE))
         exit(1)
     if not os.path.exists(src_calib_file):
-        print ('Calibration file {0} cannot be found.'.format(CALIBRATION_FILE))
+        print('Calibration file {0} cannot be found.'.format(CALIBRATION_FILE))
 
-    print ('Loading source calibration file: {0}'.format(src_calib_file))
+    print('Loading source calibration file: {0}'.format(src_calib_file))
     LoadDiffCal(
         InstrumentFilename=INSTRUMENT_FILE,
         Filename=src_calib_file,
@@ -182,7 +183,7 @@ def main(argv):
     elif args.banks == 3:
         new_group_ws_name = make_3_bank_group_workspace()
     else:
-        print ('{0}-bank grouping/calibration file is not supported.'.format(args.banks))
+        print('{0}-bank grouping/calibration file is not supported.'.format(args.banks))
         sys.exit(1)
 
     # Save calibration
