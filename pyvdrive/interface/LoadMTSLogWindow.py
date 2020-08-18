@@ -136,7 +136,8 @@ class LoadMTSLogFileWindow(QMainWindow):
         """
         # check
         if self._logFileName is None or self._summaryDict is None:
-            GUtil.pop_dialog_error(self, 'MTS log file is not given AND/OR log file format is not scanned!')
+            GUtil.pop_dialog_error(
+                self, 'MTS log file is not given AND/OR log file format is not scanned!')
             return
 
         # send signal
@@ -191,7 +192,8 @@ class LoadMTSLogFileWindow(QMainWindow):
                 if len(ipts_number_str) > 0:
                     ipts_number = int(ipts_number_str)
                 else:
-                    GUtil.pop_dialog_error(self, 'IPTS number is not given! Unable to locate archive.')
+                    GUtil.pop_dialog_error(
+                        self, 'IPTS number is not given! Unable to locate archive.')
                     return
             else:
                 ipts_number = self._iptsNumber
@@ -339,7 +341,7 @@ class LoadMTSLogFileWindow(QMainWindow):
         # dictionary to return
         self._logFormatDict.clear()
         self._logFormatDict['block'] = dict()  # block start information
-        self._logFormatDict['header'] = dict() # header item list
+        self._logFormatDict['header'] = dict()  # header item list
         self._logFormatDict['unit'] = dict()   # unit item list
         self._logFormatDict['data'] = dict()   # data range (list with 2 items)
         self._logFormatDict['duration'] = dict()
@@ -364,7 +366,8 @@ class LoadMTSLogFileWindow(QMainWindow):
             if self.ui.tableWidget_preview.is_block_start(i_row):
                 # block header. set block index and start the new list
                 block_index += 1
-                self._logFormatDict['block'][block_index] = self.ui.tableWidget_preview.get_content(i_row)
+                self._logFormatDict['block'][block_index] = self.ui.tableWidget_preview.get_content(
+                    i_row)
                 self._logFormatDict['data'][block_index] = None
                 self._logFormatDict['duration'][block_index] = None
 

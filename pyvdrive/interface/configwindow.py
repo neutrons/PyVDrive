@@ -11,7 +11,6 @@ except ImportError:
     from PyQt4.QtGui import QMainWindow
 
 
-
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
@@ -22,6 +21,7 @@ except AttributeError:
 class ConfigWindow(QMainWindow):
     """ Pop up dialog window to add runs by IPTS
     """
+
     def __init__(self, parent):
         """
         Initialization
@@ -85,7 +85,8 @@ class ConfigWindow(QMainWindow):
             self._myController.set_root_data_dir(self._rootDataDir)
             self._myController.set_relative_binned_dir(self._relativeGSASDir)
 
-            self._myController.set_ipts_config(self._currentIPTS, self._iptsDataDir, self._iptsGSSDir)
+            self._myController.set_ipts_config(
+                self._currentIPTS, self._iptsDataDir, self._iptsGSSDir)
         # END-IF
 
         return

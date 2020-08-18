@@ -1,18 +1,18 @@
 #!/usr/bin/python
 #  TODO TODO Evaluate to remove!
-#import utility modules
+# import utility modules
 import sys
 
-#import PyQt modules
+# import PyQt modules
 from PyQt4 import QtGui, QtCore, Qt
 
-#include this try/except block to remap QString needed when using IPython
+# include this try/except block to remap QString needed when using IPython
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    def _fromUtf8(s): return s
 
-#import GUI components generated from Qt Designer .ui file
+# import GUI components generated from Qt Designer .ui file
 import GuiUtility as gutil
 from ui_selectRuns import *
 
@@ -30,18 +30,18 @@ class SelectRunsDialog(QtGui.QMainWindow):
         """ setup main window
         """
         # Base class initialization and set up GUI
-        QtGui.QMainWindow.__init__(self,parent)
+        QtGui.QMainWindow.__init__(self, parent)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
         # Parnet & config
         self._myParent = parent
 
-        # Sub-app specific event handling 
+        # Sub-app specific event handling
         self.connect(self.ui.pushButton_saveQuit, QtCore.SIGNAL('clicked()'),
-                self.doSaveQuit)
-        self.connect(self.ui.pushButton_cancelQuit, QtCore.SIGNAL('clicked()'), 
-                self.doCancelQuit)
+                     self.doSaveQuit)
+        self.connect(self.ui.pushButton_cancelQuit, QtCore.SIGNAL('clicked()'),
+                     self.doCancelQuit)
 
         # Set up table
         headerlist = ['Start Date', 'End Date', 'Start Run', 'End Run', 'Select']
@@ -62,10 +62,10 @@ class SelectRunsDialog(QtGui.QMainWindow):
 
         return
 
-     
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     # Methods to handling GUI events
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+
     def doCancelQuit(self):
         """ Cancel and quit 
         """
@@ -77,21 +77,20 @@ class SelectRunsDialog(QtGui.QMainWindow):
 
         return
 
-
     def doSaveQuit(self):
         """ Save the choice and quit: this is very specific to the caller!
         """
         # Get the list to return
-        signallist = [self._myProjectName, self._myIPTS] 
+        signallist = [self._myProjectName, self._myIPTS]
 
         numrows = self.ui.tableWidget.rowCount()
-        for irow in xrange(numrows): 
+        for irow in xrange(numrows):
             selected = self.ui.tableWidget.cellWidget(irow, 4).isChecked()
             if selected is True:
                 startrun = int(self.ui.tableWidget.item(irow, 2).text())
-                endrun   = int(self.ui.tableWidget.item(irow, 3).text())
+                endrun = int(self.ui.tableWidget.item(irow, 3).text())
                 print "Selected runs: from %d to %d." % (startrun, endrun)
-                signallist.append( (startrun, endrun) )
+                signallist.append((startrun, endrun))
             # ENDIF
         # ENDFOR
 
@@ -102,10 +101,10 @@ class SelectRunsDialog(QtGui.QMainWindow):
         self.close()
 
         return
-        
-    #--------------------------------------------------------------------------
+
+    # --------------------------------------------------------------------------
     # Methods to access, set up and update table
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     def appendRow(self, startdate, enddate, startrun, endrun, select):
         """ Append a row to the project table
         """
@@ -117,7 +116,7 @@ class SelectRunsDialog(QtGui.QMainWindow):
                 raise ValueError("Select should be a boolean")
         except ValueError as e:
             raise e
-        
+
         # Format to strings
         startrun = str(int(startrun))
         endrun = str(endrun)
@@ -137,40 +136,38 @@ class SelectRunsDialog(QtGui.QMainWindow):
         irow = self._currRowIndex
 
         print "[DB] Table Current Index = ", irow, " to set items", \
-                " number of rows = ", self.ui.tableWidget.rowCount()
+            " number of rows = ", self.ui.tableWidget.rowCount()
 
         #  The 4 lines of script can be put to a method
         gutil.setTextToQTableCell(self.ui.tableWidget, irow, 0, startdate)
-        #cellitem=QtGui.QTableWidgetItem()
+        # cellitem=QtGui.QTableWidgetItem()
         #cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
-        #cellitem.setText(_fromUtf8(startdate)) 
+        # cellitem.setText(_fromUtf8(startdate))
         #self.ui.tableWidget.setItem(irow, 0, cellitem)
 
-
         # FIXME After testing, replace all the scripts to function call
-        cellitem=QtGui.QTableWidgetItem()
+        cellitem = QtGui.QTableWidgetItem()
         cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
-        cellitem.setText(_fromUtf8(enddate)) 
+        cellitem.setText(_fromUtf8(enddate))
         self.ui.tableWidget.setItem(irow, 1, cellitem)
 
-        cellitem=QtGui.QTableWidgetItem()
+        cellitem = QtGui.QTableWidgetItem()
         cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
-        cellitem.setText(_fromUtf8(startrun)) 
+        cellitem.setText(_fromUtf8(startrun))
         self.ui.tableWidget.setItem(irow, 2, cellitem)
 
-        cellitem=QtGui.QTableWidgetItem()
+        cellitem = QtGui.QTableWidgetItem()
         cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
-        cellitem.setText(_fromUtf8(endrun)) 
+        cellitem.setText(_fromUtf8(endrun))
         self.ui.tableWidget.setItem(irow, 3, cellitem)
 
         # Add widget for the selection
         gutil.addCheckboxToWSTCell(self.ui.tableWidget, irow, 4, select)
-        
+
         # Resize of the width of each new cell
         self.ui.tableWidget.resizeColumnsToContents()
 
         return
-
 
     def setRunInfo(self, projectname, ipts):
         """ Set ITPS project information to this window
@@ -184,13 +181,13 @@ class SelectRunsDialog(QtGui.QMainWindow):
         self._myIPTS = int(ipts)
 
         title = "Project %s :  Add runs of IPTS-%d" % (self._myProjectName,
-                self._myIPTS)
+                                                       self._myIPTS)
         self.ui.label_title.setText(title)
 
         return
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     """ Test Main """
     # Start application
     app = QtGui.QApplication(sys.argv)
@@ -204,5 +201,5 @@ if __name__=="__main__":
     select = True
     myapp.appendRow(startdate, enddate, startrun, endrun, select)
 
-    exit_code=app.exec_()
+    exit_code = app.exec_()
     sys.exit(exit_code)

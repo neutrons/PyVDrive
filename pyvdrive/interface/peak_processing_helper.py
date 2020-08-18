@@ -21,6 +21,7 @@ class GroupPeakDialog(QMainWindow):
     """
     Main window class to group peak with user interaction
     """
+
     def __init__(self, parent):
         """
         Initialization
@@ -99,6 +100,7 @@ class PeakWidthSetupDialog(QDialog):
     """
     Class for set up dialog
     """
+
     def __init__(self, parent):
         """
         Init ...
@@ -168,6 +170,7 @@ class PhaseWidgets(object):
     """
     A set of widgets to define a phase
     """
+
     def __init__(self, parent, edit_a, edit_b, edit_c, edit_name, combo_box_type, check_box_select):
         """
         Initialize the phase widgets group
@@ -246,8 +249,10 @@ class PhaseWidgets(object):
         """
         # Check requirements:
         assert isinstance(phase_value_list, list), 'Phase value list %s must be a list but not of type %s.' \
-                                                   '' % (str(phase_value_list), type(phase_value_list))
-        assert len(phase_value_list) == 5, 'Phase value list %s must be 5 elements.' % str(phase_value_list)
+                                                   '' % (str(phase_value_list),
+                                                         type(phase_value_list))
+        assert len(phase_value_list) == 5, 'Phase value list %s must be 5 elements.' % str(
+            phase_value_list)
 
         # Set name
         phase_value_list[0] = str(self._lineEdit_name.text()).strip()
@@ -286,10 +291,11 @@ class PhaseWidgets(object):
             else:
                 c = a
         except TypeError as e:
-            raise RuntimeError('Lattice parameters a, b or c does not have correct value. Error: %s.' % str(e))
+            raise RuntimeError(
+                'Lattice parameters a, b or c does not have correct value. Error: %s.' % str(e))
 
-        print ('[DB...BAT] Phase {} of {}: a = {}, b = {}, c = {}'
-               ''.format(phase_name, cell_type, a, b, c))
+        print('[DB...BAT] Phase {} of {}: a = {}, b = {}, c = {}'
+              ''.format(phase_name, cell_type, a, b, c))
 
         return [phase_name, cell_type, a, b, c]
 
@@ -374,7 +380,8 @@ class PhaseWidgets(object):
         # Check requirements
         assert isinstance(unit_cell_value, list), 'Unit cell value %s must be given in list but not %s.' \
                                                   '' % (str(unit_cell_value), type(unit_cell_value))
-        assert len(unit_cell_value) == 5, 'Unit cell value %s must have 5 elements.' % str(unit_cell_value)
+        assert len(unit_cell_value) == 5, 'Unit cell value %s must have 5 elements.' % str(
+            unit_cell_value)
 
         # Set phase name
         self._lineEdit_name.setText(unit_cell_value[0])
@@ -398,7 +405,8 @@ class PhaseWidgets(object):
                 new_index = index
                 break
         if new_index == -1:
-            raise RuntimeError('Impossible to find unit cell type %s not in the list.' % unit_cell_value[1])
+            raise RuntimeError(
+                'Impossible to find unit cell type %s not in the list.' % unit_cell_value[1])
         else:
             self._comboBox_type.setCurrentIndex(new_index)
 
@@ -427,4 +435,3 @@ def retrieve_peak_positions(peak_tup_list):
     # END-FOR(peak)
 
     return peak_pos_list
-

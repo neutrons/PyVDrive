@@ -14,7 +14,7 @@ try:
     from PyQt5.uic import loadUi as load_ui
     is_qt_4 = False
 except ImportError as import_e:
-    print ('Import error: {}'.format(import_e))
+    print('Import error: {}'.format(import_e))
     from PyQt4 import QtCore as QtCore
     from PyQt4.QtGui import QMainWindow, QWidget, QGridLayout, QSizePolicy, QLabel, QMenuBar, QStatusBar, QToolBar
     from PyQt4.QtGui import QFileDialog, QRadioButton, QMenu, QAction, QCursor, QVBoxLayout
@@ -26,7 +26,7 @@ except ImportError as import_e:
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except (AttributeError, ImportError):
-    _fromUtf8 = lambda s: s
+    def _fromUtf8(s): return s
 
 from pyvdrive.interface.gui.vdrivetreewidgets import VdriveRunManagerTree
 from pyvdrive.interface.gui.mplgraphicsview import MplGraphicsView
@@ -194,12 +194,18 @@ class VdriveMainWindow(QMainWindow):
         #              self.do_fit_single_peak)
 
         # Column 4
-        self.ui.graphicsView_snapView1.canvas().mpl_connect('button_release_event', self.evt_snap1_mouse_press)
-        self.ui.graphicsView_snapView2.canvas().mpl_connect('button_release_event', self.evt_snap2_mouse_press)
-        self.ui.graphicsView_snapView3.canvas().mpl_connect('button_release_event', self.evt_snap3_mouse_press)
-        self.ui.graphicsView_snapView4.canvas().mpl_connect('button_release_event', self.evt_snap4_mouse_press)
-        self.ui.graphicsView_snapView5.canvas().mpl_connect('button_release_event', self.evt_snap5_mouse_press)
-        self.ui.graphicsView_snapView6.canvas().mpl_connect('button_release_event', self.evt_snap6_mouse_press)
+        self.ui.graphicsView_snapView1.canvas().mpl_connect(
+            'button_release_event', self.evt_snap1_mouse_press)
+        self.ui.graphicsView_snapView2.canvas().mpl_connect(
+            'button_release_event', self.evt_snap2_mouse_press)
+        self.ui.graphicsView_snapView3.canvas().mpl_connect(
+            'button_release_event', self.evt_snap3_mouse_press)
+        self.ui.graphicsView_snapView4.canvas().mpl_connect(
+            'button_release_event', self.evt_snap4_mouse_press)
+        self.ui.graphicsView_snapView5.canvas().mpl_connect(
+            'button_release_event', self.evt_snap5_mouse_press)
+        self.ui.graphicsView_snapView6.canvas().mpl_connect(
+            'button_release_event', self.evt_snap6_mouse_press)
 
         self._group_left_box_list = [self.ui.comboBox_g11, self.ui.comboBox_g21,
                                      self.ui.comboBox_g31, self.ui.comboBox_g41,
@@ -281,7 +287,7 @@ class VdriveMainWindow(QMainWindow):
         :param message:
         :return:
         """
-        print ('[DB...TEST] VDRIVE command return: {}'.format(message))
+        print('[DB...TEST] VDRIVE command return: {}'.format(message))
 
     def _promote_widgets(self):
         treeView_iptsRun_layout = QVBoxLayout()
@@ -353,6 +359,7 @@ class VdriveMainWindow(QMainWindow):
             """
             class
             """
+
             def __init__(self, parent=None):
                 """
                 Init
@@ -393,7 +400,7 @@ class VdriveMainWindow(QMainWindow):
                 self.toolBar.setObjectName(_fromUtf8("toolBar"))
                 self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBar)
 
-                #self.retranslateUi(self)
+                # self.retranslateUi(self)
                 QtCore.QMetaObject.connectSlotsByName(self)
 
                 return
@@ -460,7 +467,6 @@ class VdriveMainWindow(QMainWindow):
 
         if found is False:
             GuiUtility.pop_dialog_error('Unable to locate any sample log to be picked up.')
-
 
         # self._apply_slicer_snap_view() : disabled because there is no need to do this
 
@@ -642,7 +648,8 @@ class VdriveMainWindow(QMainWindow):
             row_number_list = self.ui.tableWidget_selectedRuns.get_rows_by_run([remove_run])
             # check
             if row_number_list[0] < 0:
-                GuiUtility.pop_dialog_error(self, 'Run number %d is not in the selected runs.' % remove_run)
+                GuiUtility.pop_dialog_error(
+                    self, 'Run number %d is not in the selected runs.' % remove_run)
                 return
             else:
                 self.ui.lineEdit_runsToDelete.setText('')
@@ -678,7 +685,8 @@ class VdriveMainWindow(QMainWindow):
 
             if do_connect_runs is True:
                 # special handling to chop data by connecting runs
-                self._myWorkflow.chop_data_connect_runs(selected_run_list, start_time, stop_time, time_interval)
+                self._myWorkflow.chop_data_connect_runs(
+                    selected_run_list, start_time, stop_time, time_interval)
 
             else:
                 # regular chopping with run by run
@@ -723,15 +731,16 @@ class VdriveMainWindow(QMainWindow):
         :return:
         """
         out_file_name = str(
-                QFileDialog.getSaveFileName(self, 'Data Slice File',
-                                            self._myWorkflow.get_working_dir()))
+            QFileDialog.getSaveFileName(self, 'Data Slice File',
+                                        self._myWorkflow.get_working_dir()))
 
         print '[DB] Save slicer for run ', self._currLogRunNumber, ' sample log ', self._currSlicerLogName,
         print 'to file', out_file_name
         # Save slicer for run  57325  sample log  Voltage
 
         if self._currSlicerLogName is None:
-            GuiUtility.pop_dialog_error(self, 'Neither log-value slicer nor manual slicer is applied.')
+            GuiUtility.pop_dialog_error(
+                self, 'Neither log-value slicer nor manual slicer is applied.')
             return
         else:
             # Save splitters workspace
@@ -798,13 +807,14 @@ class VdriveMainWindow(QMainWindow):
         for i in xrange(1, num_groups+1):
             try:
                 # get on hold of three widgets with systematic naming
-                graph_view = getattr(self.ui, 'graphicsView_snapView%d'% i)
-                combo1 = getattr(self.ui, 'comboBox_g%d1'% i)
-                combo2 = getattr(self.ui, 'comboBox_g%d2'% i)
+                graph_view = getattr(self.ui, 'graphicsView_snapView%d' % i)
+                combo1 = getattr(self.ui, 'comboBox_g%d1' % i)
+                combo2 = getattr(self.ui, 'comboBox_g%d2' % i)
                 radio_button = getattr(self.ui, 'radioButton_plot%d' % i)
                 assert isinstance(radio_button, QRadioButton)
             except AttributeError as e:
-                raise RuntimeError('GUI changed but python code is not changed accordingly: %s'%(str(e)))
+                raise RuntimeError(
+                    'GUI changed but python code is not changed accordingly: %s' % (str(e)))
             else:
                 # set up group
                 graph_group = SnapGView.SnapGraphicsView(graph_view, combo1, combo2, radio_button)
@@ -829,7 +839,8 @@ class VdriveMainWindow(QMainWindow):
         :return: 2-tuple: boolean, string (error message)
         """
         # check validity
-        assert isinstance(ipts_number, int), 'IPTS number {0} must be a integer.'.format(ipts_number)
+        assert isinstance(
+            ipts_number, int), 'IPTS number {0} must be a integer.'.format(ipts_number)
         assert isinstance(ipts_dir, str), 'Data directory {0} must be a string.'.format(ipts_dir)
         assert isinstance(run_tuple_list, list), 'Run number list should be a list but not a {0}.' \
                                                  ''.format(type(run_tuple_list))
@@ -898,13 +909,14 @@ class VdriveMainWindow(QMainWindow):
         elif self.ui.radioButton_runsAddPartial.isChecked():
             # case to add a subset of runs
             run_list = GuiUtility.parse_integer_list(self.ui.lineEdit_runs)
-            print ('[DB...BAT] Parsed run list: {0}'.format(run_list))
+            print('[DB...BAT] Parsed run list: {0}'.format(run_list))
             if len(run_list) == 0:
                 GuiUtility.pop_dialog_error(self, 'No run is input by user.')
                 return
 
             # check runs with
-            status, error_message, exist_run_list = self._myWorkflow.check_runs(self._currIptsNumber, run_list)
+            status, error_message, exist_run_list = self._myWorkflow.check_runs(
+                self._currIptsNumber, run_list)
 
             if status is False:
                 # Error and return
@@ -957,7 +969,8 @@ class VdriveMainWindow(QMainWindow):
             # apply change to status record
             self._group_left_box_values[i] = curr_index
             # plot
-            SnapGView.SampleLogView(self._groupedSnapViewList[i], self).plot_sample_log(snap_resolution)
+            SnapGView.SampleLogView(
+                self._groupedSnapViewList[i], self).plot_sample_log(snap_resolution)
         # END-FOR
 
         return
@@ -1020,11 +1033,13 @@ class VdriveMainWindow(QMainWindow):
         # Get file name
         file_filter = "CSV (*.csv);;Text (*.txt);;All files (*.*)"
         log_path = self._myWorkflow.get_working_dir()
-        seg_file_name = str(QFileDialog.getOpenFileName(self, 'Open Time Segment File', log_path, file_filter))
+        seg_file_name = str(QFileDialog.getOpenFileName(
+            self, 'Open Time Segment File', log_path, file_filter))
 
         # Import file
         try:
-            time_seg_list = file_utilities.load_event_slicers_file(seg_file_name)  # missing: ref_run, run_start_time,
+            time_seg_list = file_utilities.load_event_slicers_file(
+                seg_file_name)  # missing: ref_run, run_start_time,
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self, str(run_err))
             return
@@ -1047,7 +1062,8 @@ class VdriveMainWindow(QMainWindow):
         if run_str.isdigit():
             run_number = int(run_str)
         else:
-            GuiUtility.pop_dialog_error(self, 'Run number %s selected in combo-box is not integer.' % run_str)
+            GuiUtility.pop_dialog_error(
+                self, 'Run number %s selected in combo-box is not integer.' % run_str)
             return
 
         # find default directory
@@ -1066,13 +1082,16 @@ class VdriveMainWindow(QMainWindow):
             log_path = os.path.dirname('/SNS/VULCAN/IPTS-{0}/'.format(ipts_number))
             # Dialog to get the file name
             file_filter = "Event Nexus (*_event.nxs);;All files (*.*)"
-            log_file_name = str(QFileDialog.getOpenFileName(self, 'Open NeXus File', log_path, file_filter))
+            log_file_name = str(QFileDialog.getOpenFileName(
+                self, 'Open NeXus File', log_path, file_filter))
             run_number = 0  # parse_run_number(log_file_name)
         # END-IF
 
         # Load log
-        log_name_list, run_info_str = self.load_sample_run(ipts_number, run_number, log_file_name, smart=True)
-        log_name_list = GuiUtility.sort_sample_logs(log_name_list, reverse=False, ignore_1_value=True)
+        log_name_list, run_info_str = self.load_sample_run(
+            ipts_number, run_number, log_file_name, smart=True)
+        log_name_list = GuiUtility.sort_sample_logs(
+            log_name_list, reverse=False, ignore_1_value=True)
 
         # Plot first 6 sample logs
         max_resolution = GuiUtility.parse_integer(self.ui.lineEdit_maxSnapResolution)
@@ -1281,16 +1300,19 @@ class VdriveMainWindow(QMainWindow):
         :return: list of string for log names
         """
         # Check
-        assert isinstance(run, int), 'Run number {0} must be an integer but not a {1}'.format(run, type(run))
+        assert isinstance(run, int), 'Run number {0} must be an integer but not a {1}'.format(
+            run, type(run))
         assert isinstance(nxs_file_name, str) or nxs_file_name is None,\
-            'Nexus file name {0} must be a string but not a {1}.'.format(nxs_file_name, type(nxs_file_name))
+            'Nexus file name {0} must be a string but not a {1}.'.format(
+                nxs_file_name, type(nxs_file_name))
 
         # get files
         if nxs_file_name is None:
             # Load data without file name, IPTS number and etc.
             self._myWorkflow.load_meta_data(ipts_number=ipts_number, run_number=run, file_name=None)
         else:
-            self._myWorkflow.load_meta_data(ipts_number=None, run_number=run, file_name=nxs_file_name)
+            self._myWorkflow.load_meta_data(
+                ipts_number=None, run_number=run, file_name=nxs_file_name)
 
         # Get log names
         log_name_list = self._myWorkflow.get_sample_log_names(run, smart)
@@ -1339,7 +1361,8 @@ class VdriveMainWindow(QMainWindow):
         """
         default_path = os.path.expanduser('~/.vdrive')
         session_file_name = os.path.join(default_path, 'auto_save.xml')
-        assert os.path.exists(session_file_name), 'Auto saved project file %s does not exist.' % session_file_name
+        assert os.path.exists(
+            session_file_name), 'Auto saved project file %s does not exist.' % session_file_name
 
         self.load_project(session_file_name)
 
@@ -1486,15 +1509,17 @@ class VdriveMainWindow(QMainWindow):
         # Refresh?
         if self._snapViewWindow.allow_new_session() is False:
             # If window is open but not saved, pop error message
-                GuiUtility.pop_dialog_error(self, 'Current window is not saved.')
-                return
+            GuiUtility.pop_dialog_error(self, 'Current window is not saved.')
+            return
         # END-IF
 
         # Get the final data
-        sample_log_view = SnapGView.SampleLogView(self._groupedSnapViewList[self._currentSnapViewIndex], self)
+        sample_log_view = SnapGView.SampleLogView(
+            self._groupedSnapViewList[self._currentSnapViewIndex], self)
         sample_log_name = sample_log_view.get_log_name()
         num_skipped_second = GuiUtility.parse_float(self.ui.lineEdit_numSecLogSkip)
-        self._snapViewWindow.setup(self._myWorkflow, self._currLogRunNumber, sample_log_name, num_skipped_second)
+        self._snapViewWindow.setup(self._myWorkflow, self._currLogRunNumber,
+                                   sample_log_name, num_skipped_second)
 
         self._snapViewWindow.show()
 

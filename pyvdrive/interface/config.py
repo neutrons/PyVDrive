@@ -8,6 +8,7 @@ class PyVDriveConfiguration(object):
     """
     a singleton class used by
     """
+
     def __init__(self):
         """
         initialization

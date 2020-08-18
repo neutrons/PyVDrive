@@ -131,12 +131,13 @@ class ManualSlicerSetupTableDialog(QDialog):
         if self._myParent is not None:
             self._myParent.generate_manual_slicer(split_tup_list, slicer_name=slicer_name)
             # auto save
-            file_name = os.path.join(self.controller.get_working_dir(), 'slicer_{}.dat'.format(slicer_name))
+            file_name = os.path.join(self.controller.get_working_dir(),
+                                     'slicer_{}.dat'.format(slicer_name))
             status, err_msg = self.controller.save_time_slicers(split_tup_list, file_name)
             if status:
-                print ('[INFO] Splitters are save to {}'.format(file_name))
+                print('[INFO] Splitters are save to {}'.format(file_name))
             else:
-                print ('[ERROR] Unable to save splitters due to {}'.format(err_msg))
+                print('[ERROR] Unable to save splitters due to {}'.format(err_msg))
         # END-IF
 
         return
@@ -157,7 +158,8 @@ class ManualSlicerSetupTableDialog(QDialog):
         # get the selected slicers
         selected_rows = self.ui.tableWidget_segments.get_selected_rows(True)
         if len(selected_rows) == 0:
-            GuiUtil.pop_dialog_information(self, 'No splitter (row) in the table is selected to expand.')
+            GuiUtil.pop_dialog_information(
+                self, 'No splitter (row) in the table is selected to expand.')
             return
 
         # get the slicers
@@ -192,11 +194,13 @@ class ManualSlicerSetupTableDialog(QDialog):
                 return
 
         else:
-            raise NotImplementedError('One of split by time step or split by log value step must be chosen.')
+            raise NotImplementedError(
+                'One of split by time step or split by log value step must be chosen.')
 
         # TODO/ISSUE/FUTURE
         if log_step is not None:
-            raise NotImplementedError('It has not been implemented yet to split further by log value.')
+            raise NotImplementedError(
+                'It has not been implemented yet to split further by log value.')
 
         # expand
         for row_index, splitter in slicer_list:
@@ -317,8 +321,8 @@ class ManualSlicerSetupTableDialog(QDialog):
                 single_ws_name_vec[0::2] = target_ws_1
                 single_ws_name_vec[1::2] = '-1'
 
-                print ('G: ', single_ws_time_vec)
-                print ('H: ', single_ws_name_vec)
+                print('G: ', single_ws_time_vec)
+                print('H: ', single_ws_name_vec)
 
                 self.ui.label_numSegment1.setText('{}'.format(num_slicers))
 
@@ -328,8 +332,6 @@ class ManualSlicerSetupTableDialog(QDialog):
         except Exception as e:
             GuiUtil.pop_dialog_error(self, 'blabla 1: {}'.format(e))
             return
-
-
 
         return
 
@@ -359,7 +361,8 @@ class ManualSlicerSetupTableDialog(QDialog):
             self.ui.tableWidget_segments.select_all_rows(False)
             self.ui.pushButton_selectAll.setText('Select All')
         else:
-            raise RuntimeError('Select button with text {0} is wrong!'.format(str(self.ui.pushButton_selectAll.text())))
+            raise RuntimeError('Select button with text {0} is wrong!'.format(
+                str(self.ui.pushButton_selectAll.text())))
 
         return
 
@@ -478,6 +481,6 @@ class ManualSlicerSetupTableDialog(QDialog):
         try:
             self.ui.tableWidget_segments.set_time_slicers(slicers_list)
         except RuntimeError as run_err:
-            print ('[WARNING] Writing slicer table: {}'.format(run_err))
+            print('[WARNING] Writing slicer table: {}'.format(run_err))
 
         return

@@ -4,12 +4,13 @@ try:
     from PyQt5.QtWidgets import QComboBox, QRadioButton
 except ImportError:
     from PyQt4.QtGui import QComboBox, QRadioButton
-from gui.mplgraphicsview import MplGraphicsView 
+from gui.mplgraphicsview import MplGraphicsView
 
 
 class SnapGraphicsView(object):
     """ Snap graphics view in VDrivePlot (beta)
     """
+
     def __init__(self, graphic_view_widget, combo_box1, combo_box2, radio_button):
         """
         :param graphic_view_widget:
@@ -19,7 +20,8 @@ class SnapGraphicsView(object):
         """
         # Check
         if isinstance(graphic_view_widget, MplGraphicsView) is False:
-            raise NotImplementedError("Input is not a QGraphicsView instance, but %s" % str(type(graphic_view_widget)))
+            raise NotImplementedError(
+                "Input is not a QGraphicsView instance, but %s" % str(type(graphic_view_widget)))
         if isinstance(combo_box1, QComboBox) is False:
             raise NotImplementedError("Input combo1 is not a QComboBox instance.")
         if isinstance(combo_box2, QComboBox) is False:
@@ -114,6 +116,7 @@ class SampleLogView(object):
     """
     Snap graphics view for sample environment logs
     """
+
     def __init__(self, snapgraphicsview, parent):
         """
         :param snapgraphicsview:

@@ -18,6 +18,7 @@ import DialogVanCalibRules as dlgrule
 class SetupVanCalibRuleDialog(QtGui.QDialog):
     """ Pop up dialog window to add runs by IPTS
     """
+
     def __init__(self, parent):
         """ Init
         """

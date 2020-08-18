@@ -16,6 +16,7 @@ class VulcanExperimentRecordView(QMainWindow):
     """
     Reduced live data viewer for VULCAN
     """
+
     def __init__(self, parent):
         """
         init
@@ -66,7 +67,6 @@ class VulcanExperimentRecordView(QMainWindow):
 
         table = mtd[output]
 
-
     def live_reduce(self):
         ws = input
         counter_ws = mtd['counter']
@@ -91,4 +91,3 @@ class VulcanExperimentRecordView(QMainWindow):
         EditInstrumentGeometry(Workspace=curr_ws_name, PrimaryFlightPath=43.753999999999998,
                                SpectrumIDs='1,2,3',
                                L2='2.00944,2.00944,2.00944', Polar='90,270,150')
-

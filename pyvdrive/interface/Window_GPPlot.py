@@ -32,14 +32,13 @@ try:
 except AttributeError:
     def _fromUtf8(s):
         return s
-        
-
 
 
 class Window_GPPlot(QMainWindow):
     """ Class for general-purposed plot window
     """
     # class
+
     def __init__(self, parent=None):
         """ Init
         """
@@ -54,41 +53,41 @@ class Window_GPPlot(QMainWindow):
         self.ui = load_ui(ui_path, baseinstance=self)
 
         # Event handling
-        # push buttons 
-        self.connect(self.ui.pushButton_prevView, QtCore.SIGNAL('clicked()'), 
-                self.doPlotRunPrev)
+        # push buttons
+        self.connect(self.ui.pushButton_prevView, QtCore.SIGNAL('clicked()'),
+                     self.doPlotRunPrev)
         self.connect(self.ui.pushButton_nextView, QtCore.SIGNAL('clicked()'),
-                self.doPlotRunNext)
+                     self.doPlotRunNext)
         self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
-                self.doPlotRunSelected)
+                     self.doPlotRunSelected)
         self.connect(self.ui.pushButton_allFillPlot, QtCore.SIGNAL('clicked()'),
                      self.do_plot_all_runs)
 
         self.connect(self.ui.pushButton_normByCurrent, QtCore.SIGNAL('clicked()'),
-                self.doNormByCurrent)
+                     self.doNormByCurrent)
         self.connect(self.ui.pushButton_normByVanadium, QtCore.SIGNAL('clicked()'),
-                self.doNormByVanadium)
+                     self.doNormByVanadium)
 
         self.connect(self.ui.pushButton_showVanadiumPeaks, QtCore.SIGNAL('clicked()'),
-                self.doShowVanadiumPeaks)
+                     self.doShowVanadiumPeaks)
         self.connect(self.ui.pushButton_stripVPeaks, QtCore.SIGNAL('clicked()'),
                      self.doStripVanPeaks)
         self.connect(self.ui.pushButton_smoothVanadium, QtCore.SIGNAL('clicked()'),
                      self.doSmoothVanadium)
 
         self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
-                self.doQuit)
+                     self.doQuit)
 
         # combo boxes
         self.connect(self.ui.comboBox_spectraList, QtCore.SIGNAL('currentIndexChanged(int)'),
-                self.doPlotSelectedSpectra)
+                     self.doPlotSelectedSpectra)
 
         # on-graph operation
         # FIXME : Disabled for future developing
         #self.ui.graphicsView_mainPlot.canvas.mpl_connect('button_press_event', self.on_mouseDownEvent)
 
         # Input validator
-        # FIXME / TODO - Add validators... 
+        # FIXME / TODO - Add validators...
 
         # GUI event handling flag
         self._respondToComboBoxSpectraListChange = False
@@ -106,9 +105,9 @@ class Window_GPPlot(QMainWindow):
 
         return
 
-    #---------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
     # Widget event handling methods
-    #---------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
     def doNormByCurrent(self):
         """ Normalize by current/proton charge
         """
@@ -162,7 +161,7 @@ class Window_GPPlot(QMainWindow):
 
             vecylist.append(vecy)
             # yticklabels.append('Exp %d Scan %d' % (expno, scanno))
-            #print "[DB] Scan ", scanno, ": X range: ", vecx[0], vecx[-1], " Size X = ", len(vecx)
+            # print "[DB] Scan ", scanno, ": X range: ", vecx[0], vecx[-1], " Size X = ", len(vecx)
 
             # set up range of x
             if xmin is None:
@@ -181,22 +180,21 @@ class Window_GPPlot(QMainWindow):
         print "[DB] Type of 2D array: %s." % (str(type(dim2array)))
         self._plot2D(dim2array, xmin=xmin, xmax=xmax, ymin=0, ymax=len(vecylist), clearimage=True)
 
-        ## Plot
-        #holdprev=False
-        #self.ui.graphicsView_mergeRun.clearAllLines()
-        #self.ui.graphicsView_mergeRun.addPlot2D(dim2array, xmin=xmin, xmax=xmax, ymin=0, \
+        # Plot
+        # holdprev=False
+        # self.ui.graphicsView_mergeRun.clearAllLines()
+        # self.ui.graphicsView_mergeRun.addPlot2D(dim2array, xmin=xmin, xmax=xmax, ymin=0, \
         #    ymax=len(vecylist), holdprev=holdprev, yticklabels=yticklabels)
 
         print '------------------------  ENDING   (2D) ------------------------------'
 
         return
 
-
     def doPlotRunSelected(self):
         """ Plot the current run
         """
         # Attempt 1 to read line edit input
-        try: 
+        try:
             run = str(self.ui.lineEdit_run.text())
             if run in self._runList:
                 usecombobox = False
@@ -207,10 +205,10 @@ class Window_GPPlot(QMainWindow):
 
         # Attempt 2 to read from combo box
         if usecombobox is True:
-            try: 
+            try:
                 run = str(self.ui.comboBox_runs.currentText())
-                if run not in self._runList: 
-                    print  "Run %s from combo box is not a valid run." % (run)
+                if run not in self._runList:
+                    print "Run %s from combo box is not a valid run." % (run)
                     return (False, "No line edit input... ")
             except ValueError as e:
                 print "No valid ... "
@@ -223,14 +221,14 @@ class Window_GPPlot(QMainWindow):
         # set up the spectrum combobox
         self._respondToComboBoxSpectraListChange = False
         self.ui.comboBox_spectraList.clear()
-        self.ui.comboBox_spectraList.addItem('%s: All'%(run))
+        self.ui.comboBox_spectraList.addItem('%s: All' % (run))
 
         # Plot spectra
         print "Number of spectra: %d" % (len(reduceddatalist.keys()))
         self._clearPlot()
-        for spectrum in sorted(reduceddatalist.keys()): 
+        for spectrum in sorted(reduceddatalist.keys()):
             vecx, vecy = reduceddatalist[spectrum]
-            label = "%s-%d"%(run, spectrum)
+            label = "%s-%d" % (run, spectrum)
             self._plot(vecx, vecy, label=label, overplot=True)
 
             # add to comobox
@@ -244,7 +242,6 @@ class Window_GPPlot(QMainWindow):
         self._respondToComboBoxSpectraListChange = True
 
         return
-        
 
     def doPlotRunPrev(self):
         """ Plot the previous run
@@ -255,7 +252,7 @@ class Window_GPPlot(QMainWindow):
         else:
             self._currRunIndex -= 1
             self._currRun = self._runList[self._currRunIndex]
-       
+
         # FIXME - Refactor!
         print "Run %s is selected." % (run)
         # get current run and plot
@@ -266,14 +263,14 @@ class Window_GPPlot(QMainWindow):
         # set up the spectrum combobox
         self._respondToComboBoxSpectraListChange = False
         self.ui.comboBox_spectraList.clear()
-        self.ui.comboBox_spectraList.addItem('%s: All'%(run))
+        self.ui.comboBox_spectraList.addItem('%s: All' % (run))
 
         # Plot spectra
         print "Number of spectra: %d" % (len(reduceddatalist.keys()))
         self._clearPlot()
-        for spectrum in sorted(reduceddatalist.keys()): 
+        for spectrum in sorted(reduceddatalist.keys()):
             vecx, vecy = reduceddatalist[spectrum]
-            label = "%s-%d"%(run, spectrum)
+            label = "%s-%d" % (run, spectrum)
             self._plot(vecx, vecy, label=label, overplot=True)
 
             # add to comobox
@@ -302,7 +299,6 @@ class Window_GPPlot(QMainWindow):
 
         return
 
-
     def doPlotSelectedSpectra(self):
         """
         """
@@ -327,11 +323,11 @@ class Window_GPPlot(QMainWindow):
 
         # Plot spectra
         firsttouch = True
-        for spectrum in sorted(reduceddatalist.keys()): 
+        for spectrum in sorted(reduceddatalist.keys()):
 
             if spectrumstr == 'All' or iws == spectrum:
                 vecx, vecy = reduceddatalist[spectrum]
-                label = "%s-%d"%(runstr, spectrum)
+                label = "%s-%d" % (runstr, spectrum)
 
                 if firsttouch is True:
                     overplot = False
@@ -346,17 +342,17 @@ class Window_GPPlot(QMainWindow):
 
         return
 
-
     def doShowVanadiumPeaks(self):
         """ Convert reduced data to d-spacing, re-plot and plot vanadium peaks
         """
         if self._currSpectrum == 'All':
             print "Unable to show vanadium peaks with all spectra on canvas.  Pick up 1"
 
-        reduceddatalist = self._myParent.getWorkflowObj().get_reduced_runs(self._myProjectName, self._currRun, unit='dSpacing')
-        
-        vecx, vecy = reduceddatalist[self._currSpectrum] 
-        label = "%s-%d"%(self._currRun, self._currSpectrum)
+        reduceddatalist = self._myParent.getWorkflowObj().get_reduced_runs(
+            self._myProjectName, self._currRun, unit='dSpacing')
+
+        vecx, vecy = reduceddatalist[self._currSpectrum]
+        label = "%s-%d" % (self._currRun, self._currSpectrum)
         self._plot(vecx, vecy, label=label, overplot=False)
 
         # Get vanadium peak and plot
@@ -372,9 +368,9 @@ class Window_GPPlot(QMainWindow):
 
         return
 
-    #---------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
     # Set up
-    #---------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
     def resetRuns(self):
         """ Reset runs in comboBox_runs 
         """
@@ -399,7 +395,6 @@ class Window_GPPlot(QMainWindow):
 
         return
 
-
     def setProject(self, vdprojectname):
         """ Set VDProject's name  for future reference
         """
@@ -408,13 +403,12 @@ class Window_GPPlot(QMainWindow):
 
         return
 
-
     def setRuns(self, runslist):
         """ Add runs shown in runs list to comboBox_runs
-        """ 
+        """
         # Add run to _runList
         for run in runslist:
-            if run not in self._runList: 
+            if run not in self._runList:
                 self._runList.append(run)
         # ENDFOR
 
@@ -422,15 +416,15 @@ class Window_GPPlot(QMainWindow):
         self._runList = sorted(self._runList)
 
         # Set the sorted lsit to combo box
-        self.ui.comboBox_runs.clear() 
+        self.ui.comboBox_runs.clear()
         self.ui.comboBox_runs.addItems(self._runList)
 
         return
 
-
-    #--------------------------------------------------------------------
+    # --------------------------------------------------------------------
     # Event handling methods: WxPython canvas operation
-    #--------------------------------------------------------------------
+    # --------------------------------------------------------------------
+
     def on_mouseDownEvent(self, event):
         """ Respond to pick up a value with mouse down event
         """
@@ -443,24 +437,23 @@ class Window_GPPlot(QMainWindow):
 
         return
 
-    #---------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
     # Private methods
-    #---------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
     def _clearPlot(self):
         """ 
-        """ 
+        """
         self.ui.graphicsView_mainPlot.clearAllLines()
 
         return
-
 
     def _initFigureCanvas(self):
         """ Initialize graph
         """
         # TODO - ASAP
 
-        if False: 
-            # 
+        if False:
+            #
             # TODO - Refactor this part
             vecx, vecy, xlim, ylim = self.computeMock()
             self.ui.mainplot = self.ui.graphicsView.getPlot()
@@ -480,9 +473,8 @@ class Window_GPPlot(QMainWindow):
             lowerx = [xlim[0], xlim[1]]
             lowery = [ylim[0], ylim[0]]
             self.lowerslideline = self.ui.mainplot.plot(lowerx, lowery, 'g--')
-        
-        return
 
+        return
 
     def _plot(self, vecx, vecy, label, overplot, color='black', marker='.', xlabel=None):
         """ Plot data with vec_x and vec_y
@@ -496,7 +488,8 @@ class Window_GPPlot(QMainWindow):
             self._canvasMode2D = False
 
         # Plot
-        self.ui.graphicsView_mainPlot.addPlot(vecx, vecy, color=color, marker=marker, label=label, xlabel=xlabel)
+        self.ui.graphicsView_mainPlot.addPlot(
+            vecx, vecy, color=color, marker=marker, label=label, xlabel=xlabel)
 
         # Re-set XY limit
         if overplot is False:
@@ -508,11 +501,11 @@ class Window_GPPlot(QMainWindow):
             ymax = max(vecy)
             dy = ymax-ymin
 
-            self.ui.graphicsView_mainPlot.setXYLimit(xmin-0.01*dx, xmax+0.01*dx, ymin-0.01*dy, ymax+0.01*dy)
+            self.ui.graphicsView_mainPlot.setXYLimit(
+                xmin-0.01*dx, xmax+0.01*dx, ymin-0.01*dy, ymax+0.01*dy)
         # ENDIF
 
         return
-
 
     def _plot2D(self, array2d, xmin, xmax, ymin, ymax, clearimage=True):
         """ Plot 2D
@@ -522,17 +515,17 @@ class Window_GPPlot(QMainWindow):
         if clearimage is True:
             self.ui.graphicsView_mainPlot.clearCanvas()
 
-        # Add 2D plot 
-        self.ui.graphicsView_mainPlot.addPlot2D(array2d, xmin, xmax, ymin, ymax, holdprev=False, yticklabels=None)
+        # Add 2D plot
+        self.ui.graphicsView_mainPlot.addPlot2D(
+            array2d, xmin, xmax, ymin, ymax, holdprev=False, yticklabels=None)
 
         self._canvasMode2D = True
 
         return
 
-
     def _plotPeakIndicators(self, peakposlist):
         """ Plot indicators for peaks
-        """ 
+        """
         rangex = self.ui.graphicsView_mainPlot.getXLimit()
         rangey = self.ui.graphicsView_mainPlot.getYLimit()
 
@@ -540,23 +533,22 @@ class Window_GPPlot(QMainWindow):
             if pos >= rangex[0] and pos <= rangex[1]:
                 vecx = numpy.array([pos, pos])
                 vecy = numpy.array([rangey[0], rangey[1]])
-                self.ui.graphicsView_mainPlot.addPlot(vecx, vecy, color='red', linestyle='--') 
+                self.ui.graphicsView_mainPlot.addPlot(vecx, vecy, color='red', linestyle='--')
         # ENDFOR
-        
-        return
 
+        return
 
 
 class MockParent:
     """ Mocking parent for universal purpose
     """
+
     def __init__(self):
         """ Init
         """
         # self._arrayX, self._arrayY, self._noteList = self._parseData()
 
         return
-
 
     def _parseData(self):
         datafile = open('./tests/mockdata.dat', 'r')
@@ -586,13 +578,14 @@ class MockParent:
 
         return x_array, y_array, tlist
 
-    #--------------------------------------------------------------------
+    # --------------------------------------------------------------------
     # For testing purpose
-    #--------------------------------------------------------------------
+    # --------------------------------------------------------------------
     def computeMock(self):
         """ Compute vecx and vecy as mocking
         """
-        import random, math
+        import random
+        import math
 
         x0 = 0.
         xf = 1.
@@ -613,12 +606,11 @@ class MockParent:
 
         return (vecx, vecy, xlim, ylim)
 
-
-
     def getData(self, runnumber):
         """ Form two numpy array for plotting
         """
         return (self._arrayX, self._arrayY, self._noteList)
+
 
 def testmain(argv):
     """ Main method for testing purpose
@@ -632,11 +624,11 @@ def testmain(argv):
     # myapp.setRuns(['002271'])
     myapp.show()
 
-    exit_code=app.exec_()
+    exit_code = app.exec_()
     sys.exit(exit_code)
 
-
     return
+
 
 if __name__ == "__main__":
     testmain(sys.argv)

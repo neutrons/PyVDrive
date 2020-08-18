@@ -27,6 +27,7 @@ class QuickChopDialog(QDialog):
     """
     A dialog box to do quick chopping
     """
+
     def __init__(self, parent, run_number, raw_file_name):
         """
         Initialization

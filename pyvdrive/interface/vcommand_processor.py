@@ -46,7 +46,8 @@ class VdriveCommandProcessor(object):
         self._commandList = ['CHOP', 'VBIN', 'VDRIVE', 'MERGE', 'AUTO', 'VIEW', 'VDRIVEVIEW', 'VPEAK',
                              'INFO', '2THETABIN']
 
-        self._view_chop_run_name_map = dict()  # [run number (int)] = chop run name (in Reduced Data View)
+        # [run number (int)] = chop run name (in Reduced Data View)
+        self._view_chop_run_name_map = dict()
 
         return
 
@@ -94,7 +95,8 @@ class VdriveCommandProcessor(object):
                 # set
                 arg_dict[command_arg] = arg_value
             else:
-                err_msg = 'command %s %d-th term <%s> is not valid. Must have a = sign!' % (command, index, term)
+                err_msg = 'command %s %d-th term <%s> is not valid. Must have a = sign!' % (
+                    command, index, term)
                 return False, err_msg
             # END-IF
         # END-FOR
@@ -121,7 +123,8 @@ class VdriveCommandProcessor(object):
             left_index = idl_command.index('[')
             right_index = idl_command.index(']')
             if left_index > right_index:
-                raise RuntimeError('In ILD command {}, list bracket\' order is reversed.'.format(idl_command))
+                raise RuntimeError(
+                    'In ILD command {}, list bracket\' order is reversed.'.format(idl_command))
 
             list_str = idl_command[left_index+1:right_index]
             list_str = list_str.replace(',', '~')
@@ -260,7 +263,8 @@ class VdriveCommandProcessor(object):
         """
         # create a new VdriveChop instance
         try:
-            processor = vdrive_commands.chop.VdriveChop(self._myController, arg_dict, self._mainWindow)
+            processor = vdrive_commands.chop.VdriveChop(
+                self._myController, arg_dict, self._mainWindow)
         except vdrive_commands.process_vcommand.CommandKeyError as comm_err:
             return False, str(comm_err)
 
@@ -283,7 +287,8 @@ class VdriveCommandProcessor(object):
 
             if isinstance(self._chopRunNumberList, list) and len(self._chopRunNumberList) > 0:
                 log_window.load_run(self._chopRunNumberList[0])
-                log_window.setWindowTitle('IPTS {0} Run {1}'.format(self._chopIPTSNumber, self._chopRunNumberList[0]))
+                log_window.setWindowTitle('IPTS {0} Run {1}'.format(
+                    self._chopIPTSNumber, self._chopRunNumberList[0]))
             else:
                 log_window.load_run()
         # END-IF
@@ -393,7 +398,8 @@ class VdriveCommandProcessor(object):
             # load vanadium to workspace workspace and get calculation prm file
             van_gsas_name, iparam_file_name = \
                 self._myController.archive_manager.locate_process_vanadium(van_run_number)
-            van_ws_name = self._myController.project.reduction_manager.gsas_writer.import_vanadium(van_gsas_name)
+            van_ws_name = self._myController.project.reduction_manager.gsas_writer.import_vanadium(
+                van_gsas_name)
             view_window.set_vanadium_ws(van_run_number, van_ws_name)
         else:
             van_run_number = None
@@ -405,7 +411,8 @@ class VdriveCommandProcessor(object):
 
             chop_seq_list = processor.get_chopped_sequence_range()
             if load_gsas:
-                loaded_chop_seq_list = view_window.do_load_chopped_runs(ipts_number, run_number, chop_seq_list)
+                loaded_chop_seq_list = view_window.do_load_chopped_runs(
+                    ipts_number, run_number, chop_seq_list)
                 if len(loaded_chop_seq_list) == 0:
                     return False, 'None sequences in user-specified list ({}) can be loaded.'.format(chop_seq_list)
                 else:
@@ -427,7 +434,8 @@ class VdriveCommandProcessor(object):
                 self._view_chop_run_name_map[run_number] = new_names[0]
                 chop_key = view_window.set_chopped_run(new_names[0], str(chop_seq_list[0]))
             else:
-                print ('[DB.....BAT] No change.  Search {} from [{}]'.format(run_number, self._view_chop_run_name_map))
+                print('[DB.....BAT] No change.  Search {} from [{}]'.format(
+                    run_number, self._view_chop_run_name_map))
                 chop_key = view_window.set_chopped_run(self._view_chop_run_name_map[run_number],
                                                        str(chop_seq_list[0]))
 
@@ -460,7 +468,8 @@ class VdriveCommandProcessor(object):
                 message = ''
             else:
                 status = False
-                message = 'Unable to load GSAS file of IPTS-{} Run-{}'.format(ipts_number, run_number)
+                message = 'Unable to load GSAS file of IPTS-{} Run-{}'.format(
+                    ipts_number, run_number)
         else:
             # multiple but none chopped run
             raise NotImplementedError('ASAP')

@@ -46,6 +46,7 @@ class PeakPickerWindow(QMainWindow):
     """ Class for general-purposed plot window
     """
     # class
+
     def __init__(self, parent=None, controller=None):
         """ Init
         """
@@ -80,7 +81,8 @@ class PeakPickerWindow(QMainWindow):
         self._init_widgets_setup()
 
         # child window controller
-        self._subControllerVanadium = PeakPickWindowVanadium.PeakPickerWindowChildVanadium(self, self.ui)
+        self._subControllerVanadium = PeakPickWindowVanadium.PeakPickerWindowChildVanadium(
+            self, self.ui)
         self._vanadiumProcessDialog = None
 
         # Define event handling methods
@@ -145,13 +147,15 @@ class PeakPickerWindow(QMainWindow):
         # save_to_buffer
         self.ui.pushButton_save.clicked.connect(self.do_save_peaks)
 
-        self.ui.tableWidget_peakParameter.itemSelectionChanged.connect(self.evt_table_selection_changed)
+        self.ui.tableWidget_peakParameter.itemSelectionChanged.connect(
+            self.evt_table_selection_changed)
 
         # get terminal
         self.ui.actionLaunch_Terminal.triggered.connect(self.menu_launch_terminal)
 
         #
-        self.ui.tableWidget_peakParameter.itemSelectionChanged.connect(self.evt_table_selection_changed)
+        self.ui.tableWidget_peakParameter.itemSelectionChanged.connect(
+            self.evt_table_selection_changed)
         # self.connect(self.ui.tableWidget_peakParameter, QtCore.SIGNAL('itemSelectionChanged()'),
         #              self.evt_table_selection_changed)
 
@@ -174,7 +178,8 @@ class PeakPickerWindow(QMainWindow):
         self._currentDataFile = None      # name of the data file that is currently loaded
         self._currentRunNumber = None  # current run number
         self._currentBankNumber = -1   # current bank number
-        self._currentDataSet = dict()  # current data as {bank1: (vecX, vecY, vecE); bank2: (vecX, vecY, vecE) ...}
+        # current data as {bank1: (vecX, vecY, vecE); bank2: (vecX, vecY, vecE) ...}
+        self._currentDataSet = dict()
         # disabled. leave to controller self._dataDirectory = None     # default directory to load data
         self._currGraphDataKey = None   # Data key of the current data plot on canvas
         self._dataKeyList = list()
@@ -242,7 +247,8 @@ class PeakPickerWindow(QMainWindow):
         self.ui.tableWidget_peakParameter.setup()
 
         # Mode
-        GuiUtility.set_combobox_items(self.ui.comboBox_mode, ['Single Peak Selection', 'Vanadium Processing'])
+        GuiUtility.set_combobox_items(self.ui.comboBox_mode, [
+                                      'Single Peak Selection', 'Vanadium Processing'])
 
         # set up unit cell string list
         unit_cell_str_list = []
@@ -307,7 +313,8 @@ class PeakPickerWindow(QMainWindow):
         """
         # launch vanadium dialog window
         if self._vanadiumProcessDialog is None:
-            self._vanadiumProcessDialog = vanadium_controller_dialog.VanadiumProcessControlDialog(self)
+            self._vanadiumProcessDialog = vanadium_controller_dialog.VanadiumProcessControlDialog(
+                self)
         self._vanadiumProcessDialog.show()
 
         return
@@ -338,7 +345,7 @@ class PeakPickerWindow(QMainWindow):
             width = group_right_b - group_left_b
 
             peak_tup_list = self._autoPeakGroup.get_peaks(group_id)
-            print ('[DB...BAT] {}-group with ID {}: {}'.format(index, group_id, peak_tup_list))
+            print('[DB...BAT] {}-group with ID {}: {}'.format(index, group_id, peak_tup_list))
 
             for peak_tup in peak_tup_list:
                 peak_centre = peak_tup[1]
@@ -516,7 +523,7 @@ class PeakPickerWindow(QMainWindow):
         clear picked peaks
         :return:
         """
-        print ('[DB...BAT] Clear groups first')
+        print('[DB...BAT] Clear groups first')
         self.do_clear_groups()
 
         # remove all from Diffraction Plot View
@@ -588,7 +595,8 @@ class PeakPickerWindow(QMainWindow):
             max_d = 2.5
             self.ui.lineEdit_xMax.setText('{}'.format(max_d))
         if min_d >= max_d:
-            GuiUtility.pop_dialog_error(self, 'Minimum D %f cannot be larger than Maximum D %f.' % (min_d, max_d))
+            GuiUtility.pop_dialog_error(
+                self, 'Minimum D %f cannot be larger than Maximum D %f.' % (min_d, max_d))
 
         # List all peaks if any is selected
         num_phases_used = 0
@@ -622,7 +630,8 @@ class PeakPickerWindow(QMainWindow):
         # Check result
         if len(err_msg) > 0:
             # Phase selected but not valid
-            GuiUtility.pop_dialog_error(self, 'Unable to calculate reflections due to %s.' % err_msg)
+            GuiUtility.pop_dialog_error(
+                self, 'Unable to calculate reflections due to %s.' % err_msg)
             return
 
         # other information
@@ -632,7 +641,8 @@ class PeakPickerWindow(QMainWindow):
         if num_phases_used == 0:
             peak_position_list = None
             hkl_list = None
-            GuiUtility.pop_dialog_information(self, 'No phase is selected. Find peak automatically!')
+            GuiUtility.pop_dialog_information(
+                self, 'No phase is selected. Find peak automatically!')
         else:
             peak_position_list = [r[0] for r in reflection_list]
             hkl_list = [r[1] for r in reflection_list]
@@ -642,7 +652,8 @@ class PeakPickerWindow(QMainWindow):
         try:
             found_peaks_list = self._myController.project.find_diffraction_peaks(data_key=curr_data,
                                                                                  bank_number=self._currentBankNumber,
-                                                                                 x_range=(min_d, max_d),
+                                                                                 x_range=(
+                                                                                     min_d, max_d),
                                                                                  profile='Gaussian',
                                                                                  peak_positions=peak_position_list,
                                                                                  hkl_list=hkl_list)
@@ -719,7 +730,6 @@ class PeakPickerWindow(QMainWindow):
         # is_editable = self.ui.tableWidget_peakParameter.is_editable()
         # self.ui.tableWidget_peakParameter.set_editable(is_editable)
         # item = self.ui.tableWidget_peakParameter.item(0, 1)
-
 
         return
 
@@ -802,7 +812,8 @@ class PeakPickerWindow(QMainWindow):
                 assert isinstance(overlap_peak_pos_list, list)
 
             if bank == self._currentBankNumber or self._currentBankNumber < 0:
-                self.ui.tableWidget_peakParameter.add_peak(bank, name, peak_pos, peak_width, overlap_peak_pos_list)
+                self.ui.tableWidget_peakParameter.add_peak(
+                    bank, name, peak_pos, peak_width, overlap_peak_pos_list)
             else:
                 self.ui.tableWidget_peakParameter.add_peak_to_buffer(bank, name, peak_pos, peak_width,
                                                                      overlap_peak_pos_list)
@@ -815,21 +826,21 @@ class PeakPickerWindow(QMainWindow):
     def evt_structure_1_changed(self):
         # TODO
         self.constrain_structure(self.ui.comboBox_structure1, self.ui.lineEdit_a1, self.ui.lineEdit_b1,
-                                self.ui.lineEdit_c1)
+                                 self.ui.lineEdit_c1)
 
         return
 
     def evt_structure_2_changed(self):
         # TODO
         self.constrain_structure(self.ui.comboBox_structure2, self.ui.lineEdit_a2, self.ui.lineEdit_b2,
-                                self.ui.lineEdit_c2)
+                                 self.ui.lineEdit_c2)
 
         return
 
     def evt_structure_3_changed(self):
         # TODO
         self.constrain_structure(self.ui.comboBox_structure3, self.ui.lineEdit_a3, self.ui.lineEdit_b3,
-                                self.ui.lineEdit_c3)
+                                 self.ui.lineEdit_c3)
 
         return
 
@@ -854,7 +865,6 @@ class PeakPickerWindow(QMainWindow):
         else:
             edit_b.setEnabled(True)
             edit_c.setEnabled(True)
-
 
     def evt_switch_bank(self):
         """
@@ -1024,7 +1034,8 @@ class PeakPickerWindow(QMainWindow):
 
         # Launch dialog box for calibration file name
         file_filter = 'Calibration (*.cal);;Text (*.txt);;All files (*.*)'
-        cal_file_name = QFileDialog.getOpenFileName(self, 'Calibration File', self._dataDirectory, file_filter)
+        cal_file_name = QFileDialog.getOpenFileName(
+            self, 'Calibration File', self._dataDirectory, file_filter)
 
         # Load
         self._myController.load_calibration_file(cal_file_name)
@@ -1047,7 +1058,6 @@ class PeakPickerWindow(QMainWindow):
             start_run_number = None
             end_run_number = None
 
-
         # Get the GSAS file names
         gsas_file_list = list()
         if start_run_number is not None and end_run_number is not None:
@@ -1057,8 +1067,10 @@ class PeakPickerWindow(QMainWindow):
                                                        'or equal to start run %d.' % (end_run_number,
                                                                                       start_run_number)
             # get directory containing GSAS files
-            default_dir = self._myController.get_binned_data_dir(range(start_run_number, end_run_number))
-            gsas_dir = str(QFileDialog.getExistingDirectory(self, 'GSAS File Directory', default_dir))
+            default_dir = self._myController.get_binned_data_dir(
+                range(start_run_number, end_run_number))
+            gsas_dir = str(QFileDialog.getExistingDirectory(
+                self, 'GSAS File Directory', default_dir))
 
             # form file names: standard VULCAN style
             error_message = ''
@@ -1111,7 +1123,8 @@ class PeakPickerWindow(QMainWindow):
                 default_dir = self._myController.get_binned_data_directory()
 
             filters = 'GSAS(*.gda);;All Files(*.*)'
-            gsas_file_name = QFileDialog.getOpenFileName(self, 'Load GSAS File', default_dir, filters)
+            gsas_file_name = QFileDialog.getOpenFileName(
+                self, 'Load GSAS File', default_dir, filters)
             if isinstance(gsas_file_name, tuple):
                 gsas_file_name = gsas_file_name[0]
             gsas_file_name = str(gsas_file_name)
@@ -1155,7 +1168,8 @@ class PeakPickerWindow(QMainWindow):
             # set label
             self.ui.label_loadedDataInfo.setText('Loaded {}'.format(gsas_file_name))
         except RuntimeError as re:
-            GuiUtility.pop_dialog_error(self, 'Failed to load GSAS {}: {}'.format(gsas_file_name, str(re)))
+            GuiUtility.pop_dialog_error(
+                self, 'Failed to load GSAS {}: {}'.format(gsas_file_name, str(re)))
             return None
 
         # add the new data to combo box
@@ -1220,7 +1234,8 @@ class PeakPickerWindow(QMainWindow):
         # Get reduced run information: list of BANKs
         if run_number is None:
             # in case of a loaded data file (gsas, fullprof..)
-            status, ret_obj = self._myController.get_reduced_run_info(run_number=None, data_key=data_key)
+            status, ret_obj = self._myController.get_reduced_run_info(
+                run_number=None, data_key=data_key)
         else:
             # in case of a previously reduced run
             status, ret_obj = self._myController.get_reduced_run_info(run_number)
@@ -1394,7 +1409,8 @@ class PeakPickerWindow(QMainWindow):
         for peak_list in peak_bank_dict.values():
             total_peaks += len(peak_list)
         if total_peaks == 0:
-            GuiUtility.pop_dialog_error(self, 'No peak is selected.  Unable to execute saving peaks.')
+            GuiUtility.pop_dialog_error(
+                self, 'No peak is selected.  Unable to execute saving peaks.')
             return
 
         # Set the selected peaks to controller
@@ -1428,7 +1444,7 @@ class PeakPickerWindow(QMainWindow):
         try:
             peak_width = peak_width_dialog.get_peak_width()
             # TODO - WHAT TO DO WITH SET PEAKS WITH?
-            print ('Peaks width is set to {}'.format(peak_width))
+            print('Peaks width is set to {}'.format(peak_width))
         except AssertionError:
             pass
 
@@ -1511,7 +1527,8 @@ class PeakPickerWindow(QMainWindow):
         # call controller method to set group boundary
         peak_group = peak_util.group_peaks_to_fit(raw_peak_pos_list, resolution, num_fwhm)
         assert isinstance(peak_group, peak_util.PeakGroupCollection),\
-            'Peak group {0} must be a PeakGroupCollection instance but not a {1}.'.format(peak_group, type(peak_group))
+            'Peak group {0} must be a PeakGroupCollection instance but not a {1}.'.format(
+                peak_group, type(peak_group))
 
         # clear previous grouped peaks' presentation on PLOT
         self.clear_group_highlight()
@@ -1690,7 +1707,8 @@ class PeakPickerWindow(QMainWindow):
         elif self._peakSelectionMode == 'ChangeWidth':
             self._peakSelectionMode = 'MoveCentre'
         else:
-            raise RuntimeError('Peak selection mode %s is not switchable.' % self._peakSelectionMode)
+            raise RuntimeError('Peak selection mode %s is not switchable.' %
+                               self._peakSelectionMode)
 
         return
 
@@ -1776,7 +1794,8 @@ class PeakPickerWindow(QMainWindow):
         :return:
         """
         # Check
-        assert isinstance(pos_x, float), 'X-position {0} must be a float but not a {1}.'.format(pos_x, type(pos_x))
+        assert isinstance(
+            pos_x, float), 'X-position {0} must be a float but not a {1}.'.format(pos_x, type(pos_x))
 
         # Find dx
         dx = pos_x - self._currMousePosX
@@ -1883,9 +1902,10 @@ class PeakPickerWindow(QMainWindow):
         self._peakPickerMode = PeakPickerMode.NoPick
         self._peakSelectionMode = ''
 
-        print ('[DB...BAT] Reset self._indicatorIDList (\n{}\n) to None'.format(self._indicatorIDList))
+        print('[DB...BAT] Reset self._indicatorIDList (\n{}\n) to None'.format(self._indicatorIDList))
         self._indicatorIDList = None
-        print ('[DB...BAT] Reset self._indicatorPositionList (\n{}\n) to None'.format(self._indicatorPositionList))
+        print('[DB...BAT] Reset self._indicatorPositionList (\n{}\n) to None'.format(
+            self._indicatorPositionList))
         self._indicatorPositionList = None
 
         return
@@ -1901,7 +1921,8 @@ class PeakPickerWindow(QMainWindow):
         # convert string
         output_file_name = str(output_file_name)
 
-        self._myController.project.vanadium_processing_manager.save_to_gsas(run_number, output_file_name)
+        self._myController.project.vanadium_processing_manager.save_to_gsas(
+            run_number, output_file_name)
 
         return
 
@@ -1930,8 +1951,8 @@ class PeakPickerWindow(QMainWindow):
         """
         # convert smooth_type to string from unicode
         smoother_type = str(smoother_type)
-        print ('[DB...BAT] Signal received: Smooth type = {}, n = {}, order = {}'
-               ''.format(smoother_type, param_n, param_order))
+        print('[DB...BAT] Signal received: Smooth type = {}, n = {}, order = {}'
+              ''.format(smoother_type, param_n, param_order))
 
         self._subControllerVanadium.smooth_vanadium_peaks(None, smoother_type, param_n,
                                                           param_order)
@@ -1991,4 +2012,3 @@ class PeakPickerWindow(QMainWindow):
         """
         self._subControllerVanadium.show_hide_v_peaks(self.ui.checkBox_vpeakShowPeakPos.isChecked())
         return
-

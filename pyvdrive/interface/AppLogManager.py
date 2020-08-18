@@ -22,11 +22,11 @@ except AttributeError:
         return s
 
 
-
 class MyAppLogDialog(QWidget):
     """
     """
     # Main
+
     def __init__(self, parent):
         """ Init
         """
@@ -48,8 +48,8 @@ class MyAppLogDialog(QWidget):
     def setText(self, val):
         """
         """
-        #Example: 
-        #self.ui.textBrowser_Log.setHtml("""<body>
+        # Example:
+        # self.ui.textBrowser_Log.setHtml("""<body>
         #    <h1>Key</h1>
         #    <div style='color:red;'>
         #    GREEN = Overall Progress is 80% or above
@@ -66,15 +66,12 @@ class MyAppLogDialog(QWidget):
         # text = self._myParent.getLogText()
         self.ui.textBrowser_Log.setText(self._myContent)
 
-
         return
-
 
     def accept(self):
         """
         """
         self.close()
-
 
     def reject(self):
         """
@@ -88,13 +85,13 @@ class MyAppLogDialog(QWidget):
         """
         reply = QMessageBox.question(self, 'Message', "Are you sure to quit?", QMessageBox.Yes | QMessageBox.No,
                                      QMessageBox.No)
-        
+
         if reply == QMessageBox.Yes:
             # close application
             self.close()
         else:
             # do nothing and return
-            pass     
+            pass
 
     def closeEvent(self, event):
         """

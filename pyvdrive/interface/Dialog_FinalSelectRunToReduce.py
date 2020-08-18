@@ -17,17 +17,16 @@ except ImportError:
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    def _fromUtf8(s): return s
 
 import gui.GuiUtility as gutil
-
 
 
 class FinalSelectRunToReduceDialog(QMainWindow):
     """ GUI (sub) for select run to reduce as final decision before reduction
     """
     # Define signal
-    mySelectSignal = QtCore.pyqtSignal(str, list) # list of int
+    mySelectSignal = QtCore.pyqtSignal(str, list)  # list of int
     myCancelSignal = QtCore.pyqtSignal(int)
 
     def __init__(self, parent):
@@ -68,10 +67,10 @@ class FinalSelectRunToReduceDialog(QMainWindow):
 
         return
 
-
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     # Methods to handle GUI events
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+
     def doClearAllSelection(self):
         """ Clear all selected runs for not reduction
         """
@@ -81,7 +80,6 @@ class FinalSelectRunToReduceDialog(QMainWindow):
 
         return
 
-
     def doSelectAll(self):
         """ Select all runs to reduce
         """
@@ -90,7 +88,6 @@ class FinalSelectRunToReduceDialog(QMainWindow):
             self.ui.tableWidget.cellWidget(irow, 3).setChecked(True)
 
         return
-
 
     def doQuitContinueReduce(self):
         """ Quit dialog window and continue to reduce data
@@ -111,11 +108,10 @@ class FinalSelectRunToReduceDialog(QMainWindow):
 
         return
 
-
-
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     # Methods to access, set up and update table
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+
     def appendRow(self, ipts, run, vanrun, select):
         """ Append a row to the project table
 
@@ -175,8 +171,7 @@ class FinalSelectRunToReduceDialog(QMainWindow):
         self._myIPTS = int(ipts)
 
         title = "Project %s :  Add runs of IPTS-%d" % (self._myProjectName,
-                self._myIPTS)
+                                                       self._myIPTS)
         self.setWindowTitle(title)
 
         return
-

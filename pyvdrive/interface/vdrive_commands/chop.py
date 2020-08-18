@@ -214,12 +214,12 @@ class VdriveChop(VDriveCommand):
             return False, 'Unable to generate data slicer by time due to %s.' % error_msg
 
         # chop and reduce
-        if chop_loadframe_log:
-            exp_log_type = 'loadframe'
-        elif chop_furnace_log:
-            exp_log_type = 'furnace'
-        else:
-            exp_log_type = None
+        # if chop_loadframe_log:
+        #     exp_log_type = 'loadframe'
+        # elif chop_furnace_log:
+        #     exp_log_type = 'furnace'
+        # else:
+        #     exp_log_type = None
 
         # chop
         print ('[DB...BAT...UND] Slicer key = {}'.format(slicer_key))
@@ -585,7 +585,7 @@ class VdriveChop(VDriveCommand):
             archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber,
                                                                                                  run_number_list)
             if len(error_message) > 0:
-                print '[DB...BAT] Error archive key: ', archive_key
+                print(f'[DB...BAT] Error archive key: {archive_key}')
                 return False, error_message
             run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
             self._controller.add_runs_to_project(run_info_list)
@@ -619,17 +619,20 @@ class VdriveChop(VDriveCommand):
             return False, 'Both run start {} and run end {} must be integer' \
                           ''.format(run_start, run_end)
 
-        # Auto check the
+        # Auto check the beam down
+        # This feature is not implemented
         if not self._user_know_beam_down:
             has_beam_down = False
             message = ''
             for run_number in sorted(self._runNumberList):
-                proton_charges = self._load_sample_log(self._iptsNumber, self._runNumberList[run_number])
-                has_down_i = vulcan_util.analyze_beam_down(proton_charges, beam_down_tolerance)
-                if has_beam_i:
-                    has_beam_down = True
-                    message += 'IPTS-{} Run-{} has beam down with tolerance {} seconds\n' \
-                               ''.format()
+                # TODO
+                raise RuntimeError('The following is not implemented yet for {}'.format(run_number))
+                # proton_charges = self._load_sample_log(self._iptsNumber, self._runNumberList[run_number])
+                # has_down_i = vulcan_util.analyze_beam_down(proton_charges, beam_down_tolerance)
+                # if has_beam_i:
+                #     has_beam_down = True
+                #     message += 'IPTS-{} Run-{} has beam down with tolerance {} seconds\n' \
+                #                ''.format()
             # END-FOR
 
             if has_beam_down:
@@ -686,7 +689,6 @@ class VdriveChop(VDriveCommand):
         # set run numbers
         if self._iptsNumber:
             run_number_list = range(run_start, run_end + 1)
-            event_nexus_file = None
         else:
             run_number_list = [-1]
         # END-IF
@@ -780,15 +782,16 @@ class VdriveChop(VDriveCommand):
 
             elif 'LOG' in chop_option_dict:
                 # chop by log value
-                # FIXME/TODO/ISSUE/FUTURE - shall we implement this?
-                status, message = self.chop_data_by_log(run_number=run_number,
-                                                        start_time=None,
-                                                        stop_time=None,
-                                                        log_name=log_name,
-                                                        log_value_stepl=delta_log_value,
-                                                        reduce_flag=output_to_gsas,
-                                                        output_dir=output_dir,
-                                                        dry_run=is_dry_run)
+                # FIXME/TODO/ISSUE/FUTURE -
+                raise RuntimeError('shall we implement this?')
+                # status, message = self.chop_data_by_log(run_number=run_number,
+                #                                         start_time=None,
+                #                                         stop_time=None,
+                #                                         log_name=log_name,
+                #                                         log_value_stepl=delta_log_value,
+                #                                         reduce_flag=output_to_gsas,
+                #                                         output_dir=output_dir,
+                #                                         dry_run=is_dry_run)
 
             else:
                 # do nothing but launch log window

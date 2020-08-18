@@ -22,7 +22,7 @@ try:
 except AttributeError:
     def _fromUtf8(s):
         return s
-        
+
 import gui.GuiUtility as gutil
 from pyvdrive.interface.gui.mplgraphicsview import MplGraphicsView
 
@@ -31,6 +31,7 @@ class DialogLogSnapView(QDialog):
     """ Class for general-puposed plot window
     """
     # class
+
     def __init__(self, parent=None):
         """ Init
         """
@@ -245,10 +246,11 @@ def testmain(argv):
     myapp = DialogLogSnapView(parent)
     myapp.show()
 
-    exit_code=app.exec_()
+    exit_code = app.exec_()
     sys.exit(exit_code)
 
     return
+
 
 if __name__ == "__main__":
     testmain(sys.argv)
