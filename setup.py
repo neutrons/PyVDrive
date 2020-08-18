@@ -53,12 +53,12 @@ if sys.argv[-1] == 'pyuic':
     sys.exit(0)
 
 
-
 ###################################################################
 
 NAME = "pyvdrive"
-PACKAGES = find_packages(where="src")
-PACKAGES = ["pyvdrive", "pyvdrive/lib", "pyvdrive/interface", "pyvdrive/interface/gui", "pyvdrive/interface/gui/ndav_widgets/", "pyvdrive/interface/vdrive_commands/", "pyvdrive/app/"]
+# PACKAGES = find_packages(where="src")
+PACKAGES = ["pyvdrive", "pyvdrive/lib", "pyvdrive/interface", "pyvdrive/interface/gui",
+            "pyvdrive/interface/gui/ndav_widgets/", "pyvdrive/interface/vdrive_commands/", "pyvdrive/app/"]
 META_PATH = os.path.join("src", "pyvdrive", "__init__.py")
 KEYWORDS = ["class", "attribute", "boilerplate"]
 CLASSIFIERS = [

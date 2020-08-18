@@ -168,6 +168,7 @@ class VulcanBinningHelper(object):
 #
 #         return binning_parameter_dict
 #
+
     @staticmethod
     def create_nature_bins(num_banks, east_west_binning_parameters, high_angle_binning_parameters):
         """
@@ -440,9 +441,9 @@ def align_and_focus(run_number, nexus_file_name, target_unit, binning_parameters
 
     # align and focus
     final_ws_name = 'VULCAN_{0}'.format(run_number)
-    print output_ws_name
-    print final_ws_name
-    print cal_file_name
+    print(output_ws_name)
+    print(final_ws_name)
+    print(cal_file_name)
 
     # output is TOF
     mantidapi.AlignAndFocusPowder(InputWorkspace=output_ws_name,

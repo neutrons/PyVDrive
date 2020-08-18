@@ -37,10 +37,10 @@ class Collimator(object):
         help string ...
         :return:
         """
-        print ("Collimator analysis")
+        print("Collimator analysis")
 
     def execute_scan_rotating_collimator(self, ipts_number, run_number_list, pixels, to_focus_spectra):
-        """ 
+        """
         :param run_number_list:
         :param pixels:
         :param to_focus_spectra:
@@ -205,7 +205,7 @@ class Collimator(object):
                 wbuf += '\n'
             # END-FOR
 
-            print (wbuf)
+            print(wbuf)
 
         elif isinstance(self._data_set, numpy.ndarray) and len(self._data_set.shape) == 2:
             wbuf = '# proton = {}\n'.format(self._proton_charges[0])
@@ -297,7 +297,7 @@ def parse_runs_file(file_name):
             try:
                 run_number = int(item)
             except ValueError:
-                print ('Unable to parse {} as run number'.format(item))
+                print('Unable to parse {} as run number'.format(item))
             else:
                 run_numbers.append(run_number)
         # END-FOR
@@ -347,7 +347,7 @@ def parse_pixels_file(file_name):
                 else:
                     raise ValueError('{} is not a supported format'.format(item))
             except ValueError as value_err:
-                print ('Unable to parse {} to a set of integers due to {}'.format(item, value_err))
+                print('Unable to parse {} to a set of integers due to {}'.format(item, value_err))
             else:
                 pixel_id_list.extend(pixel_ids)
         # END-FOR

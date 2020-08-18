@@ -266,7 +266,7 @@ class GSASPeakFileManager(object):
                     overlapped_peak_list = None
                 else:
                     overlapped_peak_list = list()
-                    for i_peak in xrange(num_peaks-1):
+                    for i_peak in range(num_peaks-1):
                         over_peak_pos = float(terms[4+i_peak])
                         overlapped_peak_list.append(over_peak_pos)
                 # END-IF
@@ -303,9 +303,9 @@ def format_significant_4(float_number):
 
 
 if __name__ == '__main__':
-    print format_significant_4(0.012345)
-    print format_significant_4(0.12345)
-    print format_significant_4(1.2345)
+    print(format_significant_4(0.012345))
+    print(format_significant_4(0.12345))
+    print(format_significant_4(1.2345))
 
     peak_manager = GSASPeakFileManager()
     peak_manager.import_peaks('/home/wzz/Projects/PyVDrive/tests/peak_processing/peak.txt')

@@ -26,8 +26,8 @@ for datapath in datapaths:
 # ENDFOR
 
 # Vanadium
-vanadiumDataBaseFiles = [ 
-    '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium/VRecord.txt', 
+vanadiumDataBaseFiles = [
+    '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium/VRecord.txt',
     '~/Projects/SNSData/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium/VRecord.txt']
 defaultVanadiumDataBaseFile = None
 for vanfilename in vanadiumDataBaseFiles:
@@ -40,9 +40,9 @@ for vanfilename in vanadiumDataBaseFiles:
         break
 # ENDFOR
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Finally
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Build the configuration dictionry
 configdict = {}
 configdict['default.BaseDataPath'] = defaultDataPath

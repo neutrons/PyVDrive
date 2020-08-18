@@ -224,7 +224,7 @@ class VanadiumProcessingManager(object):
         try:
             raw_van_ws = mantid_helper.retrieve_workspace(self._van_workspace_name)
         except RuntimeError as run_err:
-            raise False, 'Unable to process vanadium due to {}'.format(run_err)
+            return False, 'Unable to process vanadium due to {}'.format(run_err)
 
         for ws_index in range(mantid_helper.get_number_spectra(raw_van_ws)):
             # strip vanadium peaks

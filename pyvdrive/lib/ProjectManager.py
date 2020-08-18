@@ -1114,9 +1114,10 @@ class ProjectManager(object):
         for run_number in run_number_list:
             if run_number in self._sampleRunReductionFlagDict:
                 self._sampleRunReductionFlagDict[run_number] = False
-                print '[Info] Run {0} is in ReductionFlagDict.'.format(run_number)
+                print('[Info] Run {0} is in ReductionFlagDict.'.format(run_number))
             else:
-                print '[Warning] Run {0} is not in ReductionFlagDict. It cannot be marked as being reduced.'.format(run_number)
+                print('[Warning] Run {0} is not in ReductionFlagDict. It cannot be marked as being reduced.'
+                      ''.format(run_number))
 
         return
 
@@ -1223,7 +1224,7 @@ class ProjectManager(object):
                 # END-IF (vanadium)
 
                 # reduce
-                print '[INFO] (Version 1) Reduce IPTS {0} Run {1}'.format(ipts_number, run_number)
+                print('[INFO] (Version 1) Reduce IPTS {0} Run {1}'.format(ipts_number, run_number))
                 r_tup = self._reductionManager.reduce_event_nexus_ver1(ipts_number, run_number,
                                                                        full_event_file_path,
                                                                        output_directory,
@@ -1405,8 +1406,8 @@ class ProjectManager(object):
         error_messages = list()
         for run_number in run_number_list:
             raw_file_name, ipts_number = self._dataFileDict[run_number]
-            print '[DB...BAT] Attempt to reduce run {0} from {1}... Binned to {2}' \
-                  ''.format(run_number, raw_file_name, binning_parameters)
+            print('[DB...BAT] Attempt to reduce run {0} from {1}... Binned to {2}'
+                  ''.format(run_number, raw_file_name, binning_parameters))
 
             # reduce
             if d_spacing:

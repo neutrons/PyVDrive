@@ -227,7 +227,8 @@ def get_run_date(ws_name, raw_file_name):
 
     # get file creation time (may not be accurate if file is copied)
     if use_creation_date:
-        date_time = get_file_creation_date(raw_file_name)
+        raise RuntimeError('Implement get_file_creation_date()')
+        # TODO date_time = get_file_creation_date(raw_file_name)
 
     return date_time
 
@@ -258,7 +259,7 @@ def get_vulcan_record(ipts_number, auto):
 
 def getLogsList(vandbfile):
     """ Get the log list from vanadium database file (van record.txt)
-    The returned value will be a list of tuples.  
+    The returned value will be a list of tuples.
     In each tuple, there are log name and one example
     """
     try:
@@ -266,11 +267,11 @@ def getLogsList(vandbfile):
         lines = vfile.readlines()
         vfile.close()
     except IOError as ioe:
-        return (False, str(ioe))
+        return False, str(ioe)
 
     # parse title line
     titlelist = []
-    for iline in xrange(len(lines)):
+    for iline in range(len(lines)):
         line = lines[iline]
         line = line.strip()
 
@@ -560,7 +561,7 @@ class AutoVanadiumCalibrationLocator(object):
                 vrecordfile), 'User specified V-record file %s cannot be found.' % vrecordfile
 
         # import v-record
-        self._importVRecord(vrecordfile)
+        self._import_vdrive_record(vrecordfile)
 
         # import auto record
         if autorecordfile is None:
@@ -590,7 +591,7 @@ class AutoVanadiumCalibrationLocator(object):
         errmsg = ""
         for run in runs:
             run = int(run)
-            if self._expRecordDict.has_key(run):
+            if run in self._expRecordDict:
                 self._runs.append(run)
                 numrunsadded += 1
             else:
@@ -617,7 +618,7 @@ class AutoVanadiumCalibrationLocator(object):
         """ Locate matched vanadium runs for each run added to this instance
 
         Arguments
-         - criterion :: list of the criterion to match between run and 
+         - criterion :: list of the criterion to match between run and
 
         Return :: dictionary (key = run number, value = vanadium runs)
         """
@@ -643,7 +644,7 @@ class AutoVanadiumCalibrationLocator(object):
                 try:
                     cvalue = self._expRecordDict[run][logname]
                 except KeyError as e:
-                    print "[DB300] Log %s is not supported in Vulcan auto log." % (logname)
+                    print("[DB300] Log %s is not supported in Vulcan auto log." % logname)
                     numfail += 1
                     continue
 
@@ -661,7 +662,7 @@ class AutoVanadiumCalibrationLocator(object):
                         if abs(float(cvalue)-float(vanvalue)) < 1.:
                             good = True
                     else:
-                        raise NotImplementedError("Value type %s is not supported. " % (valuetype))
+                        raise NotImplementedError("Value type %s is not supported. " % valuetype)
 
                     if good is False:
                         vancadidaterunlist.remove(vanrun)
@@ -673,20 +674,20 @@ class AutoVanadiumCalibrationLocator(object):
 
             if len(vancadidaterunlist) == 0:
                 # unable to find vanadium run to match
-                print "Error: There is no match for run %d. " % (run)
+                print("Error: There is no match for run %d. " % run)
             else:
                 # find one or more vanadium runs. sorted with reversed order (new on top)
                 runvandict[run] = sorted(vancadidaterunlist, reverse=True)
 
                 if len(vancadidaterunlist) > 1:
-                    print "There are too many vanadium runs (%d out of %d) matching to run %d.  \
-                            The latest vnadium run is picked up. " % (
-                        len(vancadidaterunlist), len(self._vanRecordDict.keys()), run)
+                    print('There are too many vanadium runs ({} out of {}) matching to run {}.'
+                          'The latest vanadium run is picked up.'.format(len(vancadidaterunlist),
+                                                                         len(self._vanRecordDict.keys()), run))
         # ENDFOR (run)
 
         return runvandict
 
-    def _importVRecord(self, vrecordfile):
+    def _import_vdrive_record(self, vrecordfile):
         """
         """
         try:
@@ -694,11 +695,11 @@ class AutoVanadiumCalibrationLocator(object):
             lines = vfile.readlines()
             vfile.close()
         except IOError as ioe:
-            return (False, str(ioe))
+            return False, str(ioe)
 
         # parse title line
-        titlelist = []
-        for iline in xrange(len(lines)):
+        titlelist = list()
+        for iline in range(len(lines)):
             line = lines[iline]
             line = line.strip()
             if len(line) == 0:
@@ -741,19 +742,19 @@ class AutoVanadiumCalibrationLocator(object):
             dataset.append(datarow)
         # ENDFOR
 
-        print "Number of vanadium runs added = %d" % (numvanruns)
+        print("Number of vanadium runs added = %d" % numvanruns)
 
         # build dictionary
         self._vanRecordDict = {}
         try:
             irun = titlelist.index('RUN')
         except ValueError as e:
-            return (False, "There is no title named 'RUN'.")
+            return False, "There is no title named 'RUN'. FYI {}.".format(e)
 
         for datarow in dataset:
             run = int(datarow[irun])
             datadict = {}
-            for ititle in xrange(len(titlelist)):
+            for ititle in range(len(titlelist)):
                 title = titlelist[ititle]
                 value = datarow[ititle]
                 datadict[title] = value
@@ -762,7 +763,7 @@ class AutoVanadiumCalibrationLocator(object):
 
         # error message
         if len(errmsg) > 0:
-            print "Error during import vanadium profile data: \n", errmsg, "\n"
+            print("Error during import vanadium profile data: \n", errmsg, "\n")
 
         return
 
@@ -774,11 +775,11 @@ class AutoVanadiumCalibrationLocator(object):
             lines = rfile.readlines()
             rfile.close()
         except IOError as ioe:
-            return (False, str(ioe))
+            return False, str(ioe)
 
         # parse title line
         titlelist = []
-        for iline in xrange(len(lines)):
+        for iline in range(len(lines)):
             line = lines[iline].strip()
             if len(line) == 0:
                 continue
@@ -824,12 +825,12 @@ class AutoVanadiumCalibrationLocator(object):
         try:
             irun = titlelist.index('RUN')
         except ValueError as e:
-            return (False, "There is no title named 'RUN'.")
+            return False, "There is no title named 'RUN'."
 
         for datarow in dataset:
             run = int(datarow[irun])
             datadict = {}
-            for ititle in xrange(len(titlelist)):
+            for ititle in range(len(titlelist)):
                 title = titlelist[ititle]
                 value = datarow[ititle]
                 datadict[title] = value
@@ -838,9 +839,9 @@ class AutoVanadiumCalibrationLocator(object):
 
         # output error message
         if len(errmsg) > 0:
-            print "Error during importing AutoRecord.txt:\n%s\n" % (errmsg)
+            print("Error during importing AutoRecord.txt:\n%s\n" % errmsg)
 
-        print "There are %d runs that are found in record file %s." % (len(self._expRecordDict.keys()), exprecfile)
+        print("There are %d runs that are found in record file %s." % (len(self._expRecordDict.keys()), exprecfile))
 
         return
 
@@ -872,7 +873,7 @@ class AutoVanadiumCalibrationLocator(object):
             return the full path to AutoRecord.txt of the given IPTS
         """
         # there is no need to check requirement because __init__() check it already
-        rel_path = "IPTS-%d/shared/" % (int(ipts))
+        rel_path = "IPTS-%d/shared/" % int(self._iptsNumber)
         rel_path_name = os.path.join(rel_path, "AutoRecord.txt")
         exprecordfilename = os.path.join(self._rootArchiveDirectory, rel_path_name)
 
@@ -881,8 +882,8 @@ class AutoVanadiumCalibrationLocator(object):
     def check_ipts_valid(self):
         """ Check whether an IPTS number is valid
         """
-        ipts_dir = os.path.join(self._rootArchiveDirectory, "IPTS-%d" % (self._iptsNumber))
-        if os.path.isdir(ipts_dir) is True:
+        ipts_dir = os.path.join(self._rootArchiveDirectory, "IPTS-%d" % self._iptsNumber)
+        if os.path.isdir(ipts_dir):
             return True, ''
 
         msg = "IPTS directory: %s does not exist." % ipts_dir

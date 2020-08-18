@@ -154,11 +154,11 @@ def check_list(var_name, variable):
 
 def check_numpy_arrays(var_name, variables, dimension, check_same_shape):
     """ check numpy array or numpy arrays
-    :param var_name: 
-    :param variables: 
-    :param dimension: 
+    :param var_name:
+    :param variables:
+    :param dimension:
     :param check_same_shape:
-    :return: 
+    :return:
     """
     check_string_variable('Variable name', var_name)
     check_bool_variable('Flag to check arrays having same shape', check_same_shape)

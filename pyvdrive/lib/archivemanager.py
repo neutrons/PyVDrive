@@ -451,8 +451,8 @@ class DataArchiveManager(object):
                 run_dict = self._iptsInfoDict[archive_key][run_number]
                 partial_list.append(run_dict)
             else:
-                print '[Warning] Run number {0} is not in ArchiveManager\'s IPTS information dictionary.' \
-                      ''.format(run_number)
+                print('[Warning] Run number {0} is not in ArchiveManager\'s IPTS information dictionary.' \
+                      ''.format(run_number))
 
         return partial_list
 
@@ -864,7 +864,7 @@ class DataArchiveManager(object):
         # TODO : Need an elegant algorithm/method to set up the output list
         # convert delta days to seconds
         delta_seconds = delta_days * 24 * 3600.
-        print "[DB] Delta T = %f" % delta_seconds
+        print("[DB] Delta T = %f" % delta_seconds)
 
         # the list of list as return
         period_list = list()
@@ -873,7 +873,7 @@ class DataArchiveManager(object):
         # time 0
         prev_time = time_file_list[0][0]
 
-        for i in xrange(1, len(time_file_list)):
+        for i in range(1, len(time_file_list)):
             # Get the difference in time between previous time and current time
             curr_time = time_file_list[i][0]
             assert isinstance(curr_time, float)
@@ -898,7 +898,7 @@ class DataArchiveManager(object):
             # DEBUG OUTPUT
             gindex = 0
             for sublist in period_list:
-                print "Group ", gindex, " Start @ ", sublist[0][0], " Size = ", len(sublist)
+                print("Group ", gindex, " Start @ ", sublist[0][0], " Size = ", len(sublist))
                 gindex += 1
 
         return period_list
@@ -907,16 +907,16 @@ class DataArchiveManager(object):
         """ Roll time back to previous day
         """
         # TODO/FIXME/ISSUE/55+ - This will be very useful when time-run-selection is simplemented
-        print "Ecoch time = ", epochtime, type(epochtime)
+        print("Ecoch time = ", epochtime, type(epochtime))
 
         stime = time.strptime(time.ctime(epochtime))
-        print stime.tm_yday
+        print(stime.tm_yday)
 
         # FIXME - Delta T should be given!
         # NOTE : MOCK : 2 days
         rollbacktime = epochtime - 2*24*3600
         stime2 = time.strptime(time.ctime(rollbacktime))
-        print stime2.tm_yday
+        print(stime2.tm_yday)
 
         return
 

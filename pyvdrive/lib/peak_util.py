@@ -165,7 +165,7 @@ def calculate_peak_integral_intensity(vec_d, vec_y, left_x_index, right_x_index,
 
 def calculate_peak_average_d_space(vec_d, vec_y, left_x_index, right_x_index, bkgd_a, bkgd_b):
     """
-    mu = 1/A \int x f(x) dx = 1/A \sum x * f(x) * delta(x)
+    mu = 1/A int x f(x) dx = 1/A sum x * f(x) * delta(x)
     :param vec_d:
     :param vec_y:
     :param left_x_index:
@@ -203,7 +203,7 @@ def calculate_peak_average_d_space(vec_d, vec_y, left_x_index, right_x_index, bk
 
 def calculate_peak_variance(vec_d, vec_y, left_x_index, right_x_index, bkgd_a, bkgd_b):
     """
-    var = \int (x-mu)**2 f(x) dx = \sum (x-mu)**2 * f(x) * dx
+    var = int (x-mu)**2 f(x) dx = sum (x-mu)**2 * f(x) * dx
     :param vec_d:
     :param vec_y:
     :param left_x_index:

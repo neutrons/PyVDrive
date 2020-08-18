@@ -8,6 +8,7 @@ import datatypeutility
 import mantid
 import stat
 import numpy as np
+import pyvdrive.lib.reduce_VULCAN as reduce_VULCAN
 
 __author__ = 'wzz'
 
@@ -391,7 +392,7 @@ def export_experiment_log(ws_name, record_file_name, sample_name_list, sample_ti
     file_access_mode = file_access_mode[-3:]
     if file_access_mode != '666' and file_access_mode != '676':
         try:
-            os.chmod(record_file_name, 0666)
+            os.chmod(record_file_name, 0o666)
         except OSError as os_err:
             return False, '[ERROR] Unable to set file {0} to mode 666 due to {1}' \
                           ''.format(record_file_name, os_err)
@@ -401,7 +402,6 @@ def export_experiment_log(ws_name, record_file_name, sample_name_list, sample_ti
 
 
 def export_normal_sample_log(ipts_number, run_number, ws_name, record_file_name):
-    import reduce_VULCAN
 
     # convert record-tuple list to three list
     sample_title_list = [item[0] for item in reduce_VULCAN.RecordBase]
@@ -421,7 +421,6 @@ def export_normal_sample_log(ipts_number, run_number, ws_name, record_file_name)
 
 
 def export_standard_sample_log(ipts_number, run_number, ws_name, standard_sample_tuple):
-    import reduce_VULCAN
     import shutil
 
     # convert record-tuple list to three list
@@ -474,8 +473,8 @@ def search_sorted_nearest(vector, values):  # NOTE: SAME as separate_log_cooling
 if __name__ == '__main__':
     time_str1 = '2016-04-27 09:19:50.094796666-EDT'
     time_1 = parse_time(time_str1)
-    print time_1, type(time_1)
+    print(time_1, type(time_1))
 
     time_str2 = '4/27/2016 12:29:25 PM'
     time_2 = parse_time(time_str2, local_est=True)
-    print time_2, type(time_2)
+    print(time_2, type(time_2))

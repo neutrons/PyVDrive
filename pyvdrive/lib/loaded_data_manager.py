@@ -317,7 +317,7 @@ class LoadedDataManager(object):
 
         if chop_info_file:
             # parsing the chopping information file for reduced file and raw event files
-            print '[INFO] Load Chop Information File: {0}'.format(chop_info_file)
+            print('[INFO] Load Chop Information File: {0}'.format(chop_info_file))
             reduced_tuple_dict = self.parse_chop_info_file(
                 os.path.join(chopped_data_dir, chop_info_file))
         else:

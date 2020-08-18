@@ -503,5 +503,4 @@ def get_versions():
         pass
 
     return {"version": "0+unknown", "full-revisionid": None,
-            "dirty": None,
-"error": "unable to compute version", "date": None}
+            "dirty": None, "error": "unable to compute version", "date": None}
