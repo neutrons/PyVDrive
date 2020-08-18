@@ -2,9 +2,9 @@
 import os
 import math
 from mantid.api import AnalysisDataService as mtd
-from mantid.simpleapi import CrossCorrelate, GetDetectorOffsets, SaveCalFile, ConvertDiffCal, SaveDiffCal
-from mantid.simpleapi import RenameWorkspace, Plus, CreateWorkspace, Load, CreateGroupingWorkspace
-from mantid.simpleapi import CloneWorkspace, DeleteWorkspace, LoadDiffCal
+from mantid.simpleapi import SaveCalFile, ConvertDiffCal, SaveDiffCal
+from mantid.simpleapi import RenameWorkspace, Plus, CreateWorkspace, CreateGroupingWorkspace
+from mantid.simpleapi import CloneWorkspace, DeleteWorkspace
 from mantid.simpleapi import Load, LoadDiffCal, AlignDetectors, DiffractionFocussing, Rebin, EditInstrumentGeometry
 from mantid.simpleapi import ConvertToMatrixWorkspace, CrossCorrelate, GetDetectorOffsets, GeneratePythonScript
 import bisect
@@ -44,7 +44,7 @@ def analyze_outputs(cross_correlation_ws_dict, getdetoffset_result_ws_dict):
 def apply_reference_calibration(calib_ws, ref_calib_ws, bank_name):
     """
     apply reference calibration to output
-    :param calib_ws_name:
+    :param calib_ws:
     :param ref_calib_ws:
     :param bank_name:
     :return:
@@ -209,9 +209,7 @@ def calculate_model(data_ws_name, ws_index, fit_param_table_name):
     :param fit_param_table_name:
     :return:
     """
-    #data_ws = AnalysisDataService.retrieve(data_ws_name)
     data_ws = mtd[data_ws_name]
-    # param_table_ws = AnalysisDataService.retrieve(fit_param_table_name)
     param_table_ws = mtd[fit_param_table_name]
 
     for row_index in range(param_table_ws.rowCount()):
@@ -387,7 +385,6 @@ def analyze_mask(event_ws, mask_ws, wi_start, wi_stop, output_dir):
 
         # analyze masking information
         if event_ws.getSpectrum(ws_index).getNumberEvents() == 0:
-            case_i = 1  # no event
             zero_masked_is_masked += 1
         elif event_ws.getSpectrum:
             pass
@@ -682,7 +679,8 @@ def cross_correlate_vulcan_data_2bank(diamond_ws_name, group_ws_name, fit_time=1
     westeast_mask_clone = CloneWorkspace(
         InputWorkspace=westeast_mask, OutputWorkspace=str(westeast_mask) + '_copy')
 
-    combine_save_calibration(diamond_ws_name + '_{0}'.format(flag), [(westeast_offset, westeast_mask), (ha_offset, ha_mask)],
+    combine_save_calibration(diamond_ws_name + '_{0}'.format(flag), [(westeast_offset, westeast_mask),
+                                                                     (ha_offset, ha_mask)],
                              group_ws_name, 'vulcan_{0}'.format(flag))
 
     offset_dict = {'westeast': westeast_offset_clone, 'high angle': ha_offset}
@@ -693,6 +691,11 @@ def cross_correlate_vulcan_data_2bank(diamond_ws_name, group_ws_name, fit_time=1
 
 def instrument_wide_cross_correlation(focused_ws_name, reference_ws_index, min_d, max_d):
     """
+    Main algorithm to do cross-correlation among different banks of VULCAN.
+    This is the second round calibration using the data file
+    1. calibrated by previous calibration file based on inner bank cross correlation
+    2. diffraction focused
+    For the instrument with west, east and high angle banks, the input file shall be a 3 bank
 
     :param focused_ws_name:
     :param reference_ws_index:
@@ -701,21 +704,16 @@ def instrument_wide_cross_correlation(focused_ws_name, reference_ws_index, min_d
     :return:
     """
     """
-    Main algorithm to do cross-correlation among different banks of VULCAN.
-    This is the second round calibration using the data file
-    1. calibrated by previous calibration file based on inner bank cross correlation
-    2. diffraction focused
-    For the instrument with west, east and high angle banks, the input file shall be a 3 bank
+
     :return:
     """
-    CrossCorrelate(InputWorkspace='vulcan_diamond_3bank', OutputWorkspace='cc_vulcan_diamond_3bank', ReferenceSpectra=1,
-                   WorkspaceIndexMax=2, XMin=1.0649999999999999, XMax=1.083)
+    # reference for Bank 3: XMin=1.0649999999999999, XMax=1.083, WorkspaceIndexMax=2
+    CrossCorrelate(InputWorkspace=focused_ws_name, OutputWorkspace='cc_vulcan_diamond_3bank', ReferenceSpectra=1,
+                   WorkspaceIndexMax=reference_ws_index, XMin=min_d, XMax=max_d)
     GetDetectorOffsets(InputWorkspace='cc_vulcan_diamond_3bank', Step=0.00029999999999999997,
                        DReference=1.0757699999999999, XMin=-20, XMax=20, OutputWorkspace='zz_test_3bank',
                        FitEachPeakTwice=True, PeakFitResultTableWorkspace='ddd', OutputFitResult=True,
                        MinimumPeakHeight=1)
-
-    return shift_dict
 
 
 def test_cross_correlate_vulcan_data(wkspName, group_ws_name):
@@ -816,7 +814,8 @@ def evaluate_cc_quality(data_ws_name, fit_param_table_name):
 #     :return:
 #     """
 #     # Load an existing 3-bank calibration file for grouping
-#     exist3bank = '/SNS/users/wzz/Projects/VULCAN/CalibrationInstrument/Calibration_20180530/VULCAN_calibrate_2018_04_12.h5'
+#     exist3bank =
+#       '/SNS/users/wzz/Projects/VULCAN/CalibrationInstrument/Calibration_20180530/VULCAN_calibrate_2018_04_12.h5'
 #     LoadDiffCal(InputWorkspace=ref_ws_name,
 #                 Filename=exist3bank,
 #                 WorkspaceName='vulcan_old_3banks')
@@ -880,8 +879,8 @@ def load_calibration_file(ref_ws_name, calib_file_name, calib_ws_base_name=None)
         calib_ws_base_name = 'vulcan'
 
     # load data file
-    r = LoadDiffCal(InputWorkspace=ref_ws_name,
-                    Filename=calib_file_name, WorkspaceName=calib_ws_base_name)
+    LoadDiffCal(InputWorkspace=ref_ws_name,
+                Filename=calib_file_name, WorkspaceName=calib_ws_base_name)
 
     calib_ws_name = '{}_cal'.format(calib_ws_base_name)
     mask_ws_name = '{}_mask'.format(calib_ws_base_name)
@@ -1023,13 +1022,14 @@ def reduced_powder_data(ipts_number, run_number, calib_file_name, event_ws_name=
 
 # TODO - NIGHT - better coding quality
 def merge_calibration_all(diamond_ws_name, offset_mask_ws_list):
-    """
-    merge cross-correlated calibration and offset workspaces, which are on partial workspaces
+    """Merge cross-correlated calibration and offset workspaces, which are on partial workspaces
+
+    Status: Not used any more.  Kept as a  reference'
+
     :param diamond_ws_name:
     :param offset_mask_ws_list:
     :return:
     """
-    raise RuntimeError('Not used any more.  Kept as a  reference')
     offset_ws_name0, mask_ws_name0 = offset_mask_ws_list[0]
     offset_ws_name = diamond_ws_name + '_offset'
     mask_ws_name = diamond_ws_name + '_mask'
@@ -1221,9 +1221,11 @@ def peak_function(vec_dspace, peak_intensity, peak_center, sigma, a0, a1, functi
     :param function_type:
     :return:
     """
-    # function_type = gaussian:
-    vec_y = peak_intensity * numpy.exp(
-        -0.5 * (vec_dspace - peak_center) ** 2 / sigma ** 2) + a0 + a1 * vec_dspace
+    if function_type == 'gaussian':
+        vec_y = peak_intensity * numpy.exp(-0.5 * (vec_dspace - peak_center) ** 2 / sigma ** 2)\
+                + a0 + a1 * vec_dspace
+    else:
+        raise RuntimeError(f'Function of type {function_type} is not supported.')
 
     return vec_y
 
@@ -1238,11 +1240,9 @@ def select_detectors_to_mask(cost_ws_dict, cost_threshold):
     for bank_name in ['west', 'east', 'high angle']:
         cost_ws_name = cost_ws_dict[bank_name]
         cost_matrix_ws = mtd[cost_ws_name]
-        vec_ws_index = cost_matrix_ws.readX(0)
-        vec_cost = cost_matrix_ws.readY(0)
-        raise RuntimeError('Use numpy operation to get the indexes of cost larger than threshold')
-
-    return
+        vec_ws_index = cost_matrix_ws.readX(0)[cost_matrix_ws.readY(0) > cost_threshold]
+        vec_cost = cost_matrix_ws.readY(0)[cost_matrix_ws.readY(0) > cost_threshold]
+        raise NotImplementedError('Implement to mask {} with cost {}'.format(vec_ws_index, vec_cost))
 
 # def main(argv):
 #     """
@@ -1283,6 +1283,7 @@ def select_detectors_to_mask(cost_ws_dict, cost_threshold):
 # # HIGH ANGLE
 # calculate_model('cc_vulcan_diamond_high_angle', 12200, 'offset_vulcan_diamond_high_angle_FitResult')
 # # plot cost list
-# cost_list, high_angle_bad = evaluate_cc_quality('cc_vulcan_diamond_high_angle', 'offset_vulcan_diamond_high_angle_FitResult')
+# cost_list, high_angle_bad =
+#     evaluate_cc_quality('cc_vulcan_diamond_high_angle', 'offset_vulcan_diamond_high_angle_FitResult')
 # cost_array = numpy.array(cost_list).transpose()
 # CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1], NSpec=1, OutputWorkspace='HighAngle_Cost')
