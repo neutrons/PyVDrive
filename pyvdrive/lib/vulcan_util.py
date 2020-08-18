@@ -57,19 +57,23 @@ def export_vanadium_intensity_to_file(van_nexus_file, gsas_van_int_file):
         raise RuntimeError('Given vanadium NeXus path {0} is incorrect.'.format(van_nexus_file))
 
     assert isinstance(gsas_van_int_file, str), 'Target GSAS vanadium intensity file {0} must be a string but not a ' \
-                                               '{1}.'.format(gsas_van_int_file, type(gsas_van_int_file))
+                                               '{1}.'.format(gsas_van_int_file,
+                                                             type(gsas_van_int_file))
 
     # write to file
     try:
         int_file = open(gsas_van_int_file, 'w')
     except IOError as io_err:
-        raise RuntimeError('Unable to write to file {0} due to {1}'.format(gsas_van_int_file, io_err))
+        raise RuntimeError('Unable to write to file {0} due to {1}'.format(
+            gsas_van_int_file, io_err))
     except OSError as os_err:
-        raise RuntimeError('Unable to write to file {0} due to {1}'.format(gsas_van_int_file, os_err))
+        raise RuntimeError('Unable to write to file {0} due to {1}'.format(
+            gsas_van_int_file, os_err))
 
     # load data file
     out_file_name = os.path.basename(van_nexus_file).split('.')[0]
-    mantid_helper.load_nexus(data_file_name=van_nexus_file, output_ws_name=out_file_name, meta_data_only=False)
+    mantid_helper.load_nexus(data_file_name=van_nexus_file,
+                             output_ws_name=out_file_name, meta_data_only=False)
     event_ws = mantid_helper.retrieve_workspace(out_file_name)
 
     # Parse to intensity file
@@ -113,7 +117,8 @@ def format_float_number(value, significant_digits):
     :return:
     """
     # check input
-    assert isinstance(value, int), 'Input value {0} must be integer but cannot be {1}.'.format(value, type(value))
+    assert isinstance(value, int), 'Input value {0} must be integer but cannot be {1}.'.format(
+        value, type(value))
     assert isinstance(significant_digits, int) and significant_digits > 0,\
         'Significant digit {0} must be a positive integer but not a {1}.' \
         ''.format(significant_digits, type(significant_digits))
@@ -144,7 +149,8 @@ def generate_chopped_log_dir(original_dir, make_dir):
     datatypeutility.check_string_variable('Original chopped data directory', original_dir)
 
     if original_dir.count('shared') == 0:
-        raise RuntimeError('Chopped log directory must be a shared directory in /SNS/VULCAN/IPTS-xxxx/shared/')
+        raise RuntimeError(
+            'Chopped log directory must be a shared directory in /SNS/VULCAN/IPTS-xxxx/shared/')
 
     if original_dir.endswith('/'):
         original_dir = original_dir[:-1]
@@ -158,7 +164,7 @@ def generate_chopped_log_dir(original_dir, make_dir):
     if not os.path.exists(chopped_log_dir) and make_dir:
         os.mkdir(chopped_log_dir)
 
-    print ('[DB...BAT] PyVDrive chopped sample log dir: {}'.format(original_dir))
+    print('[DB...BAT] PyVDrive chopped sample log dir: {}'.format(original_dir))
 
     return chopped_log_dir
 
@@ -193,7 +199,8 @@ def get_default_binned_directory(ipts_number, check_write_and_throw=False, merge
     # check write permission
     if check_write_and_throw:
         if os.path.exists(binned_dir) is False:
-            raise RuntimeError('VULCAN binned data directory {0} does not exist.'.format(binned_dir))
+            raise RuntimeError(
+                'VULCAN binned data directory {0} does not exist.'.format(binned_dir))
         if os.access(binned_dir, os.W_OK) is False:
             raise RuntimeError('User has no write permission to directory {0}.'.format(binned_dir))
 
@@ -255,12 +262,12 @@ def getLogsList(vandbfile):
     In each tuple, there are log name and one example
     """
     try:
-        vfile = open(vandbfile,'r')
+        vfile = open(vandbfile, 'r')
         lines = vfile.readlines()
         vfile.close()
     except IOError as ioe:
         return (False, str(ioe))
-        
+
     # parse title line
     titlelist = []
     for iline in xrange(len(lines)):
@@ -272,7 +279,7 @@ def getLogsList(vandbfile):
             continue
         elif line.startswith('#') is True:
             continue
-            
+
         terms = line.split('\t')
         if terms[0].strip().isdigit() is True:
             # skip if starts with a number
@@ -294,17 +301,17 @@ def getLogsList(vandbfile):
         terms = line.split('\t')
         if terms[0].strip().isdigit() is False:
             continue
-            
+
         datarow = []
         for term in terms:
             datarow.append(term.strip())
-        
+
         # check
         if len(datarow) != len(titlelist):
             errmsg += "Line \n'%s'\nhas different number of items %d from titles %d.\n" % (line, len(datarow),
-                len(titlelist))
+                                                                                           len(titlelist))
             continue
-        
+
         examples = datarow
         break
     # ENDFOR
@@ -314,7 +321,6 @@ def getLogsList(vandbfile):
 
 def group_pixels_2theta(vulcan_ws_name, tth_group_ws_name, start_iws, end_iws,
                         two_theta_bin_range, two_theta_step):
-
 
     # create group workspace
     CreateGroupingWorkspace(InputWorkspace=vulcan_ws_name, GroupDetectorsBy='All',
@@ -372,7 +378,7 @@ def group_pixels_2theta_geometry(template_virtual_geometry_dict, ws_index_range,
     else:
         bank = 3
 
-    print (template_virtual_geometry_dict.keys())
+    print(template_virtual_geometry_dict.keys())
 
     group_geometry_dict = {'L1': template_virtual_geometry_dict['L1']}
     for geom_item in ['Polar', 'SpectrumIDs', 'L2', 'Azimuthal']:
@@ -442,7 +448,7 @@ def import_sample_log_record(ipts_number, run_number, is_chopped, record_type='s
     header.insert(0, 'chopseq')
     header.insert(1, 'ProtonCharge')
 
-    print ('HEADER: {}'.format(header))
+    print('HEADER: {}'.format(header))
 
     # peel file
     try:
@@ -522,6 +528,7 @@ def locate_run(ipts, run_number, base_path='/SNS/VULCAN/'):
 class AutoVanadiumCalibrationLocator(object):
     """ Class to locate Vanadium calibration file automatically
     """
+
     def __init__(self, ipts, base_path='/SNS/VULCAN/', vrecordfile=None, autorecordfile=None):
         """ Initialization
         Arguments:
@@ -549,22 +556,24 @@ class AutoVanadiumCalibrationLocator(object):
             vrecordfile = self.locate_vulcan_vanadium_record_file()
         else:
             assert isinstance(vrecordfile, str)
-            assert os.path.exists(vrecordfile), 'User specified V-record file %s cannot be found.' % vrecordfile
-        
+            assert os.path.exists(
+                vrecordfile), 'User specified V-record file %s cannot be found.' % vrecordfile
+
         # import v-record
         self._importVRecord(vrecordfile)
-        
+
         # import auto record
         if autorecordfile is None:
             autorecordfile = self.locate_auto_record()
         else:
             assert isinstance(autorecordfile, str)
-            assert os.path.exists(autorecordfile), 'User specified AutoRecord file %s cannot be found.' % autorecordfile
+            assert os.path.exists(
+                autorecordfile), 'User specified AutoRecord file %s cannot be found.' % autorecordfile
         self._importExperimentRecord(autorecordfile)
-        
+
         # runs
         self._runs = []
-        
+
         return
 
     @property
@@ -573,7 +582,7 @@ class AutoVanadiumCalibrationLocator(object):
         :return: IPTS number
         """
         return self._iptsNumber
-       
+
     def addRuns(self, runs):
         """ Add a runs to find whether they are in experiment record file
         """
@@ -585,9 +594,10 @@ class AutoVanadiumCalibrationLocator(object):
                 self._runs.append(run)
                 numrunsadded += 1
             else:
-                errmsg += "Run %d does not exist in IPTS %d (record file)\n" % (run, self._iptsNumber)
+                errmsg += "Run %d does not exist in IPTS %d (record file)\n" % (
+                    run, self._iptsNumber)
         # ENDFOR
-        
+
         return numrunsadded, errmsg
 
     def getVanRunLogs(self, logname):
@@ -602,8 +612,7 @@ class AutoVanadiumCalibrationLocator(object):
             rdict[run] = self._vanRecordDict[run][logname]
 
         return rdict
-        
-        
+
     def locateCalibrationFile(self, criterion):
         """ Locate matched vanadium runs for each run added to this instance
 
@@ -619,30 +628,30 @@ class AutoVanadiumCalibrationLocator(object):
             return (False, "No run number in the list to locate")
         if len(criterion) == 0:
             return (False, "No criteria is defined by user.")
-            
+
         # create dictionary for return
         runvandict = {}
-            
+
         # filter van record by criterion
         for run in self._runs:
             # get the full list of runs
-            vancadidaterunlist = self._vanRecordDict.keys()  
-            
-            # loop around criterion to remove all van runs that does not meet the requirement      
+            vancadidaterunlist = self._vanRecordDict.keys()
+
+            # loop around criterion to remove all van runs that does not meet the requirement
             numfail = 0
             for (logname, valuetype) in criterion:
-                try: 
+                try:
                     cvalue = self._expRecordDict[run][logname]
                 except KeyError as e:
                     print "[DB300] Log %s is not supported in Vulcan auto log." % (logname)
                     numfail += 1
                     continue
 
-                #print "Run %d Match log %s = %s." % (run, logname, cvalue)
+                # print "Run %d Match log %s = %s." % (run, logname, cvalue)
                 for vanrun in vancadidaterunlist:
                     good = False
                     vanvalue = self._vanRecordDict[vanrun][logname]
-                    #print "\tVanadium %d log %s = %s." % (vanrun, logname, vanvalue)
+                    # print "\tVanadium %d log %s = %s." % (vanrun, logname, vanvalue)
                     if valuetype.startswith('int'):
                         if int(cvalue) == int(vanvalue):
                             good = True
@@ -653,14 +662,15 @@ class AutoVanadiumCalibrationLocator(object):
                             good = True
                     else:
                         raise NotImplementedError("Value type %s is not supported. " % (valuetype))
-                    
+
                     if good is False:
                         vancadidaterunlist.remove(vanrun)
             # ENDFOR (criterion)
 
             if numfail == len(criterion):
-                raise NotImplementedError("None of the log name in criterion is supported by Vulcan's auto log.")
-            
+                raise NotImplementedError(
+                    "None of the log name in criterion is supported by Vulcan's auto log.")
+
             if len(vancadidaterunlist) == 0:
                 # unable to find vanadium run to match
                 print "Error: There is no match for run %d. " % (run)
@@ -671,21 +681,21 @@ class AutoVanadiumCalibrationLocator(object):
                 if len(vancadidaterunlist) > 1:
                     print "There are too many vanadium runs (%d out of %d) matching to run %d.  \
                             The latest vnadium run is picked up. " % (
-                                    len(vancadidaterunlist), len(self._vanRecordDict.keys()), run)
+                        len(vancadidaterunlist), len(self._vanRecordDict.keys()), run)
         # ENDFOR (run)
-        
+
         return runvandict
-    
+
     def _importVRecord(self, vrecordfile):
         """
         """
         try:
-            vfile = open(vrecordfile,'r')
+            vfile = open(vrecordfile, 'r')
             lines = vfile.readlines()
             vfile.close()
         except IOError as ioe:
             return (False, str(ioe))
-            
+
         # parse title line
         titlelist = []
         for iline in xrange(len(lines)):
@@ -695,7 +705,7 @@ class AutoVanadiumCalibrationLocator(object):
                 continue
             elif line.startswith('#') is True:
                 continue
-                
+
             terms = line.split('\t')
             if terms[0].strip().isdigit() is True:
                 # skip if starts with a number
@@ -704,7 +714,7 @@ class AutoVanadiumCalibrationLocator(object):
                 for term in terms:
                     titlelist.append(term.strip())
                 break
-        
+
         # parse content line
         dataset = []
         errmsg = ""
@@ -716,15 +726,15 @@ class AutoVanadiumCalibrationLocator(object):
             terms = line.split('\t')
             if terms[0].strip().isdigit() is False:
                 continue
-                
+
             datarow = []
             for term in terms:
                 datarow.append(term.strip())
-            
+
             # check
             if len(datarow) != len(titlelist):
                 errmsg += "Line \n'%s'\nhas different number of items %d from titles %d.\n" % (line, len(datarow),
-                    len(titlelist))
+                                                                                               len(titlelist))
                 continue
 
             numvanruns += 1
@@ -732,14 +742,14 @@ class AutoVanadiumCalibrationLocator(object):
         # ENDFOR
 
         print "Number of vanadium runs added = %d" % (numvanruns)
-            
+
         # build dictionary
         self._vanRecordDict = {}
         try:
             irun = titlelist.index('RUN')
         except ValueError as e:
             return (False, "There is no title named 'RUN'.")
-            
+
         for datarow in dataset:
             run = int(datarow[irun])
             datadict = {}
@@ -753,20 +763,19 @@ class AutoVanadiumCalibrationLocator(object):
         # error message
         if len(errmsg) > 0:
             print "Error during import vanadium profile data: \n", errmsg, "\n"
-        
-        return        
-        
-        
+
+        return
+
     def _importExperimentRecord(self, exprecfile):
         """
         """
         try:
-            rfile = open(exprecfile,'r')
+            rfile = open(exprecfile, 'r')
             lines = rfile.readlines()
             rfile.close()
         except IOError as ioe:
             return (False, str(ioe))
-            
+
         # parse title line
         titlelist = []
         for iline in xrange(len(lines)):
@@ -775,7 +784,7 @@ class AutoVanadiumCalibrationLocator(object):
                 continue
             elif line.startswith('#') is True:
                 continue
-                
+
             terms = line.split('\t')
             if terms[0].strip().isdigit() is True:
                 # skip if starts with a number
@@ -784,7 +793,7 @@ class AutoVanadiumCalibrationLocator(object):
                 for term in terms:
                     titlelist.append(term.strip())
                 break
-        
+
         # parse content line
         dataset = []
         errmsg = ""
@@ -795,28 +804,28 @@ class AutoVanadiumCalibrationLocator(object):
             terms = line.split('\t')
             if terms[0].strip().isdigit() is False:
                 continue
-                
+
             datarow = []
             for term in terms:
                 datarow.append(term.strip())
-            
+
             # check
             if len(datarow) != len(titlelist):
                 errmsg += "Line \n'%s'\nhas different number of items %d from titles %d.\n" % (line, len(datarow),
-                    len(titlelist))
+                                                                                               len(titlelist))
                 continue
 
             # add to data set
             dataset.append(datarow)
         # ENDFOR
-            
+
         # build dictionary
         self._expRecordDict = {}
         try:
             irun = titlelist.index('RUN')
         except ValueError as e:
             return (False, "There is no title named 'RUN'.")
-            
+
         for datarow in dataset:
             run = int(datarow[irun])
             datadict = {}
@@ -828,11 +837,11 @@ class AutoVanadiumCalibrationLocator(object):
             self._expRecordDict[run] = datadict
 
         # output error message
-        if len(errmsg) > 0: 
+        if len(errmsg) > 0:
             print "Error during importing AutoRecord.txt:\n%s\n" % (errmsg)
 
         print "There are %d runs that are found in record file %s." % (len(self._expRecordDict.keys()), exprecfile)
-        
+
         return
 
     def locate_vulcan_vanadium_record_file(self):

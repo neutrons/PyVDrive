@@ -118,7 +118,7 @@ def load_sample_logs_h5(log_h5_name, log_name=None):
             if 'sample log' in entry_attr.keys():
                 # has such attribute
                 is_s_l = True
-            elif 'type' in  h5_root[log_entry_name].keys() and h5_root[log_entry_name]['type'].value == 'sample log':
+            elif 'type' in h5_root[log_entry_name].keys() and h5_root[log_entry_name]['type'].value == 'sample log':
                 # no such attribute, then check sub entry 'type'
                 is_s_l = True
             else:
@@ -126,8 +126,8 @@ def load_sample_logs_h5(log_h5_name, log_name=None):
                 is_s_l = False
         except AttributeError as att_err:  # in case the entry is not a Group
             is_s_l = False
-            print ('[ERROR] File {} Entry {} has error to be a sample log: {}'
-                   ''.format(h5_root.filename, log_entry_name, att_err))
+            print('[ERROR] File {} Entry {} has error to be a sample log: {}'
+                  ''.format(h5_root.filename, log_entry_name, att_err))
 
         return is_s_l
 
@@ -136,16 +136,17 @@ def load_sample_logs_h5(log_h5_name, log_name=None):
         vec_value = h5_root[log_entry_name]['value'][:]
         return vec_times, vec_value
 
-    datatypeutility.check_file_name(log_h5_name, True, False, False, 'PyVDRive HDF5 sample log file')
+    datatypeutility.check_file_name(log_h5_name, True, False, False,
+                                    'PyVDRive HDF5 sample log file')
 
     log_h5 = h5py.File(log_h5_name, 'r')
-    print ('[DB...BAT] Open {}'.format(log_h5_name))
+    print('[DB...BAT] Open {}'.format(log_h5_name))
 
     sample_log_dict = dict()
     if log_name is None:
         for log_name in log_h5.keys():
             if not is_sample_log(log_h5, log_name):
-                print ('{} is not a sample log'.format(log_name))
+                print('{} is not a sample log'.format(log_name))
                 continue
             sample_log_dict[log_name] = read_log(log_h5, log_name)
     else:
@@ -162,7 +163,8 @@ def load_event_slicers_file(file_name):
     :return: list (3-tuple, start time, stop time, target)
     """
     # check
-    datatypeutility.check_file_name(file_name, True, False, False, 'Event data slicers/splitters setup file')
+    datatypeutility.check_file_name(file_name, True, False, False,
+                                    'Event data slicers/splitters setup file')
 
     # load all the file content
     try:
@@ -286,6 +288,8 @@ def parse_multi_run_slicer_file(file_name):
     return slicer_dict
 
 # TODO - TONIGHT 0 - Whether there is a similar method in chop/PICKDATA?
+
+
 def parse_time_segments(file_name):
     """
     Parse the standard time segments file serving for event slicers
@@ -399,7 +403,8 @@ def save_sample_logs(workspace, log_names, log_h5_name, start_time, attribution_
                            ''.format(workspace, type(workspace), any_err))
     datatypeutility.check_list('Sample log names', log_names)
     datatypeutility.check_string_variable('Output HDF5 log file name', log_h5_name)
-    datatypeutility.check_file_name(log_h5_name, False, True, False, 'Output PyVDrive HDF5 sample log file')
+    datatypeutility.check_file_name(log_h5_name, False, True, False,
+                                    'Output PyVDrive HDF5 sample log file')
 
     # create file
     log_h5 = h5py.File(log_h5_name, 'w')
@@ -504,7 +509,8 @@ def read_merge_run_file(run_file_name):
             try:
                 run_number = int(run_str)
             except ValueError as val_err:
-                raise RuntimeError('{} cannot be converted to integer as run number: {}'.format(run_str, val_err))
+                raise RuntimeError(
+                    '{} cannot be converted to integer as run number: {}'.format(run_str, val_err))
             run_number_list.append(run_number)
 
         # TODO - FIXME - FUTURE-AFTER-RELEAE - I don't know why parse with this format

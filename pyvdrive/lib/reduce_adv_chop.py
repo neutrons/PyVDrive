@@ -24,9 +24,10 @@ MAX_CHOPPED_WORKSPACE_IN_MEM = 200
 
 class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
     """
-    Advanced data chopping and reduction control class, which is derived from 
+    Advanced data chopping and reduction control class, which is derived from
     standard Vulcan reduction control class
     """
+
     def __init__(self, reduce_setup):
         """
         initialization
@@ -41,7 +42,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return
 
-    def chop_data(self, split_ws_name=None, info_ws_name=None, do_tof_correction = False):
+    def chop_data(self, split_ws_name=None, info_ws_name=None, do_tof_correction=False):
         """
         chop data and save to GSAS file
         :param split_ws_name:
@@ -54,8 +55,10 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         if split_ws_name is None:
             split_ws_name, info_ws_name = self._reductionSetup.get_splitters(throw_not_set=True)
         elif info_ws_name is None:
-            raise RuntimeError('Splitters workspace name must be given with information workspace name.')
-        useless, output_directory = self._reductionSetup.get_chopped_directory(True, nexus_only=True)
+            raise RuntimeError(
+                'Splitters workspace name must be given with information workspace name.')
+        useless, output_directory = self._reductionSetup.get_chopped_directory(
+            True, nexus_only=True)
 
         if do_tof_correction:
             raise RuntimeError('Not implemented for TOF correction yet.')
@@ -65,7 +68,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         # load data from file to workspace
         event_ws_name = os.path.split(raw_file_name)[1].split('.')[0]
-        mantid_helper.load_nexus(data_file_name=raw_file_name, output_ws_name=event_ws_name, meta_data_only=False)
+        mantid_helper.load_nexus(data_file_name=raw_file_name,
+                                 output_ws_name=event_ws_name, meta_data_only=False)
 
         if number_target_ws < MAX_CHOPPED_WORKSPACE_IN_MEM:
             # chop event workspace with regular method
@@ -90,8 +94,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # TODO - NIGHT (Nice) - save the split workspace for future reference
         # delete raw workspace
         # TODO/ISSUE/NOWNOW - Requiring a user option for this!
-        print '[INFO] Deleting raw event workspace {0} which {1} exists.' \
-              ''.format(event_ws_name, AnalysisDataService.doesExist(event_ws_name))
+        print('[INFO] Deleting raw event workspace {0} which {1} exists.' \
+              ''.format(event_ws_name, AnalysisDataService.doesExist(event_ws_name)))
         if AnalysisDataService.doesExist(event_ws_name):
             mantid_helper.delete_workspace(event_ws_name)
 
@@ -130,7 +134,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         for i_loop in range(num_loops):
             # get the subset of the splitters
             sub_split_ws_name = self.get_sub_splitters(split_start_index=i_loop * MAX_CHOPPED_WORKSPACE_IN_MEM,
-                                                       split_stop_index=(i_loop + 1) * MAX_CHOPPED_WORKSPACE_IN_MEM,
+                                                       split_stop_index=(
+                                                           i_loop + 1) * MAX_CHOPPED_WORKSPACE_IN_MEM,
                                                        run_start_ns=run_start_ns)
 
             # split
@@ -149,12 +154,13 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             # post check
             if AnalysisDataService.doesExist(raw_ws_name) is False:
                 return False, str(NotImplementedError('Post-check Raw workspace {0} cannot be found at loop {1} ({2}).'
-                                  ''.format(raw_ws_name, i_loop, num_loops)))
+                                                      ''.format(raw_ws_name, i_loop, num_loops)))
 
             # process
             if status:
                 # split with success
-                assert isinstance(ret_obj, list), 'Successful returned value must be a list of 2-tuples'
+                assert isinstance(
+                    ret_obj, list), 'Successful returned value must be a list of 2-tuples'
                 total_tup_list.extend(ret_obj)
             else:
                 # failed: append error message
@@ -175,11 +181,13 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         :return:
         """
         # check whether it is good to go
-        assert isinstance(self._reductionSetup, reduce_VULCAN.ReductionSetup), 'ReductionSetup is not correct.'
+        assert isinstance(self._reductionSetup,
+                          reduce_VULCAN.ReductionSetup), 'ReductionSetup is not correct.'
 
         # configure the ReductionSetup
         self._reductionSetup.process_configurations()
-        gsas_dir, nexus_dir = self._reductionSetup.get_chopped_directory(check_write_permission=True)
+        gsas_dir, nexus_dir = self._reductionSetup.get_chopped_directory(
+            check_write_permission=True)
 
         # get splitters workspaces
         split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
@@ -230,7 +238,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         for i_ws in range(num_split_ws):
             # get the split workspace's name
             ws_index = str(info_table.cell(i_ws, 0))
-            reduced_ws_name = 'VULCAN_{0}_{1}'.format(self._reductionSetup.get_run_number(), ws_index)
+            reduced_ws_name = 'VULCAN_{0}_{1}'.format(
+                self._reductionSetup.get_run_number(), ws_index)
 
             # check whether the proposed-chopped workspace does exist
             if AnalysisDataService.doesExist(reduced_ws_name):
@@ -299,14 +308,16 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         :return:
         """
         # check whether it is good to go
-        assert isinstance(self._reductionSetup, reduce_VULCAN.ReductionSetup), 'ReductionSetup is not correct.'
+        assert isinstance(self._reductionSetup,
+                          reduce_VULCAN.ReductionSetup), 'ReductionSetup is not correct.'
         # configure the ReductionSetup
         self._reductionSetup.process_configurations()
 
         # check chopping directory
         assert isinstance(chop_dir, str) and os.path.exists(chop_dir), 'Chopped data directory {0} (of type {1}) ' \
                                                                        'must be a string and exist.' \
-                                                                       ''.format(chop_dir, type(chop_dir))
+                                                                       ''.format(
+                                                                           chop_dir, type(chop_dir))
 
         # get splitters workspaces
         split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
@@ -383,7 +394,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                     pass
                 else:
                     # there won't be a workspace produced if there is no neutron event within the range.
-                    message += 'Reduced workspace {0} does not exist. Investigate it!\n'.format(chopped_ws_name)
+                    message += 'Reduced workspace {0} does not exist. Investigate it!\n'.format(
+                        chopped_ws_name)
                     everything_is_right = False
 
                 # convert unit and save for VULCAN-specific GSAS
@@ -421,7 +433,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
             # export sample logs!
             # create the log files
-            self.generate_sliced_logs(chopped_ws_name_list, self._chopExportedLogType, append=(i_loop > 0))
+            self.generate_sliced_logs(chopped_ws_name_list,
+                                      self._chopExportedLogType, append=(i_loop > 0))
 
             # TODO/ISSUE/Now/ - Need to delete the other reduced workspaces too, ???_TOF
             for ws_name in vulcan_bin_ws_list:
@@ -454,13 +467,15 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             if os.path.exists(dir_name):
                 # directory exists
                 if os.access(dir_name, os.W_OK) is False:
-                    raise RuntimeError('Directory {0} exists but user has no privilege to write.'.format(dir_name))
+                    raise RuntimeError(
+                        'Directory {0} exists but user has no privilege to write.'.format(dir_name))
             else:
                 # new directory
                 try:
                     os.mkdir(dir_name)
                 except OSError as os_err:
-                    raise RuntimeError('Unable to make directory {0} due to {1}'.format(dir_name, os_err))
+                    raise RuntimeError(
+                        'Unable to make directory {0} due to {1}'.format(dir_name, os_err))
 
             return
 
@@ -491,7 +506,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         assert isinstance(split_ws_name, str), 'Splitters workspace name {0} must be a string but not a {1}.' \
                                                ''.format(split_ws_name, type(split_ws_name))
         if mantid_helper.workspace_does_exist(split_ws_name) is False:
-            raise RuntimeError('Splitters workspace with name {0} cannot be found in ADS.'.format(split_ws_name))
+            raise RuntimeError(
+                'Splitters workspace with name {0} cannot be found in ADS.'.format(split_ws_name))
 
         # get the splitters
         split_ws = AnalysisDataService.retrieve(split_ws_name)
@@ -501,7 +517,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             num_rows = split_ws.rowCount()
             message = '[INFO] There are {0} splitters '.format(num_rows)
             if num_rows > 0:
-                message += 'from {0} to {1}.'.format(split_ws.cell(0, 0), split_ws.cell(num_rows-1, 0))
+                message += 'from {0} to {1}.'.format(split_ws.cell(0, 0),
+                                                     split_ws.cell(num_rows-1, 0))
             else:
                 message += '.'
             print message
@@ -707,6 +724,7 @@ class WriteSlicedLogs(object):
     """
     An algorithm class to write a set of sliced/chopped workspaces' sample logs to an AUTORECORD.txt like file
     """
+
     def __init__(self, chopped_data_dir, run_number):
         """
         initialization
@@ -740,7 +758,8 @@ class WriteSlicedLogs(object):
         """
         # check inputs
         assert isinstance(run_start_time, numpy.datetime64), 'Run start time {} must be numpy.datetime64 but not of' \
-                                                             'type {}'.format(run_start_time, type(run_start_time))
+                                                             'type {}'.format(
+                                                                 run_start_time, type(run_start_time))
 
         # get difference in REAL starting time (proton_charge[0])
         real_start_time_i = workspace_i.run().getProperty('proton_charge').times[0]
@@ -751,7 +770,8 @@ class WriteSlicedLogs(object):
             # absolute time (ns) from 1990-01-01
             temp_time = datetime.datetime.utcfromtimestamp(real_start_time_i.astype('O') * 1.E-9)
             delta_to_t0_ns = temp_time - time0
-            temp_stop_time = datetime.datetime.utcfromtimestamp(real_start_time_i.astype('O') * 1.E-9)
+            temp_stop_time = datetime.datetime.utcfromtimestamp(
+                real_start_time_i.astype('O') * 1.E-9)
             delta_to_tf_ns = temp_stop_time - time0
             time_stamp = delta_to_t0_ns.total_seconds()
         else:
@@ -763,9 +783,10 @@ class WriteSlicedLogs(object):
             rel_time_to_start = real_start_time_i - run_start_time
             rel_time_to_stop = real_stop_time_i - run_start_time
         except TypeError as type_err:
-            print (type(real_start_time_i))
-            print (type(run_start_time))
-            raise TypeError('{}, {}: {}'.format(type(real_start_time_i), type(run_start_time), type_err))
+            print(type(real_start_time_i))
+            print(type(run_start_time))
+            raise TypeError('{}, {}: {}'.format(
+                type(real_start_time_i), type(run_start_time), type_err))
         if isinstance(real_start_time_i, numpy.datetime64):
             rel_time_to_start = float(rel_time_to_start) * 1.E-9
             rel_time_to_stop = float(rel_time_to_stop) * 1.E-9
@@ -799,7 +820,8 @@ class WriteSlicedLogs(object):
                     # loadframe.MPTIndex for 0-th workspace VULCAN_77149_0 due to index 0 is out of bounds for
                     # axis 0 with size 0
                     error_message = '[ERROR] Unable to export "loadframe" log {3} for {0}-th workspace {1} ' \
-                                    'due to {2}'.format(i_ws, workspace_i.name(), 'index error', log_name)
+                                    'due to {2}'.format(i_ws, workspace_i.name(),
+                                                        'index error', log_name)
                     print error_message
                     start_value = 0.
                     mean_value = 0.
@@ -828,8 +850,8 @@ class WriteSlicedLogs(object):
 
         # END-FOR (entry)
 
-        print (start_series_dict['Time [sec]'])
-        print (mean_series_dict['Time [sec]'])
+        print(start_series_dict['Time [sec]'])
+        print(mean_series_dict['Time [sec]'])
 
         return
 
@@ -1043,4 +1065,3 @@ def get_sub_splitters2(split_ws_name, split_start_index, split_stop_index, run_s
         raise RuntimeError('Splitting workspace of type {0} is not supported.'.format(split_ws))
 
     return sub_split_ws_name
-

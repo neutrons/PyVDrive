@@ -70,7 +70,8 @@ def check_file_name(file_name, check_exist=True, check_writable=False, is_dir=Fa
     check_bool_variable('Flag for input string is a directory', is_dir)
     if os.path.exists(file_name):
         assert os.path.isdir(file_name) == is_dir, 'Path {0} shall {1} be a directory and it is {2}.' \
-                                                   ''.format(file_name, os.path.isdir(file_name), is_dir)
+                                                   ''.format(file_name, os.path.isdir(
+                                                       file_name), is_dir)
 
     return
 
@@ -97,12 +98,15 @@ def check_int_variable(var_name, variable, value_range):
         max_val = value_range[1]
         assert min_val is None or isinstance(min_val, int), 'Minimum value {0} of value range {1} must be either None' \
                                                             ' or integer but not {2}' \
-                                                            ''.format(min_val, value_range, type(min_val))
+                                                            ''.format(
+                                                                min_val, value_range, type(min_val))
         assert max_val is None or isinstance(max_val, int), 'Maximum value {0} of value range {1} must be either None' \
                                                             ' or integer but not {2}' \
-                                                            ''.format(max_val, value_range, type(max_val))
+                                                            ''.format(
+                                                                max_val, value_range, type(max_val))
         if (min_val is not None and variable < min_val) or (max_val is not None and variable >= max_val):
-            raise ValueError('{0} (= {1}) is out of range [{2}, {3})'.format(var_name, variable, min_val, max_val))
+            raise ValueError('{0} (= {1}) is out of range [{2}, {3})'.format(
+                var_name, variable, min_val, max_val))
 
     return
 
@@ -128,7 +132,8 @@ def check_float_variable(var_name, variable, value_range):
         min_val = value_range[0]
         max_val = value_range[1]
         if (min_val is not None and variable < min_val) or (max_val is not None and variable >= max_val):
-            raise ValueError('{0} (= {1}) is out of range [{2}, {3})'.format(var_name, variable, min_val, max_val))
+            raise ValueError('{0} (= {1}) is out of range [{2}, {3})'.format(
+                var_name, variable, min_val, max_val))
 
     return
 
@@ -164,12 +169,14 @@ def check_numpy_arrays(var_name, variables, dimension, check_same_shape):
     else:
         assert isinstance(variables, list) or isinstance(variables, tuple), 'Numpy arrays {0} must be given by either' \
                                                                             ' list or tuple but not {1}' \
-                                                                            ''.format(variables, type(variables))
+                                                                            ''.format(
+                                                                                variables, type(variables))
 
     for index, variable in enumerate(variables):
         # check whether each variable is a numpy array with desired dimension
         assert isinstance(variable, numpy.ndarray), '{0}-th element of variable {1} ({2}) must be an ndarray but not ' \
-                                                    'a {3}'.format(index, var_name, variable, type(variable))
+                                                    'a {3}'.format(index, var_name,
+                                                                   variable, type(variable))
         if dimension is not None:
             check_int_variable('ndarray dimension for {0}'.format(var_name), dimension, [0, None])
             assert len(variable.shape) == dimension, '{0}-th ndarray of variable {1} must be of {2}-dimension but ' \

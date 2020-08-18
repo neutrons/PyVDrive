@@ -102,7 +102,8 @@ class LiveDataDriver(QtCore.QThread):
         # check inputs
         assert isinstance(ws_name, str), 'Input workspace name {0} must be a string but not a {1}' \
                                          ''.format(ws_name, type(ws_name))
-        assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.'.format(bank_id, type(bank_id))
+        assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.'.format(
+            bank_id, type(bank_id))
 
         # check bank ID
         if bank_id < 1 or bank_id > 3:
@@ -151,7 +152,8 @@ class LiveDataDriver(QtCore.QThread):
         assert isinstance(date_time_vec, numpy.ndarray), 'Input time vector must be a numpy.array but not a {0}.' \
                                                          ''.format(type(date_time_vec))
         assert isinstance(time_shift, numpy.datetime64), 'Relative time {0} must be a numpy.datetime64 instance ' \
-                                                         'but not a {1}.'.format(time_shift, type(time_shift))
+                                                         'but not a {1}.'.format(
+                                                             time_shift, type(time_shift))
 
         # create an array
         shape = len(date_time_vec)
@@ -195,7 +197,8 @@ class LiveDataDriver(QtCore.QThread):
             is_new_ws = False
         else:
             # covert unit by calling Mantid
-            mantidsimple.ConvertUnits(InputWorkspace=src_ws, Target=target_unit, OutputWorkspace=new_ws_name)
+            mantidsimple.ConvertUnits(InputWorkspace=src_ws,
+                                      Target=target_unit, OutputWorkspace=new_ws_name)
             new_ws = ADS.retrieve(new_ws_name)
             is_new_ws = True
         # END-IF
@@ -283,8 +286,9 @@ class LiveDataDriver(QtCore.QThread):
         try:
             ws_names = ADS.getObjectNames()
         except RuntimeError as run_err:
-            raise RuntimeError('Unable to get workspaces\' names from ADS due to \n{0}'.format(run_err))
-        
+            raise RuntimeError(
+                'Unable to get workspaces\' names from ADS due to \n{0}'.format(run_err))
+
         return ws_names
 
     def get_peaks_parameters(self, param_type, bank_id_list, time0, d_min=None, d_max=None, norm_by_vanadium=None):
@@ -337,7 +341,8 @@ class LiveDataDriver(QtCore.QThread):
         # END-FOR
 
         # sort by time
-        view_format =  str(['float'] * (1 + len(bank_id_list))).replace('[', '').replace(']', '').replace('\'', '')
+        view_format = str(['float'] * (1 + len(bank_id_list))
+                          ).replace('[', '').replace(']', '').replace('\'', '')
         # example: 'float, float, float, float'
         param_matrix.view(view_format).sort(order=['f0'], axis=0)
         # get returned value
@@ -362,9 +367,12 @@ class LiveDataDriver(QtCore.QThread):
         assert isinstance(accumulated_workspace_list, list), 'Accumulated workspace {0} must be given in a list but ' \
                                                              'not by a {1}.'.format(accumulated_workspace_list,
                                                                                     type(accumulated_workspace_list))
-        assert isinstance(d_min, float), 'Min dSpacing {0} must be a float but not a {1}'.format(d_min, type(d_min))
-        assert isinstance(d_max, float), 'Max dSpacing {0} must be a float but not a {1}'.format(d_max, type(d_max))
-        assert isinstance(norm_by_vanadium, bool), 'Flag to normalize by vanadium shall be a boolean'
+        assert isinstance(d_min, float), 'Min dSpacing {0} must be a float but not a {1}'.format(
+            d_min, type(d_min))
+        assert isinstance(d_max, float), 'Max dSpacing {0} must be a float but not a {1}'.format(
+            d_max, type(d_max))
+        assert isinstance(norm_by_vanadium,
+                          bool), 'Flag to normalize by vanadium shall be a boolean'
 
         # determine whether it shall be in appending mode or new calculation mode
         peak_key = self._get_peak_key(d_min, d_max, norm_by_vanadium)
@@ -460,7 +468,8 @@ class LiveDataDriver(QtCore.QThread):
         :return:
         """
         # check
-        assert isinstance(van_gsas_file, str), 'Vanadium GSAS file name {0} must be a string.'.format(van_gsas_file)
+        assert isinstance(
+            van_gsas_file, str), 'Vanadium GSAS file name {0} must be a string.'.format(van_gsas_file)
         if os.path.exists(van_gsas_file) is False:
             raise RuntimeError('Vanadium GSAS file {0} cannot be found.'.format(van_gsas_file))
 
@@ -469,7 +478,8 @@ class LiveDataDriver(QtCore.QThread):
         mantidsimple.EditInstrumentGeometry(Workspace='vanadium', PrimaryFlightPath=43.753999999999998,
                                             SpectrumIDs='1, 2, 3',
                                             L2='2,2,2', Polar='-90,90,{}'.format(mantid_helper.HIGH_ANGLE_BANK_2THETA))
-        mantidsimple.ConvertUnits(InputWorkspace='vanadium', OutputWorkspace='vanadium', Target='dSpacing')
+        mantidsimple.ConvertUnits(InputWorkspace='vanadium',
+                                  OutputWorkspace='vanadium', Target='dSpacing')
 
         # bank 1 and 2: extract, rebin and smooth
         for bank in [1, 2]:
@@ -513,7 +523,8 @@ class LiveDataDriver(QtCore.QThread):
             # re-create workspace
             mantidsimple.CreateWorkspace(DataX=vec_x, DataY=vec_y, NSpec=1,
                                          UnitX='dSpacing', OutputWorkspace='vanbank3')
-            mantidsimple.Rebin(InputWorkspace='vanbank3', OutputWorkspace='vanbank3', Params='0.3,-0.001, 3.5')
+            mantidsimple.Rebin(InputWorkspace='vanbank3',
+                               OutputWorkspace='vanbank3', Params='0.3,-0.001, 3.5')
             ws_name = 'van_bank_{0}'.format(bank)
             mantidsimple.FFTSmooth(InputWorkspace='vanbank3', OutputWorkspace=ws_name, WorkspaceIndex=0,
                                    Filter='Butterworth', Params='20,2', IgnoreXBins=True, AllSpectra=True)
@@ -527,7 +538,8 @@ class LiveDataDriver(QtCore.QThread):
 
         # make sure there won't be any less than 0 item
         for ws_name in self._vanadiumWorkspaceDict.keys():
-            van_bank_i_ws = mantid_helper.retrieve_workspace(self._vanadiumWorkspaceDict[ws_name], True)
+            van_bank_i_ws = mantid_helper.retrieve_workspace(
+                self._vanadiumWorkspaceDict[ws_name], True)
             for i in range(len(van_bank_i_ws.readY(0))):
                 if van_bank_i_ws.readY(0)[i] < 1.:
                     van_bank_i_ws.dataY(0)[i] = 1.
@@ -615,7 +627,8 @@ class LiveDataDriver(QtCore.QThread):
         """
         # check whether inputs are valid
         assert isinstance(workspace_name_list, list), 'Workspace names {0} must be given in list but not {1}.' \
-                                                      ''.format(workspace_name_list, type(workspace_name_list))
+                                                      ''.format(workspace_name_list,
+                                                                type(workspace_name_list))
         assert isinstance(target_workspace_name, str), 'Target workspace name {0} for summed workspaces must be of ' \
                                                        'type {1}'.format(target_workspace_name,
                                                                          type(target_workspace_name))
@@ -645,7 +658,7 @@ class LiveDataDriver(QtCore.QThread):
             # they are different... warning
             return_value = 'Workspaces to sum have 2 different run numbers {0} and {1}.' \
                            ''.format(left_run_number, right_run_number)
-            print ('[WARNING] {0}'.format(return_value))
+            print('[WARNING] {0}'.format(return_value))
         # END-IF
 
         return return_value
@@ -654,7 +667,7 @@ class LiveDataDriver(QtCore.QThread):
         """ main method to start live data
         :return:
         """
-        print ('[DB...BAT] reduction script: {}'.format(self._live_reduction_script))
+        print('[DB...BAT] reduction script: {}'.format(self._live_reduction_script))
         # Test for script: whatever has all the log information...
         # and output_1, output_2 will do good still
         mantidsimple.StartLiveData(UpdateEvery=10,

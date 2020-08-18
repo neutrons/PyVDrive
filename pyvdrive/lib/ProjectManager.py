@@ -22,6 +22,7 @@ class ProjectManager(object):
     Note:
         (1) run_info dictionary from archive manager:  'run', 'ipts', 'file', 'time'
     """
+
     def __init__(self, parent, project_name, instrument='VULCAN'):
         """ Init
         """
@@ -164,7 +165,8 @@ class ProjectManager(object):
 
         # check inputs' types
         assert isinstance(ipts_number, int) or ipts_number is None, 'IPTS number {0} must be either ' \
-                                                                    'integer or None.'.format(ipts_number)
+                                                                    'integer or None.'.format(
+                                                                        ipts_number)
         assert isinstance(run_number_list, list), 'Run numbers must be given as list.'
         assert isinstance(x_min, float) and isinstance(x_max, float),\
             'Min X {0} and Max X {1} must be integers.'.format(x_min, x_max)
@@ -172,7 +174,8 @@ class ProjectManager(object):
 
         # check inputs' logic
         if x_min >= x_max:
-            raise RuntimeError('Min X {0} cannot be equal or larger than Max X {1}'.format(x_min, x_max))
+            raise RuntimeError(
+                'Min X {0} cannot be equal or larger than Max X {1}'.format(x_min, x_max))
         if not to_console and not file_name:
             raise RuntimeError('At least one in to_console and file name should be specified')
 
@@ -227,7 +230,8 @@ class ProjectManager(object):
                 max_x_index = min(len(vec_y), numpy.searchsorted(vec_d, x_max)+1)
 
                 # estimate background
-                bkgd_a, bkgd_b = peak_util.estimate_background(vec_d, vec_y, min_x_index, max_x_index)
+                bkgd_a, bkgd_b = peak_util.estimate_background(
+                    vec_d, vec_y, min_x_index, max_x_index)
 
                 # calculate peak intensity parameters
                 peak_integral, average_d, variance = peak_util.calculate_peak_variance(vec_d, vec_y, min_x_index,
@@ -235,7 +239,8 @@ class ProjectManager(object):
 
                 if bank_id not in output_dict:
                     output_dict[bank_id] = ''
-                output_dict[bank_id] += '{0}\t{1}\t{2}\t{3}\n'.format(run_number, peak_integral, average_d, variance)
+                output_dict[bank_id] += '{0}\t{1}\t{2}\t{3}\n'.format(
+                    run_number, peak_integral, average_d, variance)
             # END-FOR
         # END-FOR (run start)
 
@@ -249,7 +254,8 @@ class ProjectManager(object):
                     sub_file.write(output_dict[bank_id])
                     sub_file.close()
                 except IOError as io_err:
-                    raise RuntimeError('Unable to write to file {0} due to {1}'.format(sub_file_name, io_err))
+                    raise RuntimeError(
+                        'Unable to write to file {0} due to {1}'.format(sub_file_name, io_err))
             # END-FOR
         # END-IF
 
@@ -262,10 +268,10 @@ class ProjectManager(object):
         """
         if isinstance(data_key, str):
             # Check what it shall be
-            print ('[DB...BAT] data key: {0}'.format(data_key))
+            print('[DB...BAT] data key: {0}'.format(data_key))
             if data_key.endswith('G') or data_key.endswith('H'):
                 ws_name = self._loadedDataManager.get_workspace_name(data_key)
-                print ('[DB...BAT...33n: workspace name: {0}'.format(ws_name))
+                print('[DB...BAT...33n: workspace name: {0}'.format(ws_name))
             elif data_key.isdigit():
                 # reduced runs.  data key is the string version of integer run number
                 run_number = int(data_key)
@@ -274,18 +280,21 @@ class ProjectManager(object):
                     ws_name = self._reductionManager.get_reduced_workspace(run_number=int(data_key),
                                                                            is_vdrive_bin=False)
                 else:
-                    raise RuntimeError('Run number {0} cannot be found in reduction manager.'.format(run_number))
+                    raise RuntimeError(
+                        'Run number {0} cannot be found in reduction manager.'.format(run_number))
             else:
                 raise RuntimeError('Data key {} is not recognized.'.format(data_key))
         elif isinstance(data_key, tuple):
             # case for chopped series
             if len(data_key) != 2:
-                raise RuntimeError('If data key is a tuple, it must have 2 items but not {0}.'.format(data_key))
+                raise RuntimeError(
+                    'If data key is a tuple, it must have 2 items but not {0}.'.format(data_key))
             # TODO FIXME ASAP ASAP3 - this is a hack!
             ws_name = data_key[1]
         else:
             # non-supported
-            raise AssertionError('Data key {0} of type {1} is not supported.'.format(data_key, type(data_key)))
+            raise AssertionError(
+                'Data key {0} of type {1} is not supported.'.format(data_key, type(data_key)))
 
         return ws_name
 
@@ -314,8 +323,10 @@ class ProjectManager(object):
                 continue
             elif check_archive:
                 # not scanned.  then check input
-                file_name_0 = '/SNS/VULCAN/IPTS-{0}/nexus/VULCAN_{1}_events.nxs.h5'.format(ipts_number, run_number)
-                file_name_1 = '/SNS/VULCAN/IPTS-{1}/data/VULCAN_{1}_events.nxs'.format(ipts_number, run_number)
+                file_name_0 = '/SNS/VULCAN/IPTS-{0}/nexus/VULCAN_{1}_events.nxs.h5'.format(
+                    ipts_number, run_number)
+                file_name_1 = '/SNS/VULCAN/IPTS-{1}/data/VULCAN_{1}_events.nxs'.format(
+                    ipts_number, run_number)
                 if os.path.exists(file_name_0) or os.path.exists(file_name_1):
                     # found
                     continue
@@ -398,7 +409,8 @@ class ProjectManager(object):
                               ''.format(run_number, run_error)
         else:
             # user providing nexus file
-            datatypeutility.check_file_name(nexus_file_name, check_exist=True, note='Event NeXus file name')
+            datatypeutility.check_file_name(
+                nexus_file_name, check_exist=True, note='Event NeXus file name')
             data_file = nexus_file_name
             ipts_number = 0
 
@@ -446,7 +458,8 @@ class ProjectManager(object):
 
             # better output message
             if output_directory is None:
-                output_directory = '/SNS/VULCAN/IPTS-{}/shared/binned_data/{}'.format(ipts_number, run_number)
+                output_directory = '/SNS/VULCAN/IPTS-{}/shared/binned_data/{}'.format(
+                    ipts_number, run_number)
             message = 'IPTS-{0} Run {1} is chopped, reduced (?={2}) and saved to {3}\n' \
                       '\n{4}\nWarning: {5}' \
                       ''.format(ipts_number, run_number, reduce_flag, output_directory, regular_info,
@@ -541,7 +554,8 @@ class ProjectManager(object):
         # Check input
         assert isinstance(data_key, int) or isinstance(data_key, str), 'Data key {0} must be either an integer or a ' \
                                                                        'string but not a {1}.' \
-                                                                       ''.format(data_key, type(data_key))
+                                                                       ''.format(
+                                                                           data_key, type(data_key))
         assert isinstance(bank_number, int), 'Bank number must be an integer.'
         assert isinstance(x_range, tuple) and len(x_range) == 2, 'X-range must be a 2-tuple.'
         assert isinstance(profile, str), 'Peak profile must be a string.'
@@ -550,11 +564,13 @@ class ProjectManager(object):
 
         # locate the workspace
         if isinstance(data_key, int) and self._reductionManager.has_run_reduced(data_key):
-            data_ws_name = self._reductionManager.get_reduced_workspace(run_number=data_key, is_vdrive_bin=True)
+            data_ws_name = self._reductionManager.get_reduced_workspace(
+                run_number=data_key, is_vdrive_bin=True)
         elif self._loadedDataManager.has_data(data_key):
             data_ws_name = self._loadedDataManager.get_workspace_name(data_key)
         else:
-            raise RuntimeError('Workspace cannot be found with data key/run number {0}'.format(data_key))
+            raise RuntimeError(
+                'Workspace cannot be found with data key/run number {0}'.format(data_key))
 
         # check WorkspaceGroup
         ws_index = bank_number - 1
@@ -674,7 +690,8 @@ class ProjectManager(object):
 
         # Start a session
         # FIXE/NOWNOW - How to get slicer manager to do these jobs
-        self._mySlicingManager.load_meta_data_from_file(nxs_file_name=file_name, run_number=run_number)
+        self._mySlicingManager.load_meta_data_from_file(
+            nxs_file_name=file_name, run_number=run_number)
 
         # this_ws_name = get_standard_ws_name(file_name, True)
         # mtdHelper.load_nexus(file_name, this_ws_name, True)
@@ -784,7 +801,8 @@ class ProjectManager(object):
         :return: 2-tuple (vector X and vector Y)
         """
         # check inputs
-        datatypeutility.check_int_variable('Chopped data sequence (index)', chop_sequence, (0, None))
+        datatypeutility.check_int_variable(
+            'Chopped data sequence (index)', chop_sequence, (0, None))
         datatypeutility.check_int_variable('Bank ID', bank_id, (1, 999))
 
         # check reduced data
@@ -797,11 +815,13 @@ class ProjectManager(object):
         else:
             # loaded from GSAS files
             datatypeutility.check_int_variable('Run number/chop data key', chop_data_key, (1, None))
-            info_tuple = self._loadedDataManager.get_chopped_sequence_info(chop_data_key, chop_sequence)
+            info_tuple = self._loadedDataManager.get_chopped_sequence_info(
+                chop_data_key, chop_sequence)
             workspace_name = info_tuple[0]
         # END-IF
 
-        data_set_dict, data_unit = mantid_helper.get_data_from_workspace(workspace_name, bank_id, unit)
+        data_set_dict, data_unit = mantid_helper.get_data_from_workspace(
+            workspace_name, bank_id, unit)
         data_set = data_set_dict[bank_id]
 
         return data_set[0], data_set[1]
@@ -859,7 +879,8 @@ class ProjectManager(object):
         # Check inputs
         assert isinstance(run_id, int) or isinstance(run_id, str), 'Run ID must be either integer or string,' \
                                                                    'but not %s.' % str(type(run_id))
-        assert isinstance(target_unit, str), 'Target unit must be a string but not %s.' % str(type(target_unit))
+        assert isinstance(target_unit, str), 'Target unit must be a string but not %s.' % str(
+            type(target_unit))
 
         # get data
         if self._loadedDataManager.has_data(run_id):
@@ -883,7 +904,8 @@ class ProjectManager(object):
         # END-IF-ELSE
 
         # check return
-        assert isinstance(data_set, dict), 'Returned data set should be a dictionary but not %s.' % str(type(data_set))
+        assert isinstance(data_set, dict), 'Returned data set should be a dictionary but not %s.' % str(
+            type(data_set))
 
         return data_set
 
@@ -900,10 +922,12 @@ class ProjectManager(object):
             workspace_name = self._loadedDataDict[ipts_number, run_number]
         else:
             # get workspace's name from reduction
-            workspace_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=True)
+            workspace_name = self._reductionManager.get_reduced_workspace(
+                run_number, is_vdrive_bin=True)
 
         if workspace_name is None:
-            raise RuntimeError('There is no reduced workspace for IPTS {0} Run {1}'.format(ipts_number, run_number))
+            raise RuntimeError(
+                'There is no reduced workspace for IPTS {0} Run {1}'.format(ipts_number, run_number))
 
         return workspace_name
 
@@ -917,7 +941,8 @@ class ProjectManager(object):
         # Check
         if run_number:
             datatypeutility.check_int_variable('Run number', run_number, (1, 9999999))
-            run_ws_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=False)
+            run_ws_name = self._reductionManager.get_reduced_workspace(
+                run_number, is_vdrive_bin=False)
         elif data_key:
             run_ws_name = data_key
             if mantid_helper.workspace_does_exist(run_ws_name) is False:
@@ -1113,7 +1138,7 @@ class ProjectManager(object):
         self._name = project_name
 
         return
-    
+
     @property
     def reduction_manager(self):
         """
@@ -1212,7 +1237,8 @@ class ProjectManager(object):
                 status, sub_message = r_tup
                 reduce_all_success = reduce_all_success and status
                 if not status:
-                    message += 'Failed to reduce run {0} due to {1}.\n'.format(run_number, sub_message)
+                    message += 'Failed to reduce run {0} due to {1}.\n'.format(
+                        run_number, sub_message)
             # END-FOR
         else:
             # merge runs
@@ -1269,7 +1295,7 @@ class ProjectManager(object):
         :param output_directory:
         :return:
         """
-        print ('[INFO] Reduction VULCAN By 2Theta is Called')
+        print('[INFO] Reduction VULCAN By 2Theta is Called')
 
         # FIXME - TODAY - There must be a method to dig out the file
         raw_file_name = '/SNS/VULCAN/IPTS-{}/nexus/VULCAN_{}.nxs.h5'.format(ipts_number, run_number)
@@ -1329,7 +1355,8 @@ class ProjectManager(object):
 
         # generate logs
         log_type = 'loadframe'
-        log_writer = reduce_adv_chop.WriteSlicedLogs(chopped_data_dir=output_directory, run_number=run_number)
+        log_writer = reduce_adv_chop.WriteSlicedLogs(
+            chopped_data_dir=output_directory, run_number=run_number)
         workspace_name_list = [out_ws_name] * tth_num_pixels_array.shape[0]
         log_writer.generate_sliced_logs(workspace_name_list, log_type)
 
@@ -1401,7 +1428,8 @@ class ProjectManager(object):
 
                 reduced_run_numbers.append((run_number, out_ws_name))
             except RuntimeError as run_error:
-                error_messages.append('Failed to reduce run {0} due to {1}'.format(run_number, run_error))
+                error_messages.append(
+                    'Failed to reduce run {0} due to {1}'.format(run_number, run_error))
             else:
                 error_messages.append('[INFO] For {}: {}'.format(run_number, msg))
         # END-FOR
@@ -1413,7 +1441,7 @@ class ProjectManager(object):
         if gsas and vanadium_run is not None:
             # load vanadium to workspace workspace and get calculation prm file
             van_gsas_name, iparam_file_name = \
-                        self._parent.archive_manager.locate_process_vanadium(vanadium_run)
+                self._parent.archive_manager.locate_process_vanadium(vanadium_run)
             van_ws_name = self._reductionManager.gsas_writer.import_vanadium(van_gsas_name)
         else:
             # default
@@ -1457,7 +1485,8 @@ class ProjectManager(object):
             raw_file_name, ipts_number = self._dataFileDict[run_number]
             run_date_time = vulcan_util.get_run_date(out_ws_name, raw_file_name)
             gsas_file_name = os.path.join(output_directory, '{}.gda'.format(run_number))
-            vdrive_gsas_name = os.path.join(output_directory, '1.gda')  # this is for VIEW,CHOPRUN=,RUNS=1
+            # this is for VIEW,CHOPRUN=,RUNS=1
+            vdrive_gsas_name = os.path.join(output_directory, '1.gda')
 
             self._reductionManager.gsas_writer.save(out_ws_name, run_date_time=run_date_time,
                                                     gsas_file_name=gsas_file_name,
@@ -1547,7 +1576,8 @@ class ProjectManager(object):
             assert os.path.exists(data_dir)
             self._baseDataPath = data_dir
         else:
-            raise OSError("Unable to set base data path with unsupported format %s." % str(type(data_dir)))
+            raise OSError("Unable to set base data path with unsupported format %s." %
+                          str(type(data_dir)))
 
         return
 

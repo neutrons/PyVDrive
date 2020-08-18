@@ -5,6 +5,7 @@ class DiffractionPeak:
     """
     Class to describe a diffraction peak including its type and peak parameters
     """
+
     def __init__(self, profile):
         """ Initialize peak profile parameters
         :return:

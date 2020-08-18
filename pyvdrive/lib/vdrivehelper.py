@@ -132,8 +132,10 @@ def merge_2_logs(vec_times_x, vec_value_x, vec_times_y, vec_value_y):
     :param vec_value_y:
     :return:
     """
-    datatypeutility.check_numpy_arrays('X times and value vectors', [vec_times_x, vec_value_x], 1, True)
-    datatypeutility.check_numpy_arrays('Y times and value vectors', [vec_times_y, vec_value_y], 1, True)
+    datatypeutility.check_numpy_arrays('X times and value vectors', [
+                                       vec_times_x, vec_value_x], 1, True)
+    datatypeutility.check_numpy_arrays('Y times and value vectors', [
+                                       vec_times_y, vec_value_y], 1, True)
 
     list_x = list()
     list_y = list()
@@ -297,16 +299,14 @@ def setGPDateTime(epochtime):
 
     # set the new date by new hour
     newsttime = time.strptime(time.ctime(epochtime))
-    year =  newsttime.tm_year
+    year = newsttime.tm_year
     month = newsttime.tm_mon
-    day =   newsttime.tm_mday
+    day = newsttime.tm_mday
     hour = newhour
 
     tformat = "%Y %m %d %H"
-    newtime = time.strptime("%d %02d %02d %02d"%(year, month, day, hour), tformat)
-    print newtime
-
-    return
+    newtime = time.strptime("%d %02d %02d %02d" % (year, month, day, hour), tformat)
+    print(newtime)
 
 
 # SNS related
@@ -339,12 +339,12 @@ def export_experiment_log(ws_name, record_file_name, sample_name_list, sample_ti
                           patch_list):
     """ Export experiment logs
     Note: duplicate from reduce_VULCAN.ReduceVulcanData._export_experiment_log
-    :param ws_name: 
-    :param record_file_name: 
-    :param sample_title_list: 
-    :param sample_operation_list: 
-    :param patch_list: 
-    :return: 
+    :param ws_name:
+    :param record_file_name:
+    :param sample_title_list:
+    :param sample_operation_list:
+    :param patch_list:
+    :return:
     """
     # check inputs
     datatypeutility.check_file_name(record_file_name, check_exist=False, check_writable=True,
@@ -365,7 +365,7 @@ def export_experiment_log(ws_name, record_file_name, sample_name_list, sample_ti
         file_write_mode = 'new'
 
     # write
-    print ('[DB...BAT] Export (TAG) experiment log record: {}'.format(record_file_name))
+    print('[DB...BAT] Export (TAG) experiment log record: {}'.format(record_file_name))
     try:
         mantid.simpleapi.ExportExperimentLog(InputWorkspace=ws_name,
                                              OutputFilename=record_file_name,
@@ -432,11 +432,12 @@ def export_standard_sample_log(ipts_number, run_number, ws_name, standard_sample
     patch_list = reduce_VULCAN.generate_patch_log_list('VULCAN', ipts_number=ipts_number,
                                                        run_number=run_number)
     status, error_message = export_experiment_log(ws_name,
-                                           record_file_name=os.path.join(tag_dir, standard_record_file),
-                                           sample_name_list=sample_name_list,
-                                           sample_title_list=sample_title_list,
-                                           sample_operation_list=sample_operation_list,
-                                           patch_list=patch_list)
+                                                  record_file_name=os.path.join(
+                                                      tag_dir, standard_record_file),
+                                                  sample_name_list=sample_name_list,
+                                                  sample_title_list=sample_title_list,
+                                                  sample_operation_list=sample_operation_list,
+                                                  patch_list=patch_list)
     # copy GSAS file
     # TODO - TONIGHT - Better code quality
     src_gda = '/SNS/VULCAN/IPTS-{}/shared/binned_data/{}.gda'.format(ipts_number, run_number)
@@ -460,8 +461,8 @@ def search_sorted_nearest(vector, values):  # NOTE: SAME as separate_log_cooling
         elif index_i == vector.shape[0]:
             pass  # already out of right boundary
         else:
-            print ('[DB...BAT...1] For {}: Selected vector (+/- 1): {}'
-                   ''.format(values[i], vector[index_i-1:index_i+2]))
+            print('[DB...BAT...1] For {}: Selected vector (+/- 1): {}'
+                  ''.format(values[i], vector[index_i-1:index_i+2]))
             if values[i] - vector[index_i-1] < vector[index_i] - values[i]:
                 # v_i is closer to left value
                 index_list[i] = index_i - 1
@@ -478,4 +479,3 @@ if __name__ == '__main__':
     time_str2 = '4/27/2016 12:29:25 PM'
     time_2 = parse_time(time_str2, local_est=True)
     print time_2, type(time_2)
-

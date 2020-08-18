@@ -8,6 +8,7 @@ class PeakGroupCollection(object):
     It is assumed that each time that the user changes setting on peaks or peak group,
     a new PeakGroupCollection will be created
     """
+
     def __init__(self, starting_group_id):
         """
         Initialization
@@ -103,6 +104,7 @@ class PeakGroupCollection(object):
 
         :return:
         """
+
 
 HALF_PEAK_FIT_RANGE_FACTOR = 6.
 
@@ -336,4 +338,3 @@ def estimate_background(vec_d, vec_y, min_x_index, max_x_index):
     bkgd_b = vec_bkgd[1]
 
     return bkgd_a, bkgd_b
-

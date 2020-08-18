@@ -10,6 +10,7 @@ class LoadedDataManager(object):
     """
     A data manager for loaded binned data and the corresponding workspaces
     """
+
     def __init__(self, parent):
         """
         initialization
@@ -22,7 +23,8 @@ class LoadedDataManager(object):
 
         # more detailed information: key = run number (GSAS) / data key
         self._singleGSASDict = dict()
-        self._chopped_gsas_dict = dict()  # [run number] = dictionary ([seq order] = ws_name, gsas file, log file)
+        # [run number] = dictionary ([seq order] = ws_name, gsas file, log file)
+        self._chopped_gsas_dict = dict()
 
         return
 
@@ -152,12 +154,13 @@ class LoadedDataManager(object):
         """
         assert isinstance(data_key, str) or isinstance(data_key, int), 'Data key {0} of type {1} ' \
                                                                        'is not supported.' \
-                                                                       ''.format(data_key, type(data_key))
+                                                                       ''.format(
+                                                                           data_key, type(data_key))
 
         if data_key not in self._workspaceDict:
             return False
 
-        print '[DB....BAT] Loaded data keys are {0}.'.format(self._workspaceDict.keys())
+        print('[DB....BAT] Loaded data keys are {0}.'.format(self._workspaceDict.keys()))
 
         return True
 
@@ -174,7 +177,8 @@ class LoadedDataManager(object):
         datatypeutility.check_string_variable('File name', file_name)
         datatypeutility.check_string_variable('File type', file_type)
         datatypeutility.check_string_variable('Workspace prefix', prefix)
-        datatypeutility.check_int_variable('Maximum integer for file sequence number', max_int, (10, None))
+        datatypeutility.check_int_variable(
+            'Maximum integer for file sequence number', max_int, (10, None))
 
         base_ws_name = os.path.basename(file_name).split('.')[0]
         hash_part = hash(os.path.basename(file_name))
@@ -211,9 +215,11 @@ class LoadedDataManager(object):
         :return: string as data key (aka. workspace name)
         """
         # check inputs
-        datatypeutility.check_file_name(data_file_name, True, False, False, 'Binned/reduced data file to load')
+        datatypeutility.check_file_name(data_file_name, True, False,
+                                        False, 'Binned/reduced data file to load')
         if data_file_type is not None:
-            datatypeutility.check_string_variable('Data file type', data_file_type, ['gsas', 'processed nexus'])
+            datatypeutility.check_string_variable(
+                'Data file type', data_file_type, ['gsas', 'processed nexus'])
         if data_key is not None:
             datatypeutility.check_string_variable('Data key', data_key)
         datatypeutility.check_string_variable('Workspace prefix', prefix)
@@ -233,14 +239,16 @@ class LoadedDataManager(object):
         # END-IF-ELSE
 
         # Load data
-        data_ws_name = self.construct_workspace_name(data_file_name, data_file_type, prefix, max_int)
+        data_ws_name = self.construct_workspace_name(
+            data_file_name, data_file_type, prefix, max_int)
 
         if data_file_type == 'gsas':
             # load as GSAS
             mantid_helper.load_gsas_file(data_file_name, data_ws_name, standard_bin_workspace=None)
         elif data_file_type == 'processed nexus':
             # load processed nexus
-            mantid_helper.load_nexus(data_file_name=file_name, output_ws_name=data_ws_name, meta_data_only=False)
+            mantid_helper.load_nexus(data_file_name=file_name,
+                                     output_ws_name=data_ws_name, meta_data_only=False)
         else:
             raise RuntimeError('Unable to support %s file.' % data_file_type)
 
@@ -290,12 +298,15 @@ class LoadedDataManager(object):
 
         assert isinstance(chopped_data_dir, str), 'Directory {0} must be given as a string but not a {1}.' \
                                                   ''.format(chopped_data_dir, str(chopped_data_dir))
-        assert isinstance(file_format, str), 'Reduced data file format {0} must be a string.'.format(file_format)
+        assert isinstance(
+            file_format, str), 'Reduced data file format {0} must be a string.'.format(file_format)
         if file_format != 'gsas':
-            raise NotImplementedError('File format {} (other than GSAS) is not supported yet'.format(file_format))
+            raise NotImplementedError(
+                'File format {} (other than GSAS) is not supported yet'.format(file_format))
 
         if not os.path.exists(chopped_data_dir):
-            raise RuntimeError('Directory {0} for chopped data does not exist.'.format(chopped_data_dir))
+            raise RuntimeError(
+                'Directory {0} for chopped data does not exist.'.format(chopped_data_dir))
 
         if run_number is None and run_number is None:
             raise RuntimeError('Run number must be given (or ) but cannot be None')
@@ -307,7 +318,8 @@ class LoadedDataManager(object):
         if chop_info_file:
             # parsing the chopping information file for reduced file and raw event files
             print '[INFO] Load Chop Information File: {0}'.format(chop_info_file)
-            reduced_tuple_dict = self.parse_chop_info_file(os.path.join(chopped_data_dir, chop_info_file))
+            reduced_tuple_dict = self.parse_chop_info_file(
+                os.path.join(chopped_data_dir, chop_info_file))
         else:
             # look into each file
             # # chopping information file is not given, then search reduced diffraction files from hard disk
@@ -338,7 +350,7 @@ class LoadedDataManager(object):
         for seq_index in chop_sequences:
             # load GSAS file
             if seq_index not in reduced_tuple_dict:
-                print ('[DB...BAT] {}-th chopped data does not exist.'.format(seq_index))
+                print('[DB...BAT] {}-th chopped data does not exist.'.format(seq_index))
                 continue
 
             loaded_sequence_list.append(seq_index)
@@ -397,9 +409,11 @@ class LoadedDataManager(object):
         :return:
         """
         # check input
-        assert isinstance(file_format, str), 'File format {0} must be an integer.'.format(file_format)
+        assert isinstance(
+            file_format, str), 'File format {0} must be an integer.'.format(file_format)
         assert isinstance(file_list, list), 'Files {0} must be given by list.'.format(file_list)
-        assert isinstance(chopped_data_dir, str), 'Directory {0} must be a string.'.format(chopped_data_dir)
+        assert isinstance(chopped_data_dir, str), 'Directory {0} must be a string.'.format(
+            chopped_data_dir)
 
         allowed_posfix = list()
         if file_format == 'gsas':

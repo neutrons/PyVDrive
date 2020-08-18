@@ -101,7 +101,8 @@ def calculate_reflections(unit_cell, min_d, max_d):
     def get_generator(lattice_parameters, space_group):
         """
         """
-        crystal_structure = CrystalStructure(' '.join([str(x) for x in lattice_parameters]), space_group, '')
+        crystal_structure = CrystalStructure(
+            ' '.join([str(x) for x in lattice_parameters]), space_group, '')
         generator = ReflectionGenerator(crystal_structure, ReflectionConditionFilter.Centering)
         return generator
 
@@ -128,8 +129,10 @@ def calculate_reflections(unit_cell, min_d, max_d):
         return zip(hkls, dvalues)
 
     # Check inputs
-    assert isinstance(unit_cell, UnitCell), 'Input must be an instance of UnitCell but not %s.' % str(type(unit_cell))
-    assert min_d < max_d, 'Minimum d-spacing %f must be smaller than maximum d-spacing %f.' % (min_d, max_d)
+    assert isinstance(unit_cell, UnitCell), 'Input must be an instance of UnitCell but not %s.' % str(
+        type(unit_cell))
+    assert min_d < max_d, 'Minimum d-spacing %f must be smaller than maximum d-spacing %f.' % (
+        min_d, max_d)
     assert 0. <= min_d, 'Minimum d-spacing %f must be larger or equal to 0.' % min_d
 
     # cell_parameters = [5, 4, 3]
@@ -146,4 +149,3 @@ def calculate_reflections(unit_cell, min_d, max_d):
     """
 
     return reflection_list
-

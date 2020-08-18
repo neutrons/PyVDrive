@@ -23,6 +23,7 @@ class DataArchiveManager(object):
     It only serves as an information source for archived data, including IPTS and runs.
     It won't be in charge of any activity to reduce data
     """
+
     def __init__(self, instrument):
         """ Initialize including set instrument
         Purpose:
@@ -88,7 +89,8 @@ class DataArchiveManager(object):
         :return:
         """
         # Check requirements:
-        assert os.path.exists(self._archiveRootDirectory), 'Root archive directory %s is not accessible.' % self._archiveRootDirectory
+        assert os.path.exists(
+            self._archiveRootDirectory), 'Root archive directory %s is not accessible.' % self._archiveRootDirectory
 
         return self._archiveRootDirectory
 
@@ -173,7 +175,8 @@ class DataArchiveManager(object):
         datatypeutility.check_int_variable('Run number', run_number, (1, 9999999))
 
         # locate reduced GSAS file name
-        gsas_file_name = os.path.join('/SNS/VULCAN/IPTS-%d/shared/binned_data' % ipts_number, '%d.gda' % run_number)
+        gsas_file_name = os.path.join('/SNS/VULCAN/IPTS-%d/shared/binned_data' %
+                                      ipts_number, '%d.gda' % run_number)
         if not os.path.exists(gsas_file_name):
             return None
 
@@ -245,7 +248,8 @@ class DataArchiveManager(object):
 
         # scan the directory
         if os.path.exists(chop_dir) is False:
-            raise RuntimeError('Directory for chopped NeXus file {0} does not exist.'.format(chop_dir))
+            raise RuntimeError(
+                'Directory for chopped NeXus file {0} does not exist.'.format(chop_dir))
 
         #   from os import listdir
         # from os.path import isfile, join
@@ -272,7 +276,8 @@ class DataArchiveManager(object):
         if not os.path.exists(raw_event_file_name):
             # might be a pre-nED
             base_name = 'VULCAN_{0}_event.nxs'.format(run_number)
-            sub_path = os.path.join('IPTS-{0}/0/{1}/NeXus'.format(ipts_number, run_number), base_name)
+            sub_path = os.path.join(
+                'IPTS-{0}/0/{1}/NeXus'.format(ipts_number, run_number), base_name)
             raw_event_file_name_h5 = raw_event_file_name
             raw_event_file_name = os.path.join(self._archiveRootDirectory, sub_path)
         else:
@@ -286,8 +291,8 @@ class DataArchiveManager(object):
         else:
             # return for nothing
             raw_event_file_name = None
-            print ('[INFO] For IPTS-{} Run-{}, neither {} nor {} exists.'
-                   ''.format(ipts_number, run_number, raw_event_file_name_h5, raw_event_file_name))
+            print('[INFO] For IPTS-{} Run-{}, neither {} nor {} exists.'
+                  ''.format(ipts_number, run_number, raw_event_file_name_h5, raw_event_file_name))
         # END-IF-ELSE
 
         return raw_event_file_name
@@ -307,7 +312,8 @@ class DataArchiveManager(object):
         """
         # check the validity of the archive key
         assert isinstance(archive_key, str) or isinstance(archive_key, int),\
-            'Archive key %s must be a string or integer but not %s.' % (str(archive_key), type(archive_key))
+            'Archive key %s must be a string or integer but not %s.' % (
+                str(archive_key), type(archive_key))
         assert archive_key in self._iptsInfoDict,\
             'Archive key %s does not exist in archiving dictionary, which has keys %s.' \
             '' % (str(archive_key), str(self._iptsInfoDict.keys()))
@@ -354,7 +360,8 @@ class DataArchiveManager(object):
 
         for filename in file_name_list:
             # Check whether file exists
-            assert os.path.exists(filename), 'Given file %s does not exist for file time information.' % filename
+            assert os.path.exists(
+                filename), 'Given file %s does not exist for file time information.' % filename
 
             # After experiments, this is the most suitable way to define the time of a file
             create_time = os.path.getctime(filename)
@@ -432,7 +439,8 @@ class DataArchiveManager(object):
         """
         # check
         assert isinstance(archive_key, str) or isinstance(archive_key, int), \
-            'Archive key {0} must be a string or integer but not {1}.'.format(archive_key, type(archive_key))
+            'Archive key {0} must be a string or integer but not {1}.'.format(
+                archive_key, type(archive_key))
         assert isinstance(run_number_list, list), 'Run numbers {0} must be given in list but not {1}.' \
                                                   ''.format(run_number_list, type(run_number_list))
 
@@ -473,9 +481,11 @@ class DataArchiveManager(object):
         # file
         if chop_sequence is None:
             # regular run: load the NeXus file and find out
-            nexus_file = '/SNS/VULCAN/IPTS-{0}/nexus/VULCAN_{1}.nxs.h5'.format(ipts_number, run_number)
+            nexus_file = '/SNS/VULCAN/IPTS-{0}/nexus/VULCAN_{1}.nxs.h5'.format(
+                ipts_number, run_number)
             if not os.path.exists(nexus_file):
-                nexus_file2 = '/SNS/VULCAN/IPTS-{0}/data/VULCAN_{1}_event.nxs'.format(ipts_number, run_number)
+                nexus_file2 = '/SNS/VULCAN/IPTS-{0}/data/VULCAN_{1}_event.nxs'.format(
+                    ipts_number, run_number)
                 if os.path.exists(nexus_file2) is False:
                     raise RuntimeError('Unable to locate NeXus file for IPTS-{0} Run {1} with name '
                                        '{2} or {3}'.format(ipts_number, run_number, nexus_file, nexus_file2))
@@ -485,7 +495,8 @@ class DataArchiveManager(object):
 
             # load data, get proton charge and delete
             out_name = '{0}_Meta'.format(run_number)
-            mantid_helper.load_nexus(data_file_name=nexus_file, output_ws_name=out_name, meta_data_only=True)
+            mantid_helper.load_nexus(data_file_name=nexus_file,
+                                     output_ws_name=out_name, meta_data_only=True)
             proton_charge = mantid_helper.get_sample_log_value_single(out_name, 'gd_prtn_chrg')
             # convert unit from picoCoulumb to uA.hour
             proton_charge *= 1E6 * 3600.
@@ -496,10 +507,12 @@ class DataArchiveManager(object):
             record_file_name = '/SNS/VULCAN/IPTS-{0}/shared/ChoppedData/{1}/{1}sampleenv_chopped_mean.txt' \
                                ''.format(ipts_number, run_number)
             if os.path.exists(record_file_name) is False:
-                raise RuntimeError('Unable to locate chopped data record file {0}'.format(record_file_name))
+                raise RuntimeError(
+                    'Unable to locate chopped data record file {0}'.format(record_file_name))
 
             # import csv
-            data_set = pandas.read_csv(record_file_name, header=None, delim_whitespace=True, index_col=0)
+            data_set = pandas.read_csv(record_file_name, header=None,
+                                       delim_whitespace=True, index_col=0)
             try:
                 proton_charge = data_set.loc[chop_sequence][1]
                 proton_charge = float(proton_charge)
@@ -519,7 +532,8 @@ class DataArchiveManager(object):
         :param check_exist:
         :return:
         """
-        smoothed_van_file = '/SNS/VULCAN/IPTS-{0}/shared/Instrument/{1}-s.gda'.format(ipts_number, van_run_number)
+        smoothed_van_file = '/SNS/VULCAN/IPTS-{0}/shared/Instrument/{1}-s.gda'.format(
+            ipts_number, van_run_number)
 
         if check_exist and os.path.exists(smoothed_van_file) is False:
             raise RuntimeError('Smoothed vanadium run {0} cannot be found with IPTS {1} as {2}.'
@@ -581,12 +595,14 @@ class DataArchiveManager(object):
         # check input
         datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
         if record_type is not None:
-            datatypeutility.check_string_variable('Log type', record_type, allowed_values=['data', 'align'])
+            datatypeutility.check_string_variable(
+                'Log type', record_type, allowed_values=['data', 'align'])
 
         # locate IPTS folder and AutoRecord file
         ipts_shared_dir = '/SNS/VULCAN/IPTS-{}/shared'.format(ipts_number)
         if os.path.exists(ipts_shared_dir) is False:
-            raise RuntimeError('IPTS {} has no directory {} in SNS archive'.format(ipts_number, ipts_shared_dir))
+            raise RuntimeError('IPTS {} has no directory {} in SNS archive'.format(
+                ipts_number, ipts_shared_dir))
 
         if record_type is None:
             base_name = 'AutoRecord.txt'
@@ -599,7 +615,8 @@ class DataArchiveManager(object):
 
         auto_record_file_name = os.path.join(ipts_shared_dir, base_name)
         if not os.path.exists(auto_record_file_name):
-            raise RuntimeError('Auto {} record file {} does not exist.'.format(record_type, auto_record_file_name))
+            raise RuntimeError('Auto {} record file {} does not exist.'.format(
+                record_type, auto_record_file_name))
 
         # load and parse the file
         record_key = 'Auto{}-IPTS{}'.format(record_type, ipts_number)
@@ -615,7 +632,8 @@ class DataArchiveManager(object):
         :param van_run_number:
         :return:
         """
-        van_gda_file = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/PRM/{}-s.gda'.format(van_run_number)
+        van_gda_file = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/PRM/{}-s.gda'.format(
+            van_run_number)
 
         file_accessible = os.path.exists(van_gda_file)
 
@@ -659,7 +677,8 @@ class DataArchiveManager(object):
         # form IPTS
         ipts_dir = os.path.join(self._archiveRootDirectory, 'IPTS-%d' % ipts_number)
         if not os.path.exists(ipts_dir):
-            raise RuntimeError('IPTS dir {} does not exist for IPTS = {}'.format(ipts_dir, ipts_number))
+            raise RuntimeError(
+                'IPTS dir {} does not exist for IPTS = {}'.format(ipts_dir, ipts_number))
 
         # archive key:
         archive_key = ipts_number
@@ -764,13 +783,15 @@ class DataArchiveManager(object):
             run_number = int(record_file_set['RUN'][i_run])
             ipts_str = str(record_file_set['IPTS'][i_run])
             ipts_number = int(ipts_str.split('-')[-1])
-            
+
             # try new way first: /SNS/VULCAN/IPTS-18721/nexus/VULCAN_160366.nxs.h5
-            full_file_path = '/SNS/VULCAN/IPTS-{0}/nexus/VULCAN_{1}.nxs.h5'.format(ipts_number, run_number)
+            full_file_path = '/SNS/VULCAN/IPTS-{0}/nexus/VULCAN_{1}.nxs.h5'.format(
+                ipts_number, run_number)
 
             # try old way if new-way file name does not work
             if os.path.exists(full_file_path) is False:
-                full_file_path = '/SNS/VULCAN/%s/0/%d/NeXus/VULCAN_%d_event.nxs' % (ipts_str, run_number, run_number)
+                full_file_path = '/SNS/VULCAN/%s/0/%d/NeXus/VULCAN_%d_event.nxs' % (
+                    ipts_str, run_number, run_number)
             exp_time_str = str(record_file_set['StartTime'][i_run])
             exp_time = vdrivehelper.parse_time(exp_time_str)
 
@@ -851,7 +872,7 @@ class DataArchiveManager(object):
         sub_list = [time_file_list[0]]
         # time 0
         prev_time = time_file_list[0][0]
-       
+
         for i in xrange(1, len(time_file_list)):
             # Get the difference in time between previous time and current time
             curr_time = time_file_list[i][0]
@@ -890,7 +911,7 @@ class DataArchiveManager(object):
 
         stime = time.strptime(time.ctime(epochtime))
         print stime.tm_yday
-        
+
         # FIXME - Delta T should be given!
         # NOTE : MOCK : 2 days
         rollbacktime = epochtime - 2*24*3600
@@ -941,7 +962,7 @@ class DataArchiveManager(object):
             raise RuntimeError('Auto record ID {} is not in dictionary.  Available keys are {}'
                                ''.format(auto_record_ref_id, self._auto_record_dict.keys()))
         if run_range is not None:
-            print ('[ERROR] Notify developer that run range shall be implemented.')
+            print('[ERROR] Notify developer that run range shall be implemented.')
 
         # get data frame (data set)
         record_data_set = self._auto_record_dict[auto_record_ref_id]
@@ -969,11 +990,11 @@ class DataArchiveManager(object):
                 try:
                     dict_i[output_items[j]] = filtered.iloc[row_index, j]
                 except IndexError as index_err:
-                    print ('j = {}, row_index = {}'.format(j, row_index))
-                    print (column_names)
-                    print ('output items: {}'.format(output_items))
-                    print (output_items[j])
-                    print ('filtered: \n{}'.format(filtered))
+                    print('j = {}, row_index = {}'.format(j, row_index))
+                    print(column_names)
+                    print('output items: {}'.format(output_items))
+                    print(output_items[j])
+                    print('filtered: \n{}'.format(filtered))
                     raise index_err
             # print dict_i
             output_list.append(dict_i)
@@ -1055,7 +1076,8 @@ def sns_archive_nexus_path(ipts_number, run_number):
         r_file_name = ned_nexus_name
     else:
         # pre-Ned case
-        pre_ned_nexus_name = '/SNS/VULCAN/IPTS-{0}/0/{1}/NeXus/VULCAN_{1}_event.nxs'.format(ipts_number, run_number)
+        pre_ned_nexus_name = '/SNS/VULCAN/IPTS-{0}/0/{1}/NeXus/VULCAN_{1}_event.nxs'.format(
+            ipts_number, run_number)
         if os.path.exists(pre_ned_nexus_name):
             r_file_name = pre_ned_nexus_name
         else:

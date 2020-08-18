@@ -20,6 +20,7 @@ class CalibrationManager(object):
     """
     A container and manager for calibration files loaded, number of banks of groupings and etc
     """
+
     def __init__(self):
         """
         initialization
@@ -109,7 +110,8 @@ class CalibrationManager(object):
         for ws_index in range(9):
             self._focus_instrument_dict['Polar'][27][ws_index] = -90.
             self._focus_instrument_dict['Polar'][27][ws_index + 9] = 90.
-            self._focus_instrument_dict['Polar'][27][ws_index + 18] = mantid_helper.HIGH_ANGLE_BANK_2THETA
+            self._focus_instrument_dict['Polar'][27][ws_index +
+                                                     18] = mantid_helper.HIGH_ANGLE_BANK_2THETA
 
         return
 
@@ -121,7 +123,8 @@ class CalibrationManager(object):
         base_calib_dir = '/SNS/VULCAN/shared/CALIBRATION'
 
         # hard coded list of available calibration file names
-        pre_ned_setup = {3: '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc_all_2bank_11p.cal'}
+        pre_ned_setup = {
+            3: '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc_all_2bank_11p.cal'}
 
         ned_2017_setup = {3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5',
                           7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_7bank.h5',
@@ -238,18 +241,18 @@ class CalibrationManager(object):
         # do a brute force search (as there are only very few of them)
         cal_date_index = None
         for i_date in range(len(date_list)-1, -1, -1):
-            print ('[DB...BAT] Calibration Date: {}'.format(date_list[i_date]))
+            print('[DB...BAT] Calibration Date: {}'.format(date_list[i_date]))
             if run_start_date > date_list[i_date]:
                 cal_date_index = date_list[i_date]
                 break
             # END-IF
-        # END-FOR  
+        # END-FOR
 
         try:
             calibration_file_name = self._calibration_dict[cal_date_index][num_banks]
         except KeyError as key_err:
-            print ('[DB...BAT] calibration dict: {}.  {} with calibration date index = {}.  number banks = {}'
-                   ''.format(self._calibration_dict.keys(), run_start_date, cal_date_index, num_banks))
+            print('[DB...BAT] calibration dict: {}.  {} with calibration date index = {}.  number banks = {}'
+                  ''.format(self._calibration_dict.keys(), run_start_date, cal_date_index, num_banks))
             raise key_err
 
         return cal_date_index, calibration_file_name
@@ -285,7 +288,7 @@ class CalibrationManager(object):
                                                                     east_west_binning_parameters=ew_bin_params,
                                                                     high_angle_binning_parameters=high_angle_params)
 
-        print ('[DB...BAT] Binning: {}'.format(self._default_tof_bins_dict[calib_date, num_banks]))
+        print('[DB...BAT] Binning: {}'.format(self._default_tof_bins_dict[calib_date, num_banks]))
 
         return self._default_tof_bins_dict[calib_date, num_banks]
 
@@ -308,7 +311,7 @@ class CalibrationManager(object):
         except KeyError as key_err:
             err_msg = 'Unable to retrieve virtual instrument geometry for {}-bank case. FYI: {}' \
                       ''.format(num_banks, key_err)
-            print ('[ERROR CAUSING CRASH] {}'.format(err_msg))
+            print('[ERROR CAUSING CRASH] {}'.format(err_msg))
             raise RuntimeError(err_msg)
 
         return edit_instrument_param_dict
@@ -327,7 +330,7 @@ class CalibrationManager(object):
         except KeyError as key_err:
             error_msg = 'File {0} is not loaded yet! Client shall check the loaded workspace first.' \
                         'FYI: {1}'.format(cal_file_name, key_err)
-            print ('[Crash Error] {}'.format(error_msg))
+            print('[Crash Error] {}'.format(error_msg))
             raise RuntimeError(error_msg)
 
         return calib_ws_collection
@@ -367,8 +370,8 @@ class CalibrationManager(object):
         """
         # get calibration date and file name
         calib_file_date, calib_file_name = self.get_calibration_file(run_start_date, num_banks)
-        print ('[DB...BAT] CalibrationMananger: ID/Date: {}; Calibration file name: {}'
-               ''.format(calib_file_date, calib_file_name))
+        print('[DB...BAT] CalibrationMananger: ID/Date: {}; Calibration file name: {}'
+              ''.format(calib_file_date, calib_file_name))
 
         # regular check with dictionary
         has_them = True
@@ -395,7 +398,8 @@ class CalibrationManager(object):
             # END-FOR
 
             if has_all != has_some:
-                raise RuntimeError('Problematic case: Some calibration workspace existed but not all!')
+                raise RuntimeError(
+                    'Problematic case: Some calibration workspace existed but not all!')
             elif has_all:
                 # add to dictionary
                 has_them = True
@@ -422,12 +426,14 @@ class CalibrationManager(object):
         :return:
         """
         # check inputs
-        datatypeutility.check_file_name(calibration_file_name, check_exist=True, note='Calibration file')
+        datatypeutility.check_file_name(
+            calibration_file_name, check_exist=True, note='Calibration file')
         datatypeutility.check_int_variable('Number of banks', num_banks, (1, None))
 
         # load calibration
         base_name = self.get_base_name(calibration_file_name, num_banks)
-        outputs, offset_ws = mantid_helper.load_calibration_file(calibration_file_name, base_name, ref_ws_name)
+        outputs, offset_ws = mantid_helper.load_calibration_file(
+            calibration_file_name, base_name, ref_ws_name)
         # get output workspaces for their names
         calib_ws_collection = DetectorCalibrationWorkspaces()
         calib_ws_collection.calibration = outputs.OutputCalWorkspace.name()
@@ -450,17 +456,19 @@ class CalibrationManager(object):
         """
         # check whether this file has been loaded
         if self.has_loaded(run_start_date, bank_numbers)[0]:
-            print ('[INFO] Calibration file for run on and before {} has been loaded'
-                   ''.format(run_start_date))
+            print('[INFO] Calibration file for run on and before {} has been loaded'
+                  ''.format(run_start_date))
             return
 
         # use run_start_date (str) to search in the calibration date time string
-        cal_date_index, calibration_file_name = self.get_calibration_file(run_start_date, bank_numbers)
-        print ('[DB...BAT] Located calibration file {0} with reference ID {1}'
-               ''.format(calibration_file_name, cal_date_index))
+        cal_date_index, calibration_file_name = self.get_calibration_file(
+            run_start_date, bank_numbers)
+        print('[DB...BAT] Located calibration file {0} with reference ID {1}'
+              ''.format(calibration_file_name, cal_date_index))
 
         # load calibration file
-        self.load_calibration_file(calibration_file_name, cal_date_index, bank_numbers, ref_workspace_name)
+        self.load_calibration_file(calibration_file_name, cal_date_index,
+                                   bank_numbers, ref_workspace_name)
 
         return
 
@@ -549,7 +557,8 @@ class DataReductionTracker(object):
         """
         if self._compressedChoppedWorkspaceName is None:
             # not set yet.
-            self._compressedChoppedWorkspaceName = 'Chopped_{0}_Slicer_{1}.'.format(self._runNumber, self._slicerKey)
+            self._compressedChoppedWorkspaceName = 'Chopped_{0}_Slicer_{1}.'.format(
+                self._runNumber, self._slicerKey)
 
         return self._compressedChoppedWorkspaceName
 
@@ -714,7 +723,8 @@ class DataReductionTracker(object):
         :param value:
         :return:
         """
-        assert isinstance(value, bool), 'Input for is_reduced must be a boolean but not %s.' % str(type(value))
+        assert isinstance(
+            value, bool), 'Input for is_reduced must be a boolean but not %s.' % str(type(value))
         self._isReduced = value
 
     @property
@@ -781,7 +791,8 @@ class DataReductionTracker(object):
         for ws_name in workspace_name_list:
             # check type
             if not isinstance(ws_name, str):
-                err_msg += 'Input {} of type {} is invalid to be a workspace name'.format(ws_name, type(ws_name))
+                err_msg += 'Input {} of type {} is invalid to be a workspace name'.format(
+                    ws_name, type(ws_name))
                 continue
 
             # check name and existence
@@ -805,7 +816,8 @@ class DataReductionTracker(object):
         """
         # check input
         assert isinstance(chopped_file_list, list), 'Chopped NeXus files {0} must be given by list but not {1}.' \
-                                                    ''.format(chopped_file_list, type(chopped_file_list))
+                                                    ''.format(chopped_file_list,
+                                                              type(chopped_file_list))
 
         # clear previous data
         if not append:
@@ -876,7 +888,8 @@ class DataReductionTracker(object):
         :return:
         """
         # check input
-        assert isinstance(status, bool), 'Reduction status must be given by bool but not {0}'.format(type(status))
+        assert isinstance(
+            status, bool), 'Reduction status must be given by bool but not {0}'.format(type(status))
         assert isinstance(message, str), 'Reduction message {0} must be string but not {1}' \
                                          ''.format(message, type(message))
         assert isinstance(chopped_data, bool), 'Flag for being chopped run must be boolean but not {0}' \
@@ -965,7 +978,8 @@ class ReductionManager(object):
         self._myInstrument = instrument
 
         # reduction tracker: key = run number (integer), value = DataReductionTracker
-        self._reductionTrackDict = dict()  # [run number] = Tracker or [run number, slicer key] = Tracker
+        # [run number] = Tracker or [run number, slicer key] = Tracker
+        self._reductionTrackDict = dict()
 
         # calibration file and workspaces management
         self._calibrationFileManager = CalibrationManager()   # key = calibration file name
@@ -982,9 +996,9 @@ class ReductionManager(object):
         try:
             self._gsas_writer = save_vulcan_gsas.SaveVulcanGSS(None)
         except RuntimeError as run_err:
-            print ('[ERROR] Unable to initialize GSAS writer due to {}'.format(run_err))
+            print('[ERROR] Unable to initialize GSAS writer due to {}'.format(run_err))
             self._gsas_writer = None
-           
+
         # vanadium: key = vanadium run number, value = vanadium GSAS file
         self._vanadium_run_dict = dict()
 
@@ -1088,7 +1102,7 @@ class ReductionManager(object):
         # Load data
         event_ws_name = self.get_event_workspace_name(run_number=run_number)
         mantid_helper.load_nexus(raw_file_name, event_ws_name, meta_data_only=False)
-        print ('[INFO] Successfully loaded {0} to {1}'.format(raw_file_name, event_ws_name))
+        print('[INFO] Successfully loaded {0} to {1}'.format(raw_file_name, event_ws_name))
 
         # Load user specified masks/ROIs
         datatypeutility.check_list('Region of interest file list', roi_list)
@@ -1100,12 +1114,13 @@ class ReductionManager(object):
         elif len(mask_list) > 0:
             user_mask_name = self.load_mask_files(event_ws_name, roi_list, is_roi=False)
         else:
-            print ('[INFO] No user specified masking and ROI files')
+            print('[INFO] No user specified masking and ROI files')
             user_mask_name = None
         # END-IF-ELSE
 
         # Load geometry calibration file
-        calib_ws_name, group_ws_name, mask_ws_name = self._get_calibration_workspaces_names(event_ws_name, number_banks)
+        calib_ws_name, group_ws_name, mask_ws_name = self._get_calibration_workspaces_names(
+            event_ws_name, number_banks)
 
         # apply mask
         if user_mask_name:
@@ -1183,10 +1198,12 @@ class ReductionManager(object):
 
             reduced, workspace_name_list = chop_reducer.get_reduced_workspaces(chopped=True)
             chop_message = 'Output GSAS: {}.gda - {}.gda'.format(gda_file_start,
-                                                                 gda_file_start -1 + len(workspace_name_list))
+                                                                 gda_file_start - 1 + len(workspace_name_list))
 
-            error_message = self.set_chopped_reduced_workspaces(run_number, slice_key, workspace_name_list, append=True)
-            self.set_chopped_reduced_files(run_number, slice_key, chop_reducer.get_reduced_files(), append=True)
+            error_message = self.set_chopped_reduced_workspaces(
+                run_number, slice_key, workspace_name_list, append=True)
+            self.set_chopped_reduced_files(
+                run_number, slice_key, chop_reducer.get_reduced_files(), append=True)
 
             tracker.is_reduced = True
 
@@ -1246,7 +1263,8 @@ class ReductionManager(object):
         """
         # check
         assert isinstance(run_number, int), 'Input run number must be an integer.'
-        assert unit is None or isinstance(unit, str), 'Output data unit must be either None (default) or a string.'
+        assert unit is None or isinstance(
+            unit, str), 'Output data unit must be either None (default) or a string.'
 
         # get reduced workspace name
         reduced_ws_name = self.get_reduced_workspace(run_number, is_vdrive_bin=True, unit='TOF')
@@ -1283,7 +1301,7 @@ class ReductionManager(object):
         """
         return_list = list()
 
-        print ('[DB...BAT...Single] Reduction-track dict keys: {}'.format(self._reductionTrackDict.keys()))
+        print('[DB...BAT...Single] Reduction-track dict keys: {}'.format(self._reductionTrackDict.keys()))
 
         # from tracker
         for tracker_key in self._reductionTrackDict.keys():
@@ -1328,7 +1346,7 @@ class ReductionManager(object):
                 continue
 
             new_item = tracker_key
-            print ('[DB...BAT] Reduced run with {} of type {}'.format(new_item, type(new_item)))
+            print('[DB...BAT] Reduced run with {} of type {}'.format(new_item, type(new_item)))
             return_list.append(new_item)
         # END-FOR
 
@@ -1368,7 +1386,8 @@ class ReductionManager(object):
 
         # full reduction
         # get tracker
-        assert run_number in self._reductionTrackDict, 'Run number {0} is not reduced.'.format(run_number)
+        assert run_number in self._reductionTrackDict, 'Run number {0} is not reduced.'.format(
+            run_number)
         tracker = self._reductionTrackDict[run_number]
         assert isinstance(tracker, DataReductionTracker), \
             'Stored tracker must be an instance of DataReductionTracker.'
@@ -1456,7 +1475,8 @@ class ReductionManager(object):
             tracker_key = run_number, slicer_key
 
         if ipts_number is None:
-            raise NotImplementedError('Figure out how to track a reduction without a good IPTS number!')
+            raise NotImplementedError(
+                'Figure out how to track a reduction without a good IPTS number!')
 
         if tracker_key not in self._reductionTrackDict:
             new_tracker = DataReductionTracker(run_number, ipts_number)
@@ -1465,7 +1485,8 @@ class ReductionManager(object):
         else:
             # existing tracker: double check
             assert isinstance(self._reductionTrackDict[tracker_key], DataReductionTracker),\
-                'It is not DataReductionTracker but a {0}.'.format(type(self._reductionTrackDict[tracker_key]))
+                'It is not DataReductionTracker but a {0}.'.format(
+                    type(self._reductionTrackDict[tracker_key]))
             # NOTE: new_tracker here is not new tracker at all!
             new_tracker = self._reductionTrackDict[tracker_key]
 
@@ -1510,14 +1531,15 @@ class ReductionManager(object):
             if x_range_is_wrong:
                 ero_msg = 'For {0}, X range ({1}, {2}) does not make sense' \
                           ''.format(ws_unit, x_min, x_max)
-                print ('[ERROR CAUSING CRASH] {}'.format(ero_msg))
+                print('[ERROR CAUSING CRASH] {}'.format(ero_msg))
                 raise RuntimeError(ero_msg)
 
             return
 
         # check inputs
         datatypeutility.check_string_variable('Target unit', target_unit, ['TOF', 'dSpacing'])
-        datatypeutility.check_dict('Virtual (focused) instrument geometry', virtual_instrument_geometry)
+        datatypeutility.check_dict('Virtual (focused) instrument geometry',
+                                   virtual_instrument_geometry)
 
         # set up default binning parameters: only support uniform binning parameters, i.e., no ragged workspace
         if binning_params is None:
@@ -1538,7 +1560,7 @@ class ReductionManager(object):
                 # unsupported number of binning parameters
                 err_msg = 'Binning parameters {0} with {1} items are not supported.' \
                           ''.format(binning_params, len(binning_params))
-                print ('[Crash Error] {}'.format(err_msg))
+                print('[Crash Error] {}'.format(err_msg))
                 raise RuntimeError(err_msg)
         # END-IF-ELSE
 
@@ -1546,8 +1568,8 @@ class ReductionManager(object):
         self._diff_focus_params['EditInstrumentGeometry'] = virtual_instrument_geometry
 
         # align and focus
-        print ('[DB...PROGRESS...] ReductionManager: align and focus workspace from {} to {} with binning {}'
-               ''.format(event_ws_name, output_ws_name, binning_params))
+        print('[DB...PROGRESS...] ReductionManager: align and focus workspace from {} to {} with binning {}'
+              ''.format(event_ws_name, output_ws_name, binning_params))
         red_msg = mantid_reduction.align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
                                                             calibration_workspace, grouping_workspace,
                                                             reduction_params_dict=self._diff_focus_params,
@@ -1679,7 +1701,8 @@ class ReductionManager(object):
         # process on standards
         if standard_sample_tuple:
             assert isinstance(standard_sample_tuple, tuple) and len(standard_sample_tuple) == 3,\
-                'Input standard sample-tuple must be a tuple with length 3 but not a {0}.'.format(standard_sample_tuple)
+                'Input standard sample-tuple must be a tuple with length 3 but not a {0}.'.format(
+                    standard_sample_tuple)
             standard_sample, standard_dir, standard_record_file = standard_sample_tuple
             reduction_setup.is_standard = True
             reduction_setup.set_standard_sample(standard_sample, standard_dir, standard_record_file)
@@ -1699,7 +1722,8 @@ class ReductionManager(object):
                 self._reductionTrackDict[run_number].is_corrected_by_vanadium = True
 
             # set reduced files
-            self._reductionTrackDict[run_number].set_reduced_files(reducer.get_reduced_files(), append=False)
+            self._reductionTrackDict[run_number].set_reduced_files(
+                reducer.get_reduced_files(), append=False)
             # set workspaces
             status, ret_obj = reducer.get_reduced_workspaces(chopped=False)
             if status:
@@ -1721,13 +1745,17 @@ class ReductionManager(object):
         # use the simple but fragile method first
         run_start_date = mantid_helper.get_run_start(ws_name, time_unit=None)
 
-        has_loaded_cal, workspaces = self._calibrationFileManager.has_loaded(run_start_date, num_banks)
+        has_loaded_cal, workspaces = self._calibrationFileManager.has_loaded(
+            run_start_date, num_banks)
         if not has_loaded_cal:
-            print ('[DB...BAT...INFO] Calibration file has not been loaded')
-            self._calibrationFileManager.search_load_calibration_file(run_start_date, num_banks, ws_name)
-            workspaces = self._calibrationFileManager.get_loaded_calibration_workspaces(run_start_date, num_banks)
+            print('[DB...BAT...INFO] Calibration file has not been loaded')
+            self._calibrationFileManager.search_load_calibration_file(
+                run_start_date, num_banks, ws_name)
+            workspaces = self._calibrationFileManager.get_loaded_calibration_workspaces(
+                run_start_date, num_banks)
         else:
-            print ('[DB...BAT...INFO] Calibration file for {} has been loaded to {}'.format(run_start_date, workspaces))
+            print('[DB...BAT...INFO] Calibration file for {} has been loaded to {}'.format(
+                run_start_date, workspaces))
         calib_ws_name = workspaces.calibration
         group_ws_name = workspaces.grouping
         mask_ws_name = workspaces.mask
@@ -1755,8 +1783,10 @@ class ReductionManager(object):
         two_theta_array, group_ws, num_pixels_array = results
 
         # Regular calibration workspace
-        calib_ws_name, no_use_grp, mask_ws_name = self._get_calibration_workspaces_names(event_ws_name, 3)
-        template_virtual_geometry_dict = self._calibrationFileManager.get_focused_instrument_parameters(3)
+        calib_ws_name, no_use_grp, mask_ws_name = self._get_calibration_workspaces_names(
+            event_ws_name, 3)
+        template_virtual_geometry_dict = self._calibrationFileManager.get_focused_instrument_parameters(
+            3)
         virtual_geometry_dict = vulcan_util.group_pixels_2theta_geometry(template_virtual_geometry_dict,
                                                                          ws_index_range, num_pixels_array.shape[0])
 
@@ -1793,7 +1823,8 @@ class ReductionManager(object):
             raise RuntimeError('It is not allowed to define ROI and mask simultaneously, which causing logic'
                                ' confusion')
         elif len(roi_list) + len(mask_list) > 0 and no_cal_mask:
-            raise RuntimeError('It is not allowed to define ROI or Mask with NO-CALIBRATION-MASK simultaneously')
+            raise RuntimeError(
+                'It is not allowed to define ROI or Mask with NO-CALIBRATION-MASK simultaneously')
 
         # Load data
         event_ws_name = self.get_event_workspace_name(run_number=run_number)
@@ -1803,17 +1834,18 @@ class ReductionManager(object):
         datatypeutility.check_list('Region of interest file list', roi_list)
         datatypeutility.check_list('Mask file list', mask_list)
         if len(roi_list) + len(mask_list) > 0:
-            print ('[INFO] Processing masking and ROI files: {} and {}'.format(roi_list, mask_list))
+            print('[INFO] Processing masking and ROI files: {} and {}'.format(roi_list, mask_list))
             if len(roi_list) > 0:
                 user_mask_name = self.load_mask_files(event_ws_name, roi_list, is_roi=True)
             else:
                 user_mask_name = self.load_mask_files(event_ws_name, mask_list, is_roi=False)
         else:
-            print ('[INFO] No user specified masking and ROI files')
+            print('[INFO] No user specified masking and ROI files')
             user_mask_name = None
         # END-IF-ELSE
 
-        calib_ws_name, group_ws_name, mask_ws_name = self._get_calibration_workspaces_names(event_ws_name, num_banks)
+        calib_ws_name, group_ws_name, mask_ws_name = self._get_calibration_workspaces_names(
+            event_ws_name, num_banks)
 
         # apply mask
         if user_mask_name:
@@ -1826,7 +1858,8 @@ class ReductionManager(object):
         tracker.is_reduced = False
 
         # diffraction focus
-        virtual_geometry_dict = self._calibrationFileManager.get_focused_instrument_parameters(num_banks)
+        virtual_geometry_dict = self._calibrationFileManager.get_focused_instrument_parameters(
+            num_banks)
 
         red_message = self.diffraction_focus_workspace(event_ws_name=event_ws_name,
                                                        output_ws_name=event_ws_name,  # keep the workspace name
@@ -1868,7 +1901,8 @@ class ReductionManager(object):
 
         if compress:
             target_ws_name = tracker.compressed_ws_name
-            mantid_helper.make_compressed_reduced_workspace(workspace_name_list, target_workspace_name=target_ws_name)
+            mantid_helper.make_compressed_reduced_workspace(
+                workspace_name_list, target_workspace_name=target_ws_name)
 
         return error_messge
 
@@ -1905,7 +1939,8 @@ class ReductionManager(object):
                                ''.format(run_number, self._reductionTrackDict.keys()))
 
         try:
-            self._reductionTrackDict[run_number].set_reduced_workspaces(vdrive_bin_ws, tof_ws, dspace_ws)
+            self._reductionTrackDict[run_number].set_reduced_workspaces(
+                vdrive_bin_ws, tof_ws, dspace_ws)
         except AssertionError as ass_err:
             raise AssertionError('ReductionManage unable to set reduced workspace for run {0} due to {1}.'
                                  ''.format(run_number, ass_err))
@@ -1918,6 +1953,7 @@ class DetectorCalibrationWorkspaces(object):
     """
     A simple workspace for detector instrument calibration workspaces
     """
+
     def __init__(self):
         """
         initialization: all workspaces shall be workspace names but not references to workspaces

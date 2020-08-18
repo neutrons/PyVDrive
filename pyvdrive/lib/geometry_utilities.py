@@ -70,6 +70,7 @@ class VulcanGeometry(object):
     """
     a static class to calculate by retrieving vulcan geometry knowledge from pre-defined constants
     """
+
     def __init__(self, pre_ned=False):
         """
         initialization to define the type of VULCAN geometry
@@ -117,7 +118,8 @@ class VulcanGeometry(object):
 
             # convert
             panel = location/2 + 1
-            ws_index = VULCAN_PANEL_START_WSINDEX[self._generation][panel] + detid - det_id_boundary_list[location-1]
+            ws_index = VULCAN_PANEL_START_WSINDEX[self._generation][panel] + \
+                detid - det_id_boundary_list[location-1]
 
             # check
             if ref_workspace.getDetector(ws_index).getID() != detid:
@@ -180,8 +182,8 @@ class VulcanGeometry(object):
             panel_col_set.add((panel_id, col_index))
         # END-FOR
 
-        print ('[DB...BAT] {0} Rows   : {1}'.format(len(panel_row_set), sorted(list(panel_row_set))))
-        print ('[DB...BAT] {0} Columns: {1}'.format(len(panel_col_set), sorted(list(panel_col_set))))
+        print('[DB...BAT] {0} Rows   : {1}'.format(len(panel_row_set), sorted(list(panel_row_set))))
+        print('[DB...BAT] {0} Columns: {1}'.format(len(panel_col_set), sorted(list(panel_col_set))))
 
         return panel_row_set, panel_col_set
 
@@ -210,8 +212,8 @@ class VulcanGeometry(object):
         # END-FOR
         det_id_list.sort()
 
-        print ('[DB] There are {0} pixels in given {1} columns starting from detector ID {2}'
-               ''.format(len(det_id_list), len(panel_column_list), det_id_list[0]))
+        print('[DB] There are {0} pixels in given {1} columns starting from detector ID {2}'
+              ''.format(len(det_id_list), len(panel_column_list), det_id_list[0]))
 
         return det_id_list
 
@@ -232,7 +234,8 @@ class VulcanGeometry(object):
             zero_det_id = VULCAN_PANEL_DETECTORS[self._generation][panel_index][0]
             for col_index in range(VULCAN_PANEL_COLUMN_COUNT[self._generation][panel_index]):
                 if VULCAN_PANEL_COLUMN_MAJOR[self._generation][panel_index]:
-                    det_id_i = zero_det_id + col_index * VULCAN_PANEL_ROW_COUNT[self._generation][panel_index] + row_index
+                    det_id_i = zero_det_id + col_index * \
+                        VULCAN_PANEL_ROW_COUNT[self._generation][panel_index] + row_index
                     det_id_list.append(det_id_i)
                 else:
                     raise NotImplementedError('Row major case is not implemented')
@@ -240,7 +243,7 @@ class VulcanGeometry(object):
         # END-FOR
         det_id_list.sort()
 
-        print ('[DB] There are {0} pixels in given {1} rows starting from detector ID {2}'
-               ''.format(len(det_id_list), len(panel_row_list), det_id_list[0]))
+        print('[DB] There are {0} pixels in given {1} rows starting from detector ID {2}'
+              ''.format(len(det_id_list), len(panel_row_list), det_id_list[0]))
 
         return det_id_list

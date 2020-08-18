@@ -54,8 +54,8 @@ import bisect
 import save_vulcan_gsas
 import vdrivehelper as helper
 
-#sys.path.append("/opt/mantidnightly/bin")
-#sys.path.append('/SNS/users/wzz/Mantid_Project/builds/debug/bin')
+# sys.path.append("/opt/mantidnightly/bin")
+# sys.path.append('/SNS/users/wzz/Mantid_Project/builds/debug/bin')
 import mantid.simpleapi as mantidsimple
 import mantid
 from mantid.api import AnalysisDataService
@@ -116,7 +116,8 @@ elif os.path.exists('/SNS/users/wzz/VULCAN/shared/CALIBRATION'):
                       os.path.join(base_calib_dir, '2018_6_1_CAL/vdrive_3bank_bin.h5')]
 
     CalibrationFilesList = [[{3: os.path.join(pre_ned_local_dir, 'vulcan_foc_all_2bank_11p.cal')},
-                             {3: os.path.join(pre_ned_local_dir, 'VULCAN_Characterization_2Banks_v2.txt')},
+                             {3: os.path.join(pre_ned_local_dir,
+                                              'VULCAN_Characterization_2Banks_v2.txt')},
                              os.path.join(pre_ned_local_dir, 'vdrive_log_bin.dat')],
                             # east/west bank
                             ned_2018_setup
@@ -138,7 +139,8 @@ def get_auto_reduction_calibration_files(nexus_file_name):
     assert isinstance(nexus_file_name, str), 'Input event NeXus file {0} must be a string but not a {1}.' \
                                              ''.format(nexus_file_name, type(nexus_file_name))
     if os.path.exists(nexus_file_name) is False:
-        raise RuntimeError('Event NeXus file {0} does not exist or is not accessible.'.format(nexus_file_name))
+        raise RuntimeError(
+            'Event NeXus file {0} does not exist or is not accessible.'.format(nexus_file_name))
 
     # get the date of the NeXus file
     event_file_time = datetime.datetime.fromtimestamp(os.path.getmtime(nexus_file_name))
@@ -193,7 +195,7 @@ RecordBase = [
     ("MTSTorque",       "loadframe.torque",         "average"),
     ("MTSLaser",        "loadframe.laser",          "average"),
     ("MTSlaserstrain",  "loadframe.laserstrain",    "average"),
-    ("MTSDisplaceoffset","loadframe.x_offset",      "average"),
+    ("MTSDisplaceoffset", "loadframe.x_offset",      "average"),
     ("MTSAngleceoffset", "loadframe.rot_offset",    "average"),
     ("MTST1",           "loadframe.furnace1",       "average"),
     ("MTST2",           "loadframe.furnace2",       "average"),
@@ -303,6 +305,7 @@ class ReductionSetup(object):
     """
     Class to contain reduction setup parameters
     """
+
     def __init__(self):
         """
         Initialization
@@ -414,7 +417,8 @@ class ReductionSetup(object):
             bin_param_str = '5000., -0.001, 70000.'
         elif len(self._binningParameters) == 1:
             # only bin size is defined
-            bin_param_str = '{0}, {1}, {2}'.format(5000., -1*abs(self._binningParameters[0]), 70000.)
+            bin_param_str = '{0}, {1}, {2}'.format(
+                5000., -1*abs(self._binningParameters[0]), 70000.)
         elif len(self._binningParameters) == 3:
             # 3 are given
             bin_param_str = '{0}, {1}, {2}'.format(self._binningParameters[0], -1*abs(self._binningParameters[1]),
@@ -436,7 +440,8 @@ class ReductionSetup(object):
         :param user_specified_dir: if it is not specified, change to .../logs/ as default
         """
         # Check validity
-        assert isinstance(original_directory, str), 'Directory must be string but not %s.' % type(original_directory)
+        assert isinstance(original_directory, str), 'Directory must be string but not %s.' % type(
+            original_directory)
 
         # Change path from ..../autoreduce/ to .../logs/
         if original_directory.endswith("/"):
@@ -537,9 +542,11 @@ class ReductionSetup(object):
             nexus_dir = self._outputDirectory
 
         if not nexus_only and check_write_permission and os.access(gsas_dir, os.W_OK) is False:
-            raise RuntimeError('User has no privilege to write to {0} for chopped data.'.format(gsas_dir))
+            raise RuntimeError(
+                'User has no privilege to write to {0} for chopped data.'.format(gsas_dir))
         if check_write_permission and os.access(nexus_dir, os.W_OK) is False:
-            raise RuntimeError('User has no privilege to write to {0} for chopped data.'.format(nexus_dir))
+            raise RuntimeError(
+                'User has no privilege to write to {0} for chopped data.'.format(nexus_dir))
 
         return gsas_dir, nexus_dir
 
@@ -590,7 +597,7 @@ class ReductionSetup(object):
         """
         if main_gsas:
             return self._mainGSASName
-    
+
     def set_gsas_file(self, gsas_file_name, main_gsas):
         """
         get GSAS file
@@ -665,7 +672,8 @@ class ReductionSetup(object):
             if self._splitterWsName is None or self._splitterInfoName is None:
                 raise RuntimeError('Splitters (workspaces) have not been set.')
             if not AnalysisDataService.doesExist(self._splitterWsName):
-                raise RuntimeError('Splitters workspace {0} cannot be found in ADS.'.format(self._splitterWsName))
+                raise RuntimeError(
+                    'Splitters workspace {0} cannot be found in ADS.'.format(self._splitterWsName))
             if not AnalysisDataService.doesExist(self._splitterInfoName):
                 print '[WARNING] Splitters information workspace {0} do not exist.'.format(self._splitterInfoName)
                 self._splitterInfoName = None
@@ -839,11 +847,14 @@ class ReductionSetup(object):
         # 1D plot file name
         auto_reduction_dir = self.get_reduced_data_dir()
         if isinstance(auto_reduction_dir, str):
-            self._pngFileName = os.path.join(auto_reduction_dir, 'VULCAN_' + str(self._runNumber) + '.png')
+            self._pngFileName = os.path.join(
+                auto_reduction_dir, 'VULCAN_' + str(self._runNumber) + '.png')
         else:
             assert isinstance(self._mainGSASDir, str), 'Main GSAS dir {} must be set to a string but not of type {}' \
-                                                       ''.format(self._mainGSASDir, type(self._mainGSASDir))
-            self._pngFileName = os.path.join(self._mainGSASDir, 'VULCAN_{0}.png'.format(self._runNumber))
+                                                       ''.format(self._mainGSASDir,
+                                                                 type(self._mainGSASDir))
+            self._pngFileName = os.path.join(
+                self._mainGSASDir, 'VULCAN_{0}.png'.format(self._runNumber))
 
         return
 
@@ -862,7 +873,8 @@ class ReductionSetup(object):
         :param save:
         :return:
         """
-        assert isinstance(save, bool), 'Flag {0} must be a boolean but not a {1}.'.format(save, type(save))
+        assert isinstance(save, bool), 'Flag {0} must be a boolean but not a {1}.'.format(
+            save, type(save))
 
         self._saveChoppedWorkspaceToNeXus = save
 
@@ -874,7 +886,8 @@ class ReductionSetup(object):
         :param flag:
         :return:
         """
-        assert isinstance(flag, bool), 'Flag to align with VDRIVE GSAS binns {0} must be a boolean.'.format(flag)
+        assert isinstance(
+            flag, bool), 'Flag to align with VDRIVE GSAS binns {0} must be a boolean.'.format(flag)
 
         self._alignVDriveBinFlag = flag
 
@@ -905,7 +918,8 @@ class ReductionSetup(object):
         assert isinstance(min_tof, float), 'Minimum TOF value {0} must be a float but not a {1}.' \
                                            ''.format(max_tof, type(max_tof))
         assert isinstance(bin_size, float) or bin_size is None, 'Bin size {0} must be either a float or ' \
-                                                                'a None but not a {1}.'.format(bin_size, type(bin_size))
+                                                                'a None but not a {1}.'.format(
+                                                                    bin_size, type(bin_size))
 
         if bin_size is None:
             bin_size = self._defaultBinSize
@@ -961,7 +975,8 @@ class ReductionSetup(object):
         :return:
         """
         assert isinstance(splitter_ws_name, str), 'Splitters workspace name must be a string.'
-        assert isinstance(info_ws_name, str), 'Splitters information workspace name must be a string.'
+        assert isinstance(
+            info_ws_name, str), 'Splitters information workspace name must be a string.'
 
         self._splitterWsName = splitter_ws_name
         self._splitterInfoName = info_ws_name
@@ -983,7 +998,8 @@ class ReductionSetup(object):
         :param flag:
         :return:
         """
-        assert isinstance(flag, bool), 'Input flag {0} must be a boolean but not {1}.'.format(flag, type(flag))
+        assert isinstance(flag, bool), 'Input flag {0} must be a boolean but not {1}.'.format(
+            flag, type(flag))
 
         self._vanadiumFlag = flag
 
@@ -1011,11 +1027,12 @@ class ReductionSetup(object):
         self._mainRecordFileName = os.path.join(self._outputDirectory, "AutoRecord.txt")
         self._2ndRecordFileName = os.path.join(self.change_output_directory(self._outputDirectory, ""),
                                                "AutoRecord.txt")
-        print ('[DEBUG LOG] auto reduction mode: output directory: {0}; 2nd record file: {1}'
-               ''.format(self._outputDirectory, self._2ndRecordFileName))
+        print('[DEBUG LOG] auto reduction mode: output directory: {0}; 2nd record file: {1}'
+              ''.format(self._outputDirectory, self._2ndRecordFileName))
 
         # output GSAS directory
-        self._mainGSASDir = self.change_output_directory(self._outputDirectory, 'autoreduce/binnedgda')
+        self._mainGSASDir = self.change_output_directory(
+            self._outputDirectory, 'autoreduce/binnedgda')
         self._2ndGSASDir = self.change_output_directory(self._outputDirectory, 'binned_data')
 
         self.is_auto_reduction_service = True
@@ -1077,7 +1094,8 @@ class ReductionSetup(object):
         :return:
         """
         if ref_ws_name is not None:
-            datatypeutility.check_string_variable('VDrive binning reference workspace name', ref_ws_name)
+            datatypeutility.check_string_variable(
+                'VDrive binning reference workspace name', ref_ws_name)
 
         self._vdrive_binning_ref_ws_name = ref_ws_name
 
@@ -1097,7 +1115,8 @@ class ReductionSetup(object):
         :param num_focused_banks:
         :return:
         """
-        datatypeutility.check_int_variable('Number of focused banks/spectra', num_focused_banks, (0, None))
+        datatypeutility.check_int_variable(
+            'Number of focused banks/spectra', num_focused_banks, (0, None))
 
         # get the reduction calibration and etc files from event data file
         file_list = get_auto_reduction_calibration_files(self._eventFileFullPath)
@@ -1108,9 +1127,9 @@ class ReductionSetup(object):
         binning_ref_file_name = file_list[2]
 
         self.set_focus_file(calibrate_file_name)
-        print ('[INFO] number of focused banks = {1}: calibration file: {0}, '
-               'characterization file: {2}'.format(calibrate_file_name, num_focused_banks,
-                                                   character_file_name))
+        print('[INFO] number of focused banks = {1}: calibration file: {0}, '
+              'characterization file: {2}'.format(calibrate_file_name, num_focused_banks,
+                                                  character_file_name))
         self.set_charact_file(character_file_name)
         if binning_ref_file_name is not None:
             self.set_vulcan_bin_file(binning_ref_file_name)
@@ -1135,7 +1154,8 @@ class ReductionSetup(object):
         :param event_file_path:
         :return:
         """
-        assert isinstance(event_file_path, str), 'Event file must be a string but not %s.' % type(event_file_path)
+        assert isinstance(event_file_path, str), 'Event file must be a string but not %s.' % type(
+            event_file_path)
         assert os.path.exists(event_file_path), 'Event file %s does not exist.' % event_file_path
 
         self._eventFileFullPath = event_file_path
@@ -1176,7 +1196,8 @@ class ReductionSetup(object):
         :param dir_name:
         :return:
         """
-        assert isinstance(dir_name, str), 'directory name {0} must be of type string'.format(dir_name)
+        assert isinstance(
+            dir_name, str), 'directory name {0} must be of type string'.format(dir_name)
         if os.path.exists(dir_name) is False:
             raise RuntimeError('Output sample log directory {0} does not exist.'.format(dir_name))
         if os.path.isfile(dir_name):
@@ -1199,7 +1220,8 @@ class ReductionSetup(object):
         :return:
         """
         # check input's validity
-        assert isinstance(dir_path, str), 'Output directory must be a string but not %s.' % type(dir_path)
+        assert isinstance(
+            dir_path, str), 'Output directory must be a string but not %s.' % type(dir_path)
 
         # set up
         self._outputDirectory = dir_path
@@ -1301,7 +1323,8 @@ class ReductionSetup(object):
         assert isinstance(directory, str), 'Standard directory {0} must be a string but not a {1}.' \
                                            ''.format(directory, type(directory))
         assert isinstance(base_record_file, str), 'Base AutoRecord file {0} must be a string but not a {1}.' \
-                                                  ''.format(base_record_file, type(base_record_file))
+                                                  ''.format(base_record_file,
+                                                            type(base_record_file))
 
         self._standardSampleName = standard
         self._standardDirectory = directory
@@ -1371,8 +1394,8 @@ class PatchRecord:
         # Verify whether these 2 files are accessible
         self._noPatchRecord = False
         if os.path.exists(self._cvInfoFileName) is False or \
-                        os.path.exists(self._runInfoFileName) is False or \
-                        os.path.exists(self._beamInfoFileName) is False:
+                os.path.exists(self._runInfoFileName) is False or \
+                os.path.exists(self._beamInfoFileName) is False:
             self._noPatchRecord = True
 
         return
@@ -1531,7 +1554,8 @@ class PatchRecordHDF5(object):
         try:
             h5file = h5py.File(self._h5name, 'r')
         except IOError as io_err:
-            raise RuntimeError('Unable to open hdf5 file {0} due to {1}'.format(self._h5name, io_err))
+            raise RuntimeError(
+                'Unable to open hdf5 file {0} due to {1}'.format(self._h5name, io_err))
 
         log_value_dict = dict()
 
@@ -1547,8 +1571,8 @@ class PatchRecordHDF5(object):
                             try:
                                 node = node[item]
                             except IndexError as index_error:
-                                print ('[WARNING] {}: {} is not a node on H5Path. FYI: {}'
-                                       ''.format(self._h5name, node, index_error))
+                                print('[WARNING] {}: {} is not a node on H5Path. FYI: {}'
+                                      ''.format(self._h5name, node, index_error))
 
                     # END-FOR
                 except KeyError as key_err:
@@ -1560,7 +1584,7 @@ class PatchRecordHDF5(object):
 
                 log_value_dict[log_name] = str(node)
             else:
-                print ('[WARNING] Log {} is not in {}\'s PATH'.format(log_name, self._h5name))
+                print('[WARNING] Log {} is not in {}\'s PATH'.format(log_name, self._h5name))
         # END-FOR
 
         h5file.close()
@@ -1578,6 +1602,7 @@ class ReduceVulcanData(object):
     """
     Class to reduce VULCAN data
     """
+
     def __init__(self, reduce_setup):
         """
         Initialization
@@ -1639,7 +1664,8 @@ class ReduceVulcanData(object):
             try:
                 mantidsimple.DeleteWorkspace(Workspace=ws_name)
             except RuntimeError as run_err:
-                error_message += 'Unable to delete workspace {0} due to {1}.\n'.format(ws_name, run_err)
+                error_message += 'Unable to delete workspace {0} due to {1}.\n'.format(
+                    ws_name, run_err)
 
         # clear the list
         self._reducedWorkspaceList = list()
@@ -1697,7 +1723,8 @@ class ReduceVulcanData(object):
                            '' % (gsas_dir, reduction_setup.get_gsas_file(main_gsas=True))
             # 2nd GSAS file
             if reduction_setup.get_gsas_dir() is not None:
-                dry_run_str += "GSAS2 directory     : %s\n" % str(reduction_setup.get_gsas_2nd_dir())
+                dry_run_str += "GSAS2 directory     : %s\n" % str(
+                    reduction_setup.get_gsas_2nd_dir())
 
         dry_run_str += "Record file name    : %s\n" % str(reduction_setup.get_record_file())
         dry_run_str += "Record(2) file name : %s\n" % str(reduction_setup.get_record_2nd_file())
@@ -1716,7 +1743,8 @@ class ReduceVulcanData(object):
             self._myLogInfo += "[Warning]  Input file is not file but directory.\n"
             return
         if os.path.isabs(source_gsas_file_name) is not True:
-            self._myLogInfo += '[Warning] Source file name {0} is not an absolute path.\n'.format(source_gsas_file_name)
+            self._myLogInfo += '[Warning] Source file name {0} is not an absolute path.\n'.format(
+                source_gsas_file_name)
             return
 
         # Create directory if it does not exist
@@ -1737,7 +1765,8 @@ class ReduceVulcanData(object):
                                    "".format(target_file_name)
                 os.remove(target_file_name)
             shutil.copy(source_gsas_file_name, target_directory)
-            new_gsas_file_name = os.path.join(target_directory, os.path.basename(source_gsas_file_name))
+            new_gsas_file_name = os.path.join(
+                target_directory, os.path.basename(source_gsas_file_name))
             os.chmod(new_gsas_file_name, 0666)
         except IOError as io_err:
             raise RuntimeError('Unable to cropy {0} to {1} due to {2}.'
@@ -1846,11 +1875,14 @@ class ReduceVulcanData(object):
         assert isinstance(target_file, str), 'Target file name {0} must be a string but not a {1}.' \
                                              ''.format(target_file, type(target_file))
         assert isinstance(sample_name_list, list), 'Sample name list {0} must be a list but not a {1}.' \
-                                                   ''.format(sample_name_list, type(sample_name_list))
+                                                   ''.format(sample_name_list,
+                                                             type(sample_name_list))
         assert isinstance(sample_title_list, list), 'Sample title list {0} must be a list but not a {1}.' \
-                                                    ''.format(sample_title_list, type(sample_title_list))
+                                                    ''.format(sample_title_list,
+                                                              type(sample_title_list))
         assert isinstance(sample_operation_list, list), 'Sample operation list {0} must be a list but not a {1}.' \
-                                                        ''.format(sample_operation_list, type(sample_operation_list))
+                                                        ''.format(sample_operation_list,
+                                                                  type(sample_operation_list))
         assert len(sample_name_list) == len(sample_title_list) and len(sample_name_list) == len(sample_operation_list), \
             'Sample name list ({0}), sample title list ({1}) and sample operation list ({2}) must have the same ' \
             'size'.format(len(sample_name_list), len(sample_title_list), len(sample_operation_list))
@@ -2068,7 +2100,8 @@ class ReduceVulcanData(object):
         assert isinstance(log_ws_name, str), 'Log workspace name must be a string'
         assert AnalysisDataService.doesExist(log_ws_name), 'Log workspace %s does not exist in data service.' \
                                                            '' % log_ws_name
-        assert isinstance(output_directory, str), 'Output directory {0} must be a string.'.format(output_directory)
+        assert isinstance(output_directory, str), 'Output directory {0} must be a string.'.format(
+            output_directory)
         assert isinstance(run_number, int), 'Run number must be an integer.'
         assert os.path.exists(output_directory) and os.path.isdir(output_directory), \
             'Output directory must be an existing directory.'
@@ -2106,7 +2139,8 @@ class ReduceVulcanData(object):
         for title in header_item_list:
             header_str += "%s\t" % title
 
-        output_file_name = os.path.join(output_directory, 'IPTS-%d-GenericDAQ-%d.txt' % (ipts, run_number))
+        output_file_name = os.path.join(
+            output_directory, 'IPTS-%d-GenericDAQ-%d.txt' % (ipts, run_number))
         self.generate_csv_log(output_file_name, sample_log_name_list, header_str)
 
         return
@@ -2337,7 +2371,8 @@ class ReduceVulcanData(object):
             raw_event_file = self._reductionSetup.get_event_file()
         else:
             raw_event_file = event_file_name
-        assert isinstance(raw_event_file, str), 'User specified event file name {0} must be a string but not a {1}.'.format(raw_event_file, type(raw_event_file))
+        assert isinstance(raw_event_file, str), 'User specified event file name {0} must be a string but not a {1}.'.format(
+            raw_event_file, type(raw_event_file))
         # END-IF-ELSE
 
         # set up binning parameters
@@ -2370,7 +2405,8 @@ class ReduceVulcanData(object):
             self._reductionSetup.set_gsas_file(gsas_file_name, main_gsas=True)
 
         orig_gsas_name = gsas_file_name
-        gsas_file_name, gsas_message, output_access_error, del_exist = self.pre_process_output_gsas(gsas_file_name)
+        gsas_file_name, gsas_message, output_access_error, del_exist = self.pre_process_output_gsas(
+            gsas_file_name)
         if output_access_error:
             return False, 'Unable to write GSAS file {0} due to {1}'.format(gsas_file_name, gsas_message), None
 
@@ -2378,8 +2414,10 @@ class ReduceVulcanData(object):
 
         # reduce data
         try:
-            print ('[INFO] SNSPowderReduction On File {0} to {1}'.format(raw_event_file, gsas_file_name))
-            print ('[DB...BAT] Charatersization: "{0}"'.format(self._reductionSetup.get_characterization_file()))
+            print('[INFO] SNSPowderReduction On File {0} to {1}'.format(
+                raw_event_file, gsas_file_name))
+            print('[DB...BAT] Charatersization: "{0}"'.format(
+                self._reductionSetup.get_characterization_file()))
             mantidsimple.SNSPowderReduction(Filename=raw_event_file,
                                             PreserveEvents=True,
                                             CalibrationFile=self._reductionSetup.get_focus_file(),
@@ -2486,7 +2524,8 @@ class ReduceVulcanData(object):
 
             # save to Vuclan GSAS
             bin_file_name = self._reductionSetup.get_vulcan_bin_file()
-            print ('[DB...INFO] SaveVulcanGSS from {0} to {1}'.format(reduced_workspace, gsas_file_name))
+            print('[DB...INFO] SaveVulcanGSS from {0} to {1}'.format(
+                reduced_workspace, gsas_file_name))
             try:
                 # TODO FIXME How to work with old system?
                 mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_workspace,
@@ -2522,7 +2561,8 @@ class ReduceVulcanData(object):
                                        GSSFilename=gsas_file_name,
                                        IPTS=self._reductionSetup.get_ipts_number(),
                                        GSSParmFileName=gsas_iparm_file_name)
-            print ('[DB...BAT] gsas iparm file: {0}, Output GSS: {1}'.format(gsas_iparm_file_name, gsas_file_name))
+            print('[DB...BAT] gsas iparm file: {0}, Output GSS: {1}'.format(
+                gsas_iparm_file_name, gsas_file_name))
             # save_vulcan_gsas.save_vulcan_gss(reduced_workspace,
             #                                  binning_parameter_list=bin_param_list,
             #                                  output_file_name=gsas_file_name,
@@ -2599,7 +2639,8 @@ class ReduceVulcanData(object):
             message += 'User cannot overwrite existing GSAS file {0}'.format(gsas_file_name)
         elif os.path.exists(gsas_file_name):
             # re-write: so delete the original gsas file first
-            message += 'Previously reduced GSAS file {0} is to be overwritten.'.format(gsas_file_name)
+            message += 'Previously reduced GSAS file {0} is to be overwritten.'.format(
+                gsas_file_name)
             del_curr_gsas = True
 
         return gsas_file_name, message, output_access_error, del_curr_gsas
@@ -2614,7 +2655,8 @@ class ReduceVulcanData(object):
         """
         # check inputs and get input workspace
         assert isinstance(reduced_gss_ws_name, str), 'Reduced GSAS workspace name {0} must be a string but not a {1}.' \
-                                                     ''.format(reduced_gss_ws_name, type(reduced_gss_ws_name))
+                                                     ''.format(reduced_gss_ws_name,
+                                                               type(reduced_gss_ws_name))
         reduced_gss_ws = AnalysisDataService.retrieve(reduced_gss_ws_name)
 
         # get vanadium information according to vanadium run number
@@ -2628,7 +2670,8 @@ class ReduceVulcanData(object):
 
         # align bins
         if not self._is_nED:
-            check_result, message = check_point_data_log_binning(van_ws_name, standard_bin_size=0.01, tolerance=1.E-5)
+            check_result, message = check_point_data_log_binning(
+                van_ws_name, standard_bin_size=0.01, tolerance=1.E-5)
             align_bins(van_ws_name, reduced_gss_ws_name)
         # END-IF
 
@@ -2674,22 +2717,26 @@ def align_bins(src_workspace_name, template_workspace_name):
     """
     # check and get workspace
     assert isinstance(src_workspace_name, str), 'Name of workspace to align {0} must be a string but not a {1}.' \
-                                                ''.format(src_workspace_name, type(src_workspace_name))
+                                                ''.format(src_workspace_name,
+                                                          type(src_workspace_name))
     assert isinstance(template_workspace_name, str), 'Name of binning template workspace {0} must be a string ' \
                                                      'but not a {1}.'.format(template_workspace_name,
                                                                              type(template_workspace_name))
 
     # check workspaces existing or not
     if AnalysisDataService.doesExist(src_workspace_name) is False:
-        raise RuntimeError('Workspace {0} to align cannot be found in ADS.'.format(src_workspace_name))
+        raise RuntimeError(
+            'Workspace {0} to align cannot be found in ADS.'.format(src_workspace_name))
     if AnalysisDataService.doesExist(template_workspace_name) is False:
-        raise RuntimeError('Binning template workspace {0} does not exist in ADS.'.format(template_workspace_name))
+        raise RuntimeError(
+            'Binning template workspace {0} does not exist in ADS.'.format(template_workspace_name))
 
     align_ws = AnalysisDataService.retrieve(src_workspace_name)
     template_ws = AnalysisDataService.retrieve(template_workspace_name)
 
     if not (template_ws.isHistogramData() and align_ws.isHistogramData()):
-        raise RuntimeError('Neither template workspace nor ready-to-align workspace can be PointData.')
+        raise RuntimeError(
+            'Neither template workspace nor ready-to-align workspace can be PointData.')
 
     # get template X
     num_histograms = align_ws.getNumberHistograms()
@@ -2697,7 +2744,8 @@ def align_bins(src_workspace_name, template_workspace_name):
     for i_ws in range(num_histograms):
         array_x = align_ws.dataX(i_ws)
         if len(array_x) != len(template_vec_x):
-            raise RuntimeError('Template workspace and workspace to align bins do not have same number of bins.')
+            raise RuntimeError(
+                'Template workspace and workspace to align bins do not have same number of bins.')
         numpy.copyto(array_x, template_vec_x)
     # END-FOR
 
@@ -2713,7 +2761,8 @@ def check_point_data_log_binning(ws_name, standard_bin_size=0.01, tolerance=1.E-
     :return: 2-tuple. boolean/str as True/False and message
     """
     # check input & get workspace
-    assert isinstance(ws_name, str), 'Workspace name {0} must be a string but not a {1}'.format(ws_name, type(ws_name))
+    assert isinstance(ws_name, str), 'Workspace name {0} must be a string but not a {1}'.format(
+        ws_name, type(ws_name))
 
     workspace = AnalysisDataService.retrieve(ws_name)
 
@@ -3029,9 +3078,11 @@ def create_bin_table(data_ws, not_align_idl, h5_bin_file_name=None, binning_para
         low_bin_ws_name = '{0}_LowResBin'.format(base_table_name)
         high_bin_ws_name = '{0}_HighResBin'.format(base_table_name)
         if AnalysisDataService.doesExist(low_bin_ws_name) is False:
-            mantidsimple.CreateWorkspace(low_bins, low_bins, NSpec=1, OutputWorkspace=low_bin_ws_name)
+            mantidsimple.CreateWorkspace(low_bins, low_bins, NSpec=1,
+                                         OutputWorkspace=low_bin_ws_name)
         if AnalysisDataService.doesExist(high_bin_ws_name) is False:
-            mantidsimple.CreateWorkspace(high_bins, high_bins, NSpec=1, OutputWorkspace=high_bin_ws_name)
+            mantidsimple.CreateWorkspace(high_bins, high_bins, NSpec=1,
+                                         OutputWorkspace=high_bin_ws_name)
 
         # create binning table name
         bin_table_name = '{0}_{1}Bank'.format(base_table_name, num_banks)
@@ -3099,13 +3150,13 @@ def main(argv):
         # dry run
         status, msg = reducer.dry_run()
         if status:
-            print (msg)
+            print(msg)
         else:
-            print ('Unable to execute dry run due to {0}'.format(msg))
+            print('Unable to execute dry run due to {0}'.format(msg))
         # check validity
         status, error_message = reduction_setup.check_validity()
         if not status:
-            print ('Reduction setup is not valid due to {0}'.format(error_message))
+            print('Reduction setup is not valid due to {0}'.format(error_message))
 
     else:
         # execute
@@ -3114,7 +3165,7 @@ def main(argv):
             status, message = reducer.execute_vulcan_reduction(output_logs=True)
             if not status:
                 raise RuntimeError('Auto reduction error: {0}'.format(message))
-            print ('[Auto Reduction Successful: {0}]'.format(message))
+            print('[Auto Reduction Successful: {0}]'.format(message))
         elif not status:
             # error message
             raise RuntimeError('Reduction Setup is not valid:\n%s' % error_message)

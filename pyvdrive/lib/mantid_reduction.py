@@ -19,6 +19,7 @@ import h5py
 class VulcanBinningHelper(object):
     """ This is a class that provides a set of static methods to handling binning for VDRIVE
     """
+
     def __init__(self):
         """
         initialization
@@ -350,7 +351,7 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
     # Diffraction focus
     event_ws = mantid_helper.retrieve_workspace(output_ws_name)
     if event_ws.getNumberEvents() == 0:
-        print ('[DB...BAT] {}: # events = {}'.format(event_ws, event_ws.getNumberEvents()))
+        print('[DB...BAT] {}: # events = {}'.format(event_ws, event_ws.getNumberEvents()))
         error_message = 'Unable to reduced {} as number of events = 0'.format(event_ws_name)
         raise RuntimeError(error_message)
 
@@ -365,27 +366,28 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
     # Compress events as an option
     if 'CompressEvents' in reduction_params_dict:
         compress_events_tolerance = reduction_params_dict['CompressEvents']['Tolerance']
-        print ('[DB...BAT] User-specified compress tolerance = {}'.format(compress_events_tolerance))
+        print('[DB...BAT] User-specified compress tolerance = {}'.format(compress_events_tolerance))
         mantidapi.CompressEvents(InputWorkspace=output_ws_name,
                                  OutputWorkspace=output_ws_name,
                                  Tolerance=1.E-5)
 
     # rebin
     if binning_params is not None:
-        mantid_helper.rebin(workspace_name=output_ws_name, params=binning_params, preserve=not convert_to_matrix)
+        mantid_helper.rebin(workspace_name=output_ws_name,
+                            params=binning_params, preserve=not convert_to_matrix)
 
     # Edit instrument as an option
     if 'EditInstrumentGeometry' in reduction_params_dict:
         try:
             # TODO - NIGHT - In case the number of histograms of output workspace does not match (masked a lot) ...
             # TODO - FIXME - 27 bank Polar and Azimuthal are all None
-            print (reduction_params_dict['EditInstrumentGeometry'].keys())
-            print (output_ws_name)
-            print (mantid_helper.VULCAN_L1)
-            print (reduction_params_dict['EditInstrumentGeometry']['SpectrumIDs'])
-            print (reduction_params_dict['EditInstrumentGeometry']['L2'])
-            print (reduction_params_dict['EditInstrumentGeometry']['Polar'])
-            print (reduction_params_dict['EditInstrumentGeometry']['Azimuthal'])
+            print(reduction_params_dict['EditInstrumentGeometry'].keys())
+            print(output_ws_name)
+            print(mantid_helper.VULCAN_L1)
+            print(reduction_params_dict['EditInstrumentGeometry']['SpectrumIDs'])
+            print(reduction_params_dict['EditInstrumentGeometry']['L2'])
+            print(reduction_params_dict['EditInstrumentGeometry']['Polar'])
+            print(reduction_params_dict['EditInstrumentGeometry']['Azimuthal'])
 
             mantidapi.EditInstrumentGeometry(Workspace=output_ws_name,
                                              PrimaryFlightPath=mantid_helper.VULCAN_L1,
@@ -479,11 +481,12 @@ def save_ws_ascii(ws_name, output_directory, base_name):
     # check input blabla
 
     workspace = mantid_helper.retrieve_workspace(ws_name)
-    print ('[DB...BAT] {0} has {1} spectra'.format(ws_name, workspace.getNumberHistograms()))
+    print('[DB...BAT] {0} has {1} spectra'.format(ws_name, workspace.getNumberHistograms()))
     for ws_index in range(workspace.getNumberHistograms()):
         spec_id = ws_index + 1
         mantidapi.SaveAscii(InputWorkspace=ws_name,
-                            Filename=os.path.join(output_directory, base_name + '_Spec{0}.dat'.format(spec_id)),
+                            Filename=os.path.join(output_directory, base_name +
+                                                  '_Spec{0}.dat'.format(spec_id)),
                             Separator='Space',
                             SpectrumList='{0}'.format(ws_index))
 
