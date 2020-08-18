@@ -10,7 +10,7 @@ try:
     from PyQt5 import QtCore
     from PyQt5.QtCore import pyqtSignal
 except (ImportError, RuntimeError) as import_err:
-    print ('CHOP: {}'.format(import_err))
+    print('CHOP: {}'.format(import_err))
     from PyQt4 import QtCore
     from PyQt4.QtCore import pyqtSignal
 
@@ -836,7 +836,7 @@ class VdriveChop(VDriveCommand):
                               '' % chop_dir)
         else:
             os.mkdir(chop_dir)
-            os.chmod(chop_dir, 0777)
+            os.chmod(chop_dir, 0o777)
 
         # create the Chopped data for the run
         default_dir = os.path.join(chop_dir, '%d' % run_number)
@@ -846,7 +846,7 @@ class VdriveChop(VDriveCommand):
                               '' % default_dir)
         else:
             os.mkdir(default_dir)
-            os.chmod(default_dir, 0777)
+            os.chmod(default_dir, 0o777)
 
         return default_dir
 

@@ -2,7 +2,7 @@
 Mantid PyVDrive
 ===============
 
-A PyQt-based version of the PyVDrive program 
+A PyQt-based version of the PyVDrive program
 based on Mantid (http://www.mantidproject.org).
 """
 from __future__ import print_function
@@ -17,6 +17,7 @@ from pyvdrive import __project_url__, __version__
 
 try:
     import PyQt5
+    assert PyQt5
     use_pyqt5 = True
 except ImportError:
     use_pyqt5 = False

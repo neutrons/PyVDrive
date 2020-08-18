@@ -6,15 +6,15 @@
 import sys
 
 # a fix to iPython console
-import interface.config
-if interface.config.DEBUG: 
-    from interface.gui.mantidipythonwidget import MantidIPythonWidget
-    pass
+import pyvdrive.interface.config
+if pyvdrive.interface.config.DEBUG:
+    from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
+    print(MantidIPythonWidget)
 
 from PyQt4 import QtGui
 
-from interface.VDrivePlot import VdriveMainWindow
-import interface.PeakPickWindow as PeakPickWindow
+from pyvdrive.interface.VDrivePlot import VdriveMainWindow
+import pyvdrive.interface.PeakPickWindow as PeakPickWindow
 
 
 def lava_app():
@@ -23,6 +23,7 @@ def lava_app():
     else:
         _app = QtGui.QApplication(sys.argv)
     return _app
+
 
 app = lava_app()
 

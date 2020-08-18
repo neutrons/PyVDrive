@@ -445,26 +445,26 @@ def moveRows(table, dir):
                 try:
                     # put text in this item
                     item.setText(_fromUtf8(table.item(row+offset2, config.firstName).text()))
-                except:
+                except Exception:
                     item.setText(_fromUtf8(' '))
                 table.setItem(row+offset1, config.firstName, item)  # now place item in the table
                 # repeat above pattern for each column in the new row
                 item = QtGui.QTableWidgetItem()
                 try:
                     item.setText(_fromUtf8(table.item(row+offset2, config.lastName).text()))
-                except:
+                except Exception:
                     item.setText(_fromUtf8(' '))
                 table.setItem(row+offset1, config.lastName, item)
                 item = QtGui.QTableWidgetItem()
                 try:
                     item.setText(_fromUtf8(table.item(row+offset2, config.favIceCream).text()))
-                except:
+                except Exception:
                     item.setText(_fromUtf8(' '))
                 table.setItem(row+offset1, config.favIceCream, item)
                 item = QtGui.QTableWidgetItem()
                 try:
                     item.setText(_fromUtf8(table.item(row+offset2, config.favColor).text()))
-                except:
+                except Exception:
                     item.setText(_fromUtf8(' '))
                 table.setItem(row+offset1, config.favColor, item)
                 # column with the status checkbox requires a cell rather than an item to contain the checkbox
@@ -478,7 +478,7 @@ def moveRows(table, dir):
                         state = False
                     # now create a Select checkbox in the new row with the same state as the row to copy from
                     addCheckboxToWSTCell(table, row+offset1, config.select, state)
-                except:
+                except Exception:
                     # if no cell exists, just ignore
                     pass
 
