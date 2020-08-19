@@ -1,13 +1,9 @@
 from lettuce import *
 from nose.tools import assert_equals, assert_true
-
 import sys
 import os
 import os.path
-
-# FIXME - This only works for Linux platform
-sys.path.append('/home/wzz/local/lib/python2.7/Site-Packages/')
-import PyVDrive.lib.VDriveAPI as vdapi
+import pyvdrive.lib.VDriveAPI as vdapi
 
 
 class MyData:
@@ -34,7 +30,6 @@ class MyData:
         :return:
         """
         return self._ipts, self._runs[:]
-
 
     def set(self, inputobject):
         """ Set
@@ -69,6 +64,7 @@ def init_workflow(step):
     """ Do nothing at all.  It is a given situation and it won't be called.
     """
     pass
+
 
 @step(u'I create a reduction project')
 def initialize_project(step):
@@ -174,8 +170,8 @@ def reduce_single_set_data(step):
     paramdict = {
         "Extension": "_event.nxs",
         "PreserveEvents": True,
-        "Binning" : -0.001,
-        "OutputDirectory" : outputdir,
+        "Binning": -0.001,
+        "OutputDirectory": outputdir,
         "NormalizeByCurrent":  False,
         "FilterBadPulses": False,
         "CompressTOFTolerance": False,
@@ -190,9 +186,7 @@ def reduce_single_set_data(step):
     workflow.set_reduction_flag(file_flag_list=reduction_list, clear_flags=True)
 
     status, ret_obj = workflow.reduce_data_set(norm_by_vanadium=False)
-    print\
-        '[Message] ', str(ret_obj)
-    print
+    print('[Message] ', str(ret_obj))
     assert_true(status, str(ret_obj))
 
     return
@@ -221,18 +215,17 @@ def export_to_gsas(step=9):
 
     return
 
-# TODO/NOW/1st: Think of some crazy things to process the reduced data such as normalize by current, change unit, and etc.
+# TODO/NOW/1st: Think of some crazy things to process the reduced data such as normalize by current, 
+# change unit, and etc.
 
 
 if __name__ == "__main__":
 
-    if False:
-        init_workflow(0)
-        initialize_project(1)
-        setup_ipts(2)
-        filter_runs_by_run(3)
-        set_ipts_runs(4)
-        add_run_to_reduce(7)
-        reduce_single_set_data(8)
-        export_to_gsas(9)
-
+    init_workflow(0)
+    initialize_project(1)
+    setup_ipts(2)
+    filter_runs_by_run(3)
+    set_ipts_runs(4)
+    add_run_to_reduce(7)
+    reduce_single_set_data(8)
+    export_to_gsas(9)
