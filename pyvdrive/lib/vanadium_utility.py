@@ -355,15 +355,15 @@ class VanadiumProcessingManager(object):
             bank_list = [bank_id]
 
         output_ws_name = input_ws_name + '_NoPeak'
-        output_ws_dict = mantid_helper.strip_vanadium_peaks(input_ws_name=input_ws_name,
-                                                            output_ws_name=output_ws_name,
-                                                            bank_list=bank_list,
-                                                            binning_parameter=None,
-                                                            # PEAK FWHM must be integer (legacy)
-                                                            fwhm=peak_fwhm,
-                                                            peak_pos_tol=pos_tolerance,
-                                                            background_type=background_type,
-                                                            is_high_background=is_high_background)
+        mantid_helper.strip_vanadium_peaks(input_ws_name=input_ws_name,
+                                           output_ws_name=output_ws_name,
+                                           bank_list=bank_list,
+                                           binning_parameter=None,
+                                           # PEAK FWHM must be integer (legacy)
+                                           fwhm=peak_fwhm,
+                                           peak_pos_tol=pos_tolerance,
+                                           background_type=background_type,
+                                           is_high_background=is_high_background)
         self._striped_peaks_ws_dict[bank_id] = output_ws_name
 
         return output_ws_name

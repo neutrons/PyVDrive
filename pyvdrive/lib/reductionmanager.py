@@ -950,7 +950,7 @@ class ReductionManager(object):
     2. a dictionary of loaded vanadium
 
     ??? It is able to reduce the data file in the format of data file,
-    run number and etc. 
+    run number and etc.
 
     ??? It supports event chopping.
     """
@@ -1064,7 +1064,8 @@ class ReductionManager(object):
         #     convert_to_matrix = self._det_eff_ws_name is not None and apply_det_efficiency
         #     if apply_det_efficiency:
         #         # rebin
-        #         Rebin(InputWorkspace=ws_name, OutputWorkspace=ws_name, Params=binning, PreserveEvents=not convert_to_matrix)
+        #         Rebin(InputWorkspace=ws_name, OutputWorkspace=ws_name, Params=binning,
+        #               PreserveEvents=not convert_to_matrix)
         #         # apply detector efficiency
         #         Multiply(LHSWorkspace=ws_name, RHSWorkspace=self._det_eff_ws_name, OutputWorkspace=ws_name)
         raise NotImplementedError('ASAP')

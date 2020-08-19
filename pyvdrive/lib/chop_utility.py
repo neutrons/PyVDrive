@@ -1,11 +1,9 @@
 # Classes to process sample log and chopping
 import os
 import random
-import math
 import numpy
 import mantid_helper
-from mantid.api import ITableWorkspace, MatrixWorkspace
-from mantid.dataobjects import SplittersWorkspace
+from mantid.api import ITableWorkspace
 import datatypeutility
 
 FifteenYearsInSecond = 15*356*24*3600
@@ -191,11 +189,11 @@ class DataChopper(object):
         # auto target (1, 2, 3, ...) or user specified target
         # TODO - TONIGHT - better to check all the splitters
         if len(split_list) == 0:
-            raise WhatEver
+            raise RuntimeError('Splitter has zero size')
         else:
             splitter0 = split_list[0]
             if len(splitter0) < 2:
-                raise WhatEver
+                raise RuntimeError('Splitter 0 shall have at least 2 values')
             elif len(splitter0) == 2:
                 auto_target = True
             elif splitter0[2] is None:
@@ -263,7 +261,8 @@ class DataChopper(object):
         # return with relative time
         vec_times, vec_log_x, vec_log_y = mantid_helper.map_sample_logs(
             self._meta_ws_name, log_name_x, log_name_y)
-        # # TODO - TONIGHT 0 - compare with merge_2_logs shall be a static in the utility and called by plot_sample_log()!
+        # TODO - TONIGHT 0 - compare with merge_2_logs shall be a static in the utility and
+        # called by plot_sample_log()!
         # vec_log_x, vec_log_y = vdrivehelper.merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
 
         return vec_times, vec_log_x, vec_log_y
@@ -333,7 +332,7 @@ class DataChopper(object):
             run_start_time = mantid_helper.get_run_start(self._meta_ws_name, time_unit='second')
         else:
             run_start_time = None
-        print '[INFO] Run start time = ', run_start_time, 'of type ', type(run_start_time)
+        print('[INFO] Run start time = ', run_start_time, 'of type ', type(run_start_time))
 
         # get workspace
         slice_ws_name = chopper['splitter']
@@ -727,8 +726,8 @@ def is_overlap_splitter(split_ws_name):
     # return True if the number of splitters is too large, i.e., exceeds 10,000
     split_number = get_splitters_number(split_ws)
     if split_number >= LARGE_NUMBER_SPLITTER:
-        print '[Notice] Number of splitters = {0}.  It is too large to check. Return True instead' \
-              ''.format(split_number)
+        print('[Notice] Number of splitters = {0}.  It is too large to check. Return True instead'
+              ''.format(split_number))
         return True
 
     vec_splitter = get_splitters(split_ws)

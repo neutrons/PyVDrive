@@ -1,7 +1,6 @@
 __author__ = 'wzz'
 
-import mantid
-import mantid.geometry
+from mantid.geometry import CrystalStructure, ReflectionGenerator, ReflectionConditionFilter
 
 
 class UnitCell(object):
@@ -96,8 +95,6 @@ def calculate_reflections(unit_cell, min_d, max_d):
     :param max_d: maximum d-spacing value
     :return: a list of reflections.  Each reflection is a 2-tuple as ... ...
     """
-    from mantid.geometry import CrystalStructure, ReflectionGenerator, ReflectionConditionFilter
-
     def get_generator(lattice_parameters, space_group):
         """
         """

@@ -9,7 +9,6 @@ import save_vulcan_gsas
 import mantid.simpleapi as mantidsimple
 from mantid.api import AnalysisDataService, ITableWorkspace, MatrixWorkspace
 from mantid.dataobjects import SplittersWorkspace
-from mantid.kernel import DateAndTime
 import reduce_VULCAN
 import chop_utility
 import mantid_helper
@@ -94,7 +93,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # TODO - NIGHT (Nice) - save the split workspace for future reference
         # delete raw workspace
         # TODO/ISSUE/NOWNOW - Requiring a user option for this!
-        print('[INFO] Deleting raw event workspace {0} which {1} exists.' \
+        print('[INFO] Deleting raw event workspace {0} which {1} exists.'
               ''.format(event_ws_name, AnalysisDataService.doesExist(event_ws_name)))
         if AnalysisDataService.doesExist(event_ws_name):
             mantid_helper.delete_workspace(event_ws_name)
@@ -381,8 +380,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                     chopped_ws_name_list.append(reduced_ws_name)
                 else:
                     # unknown
-                    print '[ERROR] Unknown returned type (from SNSPowderReduction): {0} of type {1}' \
-                          ''.format(item, type(item))
+                    print('[ERROR] Unknown returned type (from SNSPowderReduction): {0} of type {1}'
+                          ''.format(item, type(item)))
             # END-FOR
 
             # convert the chopped workspaces to VULCAN-style GSAS file
@@ -438,8 +437,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
             # TODO/ISSUE/Now/ - Need to delete the other reduced workspaces too, ???_TOF
             for ws_name in vulcan_bin_ws_list:
-                print '[DB...BAT] Vulcan BIN workspace: {0}... Shall be deleted in future'.format(ws_name)
-                pass
+                print('[DB...BAT] Vulcan BIN workspace: {0}... Shall be deleted in future'.format(ws_name))
 
             # delete all the workspaces!
             # TODO/ISSUE/FIXME/NOW/TODAY - Delete the workspace by option
@@ -483,11 +481,11 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         gsas_dir, nexus_dir = self._reductionSetup.get_chopped_directory(False)
 
         if reduced_data:
-            print '[INFO] Reduced data will be written to {0}'.format(gsas_dir)
+            print('[INFO] Reduced data will be written to {0}'.format(gsas_dir))
             check_or_create_dir(gsas_dir)
 
         if chopped_data:
-            print '[INFO] Chopped data will be saved to {0} as NeXus files.'.format(nexus_dir)
+            print('[INFO] Chopped data will be saved to {0} as NeXus files.'.format(nexus_dir))
             check_or_create_dir(nexus_dir)
 
             # set chop_dir to class variable
@@ -521,7 +519,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                                                      split_ws.cell(num_rows-1, 0))
             else:
                 message += '.'
-            print message
+            print(message)
         else:
             # matrix workspace
             pass
@@ -770,9 +768,8 @@ class WriteSlicedLogs(object):
             # absolute time (ns) from 1990-01-01
             temp_time = datetime.datetime.utcfromtimestamp(real_start_time_i.astype('O') * 1.E-9)
             delta_to_t0_ns = temp_time - time0
-            temp_stop_time = datetime.datetime.utcfromtimestamp(
-                real_start_time_i.astype('O') * 1.E-9)
-            delta_to_tf_ns = temp_stop_time - time0
+            # temp_stop_time = datetime.datetime.utcfromtimestamp(
+            #     real_start_time_i.astype('O') * 1.E-9)
             time_stamp = delta_to_t0_ns.total_seconds()
         else:
             # time_stamp = real_start_time_i.total_nanoseconds()
@@ -802,7 +799,7 @@ class WriteSlicedLogs(object):
                 try:
                     sample_log = workspace_i.run().getProperty(log_name).value
                 except RuntimeError as run_err:
-                    print '[ERROR] Exporting chopped logs: {0}'.format(run_err)
+                    print('[ERROR] Exporting chopped logs: {0}'.format(run_err))
                     start_series_dict[mts_name].set_value(pd_index, 0.)
                     mean_series_dict[mts_name].set_value(pd_index, 0.)
                     end_series_dict[mts_name].set_value(pd_index, 0.)
@@ -822,7 +819,7 @@ class WriteSlicedLogs(object):
                     error_message = '[ERROR] Unable to export "loadframe" log {3} for {0}-th workspace {1} ' \
                                     'due to {2}'.format(i_ws, workspace_i.name(),
                                                         'index error', log_name)
-                    print error_message
+                    print(error_message)
                     start_value = 0.
                     mean_value = 0.
                     end_value = 0.
@@ -840,7 +837,7 @@ class WriteSlicedLogs(object):
                 start_value = mean_value = end_value = 0.
             else:
                 # unknown
-                print '[ERROR] MTS log name %s is cannot be found.' % mts_name
+                print('[ERROR] MTS log name %s is cannot be found.' % mts_name)
                 start_value = mean_value = end_value = 0.
             # END-IF-ELSE
 
@@ -949,7 +946,7 @@ class WriteSlicedLogs(object):
             mts_columns.append(mts_name)
 
             if log_name not in property_name_list:
-                print '[WARNING] Log {0} is not a sample log in NeXus.'.format(log_name)
+                print('[WARNING] Log {0} is not a sample log in NeXus.'.format(log_name))
         # END-FOR
 
         for i_ws, ws_name in enumerate(ws_name_list):
@@ -1000,8 +997,8 @@ class WriteSlicedLogs(object):
         if mts_columns.count('ProtonCharge') > 1:
             raise NotImplementedError('MTS has more than 1 column as "ProtonCharge"')
 
-        print '[INFO] Chopped log files are written to %s, %s and %s.' % (start_file_name, mean_file_name,
-                                                                          end_file_name)
+        print('[INFO] Chopped log files are written to %s, %s and %s.' % (start_file_name, mean_file_name,
+                                                                          end_file_name))
 
         return
 

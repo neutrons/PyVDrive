@@ -815,7 +815,7 @@ def get_run_stop(workspace, time_unit, is_relative):
         pcharge_log = workspace.run().getProperty('proton_charge')
     except (AttributeError, RuntimeError) as error:
         raise RuntimeError(
-            'Unable to access proton_charge log in given workspace {}'.format(workspace))
+                'Unable to access proton_charge log in given workspace {}: {}'.format(workspace, error))
 
     if pcharge_log.size() == 0:
         raise RuntimeError('Workspace {} has an empty proton charge log.  Unable to determine run stop'
@@ -2151,7 +2151,7 @@ def mtd_filter_bad_pulses(ws_name, lower_cutoff=95.):
     event_ws = retrieve_workspace(ws_name)
     num_events_after = event_ws.getNumberEvents()
 
-    print('[Info] FilterBadPulses reduces number of events from %d to %d (under %.3f percent) ' \
+    print('[Info] FilterBadPulses reduces number of events from %d to %d (under %.3f percent) '
           'of workspace %s.' % (num_events_before, num_events_after, lower_cutoff, ws_name))
 
     return

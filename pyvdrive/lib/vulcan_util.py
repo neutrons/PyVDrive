@@ -453,7 +453,6 @@ def import_sample_log_record(ipts_number, run_number, is_chopped, record_type='s
     # peel file
     try:
         peek_file = open(sample_log_name, 'r')
-        line0 = peek_file.readline()
         peek_file.close()
         row0 = 0
     except ValueError:
