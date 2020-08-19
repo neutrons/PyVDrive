@@ -12,7 +12,7 @@ except ImportError:
     from PyQt4 import QtCore
     from PyQt4.QtGui import QStandardItemModel, QStandardItem, QLineEdit, QMessageBox, QFileDialog
     from PyQt4.QtGui import QTableWidgetItem, QCheckBox, QWidget, QHBoxLayout, QComboBox
-#include this try/except block to remap QString needed when using IPython
+# include this try/except block to remap QString needed when using IPython
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
@@ -31,10 +31,10 @@ def add_runs_to_tree(treewidget, ipts, runlist):
     :param runlist:
     :return:
     """
-    if False:
-        model = QStandardItemModel()
-        model.setColumnCount(2)
-        model.setHeaderData(0, QtCore.Qt.Horizontal, 'IPTS')
+    # TODO - record the example below
+    #     model = QStandardItemModel()
+    #     model.setColumnCount(2)
+    #     model.setHeaderData(0, QtCore.Qt.Horizontal, 'IPTS')
 
     #treewidget = QTreeView(treewidget)
     model = treewidget.model()
@@ -43,7 +43,7 @@ def add_runs_to_tree(treewidget, ipts, runlist):
     itemmain = QStandardItem(QtCore.QString(str(ipts)))
     itemmain.setCheckable(False)
     model.setItem(numrows, 0, itemmain)
-    for i in xrange(len(runlist)):
+    for i in range(len(runlist)):
         runnumber = runlist[i]
         item = QStandardItem(QtCore.QString(str(runnumber)))
         model.setItem(numrows+i+1, 1, item)
@@ -205,7 +205,6 @@ def get_load_file_by_dialog(parent, title, default_dir, file_filter):
     :param title:
     :param default_dir:
     :param file_filter:
-    :param is_dir: if True, then only select the directories
     :return:
     """
     datatypeutility.check_string_variable('Title (to load file)', title)
@@ -225,7 +224,7 @@ def get_load_file_by_dialog(parent, title, default_dir, file_filter):
         file_name = str(returns).strip()
     file_name = file_name.strip()
 
-    print ('[DB...BAT] Splitter file: {}'.format(file_name))
+    print('[DB...BAT] Splitter file: {}'.format(file_name))
 
     return file_name
 
@@ -290,12 +289,13 @@ def parse_integer_list(line_edit, size=None, check_order=False, remove_duplicate
     :param line_edit:
     :param size:
     :param check_order: flag to check whether the input is ordered
+    :param remove_duplicate: flat to remove duplicates
     :param increase:
     :return:
     """
     # check inputs
-    assert isinstance(line_edit, QLineEdit), 'Input {0} of type {1} must be a QLineEdit instance.' \
-                                                   ''.format(line_edit, type(line_edit))
+    assert isinstance(line_edit, QLineEdit), 'Input {0} of type {1} must be a QLineEdit instance' \
+                                             ''.format(line_edit, type(line_edit))
 
     # get the text and split
     line_text = str(line_edit.text())
@@ -518,7 +518,7 @@ def skip_time(vec_times, vec_value, num_sec_skip, time_unit):
     prev_time = vec_times[0]
 
     size = len(vec_value)
-    for i in xrange(1, size):
+    for i in range(1, size):
         if prev_time + num_sec_skip * factor - 1.E-6 <= vec_times[i]:
             # on next time spot within tolerance
             out_vec_times.append(vec_times[i])
@@ -598,29 +598,28 @@ def addCheckboxToWSTCell(table, row, col, state):
     elif isinstance(state, bool) is True:
         pass
     else:
-        raise NotImplementedError("Input state %s of type %s is not accepted." % (str(state),
-            str(type(state))))
+        raise NotImplementedError("Input state %s of type %s is not accepted." % (str(state), str(type(state))))
     # ENDIF
 
-    #check if cellWidget exitst
-    if table.cellWidget(row,col) != None:
+    # check if cellWidget exitst
+    if table.cellWidget(row, col) is not None:
         # existing: just set the value
-        table.cellWidget(row,col).setChecked(state)
+        table.cellWidget(row, col).setChecked(state)
     else:
-        #case to add checkbox
+        # case to add checkbox
         checkbox = QCheckBox()
         checkbox.setText('')
         checkbox.setChecked(state)
         
-        #adding a widget which will be inserted into the table cell
-        #then centering the checkbox within this widget which in turn,
-        #centers it within the table column :-)
-        QW=QWidget()
-        cbLayout=QHBoxLayout(QW)
-        cbLayout.addWidget(checkbox)
-        cbLayout.setAlignment(QtCore.Qt.AlignCenter)
-        cbLayout.setContentsMargins(0,0,0,0)
-        table.setCellWidget(row,col, checkbox) #if just adding the checkbox directly
+        # adding a widget which will be inserted into the table cell
+        # then centering the checkbox within this widget which in turn,
+        # centers it within the table column :-)
+        qw = QWidget()
+        box_layout = QHBoxLayout(qw)
+        box_layout.addWidget(checkbox)
+        box_layout.setAlignment(QtCore.Qt.AlignCenter)
+        box_layout.setContentsMargins(0, 0, 0, 0)
+        table.setCellWidget(row, col, checkbox)  # if just adding the checkbox directly
 
     return
 
@@ -640,32 +639,31 @@ def addComboboxToWSTCell(table, row, col, itemlist, curindex):
         curindex = 0
 
     # Check if cellWidget exitst
-    if table.cellWidget(row,col) != None:
+    if table.cellWidget(row, col) is not None:
         # Existing: set to current index
-        table.cellWidget(row,col).setCurrentIndex(curindex)
+        table.cellWidget(row, col).setCurrentIndex(curindex)
     else:
         # Case to add QComboBox
         # check input
         if not isinstance(itemlist, list):
             raise NotImplementedError("Input 'itemlist' must be list! Current input is of type '{}'"
                                       "".format(type(itemlist)))
-        qlist = []
+        qlist = list()
         for item in itemlist:
             qlist.append(str(item))
         combobox = QComboBox()
         combobox.addItems(qlist)
         
-        #adding a widget which will be inserted into the table cell
-        #then centering the checkbox within this widget which in turn,
-        #centers it within the table column :-)
-        QW=QWidget()
-        cbLayout=QHBoxLayout(QW)
-        cbLayout.addWidget(combobox)
-        cbLayout.setAlignment(QtCore.Qt.AlignCenter)
-        cbLayout.setContentsMargins(0,0,0,0)
-        table.setCellWidget(row,col, combobox) #if just adding the checkbox directly
+        # adding a widget which will be inserted into the table cell
+        # then centering the checkbox within this widget which in turn,
+        # centers it within the table column :-)
+        qw = QWidget()
+        box_layout = QHBoxLayout(qw)
+        box_layout.addWidget(combobox)
+        box_layout.setAlignment(QtCore.Qt.AlignCenter)
+        box_layout.setContentsMargins(0, 0, 0, 0)
+        table.setCellWidget(row, col, combobox)  # if just adding the checkbox directly
         combobox.setCurrentIndex(curindex)
     # ENDIFELSE
 
     return
-

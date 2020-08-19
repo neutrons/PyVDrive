@@ -12,7 +12,7 @@ try:
 except (ImportError, RuntimeError) as import_err:
     print('CHOP: {}'.format(import_err))
     from PyQt4 import QtCore
-    from PyQt4.QtCore import pyqtSignal
+    # from PyQt4.QtCore import pyqtSignal
 
 
 class VdriveChop(VDriveCommand):
@@ -20,7 +20,7 @@ class VdriveChop(VDriveCommand):
     Process command MERGE
     """
     SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'DBIN', 'LOADFRAME', 'FURNACE', 'BIN', 'PICKDATA', 'OUTPUT',
-                     'BINFOLDER','MYTOFMIN', 'MYTOFMAX', 'BINW',
+                     'BINFOLDER', 'MYTOFMIN', 'MYTOFMAX', 'BINW',
                      'PULSETIME', 'DT', 'RUNV', 'ROI', 'MASK', 'NEXUS', 'STARTTIME', 'STOPTIME',
                      'NUMBANKS', 'SAVECHOPPED2NEXUS', 'IPARM', 'DRYRUN', 'FULLPROF']
 
@@ -142,7 +142,8 @@ class VdriveChop(VDriveCommand):
             slicer_key = ret_obj
 
         # chop and reduce
-        print ('[DB...BAT] user_bin_parameters = {}  ... type = {}'.format(binning_parameters, type(binning_parameters)))
+        print('[DB...BAT] user_bin_parameters = {}  ... type = {}'
+              ''.format(binning_parameters, type(binning_parameters)))
         status, message = self._controller.project.chop_run(run_number, slicer_key, reduce_flag=reduce_flag,
                                                             vanadium=vanadium, save_chopped_nexus=save_to_nexus,
                                                             output_dir=output_dir,
@@ -222,7 +223,7 @@ class VdriveChop(VDriveCommand):
         #     exp_log_type = None
 
         # chop
-        print ('[DB...BAT...UND] Slicer key = {}'.format(slicer_key))
+        print('[DB...BAT...UND] Slicer key = {}'.format(slicer_key))
         status, message = self._controller.project.chop_run(run_number, slicer_key,
                                                             reduce_flag=reduce_flag,
                                                             fullprof=self._write_to_fullprof,
@@ -304,7 +305,7 @@ class VdriveChop(VDriveCommand):
                                                                 overlap_mode=False,
                                                                 gda_start=i_slice)
 
-            print ('[DB...BAT] Processed: {} '.format(slice_key))
+            print('[DB...BAT] Processed: {} '.format(slice_key))
 
             if not status:
                 return False, message
@@ -400,7 +401,7 @@ class VdriveChop(VDriveCommand):
             else:
                 is_dry_run = False
         except ValueError as run_err:
-            raise RuntimeError('DRYRUN value {} cannot be recognized due to {}.' \
+            raise RuntimeError('DRYRUN value {} cannot be recognized due to {}'
                                ''.format(self._commandArgsDict['DRYRUN'], run_err))
 
         return is_dry_run
@@ -636,8 +637,8 @@ class VdriveChop(VDriveCommand):
             # END-FOR
 
             if has_beam_down:
-                message += 'User must specify: ProcessBeamDown as 0, 1 or 2 ' \
-                           '(0: include all events; 1: exclude down time events and include downtime in output order; ' \
+                message += 'User must specify: ProcessBeamDown as 0, 1 or 2 (0: include all events; ' \
+                           '1: exclude down time events and include downtime in output order; ' \
                            '2: exclude downtime events and exclude downtime from output GSAS)'
                 return False, message
         # END-IF
@@ -755,14 +756,15 @@ class VdriveChop(VDriveCommand):
                 try:
                     # TODO FIXME - NIGHT
                     """
-                      File "/home/wzz/Projects/PyVDrive/build/lib.linux-x86_64-2.7/pyvdrive/interface/vdrive_commands/chop.py", line 715, in exec_cmd
+                      File "/home/wzz/Projects/PyVDrive/build/lib.linux-x86_64-2.7/pyvdrive/
+                      interface/vdrive_commands/chop.py", line 715, in exec_cmd
                       slicer_list = self.parse_pick_data(user_slice_file)
                       NameError: global name 'user_slice_file' is not defined
                     """
                     user_slice_file = chop_option_dict['PICKDATA']
                     slicer_list = self.parse_pick_data(user_slice_file)
 
-                    print ('[DB...BAT] slice list: {}'.format(slicer_list))
+                    print('[DB...BAT] slice list: {}'.format(slicer_list))
 
                     status, message = self.chop_data_manually(run_number=run_number,
                                                               slicer_list=slicer_list,
@@ -957,7 +959,8 @@ CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1
 
 
 Current Example:
-CHOP,IPTS=13183,RUNS=68607,PICKDATA="/SNS/VULCAN/IPTS-13183/SHARED/VARIABLECHOP_SERRATION_2ND SERIES_4.TXT",BIN=1,LOADFRAME=1,PULSETIME=1
+CHOP,IPTS=13183,RUNS=68607,PICKDATA="/SNS/VULCAN/IPTS-13183/SHARED/VARIABLECHOP_SERRATION_2ND SERIES_4.TXT",
+BIN=1,LOADFRAME=1,PULSETIME=1
 
 PICKDATA FILE
 801266555.006	801266615.006
@@ -993,6 +996,3 @@ PICKDATA FILE
 801267505.008	801267530.008
 
 """
-
-
-

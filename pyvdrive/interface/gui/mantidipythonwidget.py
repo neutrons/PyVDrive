@@ -34,13 +34,13 @@ try:
     # This is PyQt5 compatible
     from qtconsole.rich_ipython_widget import RichIPythonWidget
     from qtconsole.inprocess import QtInProcessKernelManager
-    print ('mantidipythonwidget: import PyQt5')
+    print('mantidipythonwidget: import PyQt5')
 except ImportError as import_err:
     # This is PyQt4 compatible
-    print ('mantidipythonwidget import PyQt5 error: {}'.format(import_err))
+    print('mantidipythonwidget import PyQt5 error: {}'.format(import_err))
     from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
     from IPython.qt.inprocess import QtInProcessKernelManager
-    print ('mantidipythonwidget: import PyQt4')
+    print('mantidipythonwidget: import PyQt4')
 from mantid.api import AnalysisDataService as mtd
 
 try:
@@ -64,7 +64,7 @@ def our_run_code(self, code_obj, result=None):
     t = threading.Thread()
     # ipython 3.0 introduces a third argument named result
     nargs = len(inspect.getargspec(self.ipython_run_code).args)
-    if (nargs == 3):
+    if nargs == 3:
         t = threading.Thread(target=self.ipython_run_code, args=[code_obj,result])
     else:
         t = threading.Thread(target=self.ipython_run_code, args=[code_obj])
@@ -220,5 +220,3 @@ class MantidIPythonWidget(RichIPythonWidget):
         self.input_buffer = command
 
         return
-
-

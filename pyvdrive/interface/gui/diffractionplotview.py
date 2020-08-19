@@ -340,7 +340,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                 indicator_id, indicator_type
             )
             err_msg += 'There are %d peaks group:\n' % len(self._inEditGroupList)
-            for i_group in xrange(len(self._inEditGroupList)):
+            for i_group in range(len(self._inEditGroupList)):
                 err_msg += '%s\n' % str(self._inEditGroupList[i_group])
             raise RuntimeError(err_msg)
 
@@ -874,9 +874,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                                                              check=False)
             else:
                 # unable to move
-                print '[DB...] group: ', curr_group.get_id(), 'can move left = ', can_move_left,
-                print '; can move right = ', can_move_right
-                print self._myPeakGroupManager.pretty()
+                print('[DB...] group: ', curr_group.get_id(), 'can move left = ', can_move_left,)
+                print('; can move right = ', can_move_right)
+                print(self._myPeakGroupManager.pretty())
 
         elif self._currIndicatorType == 1:
             # cursor is in the vicinity of a peak. so the peaks-group will be moved
@@ -899,7 +899,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                 self.move_indicator(curr_group.left_boundary_id, delta_x, 0.)
                 self.move_indicator(curr_group.right_boundary_id, delta_x, 0.)
             else:
-                print '[DB....Warning] Group %d cannot be moved.' % curr_group.get_id()
+                print('[DB....Warning] Group %d cannot be moved.' % curr_group.get_id())
 
         else:
             # non-supported
@@ -919,7 +919,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # check whether the cursor is on any
         if self._currIndicatorID < 0:
             # not within any indicator range.
-            print '[DB] No indicator is selected. Nothing to move!'
+            print('[DB] No indicator is selected. Nothing to move!')
             assert self._cursorType == 0, 'arrow cursor, between 2 peaks, no operation.'
             return
 
@@ -936,10 +936,10 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             # check
             assert self._cursorType == 2, 'Cursor type %d must be 2!' % self._cursorType
 
-            print '[DB] Move (left/right %d) boundary from %f to %f' % (self._currIndicatorType,
-                                                                        self._mouseX, new_x),
-            print 'Left boundary ID = %d, Right boundary ID = %d' % (
-                curr_group.left_boundary_id, curr_group.right_boundary_id)
+            print('[DB] Move (left/right %d) boundary from %f to %f' % (self._currIndicatorType,
+                                                                        self._mouseX, new_x),)
+            print('Left boundary ID = %d, Right boundary ID = %d' % (curr_group.left_boundary_id,
+                                                                     curr_group.right_boundary_id))
 
             move_left_boundary = False
             if self._currIndicatorType == 0:
@@ -968,7 +968,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                 # update peak group manager
                 self._myPeakGroupManager.move_right_boundary(self._currGroupID, delta_x, False)
             else:
-                print '[DB...] Boundary (left=%s) cannot be moved.' % str(movable)
+                print('[DB...] Boundary (left=%s) cannot be moved.' % str(movable))
 
         elif self._currIndicatorType == 1:
             # select a peak's center, then move the peak
@@ -988,9 +988,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                                                    delta_x=delta_x, check=False, limit=self.getXLimit())
 
             else:
-                print '[DB...] Peak (indicator %d in group %d) cannot moved by %f.' % (self._currIndicatorID,
+                print('[DB...] Peak (indicator %d in group %d) cannot moved by %f.' % (self._currIndicatorID,
                                                                                        self._currGroupID,
-                                                                                       delta_x)
+                                                                                       delta_x))
 
         else:
             # unsupported case
@@ -1135,7 +1135,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         if self._mouseButtonBeingPressed != 0:
             self._mouseButtonBeingPressed = 0
         else:
-            print '[DB] Mouse is not pressed but released.'
+            print('[DB] Mouse is not pressed but released.')
 
         # skip the zoom or whatever mode
         if self._myToolBar.get_mode() != 0:
@@ -1220,9 +1220,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             curr_group_id = self._currGroupID
             curr_peak_id = self._currIndicatorID
             curr_item_type = self._currIndicatorType
-            print '[DB....Delete Peak] About to delete group %d peak %d type %d==2.' % (curr_group_id,
+            print('[DB....Delete Peak] About to delete group %d peak %d type %d==2.' % (curr_group_id,
                                                                                         curr_peak_id,
-                                                                                        curr_item_type)
+                                                                                        curr_item_type))
             assert curr_item_type == 1, \
                 'Current item type must be equal 1 for peak but not %d.' % curr_item_type
 
@@ -1279,7 +1279,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :return:
         """
         item_id, item_type, group_id = self._myPeakGroupManager.in_vicinity(self._eventX, 0.005)
-        print '[DB] Current Item = %d of type %d in Group %d.' % (item_id, item_type, group_id)
+        print('[DB] Current Item = %d of type %d in Group %d.' % (item_id, item_type, group_id))
 
         return
 
@@ -1530,14 +1530,13 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                 self.add_peak(peak_center, group_id=group_id)
             # END-IF-ELSE
 
-        return
-
     def switch_mode(self, target_mode):
         """
         switch function mode
         :param target_mode:
         :return:
         """
+        print(f'[WARNING] {target_mode} is not used')
         # reset current canvas
         self.reset()
 
