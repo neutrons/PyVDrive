@@ -246,7 +246,6 @@ class MplGraphicsView1D(QWidget):
         """
         # check whether the input is empty
         if len(vec_y) == 0:
-            print '[WARNING] Input is an empty vector set'
             return False
 
         if is_right:
@@ -789,7 +788,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         :param show_legend:
         :return: line ID (i.e., new key)
         """
-        print '[DB...BAT] Add Main Y-label : {0}; Line-label : {1}'.format(y_label, label)
+        print('[DB...BAT] Add Main Y-label : {0}; Line-label : {1}'.format(y_label, label))
 
         # Check input
         self._check_subplot_index(row_index, col_index, is_main=True)
@@ -870,8 +869,6 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         :param linewidth:
         :return:
         """
-        print '[DB...BAT] Add Right Y-label : {0}; Line-label : {1}'.format(y_label, label)
-
         # check
         try:
             self._check_subplot_index(row_index, col_index, is_main=False)
@@ -922,7 +919,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         else:
             msg = 'Return from plot is a %d-tuple: %s.. \n' % (len(plot_info), plot_info)
             for i_r in range(len(plot_info)):
-                msg += 'r[%d] = %s\n' % (i_r, str(r[i_r]))
+                msg += 'r[%d] = %s\n' % (i_r, str(plot_info[i_r]))
             raise NotImplementedError(msg)
 
         # Flush/commit
@@ -960,8 +957,8 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
                     try:
                         self.axes_main[row_index, col_index].lines.remove(mpl_line)
                     except ValueError as e:
-                        print "[Error] Plot %s is not in axes_main.lines which has %d lines. Error message: %s" % (
-                            str(line_key), len(self.axes_main[row_index, col_index].lines), str(e))
+                        print("[Error] Plot %s is not in axes_main.lines which has %d lines. Error message: %s"
+                              "" % (str(line_key), len(self.axes_main[row_index, col_index].lines), str(e)))
                 # END-IF-ELSE
 
                 # remove record
@@ -991,8 +988,8 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
                     try:
                         self.axes_right[row_index, col_index].lines.remove(mpl_line)
                     except ValueError as e:
-                        print "[Error] Plot %s is not in axes_right.lines which has %d lines. Error message: %s" % (
-                                str(line_key), len(self.axes_main[row_index, col_index].lines), str(e))
+                        print("[Error] Plot %s is not in axes_right.lines which has %d lines. Error message: %s" % (
+                                str(line_key), len(self.axes_main[row_index, col_index].lines), str(e)))
                 # END-IF-ELSE
 
                 # remove record
@@ -1198,7 +1195,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         assert isinstance(title, str), 'Title must be a string but not a {0}.'.format(type(title))
         assert isinstance(color, str), 'Color must be a string but not a {0}.'.format(type(color))
 
-        print '[DB...BAT] Set {0} in color {1} as the figure\'s title.'.format(title, color)
+        print('[DB...BAT] Set {0} in color {1} as the figure\'s title.'.format(title, color))
         self.setWindowTitle(title)
 
         self.draw()
@@ -1326,7 +1323,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
 
         # check
         if plot_line is None:
-            print '[ERROR] Line (key = %d) is None. Unable to update' % plot_key
+            print('[ERROR] Line (key = %d) is None. Unable to update' % plot_key)
             return
 
         # TODO/NOW - clean up
@@ -1423,9 +1420,9 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         num_markers = len(MplLineMarkers)
         num_colors = len(MplBasicColors)
 
-        for i in xrange(num_markers):
+        for i in range(num_markers):
             marker = MplLineMarkers[i]
-            for j in xrange(num_colors):
+            for j in range(num_colors):
                 color = MplBasicColors[j]
                 combo_list.append((marker, color))
             # ENDFOR (j)
@@ -1610,8 +1607,6 @@ class MyNavigationToolbar(NavigationToolbar2):
         else:
             # into pan mode
             self._myMode = MyNavigationToolbar.NAVIGATION_MODE_PAN
-
-        print 'PANNED'
 
         return
 
