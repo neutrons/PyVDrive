@@ -1,4 +1,3 @@
-import os
 from pyvdrive.lib import datatypeutility
 from vbin import VBin
 
@@ -20,7 +19,7 @@ class VdriveMerge(VBin):
         self._commandName = 'MERGE'
 
         self.check_command_arguments(self.SupportedArgs)
-        
+
         return
 
     def exec_cmd(self):
@@ -99,5 +98,3 @@ class VdriveMerge(VBin):
         datatypeutility.check_file_name(output_directory, False, True, True, 'MERGE outpout directory')
 
         return output_directory
-
-

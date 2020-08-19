@@ -1,9 +1,9 @@
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5.QtWidgets import QDialog, QVBoxLayout, QDialogButtonBox, QDateTimeEdit, QApplication
     from PyQt5.QtCore import Qt, QDateTime
 except ImportError:
-    from PyQt4.QtGui import QDialog, QVBoxLayout, QDialogButtonBox, QDateTimeEdit, QApplication
+    from PyQt4.QtGui import QDialog, QVBoxLayout, QDialogButtonBox, QDateTimeEdit, QApplication  # noqa: F401
     from PyQt4.QtCore import Qt, QDateTime
 
 # Customized dialog widgets
@@ -11,7 +11,7 @@ __author__ = 'wzz'
 
 
 class DateDialog(QDialog):
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         super(DateDialog, self).__init__(parent)
 
         layout = QVBoxLayout(self)
@@ -37,11 +37,11 @@ class DateDialog(QDialog):
 
 
 # static method to create the dialog and return (date, time, accepted)
-def getDateTime(parent = None):
+def getDateTime(parent=None):
     dialog = DateDialog(parent)
     result = dialog.exec_()
     date = dialog.dateTime()
-    return (date.date(), date.time(), result == QDialog.Accepted)
+    return date.date(), date.time(), result == QDialog.Accepted
 
 
 if __name__ == '__main__':

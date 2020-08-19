@@ -1,8 +1,7 @@
 import bisect
-import operator
 import numpy
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5.QtWidgets import QApplication, QMenu, QAction, QMainWindow
     from PyQt5 import QtCore
     from PyQt5.QtGui import QCursor
@@ -616,8 +615,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             # FIXME/NOW/ISSUE 45 or late: need a better data structure for it
             g_id_list = self._myPeakGroupManager.get_group_ids()
             for g_id in g_id_list:
-                group = self._myPeakGroupManager.get_group(g_id)
-                raise NotImplementedError('ASAP')
+                # group = self._myPeakGroupManager.get_group(g_id)
+                raise NotImplementedError('ASAP for get_group()')
         # END-IF
 
         # find the nearby peak
@@ -1310,7 +1309,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         if key is not None:
             self._myPatternDict[key] = (vec_x, vec_y, pattern_key)
 
-        print ('[DB...BAT] Plot {} to have pattern key'.format(title, pattern_key))
+        print('[DB...BAT] Plot {} to have pattern key'.format(title, pattern_key))
         self._lastPlotID = pattern_key
 
         return
@@ -1442,7 +1441,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         # remove the plotted diffraction pattern
         if self._lastPlotID:
-            print ('[DB...BAT] reset() --> remove {}'.format(self._lastPlotID))
+            print('[DB...BAT] reset() --> remove {}'.format(self._lastPlotID))
             self.remove_line(self._lastPlotID)
             self._lastPlotID = None
 
@@ -1519,12 +1518,12 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
             if self._myPeakSelectionMode == PeakAdditionState.AutoMode:
                 # auto mode. peak only
-                print ('[DB...BAT] Add single peak @ {}'.format(peak_center))
+                print('[DB...BAT] Add single peak @ {}'.format(peak_center))
                 self.add_single_peak(peak_pos=peak_center)
             else:
                 # power mode: peak and boundary
                 peak_width = peak_info[2]
-                print ('[DB...BAT] Add grouped peaks @ {}'.format(peak_center))
+                print('[DB...BAT] Add grouped peaks @ {}'.format(peak_center))
                 # add peak group indicator
                 group_id = self.add_peak_group(peak_center - 2*peak_width, peak_center + 2*peak_width)
                 self.add_peak(peak_center, group_id=group_id)

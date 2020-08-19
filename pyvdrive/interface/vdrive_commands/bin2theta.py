@@ -1,11 +1,9 @@
 import os
 from process_vcommand import VDriveCommand
 try:
-    from PyQt5 import QtCore
     from PyQt5.QtCore import pyqtSignal
 except (ImportError, RuntimeError) as import_err:
     print('CHOP: {}'.format(import_err))
-    from PyQt4 import QtCore
     from PyQt4.QtCore import pyqtSignal
 
 
@@ -28,7 +26,7 @@ class BinBy2Theta(VDriveCommand):
                      'PANEL', 'MIN', 'MAX', 'STEP', 'SCALE',
                      'BINFOLDER', 'DRYRUN', 'FULLPROF']
 
-    reduceSignal = QtCore.pyqtSignal(str)  # signal to send out
+    reduceSignal = pyqtSignal(str)  # signal to send out
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',

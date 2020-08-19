@@ -73,7 +73,7 @@ class RunsInfoQuery(VDriveCommand):
             if len(duration_info_list) == 0:
                 info_str = 'IPTS is empty!'
             else:
-                info_str = self.format_list_to_str(duration_info_list, keys=['run', 'duration','sample'])
+                info_str = self.format_list_to_str(duration_info_list, keys=['run', 'duration', 'sample'])
 
         else:
             return False, 'There is no sort key that is specified by user.  Inputs are {}, while the ' \
@@ -138,4 +138,3 @@ class RunsInfoQuery(VDriveCommand):
         help_str += '> INFO, IPTS=21356, RUNS=20000, RUNE=30000, DURATION=1, -n=40\n'
 
         return help_str
-

@@ -5,7 +5,7 @@
 #       The variable set to QStandardItem can be only retrieved by QModelIndex.data()
 
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QTreeView, QAbstractItemView
     from PyQt5.QtGui import QStandardItemModel, QStandardItem
@@ -78,7 +78,7 @@ class CustomizedTreeView(QTreeView):
         # assert(len(header_list) == self._myNumCols)
 
         # Set up header
-        for i_col in xrange(self._myNumCols):
+        for i_col in range(self._myNumCols):
             header = header_list[i_col]
             self.model().setHeaderData(0, QtCore.Qt.Horizontal, header)
         self._myHeaderList = header_list[:]
@@ -103,18 +103,18 @@ class CustomizedTreeView(QTreeView):
             # top main item
             self.model().removeRows(row_number, 1)
             children = self._leafDict.pop(current_value)
-            print '[INFO] Remove leaf %s with children %s.' % (current_value, str(children))
+            print('[INFO] Remove leaf %s with children %s.' % (current_value, str(children)))
         else:
             # it is a child
             parent_index = self.model().indexFromItem(the_parent)
             self.model().removeRows(row_number, 1, parent_index)
             parent_value = str(the_parent.text())
 
-            if self._leafDict.has_key(parent_value):
+            if parent_value in self._leafDict:
                 self._leafDict[parent_value].remove(current_value)
-                print '[INFO] Remove child %s from leaf %s.' % (current_value, parent_value)
+                print('[INFO] Remove child %s from leaf %s.' % (current_value, parent_value))
             else:
-                print '[INFO] Remove child %s from non-leaf parent %s.' % (current_value, parent_value)
+                print('[INFO] Remove child %s from non-leaf parent %s.' % (current_value, parent_value))
 
         return
 
@@ -125,24 +125,23 @@ class CustomizedTreeView(QTreeView):
         # Get current item
         current_index = self.currentIndex()
         assert(isinstance(current_index, QtCore.QModelIndex))
-        current_row = current_index.row()
 
         current_data = current_index.data()
         assert(isinstance(current_data, QtCore.QVariant))
         current_int_value, is_int = current_data.toInt()
 
-        print '[DEV] Current Index of Row = %d ' % current_row,
-        if is_int is True:
-            print 'with integer value %d' % current_int_value
+        if is_int:
+            print('with integer value %d' % current_int_value)
         else:
-            print 'with a value other than integer %s' % str(current_data.toString())
+            print('with a value other than integer %s' % str(current_data.toString()))
 
         current_item = self.model().itemFromIndex(current_index)
         assert(isinstance(current_item, QStandardItem))
-        print 'Current item has %d rows; ' % current_item.rowCount(),
-        print 'Current item has child = %s; ' % str(current_item.hasChildren()),
-        print 'Current item has parent = %s; ' % str(current_item.parent()),
-        print 'Current item has text = %s. ' % str(current_item.text())
+        info = 'Current item has %d rows; \n' % current_item.rowCount(),
+        info += 'Current item has child = %s; \n' % str(current_item.hasChildren()),
+        info += 'Current item has parent = %s; \n' % str(current_item.parent()),
+        info += 'Current item has text = %s. ' % str(current_item.text())
+        print(info)
 
         return
 
@@ -156,7 +155,7 @@ class CustomizedTreeView(QTreeView):
         # Check
         assert(isinstance(item_value, str))
 
-        if self._leafDict.has_key(item_value) is True:
+        if item_value in self._leafDict:
             return False, 'Item %s has been in Tree already.' % str(item_value)
         assert(isinstance(append, bool))
 
@@ -191,15 +190,12 @@ class CustomizedTreeView(QTreeView):
         """
         current_index = self.currentIndex()
         assert(isinstance(current_index, QtCore.QModelIndex))
-        current_row = current_index.row()
-        print '[DEV] Current Index of Row = %d ' % current_row
 
         # Get model
         my_model = self.model()
         assert(isinstance(my_model, QStandardItemModel))
         current_item = my_model.itemFromIndex(current_index)
         if current_item is None:
-            print '[INFO] Current item has not been set up.'
             return
 
         self._add_child_item(current_item, child_value, False)
@@ -218,7 +214,7 @@ class CustomizedTreeView(QTreeView):
         # found_item = my_model.findItems(QtCore.QString(main_item_value))
         my_model.findItems(str(main_item_value))
 
-        for i_row in xrange(num_rows):
+        for i_row in range(num_rows):
             # Get item per line:
             temp_item = my_model.item(i_row)
             assert(isinstance(temp_item, QStandardItem))
@@ -242,8 +238,6 @@ class CustomizedTreeView(QTreeView):
     def insert_child_current_item(self, child_value):
         current_index = self.currentIndex()
         assert(isinstance(current_index, QtCore.QModelIndex))
-        current_row = current_index.row()
-        print '[DEV] Current Index of Row = %d ' % current_row
 
         # Get model
         my_model = self.model()
@@ -252,7 +246,6 @@ class CustomizedTreeView(QTreeView):
 
         assert(isinstance(current_item, QStandardItem))
 
-        print 'Add Child Value ', child_value
         # child_item = QtGui.QStandardItem(QtCore.QString(child_value))
         child_item = QStandardItem(str(child_value))
         current_item.insertRow(0, [child_item])
@@ -338,6 +331,6 @@ class CustomizedTreeView(QTreeView):
         # END-FOR
 
         if len(error_message) > 0:
-            print '[Error] %s' % error_message
+            print('[Error] %s' % error_message)
 
         return item_list

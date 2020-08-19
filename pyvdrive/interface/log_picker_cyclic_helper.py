@@ -1,10 +1,8 @@
 from pyvdrive.lib import datatypeutility
-from pyvdrive.lib import file_utilities
 from gui import GuiUtility
-from mantid.simpleapi import CreateWorkspace
+from mantid.simpleapi import CreateWorkspace, SmoothData, mtd
 from pyvdrive.lib import mantid_helper
 from numpy import argrelextrema
-import os
 import numpy
 import h5py
 
@@ -70,12 +68,6 @@ class CyclicEventFilterSetupHelper(object):
             print('[{}]: {}'.format(level.upper(), msg))
 
             return avg_cycle_time, std_dev
-
-        # User input from observation
-        # Requirement: precisely pin point the start of first cycle and stop of last cycle
-        # x_start = 1713
-        # x_stop = 45073
-        # cycle_max_lower_limit = 400
 
         # check inputs
         datatypeutility.check_float_variable('Starting time of cycles', x_start, (0, None))
@@ -216,18 +208,6 @@ class CyclicEventFilterSetupHelper(object):
         CreateWorkspace(DataX=minima_times_vec, DataY=minima_value_vec,
                         NSpec=1, OutputWorkspace='debug_minima')
 
-        # export to HDF5
-        if False:
-            local_minima_indexes += start_index
-            max_index_vector += start_index
-            cycle_file = h5py.File('furnace2_cycles.h5', 'w')
-            log_group = cycle_file.create_group('furnace2')
-            log_group.create_dataset('minima', data=local_minima_indexes)
-            log_group.create_dataset('maxima', data=max_index_vector)
-            log_group['logname'] = 'furnace2'
-            cycle_file.close()
-        # END-IF
-
         return local_minima_indexes, local_maxima_indexes
 
     def pre_process_logs(self, vec_times, vec_log_value, num_neighbors):
@@ -237,9 +217,6 @@ class CyclicEventFilterSetupHelper(object):
         :param num_neighbors:
         :return:
         """
-        # datatypeutility.check_numpy_arrays('Vector for times and log values', [vec_times, vec_log_value], 1, True)
-        # datatypeutility.check_int_variable('Number of neighbors to smooth', num_neighbors, (2, None))
-
         raw_ws_name = 'furnac2.raw'
         smoothed_ws_name = raw_ws_name.split('.')[0] + '.smoothed'
         CreateWorkspace(DataX=vec_times, DataY=vec_log_value, NSpec=1, OutputWorkspace=raw_ws_name)
@@ -310,11 +287,7 @@ class CyclicEventFilterSetupHelper(object):
     # TODO FIXME TONIGHT - This shall be moved to chop utility
     def set_cyclic_filters(self, raw_ws_name, local_minima_indexes, local_maxima_indexes, log_boundaries,
                            rising):
-
-        if False:
-            raw_ws = mantid_helper.retrieve_workspace(raw_ws_name, True)
-        else:
-            raw_ws = mtd[raw_ws_name]
+        raw_ws = mtd[raw_ws_name]
 
         # prototype for create the event filters
         raw_vec_x = raw_ws.readX(0)
@@ -421,15 +394,14 @@ class CyclicEventFilterSetupHelper(object):
         :param show:
         :return:
         """
-        if show:
-            self._derivative_line[derivative_order] = self.ui.graphicsView_main.plot_derivative(vec_times,
-                                                                                                vec_derivative_i)
-        elif self._derivative_line[derivative_order] is None:
-            pass
-        else:
-            self.ui.graphicsView_main.remove_derivative(self._derivative_line[derivative_order])
-
-        return
+        # if show:
+        #     self._derivative_line[derivative_order] = self.ui.graphicsView_main.plot_derivative(vec_times,
+        #                                                                                         vec_derivative_i)
+        # elif self._derivative_line[derivative_order] is None:
+        #     pass
+        # else:
+        #     self.ui.graphicsView_main.remove_derivative(self._derivative_line[derivative_order])
+        raise NotImplementedError('In plan')
 
     def update_cycle_boundaries(self):
         """
@@ -452,22 +424,3 @@ class CyclicEventFilterSetupHelper(object):
         n_th_time = boundary_points[n]
 
         return n_th_time
-
-    def set_slicer_cyclic_logs(self):
-
-        for i_half_cycle in range(2 * num_cycles):
-            # up ramp
-            if i_half_cycle / 2 == 0:
-                start_i_index = local_minimum_index
-                stop_i_index = local_maximum_index
-            else:
-                start_i_index = local_maximum_index
-                stop_i_index = local_minimum_index
-            # even one: ramping up
-            for i_interval in range(num_intervals):
-                # search for the boundary
-                boundary_index_i = numpy.searchsorted(
-                    vec_values[start_i_index: stop_i_index], boundary_index_i)
-                slicer_dict[i_interval].append([boundary_index_i_prev, boundary_index_i])
-
-        return

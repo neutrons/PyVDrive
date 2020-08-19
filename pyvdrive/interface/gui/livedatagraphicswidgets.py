@@ -190,10 +190,10 @@ class GeneralPurpose1DView(MplGraphicsView1D):
             # END-IF
 
             # plot
-            line_key = self.add_plot(time_vec, vec_y, is_right=not is_main,
-                                     y_label=y_label, label=label_line,
-                                     line_style=line_style, marker=marker,
-                                     color=color)
+            self.add_plot(time_vec, vec_y, is_right=not is_main,
+                          y_label=y_label, label=label_line,
+                          line_style=line_style, marker=marker,
+                          color=color)
             axis_color = color
             last_time = time_vec[-1]
 
@@ -207,9 +207,9 @@ class GeneralPurpose1DView(MplGraphicsView1D):
             #     self._rightLineIndex = line_key
             # # END-IF
 
-            print '[DB...BAT] Multi-Plot  Y-label vs Line-label: {0} vs {1}.  Time 0 = {2}.  Side = {3}. ' \
-                  'Y-range: {4}, {5}' \
-                  ''.format(y_label, label_line, time_vec[0], is_main, numpy.min(vec_y), numpy.max(vec_y))
+            print('[DB...BAT] Multi-Plot  Y-label vs Line-label: {0} vs {1}.  Time 0 = {2}.  Side = {3}.'
+                  'Y-range: {4}, {5}'
+                  ''.format(y_label, label_line, time_vec[0], is_main, numpy.min(vec_y), numpy.max(vec_y)))
         # END-FOR
 
         # set the Y-axis color
@@ -279,8 +279,8 @@ class GeneralPurpose1DView(MplGraphicsView1D):
                 self.update_line(row_index=0, col_index=0, ikey=line_key, vec_x=time_vec, vec_y=value_vec,
                                  is_main=is_main)
             except ValueError as val_err:
-                print 'Failed to update {0} with time {1} and value {2} due to {3}.' \
-                      ''.format(y_label, time_vec, value_vec, val_err)
+                print('Failed to update {0} with time {1} and value {2} due to {3}.'
+                      ''.format(y_label, time_vec, value_vec, val_err))
                 raise val_err
 
         else:
@@ -314,8 +314,8 @@ class GeneralPurpose1DView(MplGraphicsView1D):
         self.canvas().set_y_limits(row_index=0, col_index=0, is_main=is_main, ymin=min_y - 0.02 * y_range,
                                    ymax=max_y + 0.02 * y_range, apply_change=True)
 
-        print '[DB...BAT] Y-label vs Line-label: {0} vs {1}.  Time 0 = {2}.  Side = {3}' \
-              ''.format(y_label, line_label, time_vec[0], is_main)
+        print('[DB...BAT] Y-label vs Line-label: {0} vs {1}.  Time 0 = {2}.  Side = {3}'
+              ''.format(y_label, line_label, time_vec[0], is_main))
 
         # set legend
         self.canvas()._setup_legend(0, 0, location='"lower left"', is_main=is_main)
@@ -383,13 +383,13 @@ class Live2DView(MplGraphicsView2D):
         datatypeutility.check_dict('Input data set', data_set_dict)
 
         # TEST/TODO - Find out the status in real time test
-        print ('[DB...FIND] About to plot contour... Is Zoom From Home = {}, Home XY Limit = {}, '
-               'Current X limit = {}'.format(self._isZoomedFromHome, self._homeXYLimit,
-                                             self._zoomInXRange))
+        print('[DB...FIND] About to plot contour... Is Zoom From Home = {}, Home XY Limit = {}, '
+              'Current X limit = {}'.format(self._isZoomedFromHome, self._homeXYLimit,
+                                            self._zoomInXRange))
 
         # record current setup
         if self.has_image_on_canvas():
-            print '[DB...BAT] Do I have Image? {}'.format(self.has_image_on_canvas())
+            print('[DB...BAT] Do I have Image? {}'.format(self.has_image_on_canvas()))
             self._zoomInXRange = self.canvas.getXLimit()
 
         # construct the vectors for 2D contour plot

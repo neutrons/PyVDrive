@@ -3,20 +3,20 @@ import datetime
 import numpy
 import platform
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QLineEdit, QMessageBox, QTableWidgetItem, QCheckBox, QWidget, QHBoxLayout, QFileDialog
     from PyQt5.QtWidgets import QComboBox
     from PyQt5.QtGui import QStandardItemModel, QStandardItem
 except ImportError:
     from PyQt4 import QtCore
-    from PyQt4.QtGui import QStandardItemModel, QStandardItem, QLineEdit, QMessageBox, QFileDialog
+    from PyQt4.QtGui import QStandardItemModel, QStandardItem, QLineEdit, QMessageBox, QFileDialog  # noqa: F401
     from PyQt4.QtGui import QTableWidgetItem, QCheckBox, QWidget, QHBoxLayout, QComboBox
 # include this try/except block to remap QString needed when using IPython
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    _fromUtf8 = lambda s: s  # noqa: E265
 
 from pyvdrive.lib import datatypeutility
 
@@ -560,7 +560,7 @@ def sort_sample_logs(log_name_list, reverse=False, ignore_1_value=True):
 def setTextToQTableCell(table, irow, icol, text):
     """ Set up a regular text cell in a QTableWidget
 
-    Arguments: 
+    Arguments:
      - table    :: QTableWidget
      - irow     :: integer as row number
      - icol     :: integer as column number
@@ -610,7 +610,7 @@ def addCheckboxToWSTCell(table, row, col, state):
         checkbox = QCheckBox()
         checkbox.setText('')
         checkbox.setChecked(state)
-        
+
         # adding a widget which will be inserted into the table cell
         # then centering the checkbox within this widget which in turn,
         # centers it within the table column :-)
@@ -653,7 +653,7 @@ def addComboboxToWSTCell(table, row, col, itemlist, curindex):
             qlist.append(str(item))
         combobox = QComboBox()
         combobox.addItems(qlist)
-        
+
         # adding a widget which will be inserted into the table cell
         # then centering the checkbox within this widget which in turn,
         # centers it within the table column :-)

@@ -3,11 +3,10 @@ import os
 import pyvdrive.lib.VDriveAPI as VdriveAPI
 from pyvdrive.lib import datatypeutility
 from pyvdrive.lib import file_utilities
-from pyvdrive.interface.gui import GuiUtility
 try:
     from PyQt5.QtCore import QObject
 except (ImportError, RuntimeError) as import_err:
-    print ('Process_VCommand: {}'.format(import_err))
+    print('Process_VCommand: {}'.format(import_err))
     from PyQt4.QtCore import QObject
 
 

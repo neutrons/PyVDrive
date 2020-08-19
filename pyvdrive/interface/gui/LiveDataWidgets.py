@@ -187,7 +187,6 @@ class LivePlotYAxisTable(NTableWidget.NTableWidget):
             min_d = self.get_cell_value(row_number, self._iColMinD, allow_blank=True)
             max_d = self.get_cell_value(row_number, self._iColMaxD, allow_blank=True)
             norm_by_van = self.get_cell_value(row_number, self._iColNormByVan)
-            print '[DB...BAT] {0} {1}'.format(min_d, max_d)
 
             item_name_list.append(item_name)
             side_list.append(is_main)

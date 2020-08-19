@@ -134,6 +134,9 @@ class VulcanLiveDataView(QMainWindow):
         # 1 for True/main axis, 0 for False/right axis
         self._plotPeakVanadiumNorm = {1: False, 0: False}
 
+        # flag to plot
+        self._plotRun = None
+
         # other time
         self._liveStartTimeStamp = None  # shall be of time numpy.datetime64
 
@@ -299,7 +302,7 @@ class VulcanLiveDataView(QMainWindow):
         :return:
         """
         action = self.ui.dockWidget_multiPurposeView.toggleViewAction()
-        print '[DB...PROTOTYPE] action : {0} of type {1}'.format(action, type(action))
+        print('[DB...PROTOTYPE] action : {0} of type {1}'.format(action, type(action)))
         action.setVisible(True)
         self.ui.dockWidget_multiPurposeView.show()
 
@@ -370,8 +373,8 @@ class VulcanLiveDataView(QMainWindow):
             self.write_log(level='warning', message='Accumulation time is modified to {0}'
                                                     ''.format(self._myAccumulationTime))
         # END-IF
-        self._myIncrementalWorkspaceNumber = self._myAccumulationTime / \
-            self._myUpdateTimePeriod * 2  # leave some space
+        # leave some space for workspace number
+        self._myIncrementalWorkspaceNumber = self._myAccumulationTime // self._myUpdateTimePeriod * 2
         self._myMaxIncrementalNumber = self._myAccumulationTime / self._myUpdateTimePeriod
 
         # set the lists
@@ -755,12 +758,13 @@ class VulcanLiveDataView(QMainWindow):
         ws_name_list = list()
         ws_index_list = list()
         try:
-            print '[DB...BAT...BAT] Index = {0} ' \
+            print('[DB...BAT...BAT] Index = {0} ' \
                   'Workspace Name = {1}'.format(self._myAccumulationListIndex,
-                                                self._myAccumulationWorkspaceList[self._myAccumulationListIndex])
+                                                self._myAccumulationWorkspaceList[self._myAccumulationListIndex]))
         except IndexError as index_err:
-            raise RuntimeError('In get_accumulation_workspaces(), _myAccumulationListIndex = {} out of range of _myAccumulationWorksapceList'.format(
-                self._myAccumulationListIndex, len(self._myAccumulationWorkspaceList)))
+            raise RuntimeError('In get_accumulation_workspaces(), _myAccumulationListIndex = {} out of '
+                               'range of _myAccumulationWorksapceList'
+                               ''.format(self._myAccumulationListIndex, len(self._myAccumulationWorkspaceList)))
 
         for ws_count in range(last_n_round):
             # get accumulation workspace list index
@@ -1098,8 +1102,8 @@ class VulcanLiveDataView(QMainWindow):
         curr_run_number = int(self.ui.lineEdit_runNumber.text())
 
         if self._controller.has_loaded_logs(ipts_number, self._2dStartRunNumber, curr_run_number):
-            x_axis_vec, y_axis_vec = self._controller.get_loaded_logs(self._2dStartRunNumber, curr_run_number,
-                                                                      self._inAccumulationWorkspaceName)
+            self._controller.get_loaded_logs(self._2dStartRunNumber, curr_run_number,
+                                             self._inAccumulationWorkspaceName)
         else:
             self._controller.load_nexus_sample_logs(ipts_number, self._2dStartRunNumber, curr_run_number,
                                                     run_on_thread=True)
@@ -1118,9 +1122,6 @@ class VulcanLiveDataView(QMainWindow):
         :param x_axis_name:
         :param y_axis_name_list:
         :param side_list: Flag for left/right side to plot list of boolean. True = left/main axis; False = right axis
-        :param d_min:
-        :param d_max:
-        :param norm_by_van:
         :return:
         """
         # parse the user-specified X and Y axis name and process name in case of 'name (#)'
@@ -1261,16 +1262,16 @@ class VulcanLiveDataView(QMainWindow):
                 # append
                 if is_main:
                     if len(time_vec) == 1 and time_vec[0] <= self._currMainYLogTimeVector[-1]:
-                        print '[DEBUG] CRAP Main: {0} comes after {1}'.format(time_vec[0],
-                                                                              self._currMainYLogTimeVector[-1])
+                        print('[DEBUG] CRAP Main: {0} comes after {1}'.format(time_vec[0],
+                                                                              self._currMainYLogTimeVector[-1]))
                     self._currMainYLogTimeVector = numpy.append(
                         self._currMainYLogTimeVector, time_vec)
                     self._currMainYLogValueVector = numpy.append(
                         self._currMainYLogValueVector, value_vec)
                 else:
                     if len(time_vec) == 1 and time_vec[0] <= self._currRightYLogTimeVector[-1]:
-                        print '[DEBUG] CRAP Right: {0} comes after {1}'.format(time_vec[0],
-                                                                               self._currRightYLogTimeVector[-1])
+                        print('[DEBUG] CRAP Right: {0} comes after {1}'.format(time_vec[0],
+                                                                               self._currRightYLogTimeVector[-1]))
                     self._currRightYLogTimeVector = numpy.append(
                         self._currRightYLogTimeVector, time_vec)
                     self._currRightYLogValueVector = numpy.append(
@@ -1432,11 +1433,8 @@ class VulcanLiveDataView(QMainWindow):
                                                           self._bankViewDMin, self._bankViewDMax)
             self.write_log('debug', db_msg)
             if str(self.ui.comboBox_currUnits.currentText()) == 'dSpacing':
-                print '[DB...BAT...BAT...BAT] Set bank View of ROI'
                 for bank_id in [1, 2, 3]:
                     self.set_bank_view_roi(bank_id=bank_id, left_x_bound=None, right_x_bound=None)
-            else:
-                print '[DB...BAT...BAT...BAT] Set bank View to original'
 
             # update log
             if self._currSampleLogX is not None:

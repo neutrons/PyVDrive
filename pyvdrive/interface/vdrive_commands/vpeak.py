@@ -102,9 +102,10 @@ class VanadiumPeak(VDriveCommand):
             # load GSAS file or ProcessedNeXus file
             van_file_name = self._controller.archive_manager.locate_gsas(self._iptsNumber, self._vanRunNumber)
             self._myVanDataKey = self._controller.project.data_loading_manager.load_binned_data(van_file_name, 'gsas',
-                                                                                        max_int=10, prefix='van',
-                                                                                        data_key=None,
-                                                                                        target_unit='dSpacing')
+                                                                                                max_int=10,
+                                                                                                prefix='van',
+                                                                                                data_key=None,
+                                                                                                target_unit='dSpacing')
 
             # load logs for future
             if True:

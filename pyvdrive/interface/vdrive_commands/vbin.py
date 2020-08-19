@@ -4,7 +4,7 @@ import pyvdrive.lib.vulcan_util as vulcan_util
 from pyvdrive.lib import datatypeutility
 
 # VDRIVEBIN, i.e., VBIN
-# 
+#
 # Example:
 # cmd = VBIN(conroller, args)
 # cmd.run()
@@ -40,7 +40,7 @@ class AutoReduce(process_vcommand.VDriveCommand):
         except KeyError:
             return False, 'IPTS must be given!'
         else:
-            print '[DB...BAT] IPTS = ', ipts
+            print('[DB...BAT] IPTS = ', ipts)
 
         try:
             run_number_list = self.parse_run_numbers()
@@ -315,12 +315,12 @@ class VBin(process_vcommand.VDriveCommand):
                                    ''.format(intensity_file_name, err)
                         status = False
                         write_intensity = False
-                
+
                 if write_intensity:
                     message += '\nExport GSAS intensity of file {0} to {1}'.format(nexus_file_name, intensity_file_name)
                     vulcan_util.export_vanadium_intensity_to_file(van_nexus_file=nexus_file_name,
                                                                   gsas_van_int_file=intensity_file_name)
-                    os.chmod(intensity_file_name, 0666)
+                    os.chmod(intensity_file_name, 0o666)
 
             # END-FOR
         # END-IF
@@ -373,4 +373,3 @@ class VBin(process_vcommand.VDriveCommand):
         self._merge_flag = flag
 
         return
-
