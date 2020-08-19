@@ -19,7 +19,6 @@ except ImportError:
 
 from mplgraphicsview import MplGraphicsView
 import ndav_widgets.NTableWidget as baseTable
-from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
 from mantid.api import AnalysisDataService
 import os
 

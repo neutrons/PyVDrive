@@ -96,7 +96,8 @@ class CyclicEventFilterSetupHelper(object):
             vec_x[stop_index], vec_y[stop_index], stop_index))
 
         # Step 1: use smoothed data to find local maxima: use 'argrelextrema' to find local maxima
-        roi_vec_x = vec_x[start_index:stop_index]
+        # check Y only
+        # roi_vec_x = vec_x[start_index:stop_index]
         roi_vec_y = vec_y[start_index:stop_index]
 
         roi_maxima_indexes = argrelextrema(roi_vec_y, numpy.greater)
@@ -338,7 +339,7 @@ class CyclicEventFilterSetupHelper(object):
             splitter_index_vec = numpy.array(splitter_index_list)
             splitter_times = raw_vec_x[splitter_index_vec]
             splitter_refs = raw_vec_y[splitter_index_vec]
-            splitters = CreateWorkspace(DataX=splitter_times, DataY=splitter_refs, NSpec=1)
+            CreateWorkspace(DataX=splitter_times, DataY=splitter_refs, NSpec=1)
         # END-IF
 
         return splitter_list

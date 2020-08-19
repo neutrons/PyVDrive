@@ -1,7 +1,7 @@
 # import PyQt modules
 import os
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore
     from PyQt5.Qt import QVariant
     from PyQt5.QtWidgets import QVBoxLayout
@@ -10,7 +10,7 @@ try:
 except ImportError:
     from PyQt4 import QtCore
     from PyQt4.Qt import QVariant
-    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.QtGui import QVBoxLayout  # noqa: F401
     from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QDialog, QFileDialog
 
@@ -296,7 +296,7 @@ class VanadiumProcessControlDialog(QDialog):
             run_number = gutil.parse_integer(self.ui.lineEdit_runNumber, allow_blank=False)
         except RuntimeError as run_err:
             gutil.pop_dialog_error(
-                self, 'IPTS and run number must be specified in order to save for GSAS.')
+                self, 'IPTS and run number must be specified in order to save for GSAS. {}.'.format(run_err))
             return
 
         # get default directory
@@ -365,7 +365,7 @@ class VanadiumProcessControlDialog(QDialog):
 
     def do_smooth_bf(self):
         """
-        Use brute force to 
+        Use brute force to
         :return:
         """
 

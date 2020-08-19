@@ -1,13 +1,13 @@
 import os
 try:
-    import qtconsole.inprocess
-    from PyQt5 import QtWidgets, QtCore
+    import qtconsole.inprocess  # noqa: F401
+    from PyQt5 import QtCore
     from PyQt5.QtWidgets import QVBoxLayout, QDialog, QFileDialog, QInputDialog
     from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtCore import pyqtSignal
 except (ImportError, RuntimeError):
-    from PyQt4 import QtGui, QtCore
-    from PyQt4.QtGui import QVBoxLayout, QDialog, QFileDialog, QInputDialog
+    from PyQt4 import QtGui, QtCore  # noqa: F401
+    from PyQt4.QtGui import QVBoxLayout, QDialog, QFileDialog, QInputDialog  # noqa: F401
     from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtCore import pyqtSignal
 # try:
@@ -210,8 +210,9 @@ class ManualSlicerSetupTableDialog(QDialog):
                 new_splitter_list = self.generate_time_splitters(splitter, time_step)
             else:
                 # log_step is not None:
-                new_splitter_list = self._myParent.get_controller().generate_log_splitters(workspace_name,
-                                                                                           splitter, log_step)
+                raise RuntimeError('Where does the workspace come from????')
+                # new_splitter_list = self._myParent.get_controller().generate_log_splitters(workspace_name,
+                #                                                                            splitter, log_step)
             # END-IF-ELSE
 
             # replace the selected splitter by the new splitters
@@ -424,7 +425,7 @@ class ManualSlicerSetupTableDialog(QDialog):
         # TODO/ISSUE/33 - This method will be modified to an event-handling method for picker updating
         # Deselect all rows
         num_rows = self.ui.tableWidget_segments.rowCount()
-        for i_row in xrange(num_rows):
+        for i_row in range(num_rows):
             self.ui.tableWidget_segments.select_row(i_row, False)
 
         # Sort by start time

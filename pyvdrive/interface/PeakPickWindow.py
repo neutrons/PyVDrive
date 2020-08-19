@@ -5,7 +5,7 @@
 ########################################################################
 import os
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore as QtCore
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
@@ -22,15 +22,16 @@ try:
 except AttributeError:
     def _fromUtf8(s):
         return s
-import gui.GuiUtility as GuiUtility
-import gui.diffractionplotview as dv
-from peak_processing_helper import GroupPeakDialog, PeakWidthSetupDialog, PhaseWidgets, UnitCellList
+import pyvdrive.interface.gui.GuiUtility as GuiUtility
+import pyvdrive.interface.gui.diffractionplotview as dv
+from pyvdrive.interface.peak_processing_helper import GroupPeakDialog, PeakWidthSetupDialog
+from pyvdrive.interface.peak_processing_helper import PhaseWidgets, UnitCellList
 from pyvdrive.interface.gui.diffractionplotview import DiffractionPlotView
 from pyvdrive.interface.gui.vdrivetablewidgets import PeakParameterTable
-import vanadium_controller_dialog
+from pyvdrive.interface import vanadium_controller_dialog
 import pyvdrive.lib.peak_util as peak_util
 from pyvdrive.lib import datatypeutility
-import PeakPickWindowVanadium
+from pyvdrive.interface import PeakPickWindowVanadium
 
 
 class PeakPickerMode(object):
@@ -198,7 +199,7 @@ class PeakPickerWindow(QMainWindow):
 
         # Phases and initialize
         self._phaseDict = dict()   # keys are pre-set to 1, 2, 3
-        for i in xrange(1, 4):
+        for i in range(1, 4):
             self._phaseDict[i] = [None, None, 0., 0., 0.]   # name, type, a, b, c
 
         # Event handlers lock
@@ -313,8 +314,7 @@ class PeakPickerWindow(QMainWindow):
         """
         # launch vanadium dialog window
         if self._vanadiumProcessDialog is None:
-            self._vanadiumProcessDialog = vanadium_controller_dialog.VanadiumProcessControlDialog(
-                self)
+            self._vanadiumProcessDialog = vanadium_controller_dialog.VanadiumProcessControlDialog(self)
         self._vanadiumProcessDialog.show()
 
         return
@@ -368,7 +368,7 @@ class PeakPickerWindow(QMainWindow):
         # get number of groups
         num_groups = self.ui.graphicsView_main.get_number_peaks_groups()
 
-        for i_grp in xrange(num_groups):
+        for i_grp in range(num_groups):
             # get peak group
             group = self.ui.graphicsView_main.get_peaks_group(i_grp)
 
@@ -392,7 +392,7 @@ class PeakPickerWindow(QMainWindow):
 
             for peak_tup in peak_tup_list:
                 peak_center = peak_tup[0]
-                print 'Peak center = ', peak_center, 'of type', type(peak_center)
+                print('Peak center = ', peak_center, 'of type', type(peak_center))
                 if isinstance(peak_center, tuple):
                     peak_center = peak_center[0]
 
@@ -485,7 +485,7 @@ class PeakPickerWindow(QMainWindow):
         # Plot
         for peak_info_tup in peak_info_list:
             peak_pos = peak_info_tup[0]
-            peak_width = peak_info_tup[1]
+            # peak_width = peak_info_tup[1]
             self.ui.graphicsView_main.plot_peak_indicator(peak_pos)
         # END-FOR
 
@@ -497,7 +497,7 @@ class PeakPickerWindow(QMainWindow):
         :return:
         """
         # Clear phase list
-        for i_phase in xrange(1, 4):
+        for i_phase in range(1, 4):
             self._phaseDict[i_phase] = ['', '', 0., 0., 0.]
 
         # Clear all the widgets
@@ -740,7 +740,7 @@ class PeakPickerWindow(QMainWindow):
         Guarantees: Rows are sorted by column 2 (3rd column)
         :return:
         """
-        print 'Sorting is enabled?', self.ui.tableWidget_peakParameter.isSortingEnabled()
+        print('Sorting is enabled?', self.ui.tableWidget_peakParameter.isSortingEnabled())
         # Here is prototype
         p_int = self.ui.tableWidget_peakParameter.get_peak_pos_col_index()
         qt_sort_order = self._currTableOrder
@@ -844,8 +844,7 @@ class PeakPickerWindow(QMainWindow):
 
         return
 
-    @staticmethod
-    def constrain_structure(combo_box, edit_a, edit_b, edit_c):
+    def constrain_structure(self, combo_box, edit_a, edit_b, edit_c):
         crystal_structure = str(combo_box.currentText())
         if crystal_structure == '':
             GuiUtility.pop_dialog_error(self, 'Empty structure')
@@ -1177,12 +1176,12 @@ class PeakPickerWindow(QMainWindow):
         if gsas_file_name is not None:
             # gsas file mode
             combo_item_name = str(data_key)
-            title_message = 'File %s Bank %d' % (data_key, 1)
+            # title_message = 'File %s Bank %d' % (data_key, 1)
             # self.ui.label_diffractionMessage.setText('File %s Bank %d' % (data_key, 1))
         else:
             # memory mode (just reduced)
             combo_item_name = str(run_number)
-            title_message = 'Run %d Bank %d' % (run_number, 1)
+            # title_message = 'Run %d Bank %d' % (run_number, 1)
             # self.ui.label_diffractionMessage.setText('Run %d Bank %d' % (run_number, 1))
 
         # register this run to the record to avoid adding same item twice
@@ -1383,7 +1382,8 @@ class PeakPickerWindow(QMainWindow):
                                                            default_dir=default_dir,
                                                            file_filter=file_filter)
 
-        # out_file_name = QFileDialog.getSaveFileName(self, 'Save peaks to GSAS peak file', self._dataDirectory, file_filter)
+        # out_file_name = QFileDialog.getSaveFileName(self, 'Save peaks to GSAS peak file',
+        #                                             self._dataDirectory, file_filter)
         # if isinstance(out_file_name, tuple):
         #     out_file_name = out_file_name[0]
         # out_file_name = str(out_file_name).strip()
@@ -1391,14 +1391,14 @@ class PeakPickerWindow(QMainWindow):
             return   # return for cancellation
 
         # Get the peaks from buffer
-        print 'Get buffered peaks of bank %d' % self._currentBankNumber
+        print('Get buffered peaks of bank %d' % self._currentBankNumber)
         peak_bank_dict = self.ui.tableWidget_peakParameter.get_buffered_peaks(
             excluded_banks=[self._currentBankNumber])
 
         # Get the peaks from table
         num_peaks = self.ui.tableWidget_peakParameter.rowCount()
         peak_list = list()
-        for i_peak in xrange(num_peaks):
+        for i_peak in range(num_peaks):
             # get a list from the peak
             peak_i = self.ui.tableWidget_peakParameter.get_peak(i_peak)
             peak_list.append(peak_i)
@@ -1481,12 +1481,13 @@ class PeakPickerWindow(QMainWindow):
     def evt_table_selection_changed(self):
         """
         Event handling as the selection of the row changed
-        Used to be linked to self.ui.tableWidget_peakParameter.itemSelectionChanged.connect(self.evt_table_selection_changed)
+        Used to be linked to
+        self.ui.tableWidget_peakParameter.itemSelectionChanged.connect(self.evt_table_selection_changed)
 
         :return:
         """
-        print '[Prototype] current row is ', self.ui.tableWidget_peakParameter.currentRow(), \
-            self.ui.tableWidget_peakParameter.currentColumn()
+        print('[Prototype] current row is ', self.ui.tableWidget_peakParameter.currentRow(),
+              self.ui.tableWidget_peakParameter.currentColumn())
 
         """
         print type(self.ui.tableWidget_peakParameter.selectionModel().selectedRows())
@@ -1521,8 +1522,8 @@ class PeakPickerWindow(QMainWindow):
         # get single peaks from canvas
         raw_peak_pos_list = self.ui.graphicsView_main.get_ungrouped_peaks()
         # TODO/DEBUG/FIXME/ - Find out why do grouping a few time can cause duplicate peaks in table
-        print '[DB...#33] Number of raw peaks = {0} with peak positions: {1}.' \
-              ''.format(len(raw_peak_pos_list), raw_peak_pos_list)
+        print('[DB...#33] Number of raw peaks = {0} with peak positions: {1}.'
+              ''.format(len(raw_peak_pos_list), raw_peak_pos_list))
 
         # call controller method to set group boundary
         peak_group = peak_util.group_peaks_to_fit(raw_peak_pos_list, resolution, num_fwhm)
@@ -1676,7 +1677,7 @@ class PeakPickerWindow(QMainWindow):
             return
 
         # TODO/NOW/1st: import phase file and set widgets
-        print 'Importing phase information file!'
+        print('Importing phase information file!')
 
         return
 
@@ -1801,11 +1802,11 @@ class PeakPickerWindow(QMainWindow):
         dx = pos_x - self._currMousePosX
 
         # Update indicator positions
-        for i in xrange(3):
+        for i in range(3):
             self._indicatorPositionList[i] += dx
 
         # Move indicators
-        for i in xrange(3):
+        for i in range(3):
             indicator_id = self._indicatorIDList[i]
             self.ui.graphicsView_main.move_indicator(indicator_id, dx, 0)
         # END-FOR
@@ -1965,7 +1966,7 @@ class PeakPickerWindow(QMainWindow):
         :return:
         """
         if self._vanStripPlotID is None:
-            print '[INFO] There is no vanadium-peak-removed spectrum to remove from canvas.'
+            print('[INFO] There is no vanadium-peak-removed spectrum to remove from canvas.')
             return
 
         # remove the plot
@@ -1986,7 +1987,7 @@ class PeakPickerWindow(QMainWindow):
         """
         # return if there is no such action before
         if self._smoothedPlotID is None:
-            print '[INFO] There is no smoothed spectrum to undo.'
+            print('[INFO] There is no smoothed spectrum to undo.')
             return
 
         # remove the plot

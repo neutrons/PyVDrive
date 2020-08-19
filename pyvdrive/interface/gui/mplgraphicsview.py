@@ -3,7 +3,7 @@ import os
 import numpy as np
 
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5.QtCore import pyqtSignal
     from PyQt5.QtWidgets import QWidget, QSizePolicy, QVBoxLayout
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -1327,7 +1327,6 @@ class Qt4MplCanvas(FigureCanvas):
         if yticklabels is not None:
             # it will always label the first N ticks even image is zoomed in
             print("--------> [FixMe]: The way to set up the Y-axis ticks is wrong!")
-            #self.axes.set_yticklabels(yticklabels)
 
         # explicitly set aspect ratio of the image
         self.axes.set_aspect('auto')
@@ -1392,8 +1391,6 @@ class Qt4MplCanvas(FigureCanvas):
     def addImage(self, imagefilename):
         """ Add an image by file
         """
-        #import matplotlib.image as mpimg
-
         # set aspect to auto mode
         self.axes.set_aspect('auto')
 

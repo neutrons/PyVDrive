@@ -4,9 +4,10 @@
 #
 ########################################################################
 import sys
+import os
 
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
@@ -23,7 +24,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-import gui.GuiUtility as gutil
+import pyvdrive.interface.gui.GuiUtility as gutil
 from pyvdrive.interface.gui.mplgraphicsview import MplGraphicsView
 
 

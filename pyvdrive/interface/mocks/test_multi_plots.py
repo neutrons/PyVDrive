@@ -1,4 +1,3 @@
-from mplgraphicsview1d import MplGraphicsView1D
 from PyQt4 import QtGui, QtCore
 import sys
 import ui_multplot_test
@@ -66,6 +65,7 @@ def tester_app():
     else:
         _app = QtGui.QApplication(sys.argv)
     return _app
+
 
 # get arguments
 args = sys.argv

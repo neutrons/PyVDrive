@@ -1,12 +1,12 @@
 import os
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5.QtWidgets import QMainWindow, QFileDialog
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
     from PyQt5 import QtCore
 except ImportError:
-    from PyQt4.QtGui import QMainWindow, QFileDialog
+    from PyQt4.QtGui import QMainWindow, QFileDialog  # noqa: F401
     from PyQt4.QtGui import QVBoxLayout
     from PyQt4.uic import loadUi as load_ui
     from PyQt4 import QtCore

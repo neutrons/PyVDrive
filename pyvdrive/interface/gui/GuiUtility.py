@@ -16,7 +16,7 @@ except ImportError:
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s  # noqa: E265
+    _fromUtf8 = lambda s: s  # noqa: E731
 
 from pyvdrive.lib import datatypeutility
 
@@ -36,7 +36,7 @@ def add_runs_to_tree(treewidget, ipts, runlist):
     #     model.setColumnCount(2)
     #     model.setHeaderData(0, QtCore.Qt.Horizontal, 'IPTS')
 
-    #treewidget = QTreeView(treewidget)
+    # treewidget = QTreeView(treewidget)
     model = treewidget.model()
 
     numrows = model.rowCount()

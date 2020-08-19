@@ -1,7 +1,6 @@
 import threading
 import types
 import inspect
-import os
 from os import path
 
 # home_dir = os.path.expanduser('~')

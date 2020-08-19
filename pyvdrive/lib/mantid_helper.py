@@ -8,8 +8,8 @@ import mantid.dataobjects
 import mantid.geometry
 import mantid.simpleapi as mantidapi
 from mantid.api import AnalysisDataService as ADS
-import vdrivehelper
-import datatypeutility
+from pyvdrive.lib import vdrivehelper
+from pyvdrive.lib import datatypeutility
 import datetime
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
@@ -168,15 +168,13 @@ def convert_to_non_overlap_splitters_bf(split_ws_name):
         target_i = split_ws.cell(i_row, 2)
         # always tends to append to the current one.  if not, then search till beginning of the list
 
-        prev_child_index = current_child_index
-
         continue_loop = True
         while continue_loop:
             if curr_split_ws.rowCount() == 0 or curr_split_ws.cell(curr_split_ws.rowCount()-1, 1) <= start_i:
                 # either empty split workspace of current split workspace's last splitter's stop time is earlier
                 # add a new row
-                print '[DB...BT] Add split from {0} to {1} to sub-splitter {2}' \
-                      ''.format(start_i, stop_i, current_child_index)
+                print('[DB...BT] Add split from {0} to {1} to sub-splitter {2}'
+                      ''.format(start_i, stop_i, current_child_index))
                 curr_split_ws.addRow([start_i, stop_i, target_i])
                 break
 
@@ -187,7 +185,6 @@ def convert_to_non_overlap_splitters_bf(split_ws_name):
                 # advance to next one (fill evenly, right?)
                 current_child_index += 1
             curr_split_ws = sub_split_ws_list[current_child_index]
-            print '[DB...BT] Advance to next sub-splitter {0}'.format(current_child_index)
 
             if current_child_index == 0 and curr_split_ws.cell(curr_split_ws.rowCount()-1, 1) > start_i:
                 # go from last one to first one. time to add a new one if still overlap with new one
@@ -195,7 +192,6 @@ def convert_to_non_overlap_splitters_bf(split_ws_name):
                 curr_split_ws = create_table_splitters(
                     split_ws_name + '{0}'.format(current_child_index))
                 sub_split_ws_list.append(curr_split_ws)
-                print '[DB...BT] Create a new sub-splitter {0}.'.format(current_child_index)
             # END-IF
         # END-WHILE
     # END-FOR
@@ -221,8 +217,6 @@ def create_overlap_splitters(ws_name, start_time, stop_time, time_bin_size, time
 
     # get number of sub-splitters workspaces
     num_sub_splitters = int(time_bin_size / time_segment_period + 0.5)
-    print '[DB...BAT] Time bin size = {0} Time segment size = {1} Num sub splitters = {2}' \
-          ''.format(time_bin_size, time_segment_period, num_sub_splitters)
 
     # get the element of each splitters workspace
     splitters_size = (stop_time - start_time) / time_segment_period
@@ -562,7 +556,6 @@ def generate_event_filters_arbitrary(split_list, relative_time, tag, auto_target
     if len(split_list) == 0:
         return False, 'Empty time slice list'
 
-    print '[DB...BAT] Number of splitters = {0}'.format(len(split_list))
     for index, split_tup in enumerate(split_list):
         # print '[DB...BAT] Splitter {0}: start = {1}, stop = {2}.'.format(index, split_tup[0], split_tup[1])
         start_time = split_tup[0]
@@ -701,7 +694,6 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
     my_arg_dict['UnitOfTime'] = time_unit
 
     try:
-        print '[DB...BAT] Generate events by time: ', my_arg_dict
         mantidapi.GenerateEventsFilter(**my_arg_dict)
     except RuntimeError as e:
         return False, str(e)
@@ -1293,12 +1285,11 @@ def get_time_segments_from_splitters(split_ws_name, time_shift, unit):
         factor = 1
 
     num_rows = split_ws.rowCount()
-    for i_row in xrange(num_rows):
+    for i_row in range(num_rows):
         # Get original data
         start_time = split_ws.cell(i_row, 0)
         stop_time = split_ws.cell(i_row, 1)
         target = split_ws.cell(i_row, 2)
-        print '[DB-BAT] Row %d' % i_row, start_time, ', ', stop_time, ', ', target
 
         # calibrated by time shift
         start_time = start_time * factor - time_shift
@@ -1574,7 +1565,7 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     :param standard_bin_workspace: binning template workspace. It can be None for not aligning
     :return: output workspace name
     """
-    import reduce_VULCAN
+    from pyvdrive.lib import reduce_VULCAN
 
     # TEST/ISSUE/NOW - Implement feature with standard_bin_workspace...
     # Check
@@ -2053,7 +2044,7 @@ def map_sample_logs(meta_ws_name, log_name_x, log_name_y):
                                         TimeZone='UTC',
                                         Header='')
 
-    import vulcan_util
+    from pyvdrive.lib import vulcan_util
 
     log_set = vulcan_util.import_vulcan_log('/tmp/test.dat', header=None)  # no header
 
@@ -2160,8 +2151,8 @@ def mtd_filter_bad_pulses(ws_name, lower_cutoff=95.):
     event_ws = retrieve_workspace(ws_name)
     num_events_after = event_ws.getNumberEvents()
 
-    print '[Info] FilterBadPulses reduces number of events from %d to %d (under %.3f percent) ' \
-          'of workspace %s.' % (num_events_before, num_events_after, lower_cutoff, ws_name)
+    print('[Info] FilterBadPulses reduces number of events from %d to %d (under %.3f percent) ' \
+          'of workspace %s.' % (num_events_before, num_events_after, lower_cutoff, ws_name))
 
     return
 
@@ -2373,7 +2364,7 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
             if len(ws_name) == 0:
                 chopped_ws_name_list.pop(i_w)
             elif ADS.doesExist(ws_name) is False:
-                print '[ERROR] Chopped workspace {0} cannot be found.'.format(ws_name)
+                print('[ERROR] Chopped workspace {0} cannot be found.'.format(ws_name))
         # END-FOR
         assert num_split_ws == len(chopped_ws_name_list), 'Number of split workspaces {0} must be equal to number of ' \
                                                           'chopped workspaces names {1} ({2}).' \
@@ -2383,7 +2374,7 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
         return False, 'Failed to split data by FilterEvents.'
 
     if len(ret_list) != 3 + len(chopped_ws_name_list):
-        print '[WARNING] Returned List Size = {0}'.format(len(ret_list))
+        print('[WARNING] Returned List Size = {0}'.format(len(ret_list)))
 
     # Save result
     chop_list = list()
@@ -2392,47 +2383,27 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
         for index, chopped_ws_name in enumerate(chopped_ws_name_list):
             base_file_name = '{0}_event.nxs'.format(chopped_ws_name)
             file_name = os.path.join(output_directory, base_file_name)
-            print '[INFO] Save chopped workspace {0} to {1}.'.format(chopped_ws_name, file_name)
+            print('[INFO] Save chopped workspace {0} to {1}.'.format(chopped_ws_name, file_name))
             mantidapi.SaveNexusProcessed(InputWorkspace=chopped_ws_name, Filename=file_name)
             chop_list.append((file_name, chopped_ws_name))
 
         # Clear only if file is saved
-        print '[INFO] Delete correction workspace {0}'.format(correction_ws)
+        print('[INFO] Delete correction workspace {0}'.format(correction_ws))
         delete_workspace(correction_ws)
-
-        # DEBUG: where does raw workspace go?
-        if ADS.doesExist(raw_ws_name):
-            print '[DB...BAT] Check3 Raw workspace {0} is still there.'.format(raw_ws_name)
-            # mantidapi.GeneratePythonScript(InputWorkspace=raw_ws_name, Filename='/tmp/raw_1.py')
-
-        else:
-            print '[DB...BAT] Check3 Raw workspace {0} disappears after FilterEvents.'.format(raw_ws_name)
 
         if delete_split_ws:
             for chopped_ws_name in chopped_ws_name_list:
-                print '[INFO] Delete chopped child workspace {0}'.format(chopped_ws_name)
+                print('[INFO] Delete chopped child workspace {0}'.format(chopped_ws_name))
                 mantidapi.DeleteWorkspace(Workspace=chopped_ws_name)
                 # DEBUG: where does raw workspace go?
-                if ADS.doesExist(raw_ws_name):
-                    print '[DB...BAT] Check2 Raw workspace {0} is still there after deleting {1}.' \
-                          ''.format(raw_ws_name, chopped_ws_name)
-                else:
-                    print '[DB...BAT] Check2 Raw workspace {0} disappears after FilterEvents after deleting {1}.' \
-                          ''.format(raw_ws_name, chopped_ws_name)
+                if ADS.doesExist(raw_ws_name) is False:
                     return False, str(RuntimeError('.... Debug Stop ... Debug Stop ...'))
     else:
         if delete_split_ws:
-            print '[WARNING] Chopped workspaces cannot be deleted if the output directory is not specified.'
+            print('[WARNING] Chopped workspaces cannot be deleted if the output directory is not specified.')
         for chopped_ws_name in chopped_ws_name_list:
             chop_list.append((None, chopped_ws_name))
     # END-IF
-
-    # DEBUG: where does raw workspace go?
-    if ADS.doesExist(raw_ws_name):
-        print '[DB...BAT] Check2 Raw workspace {0} is still there.'.format(raw_ws_name)
-        # mantidapi.GeneratePythonScript(InputWorkspace=raw_ws_name, Filename='/tmp/raw_2.py')
-    else:
-        print '[DB...BAT] Check2 Raw workspace {0} disappears after FilterEvents.'.format(raw_ws_name)
 
     return True, chop_list
 

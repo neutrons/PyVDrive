@@ -1,14 +1,12 @@
 #!/usr/bin/python
 import sys
 import pyvdrive
-from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
+from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget  # noqa: F401
 import os
 try:
-    from PyQt5 import QtCore as QtCore
     from PyQt5.QtWidgets import QDialog, QApplication
     from PyQt5.uic import loadUi as load_ui
 except ImportError:
-    from PyQt4 import QtCore as QtCore
     from PyQt4.QtGui import QDialog, QApplication
     from PyQt4.uic import loadUi as load_ui
 

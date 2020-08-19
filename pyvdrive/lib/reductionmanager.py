@@ -8,7 +8,6 @@ import reduce_adv_chop
 import mantid_reduction
 import datatypeutility
 import datetime
-import numpy
 import save_vulcan_gsas
 import vulcan_util
 import mantid.simpleapi as mantid_api
@@ -147,7 +146,7 @@ class CalibrationManager(object):
         self._calibration_dict[datetime.datetime(2017, 6, 1)] = ned_2017_setup
         self._calibration_dict[datetime.datetime(2018, 5, 30)] = ned_2018_setup
         self._calibration_dict[datetime.datetime(2019, 1, 1)] = ned_2019_setup
-        self._calibration_dict[datetime.datetime(2019, 6, 1)] = ned_2019_setup
+        self._calibration_dict[datetime.datetime(2019, 6, 1)] = ned_2019B_setup
 
         return
 

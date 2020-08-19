@@ -4,11 +4,11 @@
 import os
 
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QTreeView, QAbstractItemView, QFileSystemModel, QAction
     from PyQt5.QtGui import QStandardItem
-except ImportError as import_err:
+except ImportError:
     from PyQt4 import QtCore
     from PyQt4.QtGui import QTreeView, QAbstractItemView, QFileSystemModel, QStandardItem
     from PyQt4.QtGui import QAction
@@ -293,8 +293,8 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
             try:
                 run = int(run_str)
                 run_list.append(run)
-            except ValueError as exception:
-                print('[Error] Unable to convert run item with text %s to integer' % run_str)
+            except ValueError as val_err:
+                print('[Error] Unable to convert run item with text {} to integer as {}'.format(run_str, val_err))
         # END-FOR
 
         # sort

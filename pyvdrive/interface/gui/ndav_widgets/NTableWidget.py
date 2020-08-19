@@ -2,7 +2,7 @@
 # N(DAV)TableWidget
 #
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QCheckBox
 except ImportError:

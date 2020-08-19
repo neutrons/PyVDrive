@@ -1,15 +1,15 @@
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QMainWindow
 except ImportError:
     from PyQt4 import QtCore
-    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.QtGui import QVBoxLayout  # noqa: F401
     from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QMainWindow
-
+import os
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8

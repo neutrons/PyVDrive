@@ -222,7 +222,7 @@ class VDriveAPI(object):
         # Sort by d-space... NOT FINISHED YET
         num_ref = len(reflections)
         ref_dict = dict()
-        for i_ref in xrange(num_ref):
+        for i_ref in range(num_ref):
             ref_tup = reflections[i_ref]
             assert isinstance(ref_tup, tuple)
             assert len(ref_tup) == 2
@@ -308,58 +308,6 @@ class VDriveAPI(object):
         peak_file_manager.export_peaks(out_file_name)
 
         return
-
-    # def find_peaks(self, data_key, bank_number, x_range,
-    #                auto_find, profile='Gaussian',
-    #                peak_positions=None, hkl_list=None):
-    #     """
-    #     Find peaks in a given diffraction pattern
-    #     Requirements:
-    #      - by run number, a workspace containing the reduced run must be found
-    #      - either auto (mode) is on or peak positions are given;
-    #      - peak profile is default as Gaussian and is limited to the peak profile supported by Mantid
-    #     :param data_key: a data key (for loaded previously reduced data) or run number
-    #     :param bank_number:
-    #     :param x_range:
-    #     :param peak_positions:
-    #     :param hkl_list:
-    #     :param profile:
-    #     :param auto_find:
-    #     :return: list of tuples for peak information as (peak center, height, width)
-    #     """
-    #     try:
-    #         # raise exceptions if the input parameters are not allowed.
-    #         if isinstance(peak_positions, list) and auto_find:
-    #             raise RuntimeError('It is not allowed to specify both peak positions and turn on auto mode.')
-    #         if peak_positions is None and auto_find is False:
-    #             raise RuntimeError('Either peak positions is given. Or auto mode is turned on.')
-    #
-    #         peak_info_list = self._myProject.find_diffraction_peaks(data_key, bank_number, x_range,
-    #                                                                 peak_positions, hkl_list,
-    #                                                                 profile)
-    #     except RuntimeError as run_err:
-    #         return False, 'Failed to find peaks due to {0}'.format(run_err)
-    #
-    #     return True, peak_info_list
-
-    # def gen_data_slice_manual(self, run_number, relative_time, time_segment_list, slice_tag):
-    #     """ generate event slicer for data manually
-    #     :param run_number:
-    #     :param relative_time:
-    #     :param time_segment_list:
-    #     :param slice_tag: string for slice tag name
-    #     :return: slice tag. if user gives slice tag as None, then the returned one is the auto-generated.
-    #     """
-    #     # TODO FIXME - NIGHT - This method can be removed
-    #     # get the chopper
-    #     chopper = self._myProject.get_chopper(run_number)
-    #
-    #     status, slice_tag = chopper.generate_events_filter_manual(run_number=run_number,
-    #                                                               split_list=time_segment_list,
-    #                                                               relative_time=relative_time,
-    #                                                               splitter_tag=slice_tag)
-    #
-    #     return status, slice_tag
 
     def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step, raw_nexus_name=None):
         """
@@ -533,13 +481,6 @@ class VDriveAPI(object):
                                  (str(run_number), str(data_key)))
 
         return True, info
-
-    # def get_reduced_runs(self, with_ipts=True):
-    #     """ Get the runs (run numbers) that have been reduced successfully
-    #     :param with_ipts: if true, then return 2-tuple as (run number, IPTS)
-    #     :return: list of strings?
-    #     """
-    #     return self._myProject.reduction_manager.get_reduced_runs(with_ipts)
 
     def get_reduced_workspace_name(self, run_id):
         """
@@ -756,14 +697,14 @@ class VDriveAPI(object):
 
     def get_archived_data_dir(self, ipts_number, run_number, chopped_data):
         """
-        get the directory of the SNS archived data (GSAS file) by ITPS number, Run number and whether it is the 
+        get the directory of the SNS archived data (GSAS file) by ITPS number, Run number and whether it is the
         previously chopped and reduced data
         :param ipts_number:
         :param run_number:
         :param chopped_data:
         :return:
         """
-        import vdrive_constants
+        from pyvdrive.lib import vdrive_constants
         if chopped_data:
             # chopped data
             sns_dir = self.archive_manager.get_vulcan_chopped_gsas_dir(ipts_number, run_number)
@@ -948,7 +889,7 @@ class VDriveAPI(object):
             else:
                 i_end_run = run_list.index(end_run)
         except IndexError as ie:
-            return False, 'Either start run %d or end run %d is not added to project.' % (start_run, end_run)
+            return False, 'Either start run {} or end run {} is not added to project. {}'.format(start_run, end_run, ie)
 
         ret_list = run_list[i_start_run:i_end_run+1]
 
@@ -1038,7 +979,8 @@ class VDriveAPI(object):
             #                                                relative=relative)
         # END-IF
 
-        # TODO - TONIGHT 0 (ISSUE 164) - Add a place to store vec_times, vec_log_x, vec_log_y (external method in chopper?)
+        # TODO - TONIGHT 0 (ISSUE 164) -
+        # TODO - Add a place to store vec_times, vec_log_x, vec_log_y (external method in chopper?)
         # TODO - UI - (1) add a section for line integral (2) option: section length, smooth, plot
         # TODO - Lib - (1) algorithm to smooth (X intact) (2) trace back from X/Y to time (using vec T, vecX, vecY)
         # TODO - UI - Table to show the result
@@ -1215,7 +1157,7 @@ class VDriveAPI(object):
             ipts_number, run_number, chop_sequence)
 
         workspace = mantid_helper.retrieve_workspace(ws_name, True)
-        print '[DB...BAT...TRACE] PC = {0}, Acting on workspace {1}'.format(proton_charge, workspace)
+        print('[DB...BAT...TRACE] PC = {0}, Acting on workspace {1}'.format(proton_charge, workspace))
 
         workspace *= (1./proton_charge)
 
@@ -1705,9 +1647,8 @@ class VDriveAPI(object):
                 else:
                     van_file_name = self._myArchiveManager.get_gsas_file(
                         ipts_number, run_number, check_exist=True)
-                print '[DB...BAT...TRACE] ', van_file_name
             except RuntimeError as run_err:
-                print '[WARNING]: {0}'.format(run_err)
+                print('[WARNING]: {0}'.format(run_err))
                 van_file_name = None
         # END-IF
 
@@ -1743,7 +1684,7 @@ class VDriveAPI(object):
         # END-IF-ELSE
 
         # convert unit
-        print '[DB...BAT] Load vanadium and convert unit???  from {0}'.format(van_file_name)
+        print('[DB...BAT] Load vanadium and convert unit???  from {0}'.format(van_file_name))
         mantid_helper.mtd_convert_units(van_ws_key, unit)
 
         return True, van_ws_key
@@ -1774,14 +1715,8 @@ class VDriveAPI(object):
         data_line_number = block_start_line + start_point_index
         num_points = min(end_point_index - start_point_index, block_end_line - data_line_number)
 
-        print '[DB.,,,,..BAT] Read MTS Block %d, Start Point = %d, End Point = %d: block : %d, %d ' % (
-            block_index, start_point_index, end_point_index, block_start_line, block_end_line),
-        print 'read from line %d with number of points = %d' % (data_line_number, num_points)
-
         # load file
         # TODO/FIXME - sep is fixed to \t now.  It might not be a good approach
-        print '[DB...BAT] File name = ', log_file_name, 'Skip = ', data_line_number, 'Names: ', header,
-        print 'Number of points = ', num_points
         mts_series = pd.read_csv(log_file_name, skiprows=data_line_number,
                                  names=header, nrows=num_points,
                                  sep='\t')
@@ -1823,7 +1758,7 @@ class VDriveAPI(object):
         # Out file name
         if os.path.isabs(out_file_name) is False:
             out_file_name = os.path.join(self._myWorkDir, out_file_name)
-            print '[INFO] Session file is saved to working directory as %s.' % out_file_name
+            print('[INFO] Session file is saved to working directory as %s.' % out_file_name)
 
         archivemanager.save_to_xml(save_dict, out_file_name)
 

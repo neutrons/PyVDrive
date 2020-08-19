@@ -53,7 +53,7 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         num_rows = self.rowCount()
 
         # fill the stop time by next row's start time
-        for ir in xrange(num_rows-1):
+        for ir in range(num_rows-1):
             stop_time = self.get_cell_value(ir + 1, self._colIndexStart)
             self.set_value_cell(ir, self._colIndexStop, stop_time)
 
@@ -66,12 +66,12 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         num_rows = self.rowCount()
         start_time_list = list()
 
-        for ir in xrange(num_rows):
+        for ir in range(num_rows):
             start_time = self.get_cell_value(ir, 0)
             start_time_list.append(start_time)
 
         start_time_list.sort()
-        print '[DB] Start Times: ', start_time_list
+        print('[DB] Start Times: ', start_time_list)
 
         return start_time_list
 
@@ -105,7 +105,7 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         split_tup_list = list()
 
         num_rows = self.rowCount()
-        for ir in xrange(num_rows):
+        for ir in range(num_rows):
             selected = self.get_cell_value(ir, self._colIndexSelect)
             if not selected:
                 continue
@@ -141,13 +141,11 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
             return False, 'Input row number %d is out of range [0, %d).' % (row_number, num_rows)
 
         # Replace original row
-        print '[DB-HUGE] Update cell @ %d, %d with value %f.' % (row_number, self._colIndexStart, time_segments[0][0])
         self.update_cell_value(row_number, self._colIndexStart, time_segments[0][0])
-        print '[DB-HUGE] Update cell @ %d, %d with value %f.' % (row_number, self._colIndexStop, time_segments[0][1])
         self.update_cell_value(row_number, self._colIndexStop, time_segments[0][1])
 
         # Insert the rest by inserting rows and set values
-        for index in xrange(1, len(time_segments)):
+        for index in range(1, len(time_segments)):
             start_time = -0.1
             stop_time = -0.1
             target = ''
@@ -155,7 +153,7 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         # END-FOR
 
         # set value to all the rows belonged to that
-        for index in xrange(1, len(time_segments)):
+        for index in range(1, len(time_segments)):
             self.update_cell_value(row_number + index, self._colIndexStart, time_segments[index][0])
             self.update_cell_value(row_number + index, self._colIndexStop, time_segments[index][1])
             if len(time_segments[index]) >= 3:
@@ -261,7 +259,7 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         # Get the values of the first column to a new list
         num_rows = self.rowCount()
         start_time_list = list()
-        for i_row in xrange(num_rows):
+        for i_row in range(num_rows):
             start_time = self.get_cell_value(i_row, self._colIndexStart)
             start_time_list.append(start_time)
         # END-FOR(i_row)
@@ -270,7 +268,7 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         start_time_list.sort()
 
         # Update the sorted list to table
-        for i_row in xrange(num_rows):
+        for i_row in range(num_rows):
             self.update_cell_value(i_row, self._colIndexStart, start_time_list[i_row])
 
         return
@@ -410,7 +408,6 @@ class MTSFormatTable(NdavTable.NTableWidget):
             # for each row, read all checked box
             num_true_counts = 0
             # get row number
-            print '[DB...BAT] Parsing row %d', i_row
             row_number = self.get_cell_value(i_row, self._colIndexRow)
             # is comments
             # use if but not if-else in order to prevent user selects more than 1 checkbox
@@ -737,10 +734,8 @@ class PeakParameterTable(NdavTable.NTableWidget):
                 peak_group = peak_row[5]
 
                 peak_i = [bank, peak_name, peak_centre, peak_width, peak_group]
-                print '[DB...BAT] Buffered peak: ', peak_i
                 peak_list.append(peak_i)
-
-                print 'Appending peak %d: %s' % (len(peak_list)-1, str(peak_i))
+                print('Appending peak %d: %s' % (len(peak_list)-1, str(peak_i)))
             # END-FOR
 
             # add to dictionary
@@ -814,10 +809,9 @@ class PeakParameterTable(NdavTable.NTableWidget):
         self._buffer[bank_id] = list()
 
         num_rows = self.rowCount()
-        for i_row in xrange(num_rows):
+        for i_row in range(num_rows):
             row_i = self.get_row_value(i_row)
             self._buffer[bank_id].append(row_i)
-            print 'row %d' % i_row, row_i, type(row_i)
 
         return
 
@@ -947,7 +941,7 @@ class VdriveRunTableWidget(NdavTable.NTableWidget):
         num_rows = self.rowCount()
         for run_number in run_list:
             match_row_number = -1
-            for i_row in xrange(num_rows):
+            for i_row in range(num_rows):
                 temp_row_number = self.get_cell_value(i_row, 0)
                 if run_number == temp_row_number:
                     match_row_number = i_row

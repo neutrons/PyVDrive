@@ -1,10 +1,10 @@
 import os
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QDialog, QLineEdit, QComboBox, QCheckBox
     from PyQt5.uic import loadUi as load_ui
 except ImportError:
-    from PyQt4.QtGui import QMainWindow, QVBoxLayout, QDialog, QLineEdit, QComboBox, QCheckBox
+    from PyQt4.QtGui import QMainWindow, QVBoxLayout, QDialog, QLineEdit, QComboBox, QCheckBox  # noqa: F401
     from PyQt4.uic import loadUi as load_ui
 from gui import GuiUtility
 
@@ -400,7 +400,7 @@ class PhaseWidgets(object):
             self._lineEdit_a.setText(str(unit_cell_value[4]))
         # Set unit cell type
         new_index = -1
-        for index in xrange(len(UnitCellList)):
+        for index in range(len(UnitCellList)):
             if unit_cell_value[1] == UnitCellList[index][0]:
                 new_index = index
                 break

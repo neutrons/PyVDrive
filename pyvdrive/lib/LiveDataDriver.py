@@ -1,13 +1,6 @@
 import os
-import sys
-
-# # path will be ... TODO TODO TODO
-# sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
-
-
 import numpy
 import mantid.simpleapi as mantidsimple
-import mantid
 from mantid.api import AlgorithmManager
 from mantid.api import AnalysisDataService as ADS
 import mantid_helper
@@ -357,7 +350,7 @@ class LiveDataDriver(QtCore.QThread):
 
     def integrate_peaks(self, accumulated_workspace_list, d_min, d_max, norm_by_vanadium):
         """ integrate peaks for a list of
-        :param accumulated_workspace_list: 
+        :param accumulated_workspace_list:
         :param d_min:
         :param d_max:
         :param norm_by_vanadium
@@ -388,8 +381,8 @@ class LiveDataDriver(QtCore.QThread):
         for ws_name in accumulated_workspace_list:
             if ws_name is None:
                 # workspace name is None or not exist?
-                print '[WARNING] Found workspace None in given accumulated workspaces {0}' \
-                      ''.format(accumulated_workspace_list)
+                print('[WARNING] Found workspace None in given accumulated workspaces {0}'
+                      ''.format(accumulated_workspace_list))
                 continue
 
             # integrate peak for the non-integrated workspace and LAST workspace only
@@ -399,7 +392,7 @@ class LiveDataDriver(QtCore.QThread):
 
             # too old to be in ADS
             if mantid_helper.workspace_does_exist(ws_name) is False:
-                print '[WARNING] Workspace {0} does not exist in ADS.'.format(ws_name)
+                print('[WARNING] Workspace {0} does not exist in ADS.'.format(ws_name))
                 continue
 
             # get workspace
@@ -590,15 +583,15 @@ class LiveDataDriver(QtCore.QThread):
                                               date_time_vec[-1], time_vec_i[0], diff_ns)
                     if ws_name == 'Accumulated_00001':
                         # if it happens with first.. just skip!
-                        print '[ERROR] {0}'.format(error_message)
+                        print('[ERROR] {0}'.format(error_message))
                         continue
                     else:
                         raise RuntimeError(error_message)
                 elif date_time_vec[-1] == time_vec_i[0]:
-                    print 'Previous workspace {0} has one entry overlapped with current one {1} on sample log {2}: ' \
-                          '{3} vs {4}. Values are {5} and {6}.' \
+                    print('Previous workspace {0} has one entry overlapped with current one {1} on sample log {2}: '
+                          '{3} vs {4}. Values are {5} and {6}.'
                           ''.format(ws_name_list[seq_index-1], ws_name, sample_log_name,
-                                    date_time_vec[-1], time_vec_i[0], sample_value_vec[-1], value_vec_i[0])
+                                    date_time_vec[-1], time_vec_i[0], sample_value_vec[-1], value_vec_i[0]))
 
                 # append
                 numpy.append(date_time_vec, time_vec_i)
@@ -607,8 +600,8 @@ class LiveDataDriver(QtCore.QThread):
 
             if len(time_vec_i) > 0:
                 # DEBUG OUTPUT
-                print '[DB...SEVERE] Workspace {0} Entry 0: {1}; Entry -1: {2}; Number of Entries: {3}' \
-                      ''.format(ws_name, time_vec_i[0], time_vec_i[-1], len(time_vec_i))
+                print('[DB...SEVERE] Workspace {0} Entry 0: {1}; Entry -1: {2}; Number of Entries: {3}'
+                      ''.format(ws_name, time_vec_i[0], time_vec_i[-1], len(time_vec_i)))
 
                 last_pulse_time = temp_workspace.run().getProperty('proton_charge').times[-1]
             # END

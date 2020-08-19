@@ -1,7 +1,7 @@
 from datetime import datetime
 import os
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
@@ -758,13 +758,14 @@ class VulcanLiveDataView(QMainWindow):
         ws_name_list = list()
         ws_index_list = list()
         try:
-            print('[DB...BAT...BAT] Index = {0} ' \
+            print('[DB...BAT...BAT] Index = {0} '
                   'Workspace Name = {1}'.format(self._myAccumulationListIndex,
                                                 self._myAccumulationWorkspaceList[self._myAccumulationListIndex]))
         except IndexError as index_err:
-            raise RuntimeError('In get_accumulation_workspaces(), _myAccumulationListIndex = {} out of '
-                               'range of _myAccumulationWorksapceList'
-                               ''.format(self._myAccumulationListIndex, len(self._myAccumulationWorkspaceList)))
+            raise RuntimeError('In get_accumulation_workspaces(), _myAccumulationListIndex = {} out of {} '
+                               'range of _myAccumulationWorksapceList.  Error info: {}'
+                               ''.format(self._myAccumulationListIndex, len(self._myAccumulationWorkspaceList),
+                                         index_err))
 
         for ws_count in range(last_n_round):
             # get accumulation workspace list index

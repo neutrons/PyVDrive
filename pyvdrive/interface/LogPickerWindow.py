@@ -6,7 +6,7 @@
 import os
 import numpy
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore as QtCore
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
@@ -15,7 +15,7 @@ except ImportError:
     from PyQt4 import QtCore as QtCore
     from PyQt4.QtGui import QVBoxLayout
     from PyQt4.uic import loadUi as load_ui
-    from PyQt4.QtGui import QMainWindow, QButtonGroup, QFileDialog
+    from PyQt4.QtGui import QMainWindow, QButtonGroup, QFileDialog  # noqa: F401
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -357,7 +357,7 @@ class WindowLogPicker(QMainWindow):
             """
             # cache current
             self._cached_slicers_dict[self._current_slicer_type] = self._current_slicer_type
-            prev_slicer = self._current_slicer_type
+            # prev_slicer = self._current_slicer_type
 
             # get the next
             self._current_slicer_type = mode_name
@@ -603,12 +603,12 @@ class WindowLogPicker(QMainWindow):
         # Error above line
 
         # automatically determine the type of slicer time: epoch (nano seconds or relative)
-        if slicer_start_time > 3600 * 24 * 365:
-            # larger than 1 year. then must be an absolute time
-            run_start_s = int(self.ui.label_runStartEpoch.text())
-        else:
-            # relative time: no experiment in 1991
-            run_start_s = 0.
+        # if slicer_start_time > 3600 * 24 * 365:
+        #     # larger than 1 year. then must be an absolute time
+        #     run_start_s = int(self.ui.label_runStartEpoch.text())
+        # else:
+        #     # relative time: no experiment in 1991
+        #     run_start_s = 0.
 
         # add slicers to table
         # TODO - TODAY 190 - Test
@@ -657,7 +657,7 @@ class WindowLogPicker(QMainWindow):
                                                          default_dir=self.get_controller().working_dir(),
                                                          file_filter='HDF5 (*.hdf5);;HDF5 (*.hdf)')
 
-        sample_log_dict = file_utilities.load_sample_logs_h5(log_h5_name=h5_log_name)
+        file_utilities.load_sample_logs_h5(log_h5_name=h5_log_name)
 
         # TODO - TODAY - Need to find out what is the next step after loading sample logs
 
@@ -679,8 +679,6 @@ class WindowLogPicker(QMainWindow):
 
         # get this dictionary
         mts_log_dict = self._mtsLogFormat[mts_log_file]
-
-        print '[DB...BAT] mts log dict: ', mts_log_dict
 
         duration = mts_log_dict['duration'][block_index][1] - \
             mts_log_dict['duration'][block_index][0]
@@ -713,7 +711,7 @@ class WindowLogPicker(QMainWindow):
         delta_points = self.get_data_size_to_load()
         if delta_points <= 0:
             # no point to load
-            print '[DB INFO] calculated delta-points = %d < 0. No loading' % delta_points
+            print('[DB INFO] calculated delta-points = %d < 0. No loading' % delta_points)
 
         # get the file
         mts_log_file = str(self.ui.lineEdit_logFileName.text())
@@ -821,7 +819,8 @@ class WindowLogPicker(QMainWindow):
         # get current index of the combo box and find out the next
         current_index = self.ui.comboBox_logNames.currentIndex()
         max_index = self.ui.comboBox_logNames.size()
-        # TODO - TODAY - Test - logNames.size() may not a correction method to find total number of entries of a combo box
+        # TODO - TODAY - Test - logNames.size() may not a correction method to find total number
+        # of entries of a combo box
         next_index = (current_index + 1) % int(max_index)
 
         # advance to the next one

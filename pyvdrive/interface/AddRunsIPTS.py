@@ -5,14 +5,14 @@ import os
 import datetime
 
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QDialog, QFileDialog
 except ImportError:
     from PyQt4 import QtCore
-    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.QtGui import QVBoxLayout  # noqa: F401
     from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QDialog, QFileDialog
 
@@ -176,45 +176,46 @@ class AddRunsByIPTSDialog(QDialog):
         Add runs by date of runs
         :return:
         """
-        # add runs by date and time
-        assert self.ui.dateEdit_begin.isEnabled() and self.ui.dateEdit_end.isEnabled()
+        raise NotImplementedError('Method filter_runs_by_date() is not implemented yet')
+        # # add runs by date and time
+        # assert self.ui.dateEdit_begin.isEnabled() and self.ui.dateEdit_end.isEnabled()
 
-        # get workflow controller
-        workflow_controller = self._myParent.get_controller()
+        # # get workflow controller
+        # workflow_controller = self._myParent.get_controller()
 
-        # get start date
-        begin_date = self.ui.dateEdit_begin.date()
-        assert(isinstance(begin_date, QtCore.QDate))
-        begin_date_str = '%02d/%02d/%02d' % (begin_date.month(),
-                                             begin_date.day(), begin_date.year())
+        # # get start date
+        # begin_date = self.ui.dateEdit_begin.date()
+        # assert(isinstance(begin_date, QtCore.QDate))
+        # begin_date_str = '%02d/%02d/%02d' % (begin_date.month(),
+        #                                      begin_date.day(), begin_date.year())
 
-        # get end date
-        end_date = self.ui.dateEdit_end.date()
-        assert(isinstance(end_date, QtCore.QDate))
-        end_date_str = '%02d/%02d/%02d' % (end_date.month(), end_date.day(), end_date.year())
+        # # get end date
+        # end_date = self.ui.dateEdit_end.date()
+        # assert(isinstance(end_date, QtCore.QDate))
+        # end_date_str = '%02d/%02d/%02d' % (end_date.month(), end_date.day(), end_date.year())
 
-        # get the complete list of run (tuples) as it is filtered by date
-        status, ret_obj = workflow_controller.get_ipts_info(self._iptsDir, None, None)
-        if status is True:
-            run_tup_list = ret_obj
-        else:
-            error_message = ret_obj
-            gutil.pop_dialog_error(self, error_message)
-            return
+        # # get the complete list of run (tuples) as it is filtered by date
+        # status, ret_obj = workflow_controller.get_ipts_info(self._iptsDir, None, None)
+        # if status is True:
+        #     run_tup_list = ret_obj
+        # else:
+        #     error_message = ret_obj
+        #     gutil.pop_dialog_error(self, error_message)
+        #     return
 
-        # filter by date
-        status, ret_obj = general_util.filter_runs_by_date(run_tup_list, begin_date_str, end_date_str,
-                                                           include_end_date=True)
-        if status is True:
-            run_tup_list = ret_obj
-        else:
-            #  pop error
-            error_message = ret_obj
-            gutil.pop_dialog_error(self, error_message)
-            return
-        # END-IF
+        # # filter by date
+        # status, ret_obj = general_util.filter_runs_by_date(run_tup_list, begin_date_str, end_date_str,
+        #                                                    include_end_date=True)
+        # if status is True:
+        #     run_tup_list = ret_obj
+        # else:
+        #     #  pop error
+        #     error_message = ret_obj
+        #     gutil.pop_dialog_error(self, error_message)
+        #     return
+        # # END-IF
 
-        return run_tup_list
+        # return run_tup_list
 
     def get_runs_by_number(self):
         """

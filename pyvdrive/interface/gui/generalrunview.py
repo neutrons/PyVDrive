@@ -85,7 +85,7 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         if self._has2DImage:
             self.reset_2d_plots()
 
-        print ('[DB...BAT] Plot 1D: size vecX = {}, size vecY = {}'.format(len(vec_x), len(vec_y)))
+        print('[DB...BAT] Plot 1D: size vecX = {}, size vecY = {}'.format(len(vec_x), len(vec_y)))
 
         # draw line
         line_id = self.add_plot_1d(vec_x=vec_x, vec_y=vec_y,
@@ -306,4 +306,3 @@ class LinePlot3DView(mplgraphicsview3d.MplPlot3dCanvas):
     def plot_runs(self):
 
         self.plot_surface_prototype()
-

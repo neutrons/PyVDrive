@@ -8,7 +8,7 @@
 import os
 import numpy
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5.QtWidgets import QMainWindow
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
@@ -31,7 +31,7 @@ from pyvdrive.interface.gui.generalrunview import GeneralRunView
 import pyvdrive.lib.datatypeutility
 from pyvdrive.lib import datatypeutility
 import atomic_data_viewers
-from gui.samplelogview import LogGraphicsView
+from pyvdrive.interface.gui.samplelogview import LogGraphicsView
 from pyvdrive.lib import reduce_VULCAN
 from pyvdrive.lib import vdrive_constants
 from atomic_data_viewers import PlotInformation
@@ -562,7 +562,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         if not status:
             print('[ERROR-POP] Unable to get bank list from {0}'.format(data_key))
             return
-        print data_bank_list
+        print(data_bank_list)
 
         # number of banks are same
         if len(data_bank_list) == len(self._bankIDList):
@@ -684,7 +684,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             self._currentPlotID = None
             self.ui.graphicsView_logPlot.reset()
 
-            # TODO - TONIGHT 191.1 - May need to clear the chop sequence combo box... But there are other variables to set
+            # TODO - TONIGHT 191.1 - May need to clear the chop sequence combo box...
+            # TODO - But there are other variables to set
         else:
             # set the chop run to 'current'/previous chopped name
             combo_index = self._chop_combo_name_list.index(curr_chopped_run_name)
@@ -1075,26 +1076,26 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             raise NotImplementedError(
                 'It has not been implemented to load sliced logs from memory/workspaces')
 
-            workspace_key = str(self.ui.comboBox_chopSeq.currentText())
-            workspace_key_list = [workspace_key]
-
-            for workspace_key in workspace_key_list:
-                # get the name of the workspace containing sample logs
-                if workspace_key in self._choppedSampleDict:
-                    # this is for loaded GSAS and NeXus file
-                    sample_key = self._choppedSampleDict[workspace_key]
-                else:
-                    # just reduced workspace
-                    sample_key = workspace_key
-
-                # get the sample log time and value
-                vec_times, vec_value = self._myController.get_sample_log_values(
-                    sample_key, sample_name, relative=True)
-
-                # plot
-                self.ui.graphicsView_logPlot.plot_sample_data(
-                    vec_times, vec_value, workspace_key, sample_name)
-                # END-FOR
+            # workspace_key = str(self.ui.comboBox_chopSeq.currentText())
+            # workspace_key_list = [workspace_key]
+            #
+            # for workspace_key in workspace_key_list:
+            #     # get the name of the workspace containing sample logs
+            #     if workspace_key in self._choppedSampleDict:
+            #         # this is for loaded GSAS and NeXus file
+            #         sample_key = self._choppedSampleDict[workspace_key]
+            #     else:
+            #         # just reduced workspace
+            #         sample_key = workspace_key
+            #
+            #     # get the sample log time and value
+            #     vec_times, vec_value = self._myController.get_sample_log_values(
+            #         sample_key, sample_name, relative=True)
+            #
+            #     # plot
+            #     self.ui.graphicsView_logPlot.plot_sample_data(
+            #         vec_times, vec_value, workspace_key, sample_name)
+            #     # END-FOR
         # END-FOR
 
         return
@@ -1273,7 +1274,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         #     # NOTE: be careful about non-existing chop name and seq name
         #     if set_to in self._chop_combo_name_list:
         #         new_chop_index = self._chop_combo_name_list.index(set_to)
-        #         self.ui.comboBox_choppedRunNumber.setCurrentIndex(new_chop_index)  # this will trigger the event to plot
+        #         self.ui.comboBox_choppedRunNumber.setCurrentIndex(new_chop_index)
+        #         # this will trigger the event to plot
         #         if set_to_seq in self._chop_seq_combo_name_list:
         #             new_seq_index = self._chop_seq_combo_name_list.index(set_to_seq)
         #             self.ui.comboBox_chopSeq.setCurrentIndex(new_seq_index)
@@ -1369,7 +1371,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         else:
             print('[WARNING] Unable to focus chop run {} to sequence {}'.format(
                 chop_run_name, slice_sequence_name))
-            debug_string = ''
             # focus sequence
             # for name in self._chop_seq_combo_name_list:
             #     print (name, type(name))
@@ -1948,7 +1949,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return sample_log_dict
 
-    def retrieve_loaded_reduced_data(self, data_key, ipts_number, run_number, chop_seq_index, bank_id, unit, pc_norm, van_run):
+    def retrieve_loaded_reduced_data(self, data_key, ipts_number, run_number, chop_seq_index,
+                                     bank_id, unit, pc_norm, van_run):
         """
         Retrieve reduced data from workspace (via run number) to _reducedDataDict.
         Note: this method is used to talk with myController
