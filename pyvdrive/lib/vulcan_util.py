@@ -294,7 +294,6 @@ def getLogsList(vandbfile):
     # parse an example line
     examples = []
     errmsg = ""
-    numvanruns = 0
     for line in lines:
         line = line.strip()
         if len(line) == 0 or line.startswith('#') is True:
@@ -456,7 +455,6 @@ def import_sample_log_record(ipts_number, run_number, is_chopped, record_type='s
         peek_file = open(sample_log_name, 'r')
         line0 = peek_file.readline()
         peek_file.close()
-        item1 = float(line0.strip().split()[0])
         row0 = 0
     except ValueError:
         row0 = 1
@@ -644,7 +642,7 @@ class AutoVanadiumCalibrationLocator(object):
                 try:
                     cvalue = self._expRecordDict[run][logname]
                 except KeyError as e:
-                    print("[DB300] Log %s is not supported in Vulcan auto log." % logname)
+                    print("[DB300] Log {} is not supported in Vulcan auto log. FYI {}".format(logname, e))
                     numfail += 1
                     continue
 
@@ -825,7 +823,7 @@ class AutoVanadiumCalibrationLocator(object):
         try:
             irun = titlelist.index('RUN')
         except ValueError as e:
-            return False, "There is no title named 'RUN'."
+            return False, "There is no title named 'RUN'. FYI {}".format(e)
 
         for datarow in dataset:
             run = int(datarow[irun])

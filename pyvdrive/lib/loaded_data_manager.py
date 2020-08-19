@@ -323,8 +323,8 @@ class LoadedDataManager(object):
         else:
             # look into each file
             # # chopping information file is not given, then search reduced diffraction files from hard disk
-            print '[WARNING] Unable to Find Chop Information File in {0}. No Sample Log Loaded.' \
-                  ''.format(chopped_data_dir)
+            print('[WARNING] Unable to Find Chop Information File in {0}. No Sample Log Loaded.'
+                  ''.format(chopped_data_dir))
             reduced_tuple_dict = self.search_reduced_files(file_format, file_list, chopped_data_dir)
 
         # END-IF-ELSE

@@ -1,5 +1,5 @@
 # This is a class to slice and focus data for parallelization (multiple threading)
-from mantid.simpleapi import Load, LoadEventNexus, FilterEvents, AlignAndFocusPowder
+from mantid.simpleapi import Load, LoadEventNexus, FilterEvents
 from mantid.simpleapi import AlignDetectors, ConvertUnits
 from mantid.simpleapi import DiffractionFocussing, CreateWorkspace
 from mantid.simpleapi import EditInstrumentGeometry, GeneratePythonScript

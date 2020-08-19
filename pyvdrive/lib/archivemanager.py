@@ -451,7 +451,7 @@ class DataArchiveManager(object):
                 run_dict = self._iptsInfoDict[archive_key][run_number]
                 partial_list.append(run_dict)
             else:
-                print('[Warning] Run number {0} is not in ArchiveManager\'s IPTS information dictionary.' \
+                print('[Warning] Run number {0} is not in ArchiveManager\'s IPTS information dictionary.'
                       ''.format(run_number))
 
         return partial_list

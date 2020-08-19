@@ -277,7 +277,8 @@ class GSASPeakFileManager(object):
             except IndexError:
                 raise IndexError('Number of items in line "%s" is not right!' % line)
             except TypeError as err:
-                raise TypeError('Line "%s" is not in a supported format.' % line)
+                raise TypeError('Line {} is not in a supported format but of type {}. FYI: {}.'
+                                ''.format(line, type(line), err))
 
         return
 

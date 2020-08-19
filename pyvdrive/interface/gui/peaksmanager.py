@@ -826,21 +826,18 @@ class GroupedPeaksInfo(object):
 
         # group ID
         self._groupID = -1
-    
-        #
+        # set left and right ID
         self._leftID = left_boundary_id
         self._rightID = right_boundary_id
-    
         self._leftX = left_x
         self._rightX = right_x
-    
         self._peakPosIDList = list()  # a list of 2-tuple as peak position and indicator ID
 
         # mode controller: only in edit mode allows the moving of boundary of peak center
         self._inEditMode = True
-    
+
         return
-    
+
     def __str__(self):
         """ Pretty print for Grouped PeaksInfo
         :return:
@@ -851,44 +848,44 @@ class GroupedPeaksInfo(object):
             out_str += 'P_%d (%d): %.7f, ' % (i_peak, self._peakPosIDList[i_peak][1],
                                               self._peakPosIDList[i_peak][0])
         out_str += 'Right boundary (%d): %.7f]' % (self.right_boundary_id, self.right_boundary)
-    
+
         return out_str
-    
+
     @property
     def left_boundary(self):
         """
         """
         return self._leftX
-    
+
     @left_boundary.setter
     def left_boundary(self, x):
         """
         """
         assert isinstance(x, float)
         self._leftX = x
-    
+
         return
-    
+
     @property
     def left_boundary_id(self):
         """ Indicator ID of the left boundary
         :return:
         """
         return self._leftID
-    
+
     @property
     def right_boundary_id(self):
         """ Indicator ID of the right boundary
         :return:
         """
         return self._rightID
-    
+
     @property
     def right_boundary(self):
         """
         """
         return self._rightX
-    
+
     @right_boundary.setter
     def right_boundary(self, x):
         """
@@ -897,7 +894,7 @@ class GroupedPeaksInfo(object):
         assert x > self._leftX
         self._rightX = x
         return
-    
+
     def add_peak(self, indicator_id, peak_pos):
         """
         Add a peak
@@ -908,12 +905,12 @@ class GroupedPeaksInfo(object):
         # check
         assert isinstance(indicator_id, int)
         assert isinstance(peak_pos, float)
-    
+
         # add to peak list
         self._peakPosIDList.append((peak_pos, indicator_id))
-    
+
         return
-    
+
     def delete_peak(self, peak_id):
         """
         Delete a peak by its indicator ID
@@ -922,7 +919,7 @@ class GroupedPeaksInfo(object):
         """
         # check
         assert isinstance(peak_id, int)
-    
+
         # remove
         found_peak = False
         for i_peak in range(len(self._peakPosIDList)):
@@ -931,7 +928,7 @@ class GroupedPeaksInfo(object):
                 found_peak = True
                 self._peakPosIDList.pop(i_peak)
                 break
-    
+
         return found_peak
 
     def get_id(self):
@@ -940,7 +937,7 @@ class GroupedPeaksInfo(object):
         :return:
         """
         return self._groupID
-    
+
     def get_number_peaks(self):
         """ Get number of peaks in this peaks group
         :return:
@@ -963,14 +960,14 @@ class GroupedPeaksInfo(object):
                 return peak_pos_i
 
         return None
-    
+
     def get_peaks(self):
         """ Get all the peaks' tuple
         :return: a list of 2-tuples (peak position and peak ID)
         """
         self._peakPosIDList.sort()
         #  print '[DB...] get_peaks: return...', self._peakPosIDList
-    
+
         return self._peakPosIDList[:]
 
     def has_peak(self, peak_id):
@@ -1024,7 +1021,7 @@ class GroupedPeaksInfo(object):
             self._peakPosIDList[i_peak] = (peak_pos, peak_id_list[i_peak])
 
         return
-    
+
     def is_editable(self):
         """
         """
@@ -1106,7 +1103,7 @@ class GroupedPeaksInfo(object):
         assert isinstance(peak_id, int)
         assert isinstance(x, float)
         assert isinstance(is_displacement, bool)
-    
+
         found_peak = False
         for i_peak in range(len(self._peakPosIDList)):
             p_id = self._peakPosIDList[i_peak][1]
@@ -1128,5 +1125,5 @@ class GroupedPeaksInfo(object):
                 found_peak = True
                 break
         # END-FOR
-    
+
         return found_peak

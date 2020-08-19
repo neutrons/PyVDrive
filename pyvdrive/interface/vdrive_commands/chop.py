@@ -8,7 +8,7 @@ from process_vcommand import convert_string_to
 from pyvdrive.lib import datatypeutility
 try:
     from PyQt5 import QtCore
-    from PyQt5.QtCore import pyqtSignal
+    # from PyQt5.QtCore import pyqtSignal
 except (ImportError, RuntimeError) as import_err:
     print('CHOP: {}'.format(import_err))
     from PyQt4 import QtCore
@@ -265,7 +265,8 @@ class VdriveChop(VDriveCommand):
         # dry run: return input options
         if dry_run:
             outputs = 'Slice IPTS-{0} Run {1} by time with ({2}, {3}, {4}) and dt = {5}' \
-                      ''.format(self._iptsNumber, run_number, start_time, time_interval, stop_time, overlap_time_interval)
+                      ''.format(self._iptsNumber, run_number, start_time, time_interval,
+                                stop_time, overlap_time_interval)
             if reduce_flag:
                 outputs += 'and reduce (to GSAS) '
             else:

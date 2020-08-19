@@ -325,7 +325,7 @@ class ProjectManager(object):
                 # not scanned.  then check input
                 file_name_0 = '/SNS/VULCAN/IPTS-{0}/nexus/VULCAN_{1}_events.nxs.h5'.format(
                     ipts_number, run_number)
-                file_name_1 = '/SNS/VULCAN/IPTS-{1}/data/VULCAN_{1}_events.nxs'.format(
+                file_name_1 = '/SNS/VULCAN/IPTS-{0}/data/VULCAN_{1}_events.nxs'.format(
                     ipts_number, run_number)
                 if os.path.exists(file_name_0) or os.path.exists(file_name_1):
                     # found
