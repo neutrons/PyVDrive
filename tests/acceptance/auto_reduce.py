@@ -1,6 +1,4 @@
-from lettuce import *
-from nose.tools import assert_equals, assert_true
-import sys
+import pytest
 import os
 import os.path
 import pyvdrive.lib.VDriveAPI as vdapi
@@ -59,15 +57,13 @@ my_data = MyData()
 ipts_number = 16002
 
 
-@step(u'I get one run belonged to an IPTS number')
-def init_workflow(step):
+def init_workflow():
     """ Do nothing at all.  It is a given situation and it won't be called.
     """
     pass
 
 
-@step(u'I create a reduction project')
-def initialize_project(step):
+def initialize_project():
     """
     Initialize the workflow instance and set up a reduction project
     :param step:
@@ -87,8 +83,7 @@ def initialize_project(step):
     return
 
 
-@step(u'I set the IPTS number and get runs from its archive')
-def setup_ipts(step):
+def setup_ipts():
     """ Set up IPTS, run number and etc for reduction
     """
     # Get workflow
@@ -100,15 +95,14 @@ def setup_ipts(step):
 
     # Get runs
     status, run_tup_list = wk_flow.get_ipts_info(ipts_number)
-    assert_equals(status, True)
+    assert status
 
     my_data.set_ipts_runs(ipts_number, run_tup_list)
 
     return
 
 
-@step(u'I add just a few runs')
-def filter_runs_by_run(step):
+def filter_runs_by_run():
     """ Filter runs by date
     """
     this_ipts_number, run_tup_list = my_data.get_ipts_runs()
@@ -116,35 +110,29 @@ def filter_runs_by_run(step):
     first_run = 80230
     last_run = 80240
     status, filter_run_tup_list = vdapi.filter_runs_by_run(run_tup_list, first_run, last_run)
-    assert_equals(status, True)
-    assert_equals(len(filter_run_tup_list), 10)
+    assert len(filter_run_tup_list) == 10
 
     my_data.set_ipts_runs(ipts_number, filter_run_tup_list)
 
     return
 
 
-@step(u'I check IPTS and run numbers from the workflow instance')
-def set_ipts_runs(step):
+def set_ipts_runs():
     """
     """
     wk_flow = my_data.get()
     this_ipts_number, run_tup_list = my_data.get_ipts_runs()
 
     status, error_message = wk_flow.clear_runs()
-    assert_equals(status, True)
+    assert status
 
     status, error_message = wk_flow.add_runs_to_project(run_tup_list, this_ipts_number)
-    assert_equals(status, True)
-    assert_equals(10, wk_flow.get_number_runs())
-
-    return
+    assert status
+    assert 10 == wk_flow.get_number_runs()
 
 
-@step(u'I add a run number to the VDrive project for reduction')
-def add_run_to_reduce(step):
+def add_run_to_reduce():
     """ Add a run to reduce
-    :param step:
     :return:
     """
     workflow = my_data.get()
@@ -154,8 +142,7 @@ def add_run_to_reduce(step):
     return
 
 
-@step(u'I reduce the specified Vulcan run')
-def reduce_single_set_data(step):
+def reduce_single_set_data():
     """ Set up reduction parameter and reduce data
     """
     workflow = my_data.get()
@@ -187,15 +174,11 @@ def reduce_single_set_data(step):
 
     status, ret_obj = workflow.reduce_data_set(norm_by_vanadium=False)
     print('[Message] ', str(ret_obj))
-    assert_true(status, str(ret_obj))
-
-    return
+    assert status
 
 
-@step(u'I export the reduced data to GSAS file')
-def export_to_gsas(step=9):
+def export_to_gsas():
     """ Test retrieve reduced data
-    :param step:
     :return:
     """
     # Get workflow
@@ -208,12 +191,9 @@ def export_to_gsas(step=9):
         os.remove(output_file_name)
 
     status = work_flow.export_gsas_file(run_number=80231)
-    assert_true(status)
+    assert status
+    assert os.path.exists(output_file_name)
 
-    # Check existence of the
-    assert_true(os.path.exists(output_file_name))
-
-    return
 
 # TODO/NOW/1st: Think of some crazy things to process the reduced data such as normalize by current, 
 # change unit, and etc.
@@ -221,11 +201,11 @@ def export_to_gsas(step=9):
 
 if __name__ == "__main__":
 
-    init_workflow(0)
-    initialize_project(1)
-    setup_ipts(2)
-    filter_runs_by_run(3)
-    set_ipts_runs(4)
-    add_run_to_reduce(7)
-    reduce_single_set_data(8)
-    export_to_gsas(9)
+    init_workflow()
+    initialize_project()
+    setup_ipts()
+    filter_runs_by_run()
+    set_ipts_runs()
+    add_run_to_reduce()
+    reduce_single_set_data()
+    export_to_gsas()
