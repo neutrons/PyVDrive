@@ -1,11 +1,10 @@
 #!/usr/bin/python
 # import utility modules
-import sys
 import os
 
 # import PyQt modules
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore as QtCore
     from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout, QSizePolicy, QLabel, QMenuBar, QStatusBar, QToolBar
     from PyQt5.QtWidgets import QFileDialog, QRadioButton, QMenu, QAction
@@ -49,7 +48,6 @@ import config
 """ import PyVDrive library """
 import pyvdrive as PyVDrive
 import pyvdrive.lib.VDriveAPI as VdriveAPI
-from pyvdrive.lib import datatypeutility
 
 __author__ = 'wzz'
 
@@ -446,10 +444,9 @@ class VdriveMainWindow(QMainWindow):
         settings = QtCore.QSettings()
         value1 = settings.value('test01', '')
         if isinstance(value1, QtCore.QVariant) is False:
-            print '[Error] to load QSettings.  Value1 is of type %s' % str(type(value1))
+            print('[Error] to load QSettings.  Value1 is of type %s' % str(type(value1)))
             return
         value1str = value1.toString()
-        print '[DB] Value 1 without previous setting', str(value1str), 'of type', str(type(value1str))
         self.ui.lineEdit_userLogFileName.setText(value1str)
 
     def do_apply_log_slicer(self):
@@ -457,12 +454,11 @@ class VdriveMainWindow(QMainWindow):
         :return:
         """
         found = False
-        for i_radio in xrange(self._numSnapViews):
+        for i_radio in range(self._numSnapViews):
             if self._groupedSnapViewList[i_radio].is_selected() is True:
                 self._currSlicerLogName = SnapGView.SampleLogView(
                     self._groupedSnapViewList[i_radio], self).get_log_name()
                 found = True
-                print '[DB] VDrivePlot: snap view for radio button %d is selected.' % i_radio
                 break
 
         if found is False:
@@ -549,7 +545,7 @@ class VdriveMainWindow(QMainWindow):
             self.ui.tabWidget_reduceData.setCurrentIndex(0)
 
             # set up current run to chop
-            current_run_number = run_number_list[0]
+            # current_run_number = run_number_list[0]
             self.ui.comboBox_chopTabRunList.clear()
             for run_number in run_number_list:
                 self.ui.comboBox_chopTabRunList.addItem('%d' % run_number)
@@ -672,7 +668,6 @@ class VdriveMainWindow(QMainWindow):
 
         # Check selected run numbers
         selected_run_list = self.ui.tableWidget_selectedRuns.get_selected_runs()
-        print '[DB] Slice data by time: runs to chop = %s' % str(selected_run_list)
 
         do_connect_runs = self.ui.checkBox_chopContinueRun.isChecked()
 
@@ -734,10 +729,7 @@ class VdriveMainWindow(QMainWindow):
             QFileDialog.getSaveFileName(self, 'Data Slice File',
                                         self._myWorkflow.get_working_dir()))
 
-        print '[DB] Save slicer for run ', self._currLogRunNumber, ' sample log ', self._currSlicerLogName,
-        print 'to file', out_file_name
         # Save slicer for run  57325  sample log  Voltage
-
         if self._currSlicerLogName is None:
             GuiUtility.pop_dialog_error(
                 self, 'Neither log-value slicer nor manual slicer is applied.')
@@ -804,7 +796,7 @@ class VdriveMainWindow(QMainWindow):
         :param num_groups: number of groups to initialize
         :return: None
         """
-        for i in xrange(1, num_groups+1):
+        for i in range(1, num_groups+1):
             try:
                 # get on hold of three widgets with systematic naming
                 graph_view = getattr(self.ui, 'graphicsView_snapView%d' % i)
@@ -876,7 +868,7 @@ class VdriveMainWindow(QMainWindow):
 
         data_root_dir = self._myWorkflow.get_data_root_directory(throw=False)
         child_window.set_data_root_dir(data_root_dir)
-        r = child_window.exec_()
+        child_window.exec_()
 
         # set the close one
         self._addedIPTSNumber = child_window.get_ipts_number()
@@ -955,7 +947,7 @@ class VdriveMainWindow(QMainWindow):
 
         snap_resolution = GuiUtility.parse_integer(self.ui.lineEdit_maxSnapResolution)
 
-        for i in xrange(len(self._group_left_box_list)):
+        for i in range(len(self._group_left_box_list)):
             curr_index = int(self._group_left_box_list[i].currentIndex())
 
             # skip if it is not set!
@@ -1018,7 +1010,7 @@ class VdriveMainWindow(QMainWindow):
         van_key = self._myWorkflow.load_smoothed_vanadium(smooth_van_file)
 
         # get information
-        van_info = self._myWorkflow.get_vanadium_info(van_key)
+        self._myWorkflow.get_vanadium_info(van_key)
 
         # write vanadium information in somethere
         # ... write vanadium ...
@@ -1098,7 +1090,7 @@ class VdriveMainWindow(QMainWindow):
 
         # Set up and plot all 6 widgets groups. Need to lock the event handler for 6 combo boxes first
         self._logSnapViewLock = True
-        for i in xrange(min(self._numSnapViews, len(log_name_list))):
+        for i in range(min(self._numSnapViews, len(log_name_list))):
             # create a log_widget from base snap view widgets and set up
             snap_widget = self._groupedSnapViewList[i]
             log_widget = SnapGView.SampleLogView(snap_widget, self)
@@ -1503,7 +1495,6 @@ class VdriveMainWindow(QMainWindow):
         # Create a Snap view window if needed
         if self._snapViewWindow is None:
             # Create a new window
-            print '[DB Trace] Creating a new SnapViewDialog.'
             self._snapViewWindow = dlgSnap.DialogLogSnapView(self)
 
         # Refresh?

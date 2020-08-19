@@ -100,7 +100,7 @@ class LauncherManager(QDialog):
         """
 
         self._myPeakPickerWindow = PeakPickWindow.PeakPickerWindow(self._mainReducerWindow,
-                self._mainReducerWindow.get_controller())
+                                                                   self._mainReducerWindow.get_controller())
         # self._myPeakPickerWindow.set_controller(self._mainReducerWindow.get_controller())
         self._myPeakPickerWindow.show()
 

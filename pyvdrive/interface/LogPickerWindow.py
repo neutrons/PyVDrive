@@ -599,7 +599,7 @@ class WindowLogPicker(QMainWindow):
         # get run start time in second
         # TODO - TONIGHT 0 - Fix this: TypeError: 'TimeSegment' object does not support indexing
         # Error:  TypeError: 'TimeSegment' object does not support indexing
-        slicer_start_time = slicer_list[0][0]
+        # slicer_start_time = slicer_list[0][0]
         # Error above line
 
         # automatically determine the type of slicer time: epoch (nano seconds or relative)

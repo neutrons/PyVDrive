@@ -2,7 +2,7 @@
 This module contains a class to handle standard VDRIVE commands
 """
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5.QtWidgets import QMainWindow
     from PyQt5.QtCore import pyqtSignal
 except ImportError:
@@ -84,7 +84,7 @@ class VdriveCommandProcessor(object):
 
                 # special treatment for typical user type
                 if command_arg == 'ITPS':
-                    print '[WARNING] Argument ITPS is not supported. Auto correct it to IPTS.'
+                    print('[WARNING] Argument ITPS is not supported. Auto correct it to IPTS.')
                     command_arg = 'IPTS'
 
                 # process argument value: remove ' and "
@@ -154,8 +154,8 @@ class VdriveCommandProcessor(object):
         command = command_script[0].strip()
         command_args = command_script[1:]
 
-        print '[INFO-IDL] Parse input IDL command: {} to {}\n\tArguments = {}' \
-              ''.format(vdrive_command, vdrive_command_pp, command)
+        print('[INFO-IDL] Parse input IDL command: {} to {}\n\tArguments = {}'
+              ''.format(vdrive_command, vdrive_command_pp, command))
 
         # support command case insensitive
         raw_command = command

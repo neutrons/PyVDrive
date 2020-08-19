@@ -2465,7 +2465,7 @@ def smooth_vanadium(input_workspace, output_workspace=None, workspace_index=None
                                                  ''.format(workspace_index, type(workspace_index))
         input_ws = ADS.retrieve(input_workspace)
         if not 0 <= workspace_index < input_ws.getNumberHistograms():
-            raise RuntimeError('Workspace index {0} is out of range [0, {0}).'
+            raise RuntimeError('Workspace index {} is out of range [0, {}).'
                                ''.format(workspace_index, input_ws.getNumberHistograms()))
         try:
             mantidapi.FFTSmooth(InputWorkspace=input_workspace,
