@@ -165,7 +165,8 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         size_set = set()
         for data_set in data_set_list:
             vec_x, vec_y = data_set
-            assert len(vec_x) == len(vec_y), 'Size of vector X (%d) and vector Y (%d) must be same!' % (len(vec_x), len(vec_y))
+            assert len(vec_x) == len(vec_y), 'Size of vector X (%d) and vector Y (%d) must be same!' \
+                                             '' % (len(vec_x), len(vec_y))
             size_set.add(len(vec_x))
         # END-FOR
         assert len(size_set) == 1, 'All the reduced data must have equal sizes but not %s.' % str(size_set)
@@ -198,7 +199,8 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         :return:
         """
         # check
-        assert isinstance(target_dim, int) and 1 <= target_dim <= 3, 'Target dimension must be an integer between 1 and 3.'
+        assert isinstance(target_dim, int) and 1 <= target_dim <= 3, 'Target dimension must be an integer ' \
+                                                                     'between 1 and 3.'
 
         # clear current canvas
         self.clear_canvas()
@@ -265,7 +267,8 @@ class ContourPlotView(mplgraphicsview2d.MplGraphicsView2D):
         size_set = set()
         for data_set in data_set_list:
             vec_x, vec_y = data_set
-            assert len(vec_x) == len(vec_y), 'Size of vector X (%d) and vector Y (%d) must be same!' % (len(vec_x), len(vec_y))
+            assert len(vec_x) == len(vec_y), 'Size of vector X (%d) and vector Y (%d) must be same!' \
+                                             '' % (len(vec_x), len(vec_y))
             size_set.add(len(vec_x))
         # END-FOR
         assert len(size_set) == 1, 'All the reduced data must have equal sizes but not %s.' % str(size_set)

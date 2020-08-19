@@ -1,12 +1,11 @@
-#pylint: disable=invalid-name,too-many-public-methods,too-many-arguments,non-parent-init-called,R0902,too-many-branches,C0302
+#pylint: disable=invalid-name,too-many-public-methods,too-many-arguments,non-parent-init-called,R0902,too-many-branches,C0302  # noqa: E265
 """
 Graphics class with matplotlib backend specific for advanced 1D plot
 """
-import os
 import numpy as np
 
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5.QtWidgets import QWidget, QSizePolicy, QVBoxLayout
     from PyQt5.QtCore import pyqtSignal
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -18,7 +17,6 @@ except ImportError:
     from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar2
 
 from matplotlib.figure import Figure
-import matplotlib.image
 
 MplLineStyles = ['-', '--', '-.', ':', 'None', ' ', '']
 MplLineMarkers = [
@@ -648,8 +646,8 @@ class MplGraphicsView1D(QWidget):
                                            line_id=ikey, remove_line=False,
                                            vec_y=vec_y, label=None)  # let callee to determine label
 
-        self._myCanvas.update_plot_line(row_index, col_index, ikey, is_main, vec_x, vec_y, line_style, line_color, marker,
-                                               marker_color)
+        self._myCanvas.update_plot_line(row_index, col_index, ikey, is_main, vec_x, vec_y, line_style,
+                                        line_color, marker, marker_color)
 
         return
 
@@ -698,7 +696,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
             self.set_subplots(row_size, col_size)
 
         # Set size policy to be able to expanding and resizable with frame
-        FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding,QSizePolicy.Expanding)
+        FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
         return
@@ -1220,8 +1218,8 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
             try:
                 self.axes_main[row_index, col_index].lines.remove(self._mainLineDict[plot_key])
             except ValueError as r_error:
-                error_message = 'Unable to remove to 1D line %s (ID=%d) due to %s.' % (str(self._mainLineDict[plot_key]),
-                                                                                       plot_key, str(r_error))
+                error_message = 'Unable to remove to 1D line {} (ID=%d) due to {}.' \
+                                ''.format(self._mainLineDict[plot_key], plot_key, str(r_error))
                 raise RuntimeError(error_message)
             # remove the plot key from dictionary
             del self._mainLineDict[plot_key][row_index, col_index]
