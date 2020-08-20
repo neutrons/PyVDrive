@@ -183,8 +183,8 @@ def reduce_data():
     paramdict = {
         "Extension": "_event.nxs",
         "PreserveEvents": True,
-        "Binning" : -0.001,
-        "OutputDirectory" : outputdir,
+        "Binning": -0.001,
+        "OutputDirectory": outputdir,
         "NormalizeByCurrent":  False,
         "FilterBadPulses": False,
         "CompressTOFTolerance": False,
