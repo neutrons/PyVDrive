@@ -1,16 +1,15 @@
 #!/usr/bin/python
 # TODO TODO FIXME FIXME - Evaluate to remove!
-
-import sys
+import os
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtGui, QtCore
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QMainWindow
 except ImportError:
-    from PyQt4 import QtGui, QtCore
-    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4 import QtGui, QtCore  # noqa: F401
+    from PyQt4.QtGui import QVBoxLayout  # noqa: F401
     from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QMainWindow
 
@@ -75,7 +74,7 @@ class FinalSelectRunToReduceDialog(QMainWindow):
         """ Clear all selected runs for not reduction
         """
         numrows = self.ui.tableWidget.rowCount()
-        for irow in xrange(numrows):
+        for irow in range(numrows):
             self.ui.tableWidget.cellWidget(irow, 3).setChecked(False)
 
         return
@@ -84,7 +83,7 @@ class FinalSelectRunToReduceDialog(QMainWindow):
         """ Select all runs to reduce
         """
         numrows = self.ui.tableWidget.rowCount()
-        for irow in xrange(numrows):
+        for irow in range(numrows):
             self.ui.tableWidget.cellWidget(irow, 3).setChecked(True)
 
         return
@@ -95,11 +94,11 @@ class FinalSelectRunToReduceDialog(QMainWindow):
         # Collect runs to reduce
         retlist = []
         numrows = self.ui.tableWidget.rowCount()
-        for irow in xrange(numrows):
+        for irow in range(numrows):
             if self.ui.tableWidget.cellWidget(irow, 3).isChecked() is True:
                 retlist.append(int(str(self.ui.tableWidget.item(irow, 0).text())))
 
-        print "[DB] Runs to reduce: ", retlist
+        print("[DB] Runs to reduce: ", retlist)
 
         self.mySelectSignal.emit(self._myProjectName, retlist)
 

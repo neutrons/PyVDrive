@@ -1,6 +1,6 @@
 import numpy as np
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5.QtWidgets import QComboBox, QRadioButton
 except ImportError:
     from PyQt4.QtGui import QComboBox, QRadioButton

@@ -62,7 +62,7 @@ class MockVDriveAPI(object):
         # Sort by d-space... NOT FINISHED YET
         num_ref = len(reflections)
         ref_dict = dict()
-        for i_ref in xrange(num_ref):
+        for i_ref in range(num_ref):
             ref_tup = reflections[i_ref]
             assert isinstance(ref_tup, tuple)
             assert len(ref_tup) == 2
@@ -84,7 +84,6 @@ class MockVDriveAPI(object):
         # sort the list again with peak positions...
         peak_pos_list = ref_dict.keys()
         peak_pos_list.sort()
-        print '[DB] List of peak positions: ', peak_pos_list
         curr_list = None
         curr_pos = -1
         for peak_pos in peak_pos_list:
@@ -99,14 +98,11 @@ class MockVDriveAPI(object):
         # END-FOR
 
         # Convert from dictionary to list as 2-tuples
-
-        print '[DB-BAT] List of final reflections:', type(ref_dict)
         d_list = ref_dict.keys()
         d_list.sort(reverse=True)
         reflection_list = list()
         for peak_pos in d_list:
             reflection_list.append((peak_pos, ref_dict[peak_pos]))
-            print '[DB-BAT] d = %f\treflections: %s' % (peak_pos, str(ref_dict[peak_pos]))
 
         return reflection_list
 
@@ -126,7 +122,6 @@ class MockVDriveAPI(object):
         :return:
         """
         import os
-        print 'Data key is %s of type %s' % (str(data_key), str(type(data_key)))
 
         # Check requirements
         assert isinstance(data_key, str), 'Data key must be a string.'
@@ -199,9 +194,6 @@ class MockVDriveAPI(object):
         peak_manager = pio.GSASPeakFileManager()
         peak_manager.import_peaks(peak_file_name)
         peak_list = peak_manager.get_peaks()
-
-        for peak in peak_list:
-            print type(peak), peak
 
         return peak_list
 

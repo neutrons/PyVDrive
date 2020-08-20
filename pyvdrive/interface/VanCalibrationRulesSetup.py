@@ -2,8 +2,6 @@
 # Beta Version: Set up automatic vanadium calibration run
 #               location rules
 ########################################################
-import os
-
 from PyQt4 import QtGui, QtCore
 
 try:

@@ -166,8 +166,6 @@ class VulcanGuiReduction(object):
             raise NotImplementedError('Binning by pixels is not implemented yet!')
         else:
             # regular binning
-            print '[DB] GUI reducer setup: {0}.'.format(arg_dict)
-
             # check something:
             if arg_dict['auto_reduce'] and arg_dict['dspace']:
                 return False, 'Auto reduction and reducing to dSpacing cannot be selected together'

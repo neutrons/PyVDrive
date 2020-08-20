@@ -1,5 +1,5 @@
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5.QtWidgets import QMainWindow
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
@@ -7,9 +7,11 @@ except ImportError:
     from PyQt4.QtGui import QMainWindow
     from PyQt4.QtGui import QVBoxLayout
     from PyQt4.uic import loadUi as load_ui
-
-
+import os
 from pyvdrive.interface.gui.vdrivetablewidgets import ExperimentRecordTable
+from mantid.kernel import logger
+from mantid.simpleapi import mtd, CreateEmptyTableWorkspace, CloneWorkspace, AlignAndFocusPowder
+from mantid.simpleapi import EditInstrumentGeometry, Rebin
 
 
 class VulcanExperimentRecordView(QMainWindow):
@@ -45,8 +47,6 @@ class VulcanExperimentRecordView(QMainWindow):
 
         :return:
         """
-        from datetime import datetime
-
         # Now get the data, read the first spectra
         spectra = input.readY(0)
         # extract the first value from the array
@@ -73,10 +73,10 @@ class VulcanExperimentRecordView(QMainWindow):
 
         index = int(counter_ws.readX(0)[0])
 
-        print 'index = ', index
+        print('index = ', index)
         counter_ws.dataX(0)[0] += 1
 
-        print 'Iteration {0}: Number of events = {1}'.format(index, ws.getNumberEvents())
+        print('Iteration {0}: Number of events = {1}'.format(index, ws.getNumberEvents()))
 
         curr_ws_name = 'output_{0}'.format(index)
         CloneWorkspace(InputWorkspace=input, OutputWorkspace=curr_ws_name)
@@ -87,7 +87,7 @@ class VulcanExperimentRecordView(QMainWindow):
                             Params='-0.001',
                             DMin='0.5', DMax='3.5', PreserveEvents=False)
         # PrimaryFlightPath=43, SpectrumIDs='0-2', L2='2,2,2', Polar='90,270,145', Azimuthal='0, 0, 0')
-        print '[SpecialDebug] Interface... EditInstrument on {0}'.format(curr_ws_name)
+        print('[SpecialDebug] Interface... EditInstrument on {0}'.format(curr_ws_name))
         EditInstrumentGeometry(Workspace=curr_ws_name, PrimaryFlightPath=43.753999999999998,
                                SpectrumIDs='1,2,3',
                                L2='2.00944,2.00944,2.00944', Polar='90,270,150')

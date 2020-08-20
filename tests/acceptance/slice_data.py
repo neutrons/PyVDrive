@@ -1,4 +1,3 @@
-from lettuce import *
 from nose.tools import assert_equals, assert_true, assert_false
 
 import sys
@@ -8,6 +7,7 @@ import os
 # FIXME - This only works for Linux/MacOS X platform
 sys.path.append('/home/wzz/local/lib/python2.7/Site-Packages/')
 import PyVDrive.lib.VDriveAPI as vdapi
+
 
 class MyData:
     def __init__(self):
@@ -74,20 +74,18 @@ def getPyDriveDataDir(cwd):
 
     return data_dir
 
+
 my_data = MyData()
 
-@step(u'I am using VDriveAPI')
-def init_workflow(step):
+
+def init_workflow():
     """ Set up including
     Note: I really don't think this step does anything real.  It is skipped
     """
-    print 'All Skipped'
-
-    return
+    pass
 
 
-@step(u'I get a list of runs from a local directory')
-def setup_ipts(step):
+def setup_ipts():
     """ Set up IPTS, run number and etc for reduction
     """
     # Set up workflow
@@ -97,7 +95,6 @@ def setup_ipts(step):
     cwd = os.getcwd()
     # data_dir = getPyDriveDataDir(cwd)
     data_dir = '/SNS/VULCAN'
-    print 'Data Dir: ', data_dir
     wk_flow.set_data_root_directory(data_dir)
 
     # work dir
@@ -115,7 +112,7 @@ def setup_ipts(step):
     ipts_dir = os.path.join(data_dir, 'IPTS-10311')
     status, errmsg = wk_flow.set_ipts(10311)
     if not status:
-        print '[ERROR]', errmsg
+        print('[ERROR]', errmsg)
     assert_true(status)
 
     # Get runs from directory: get_ipts_info() is not used anymore
@@ -128,8 +125,7 @@ def setup_ipts(step):
     return
 
 
-@step(u'I filter the runs by run numbers')
-def filter_runs(step):
+def filter_runs():
     """ Filter runs by date
     """
     ipts_number, run_tup_list = my_data.get_ipts_runs()
@@ -146,11 +142,10 @@ def filter_runs(step):
 
     return
 
-@step(u'I input run number')
-def set_ipts_runs(step):
+
+def set_ipts_runs():
     """
     Add runs to
-    :param step:
     :return:
     """
     wk_flow = my_data.get()
@@ -166,11 +161,10 @@ def set_ipts_runs(step):
 
     return
 
-@step(u'I input name of a sample log to get its data')
-def input_sample_log_name(step):
+
+def input_sample_log_name():
     """
     Input a sample log's name and get it data
-    :param step:
     :return:
     """
     # Get workflow
@@ -200,11 +194,10 @@ def input_sample_log_name(step):
 
     return
 
-@step(u'Then I set up rules to slice this run by this sample log and generate data slicer')
-def generate_data_slicer(step):
+
+def generate_data_slicer():
     """
     Set up rules and create data slicer/event splitters by sample log value
-    :param step:
     :return:
     """
     test_run_number = 58848
@@ -225,10 +218,9 @@ def generate_data_slicer(step):
 
     return
 
-@step(u'Then I slice data and check result')
-def slice_data(step):
+
+def slice_data():
     """ Slice data by current splitters
-    :param step:
     :return:
     """
     test_run_number = 58848
@@ -261,11 +253,9 @@ def slice_data(step):
     return
 
 
-@step(u'Then I set up rules to slice this run by time')
-def generate_data_slicer_by_time(step):
+def generate_data_slicer_by_time():
     """
     Set up rules and create data slicer/event splitters by sample log value
-    :param step:
     :return:
     """
     test_run_number = 58848
@@ -275,18 +265,14 @@ def generate_data_slicer_by_time(step):
     assert(isinstance(wk_flow, vdapi.VDriveAPI))
 
     # Set up rule
-    status, ret_obj = wk_flow.gen_data_slicer_by_time(run_number=test_run_number,
-                                                      start_time=1.0,
-                                                      end_time=200.1,
-                                                      time_step=10.)
+    wk_flow.gen_data_slicer_by_time(run_number=test_run_number,
+                                    start_time=1.0, end_time=200.1,  time_step=10.)
 
     return
 
 
-@step(u'I have data sliced by time-splitters and check result')
-def slice_data_by_time(step):
+def slice_data_by_time():
     """ Slice data by current splitters
-    :param step:
     :return:
     """
     test_run_number = 58848
@@ -296,19 +282,17 @@ def slice_data_by_time(step):
     wk_flow = my_data.get()
     assert(isinstance(wk_flow, vdapi.VDriveAPI))
 
-    status, ret_obj = wk_flow.slice_data(run_number=test_run_number,
-                                         by_time=True)
+    wk_flow.slice_data(run_number=test_run_number,  by_time=True)
 
     return
 
 
 if True:
-    setup_ipts(1)
-    filter_runs(2)
-    set_ipts_runs(3)
-    input_sample_log_name(4)
-    generate_data_slicer(5)
-    slice_data(6)
-    generate_data_slicer_by_time(7)
-    slice_data_by_time(8)
-
+    setup_ipts()
+    filter_runs()
+    set_ipts_runs()
+    input_sample_log_name()
+    generate_data_slicer()
+    slice_data()
+    generate_data_slicer_by_time()
+    slice_data_by_time()
