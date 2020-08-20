@@ -140,7 +140,6 @@ def save_session():
 
 def load_session():
     """ Load session to a new workflow instance
-    :param step:
     :return:
     """
     # Current workflow
@@ -224,7 +223,6 @@ def retrieve_reduced_data():
 
 def reduce_2_runs():
     """ Test to reduce multiple runs
-    :param step:
     :return:
     """
     # Get workflow

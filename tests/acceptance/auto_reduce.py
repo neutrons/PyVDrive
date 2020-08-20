@@ -66,7 +66,6 @@ def init_workflow():
 def initialize_project():
     """
     Initialize the workflow instance and set up a reduction project
-    :param step:
     :return:
     """
     # Initialize work flow
