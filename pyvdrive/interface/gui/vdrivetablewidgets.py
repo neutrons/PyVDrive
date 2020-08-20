@@ -1,4 +1,4 @@
-import ndav_widgets.NTableWidget as NdavTable
+import pyvdrive.interface.gui.ndav_widgets.NTableWidget as NdavTable
 from pyvdrive.lib import datatypeutility
 
 
