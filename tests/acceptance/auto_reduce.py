@@ -48,7 +48,7 @@ class MyData:
         """
         self._ipts = int(ipts_number)
         self._runs = run_tup_list[:]
-        assert(self._runs, list)
+        assert isinstance(self._runs, list)
 
 
 my_data = MyData()
@@ -194,12 +194,9 @@ def export_to_gsas():
     assert os.path.exists(output_file_name)
 
 
-# TODO/NOW/1st: Think of some crazy things to process the reduced data such as normalize by current, 
+# TODO/NOW/1st: Think of some crazy things to process the reduced data such as normalize by current,
 # change unit, and etc.
-
-
-if __name__ == "__main__":
-
+def test_main():
     init_workflow()
     initialize_project()
     setup_ipts()
@@ -208,3 +205,7 @@ if __name__ == "__main__":
     add_run_to_reduce()
     reduce_single_set_data()
     export_to_gsas()
+
+
+if __name__ == "__main__":
+    pytest.main(__file__)

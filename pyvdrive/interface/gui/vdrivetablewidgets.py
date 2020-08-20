@@ -199,7 +199,7 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
             # type 2: splitters
             for slicer_index, time_slicer_tup in enumerate(time_slicer_list):
                 if len(time_slicer_tup) <= 1:
-                    raise RuntimeError('{}-th slicer has too less items'
+                    raise RuntimeError('{}-th slicer has too less items: {}'
                                        ''.format(slicer_index, time_slicer_tup))
                 elif len(time_slicer_tup) == 2 or time_slicer_tup[2] is None:
                     # use automatic slicer order index as target workspace

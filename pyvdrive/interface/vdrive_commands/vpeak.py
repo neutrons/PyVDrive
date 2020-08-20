@@ -63,7 +63,7 @@ class VanadiumPeak(VDriveCommand):
             try:
                 self.set_ipts()
             except RuntimeError as run_err:
-                return False, 'Without option'.format(run_err)
+                return False, 'Unable to set IPTS: {}'.format(run_err)
 
             # get run v
             if 'RUNV' not in self._commandArgsDict:

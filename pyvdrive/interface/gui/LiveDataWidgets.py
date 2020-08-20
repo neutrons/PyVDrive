@@ -146,7 +146,7 @@ class LivePlotYAxisTable(NTableWidget.NTableWidget):
         # check input
         assert isinstance(log_name, str), 'Log name {0} must be given in a string but not a {1}.' \
                                           ''.format(log_name, type(log_name))
-        assert isinstance(side, bool), 'Side {0} to add log {1} must be a boolean but not a {1}' \
+        assert isinstance(side, bool), 'Side {} to add log {} must be a boolean but not a {}' \
                                        ''.format(side, log_name, type(side))
 
         # select/name/side/dmin/dmax/norm by van

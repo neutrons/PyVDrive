@@ -48,7 +48,7 @@ class MyData:
         """
         self._ipts = int(ipts_number)
         self._runs = run_tup_list[:]
-        assert(self._runs, list)
+        assert isinstance(self._runs, list)
 
 
 my_data = MyData()

@@ -86,7 +86,7 @@ def setup_ipts():
     wk_flow = vdapi.VDriveAPI('VULCAN')
 
     # data source
-    cwd = os.getcwd()
+    # cwd = os.getcwd()
     # data_dir = getPyDriveDataDir(cwd)
     data_dir = '/SNS/VULCAN'
     wk_flow.set_data_root_directory(data_dir)
@@ -235,10 +235,10 @@ def slice_data():
     if False:
         num_raw_events = wk_flow.get_number_events(run_number=test_run_number)
         num_split_ws_events = 0
-        for split_ws_name in vec_split_ws:
+        for split_ws_name in split_ws_name_list:
             partial_num_events = wk_flow.get_number_events(split_ws_name)
             num_split_ws_events += partial_num_events
-        assert_equals(num_raw_events, num_split_ws_events)
+        assert num_raw_events == num_split_ws_events
 
     return
 
@@ -266,7 +266,7 @@ def slice_data_by_time():
     :return:
     """
     test_run_number = 58848
-    test_log_name = 'loadframe.stress'
+    # test_log_name = 'loadframe.stress'
 
     # Get workflow
     wk_flow = my_data.get()

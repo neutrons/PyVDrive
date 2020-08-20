@@ -1309,7 +1309,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         if key is not None:
             self._myPatternDict[key] = (vec_x, vec_y, pattern_key)
 
-        print('[DB...BAT] Plot {} to have pattern key'.format(title, pattern_key))
+        print('[DB...BAT] Plot {} to have pattern key {}'.format(title, pattern_key))
         self._lastPlotID = pattern_key
 
         return

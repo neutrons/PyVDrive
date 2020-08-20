@@ -42,33 +42,35 @@ class VulcanExperimentRecordView(QMainWindow):
 
         return
 
-    def live_monitor(self):
+    def live_monitor(self, input_ws, output_ws):
         """
 
         :return:
         """
         # Now get the data, read the first spectra
-        spectra = input.readY(0)
+        spectra = input_ws.readY(0)
         # extract the first value from the array
         count = spectra[0]
+        print(f'Total count: {count}')
 
-        count = input.getNumberEvents()
+        count = input_ws.getNumberEvents()
 
         # output it as a log message
         logger.notice("Total counts so far " + str(count))
 
         # if my ouput workspace has not been created yet, create it.
-        if not mtd.doesExist(output):
-            table = CreateEmptyTableWorkspace(OutputWorkspace=output)
+        if not mtd.doesExist(output_ws):
+            table = CreateEmptyTableWorkspace(OutputWorkspace=output_ws)
             table.setTitle("Event Rate History")
             table.addColumn("str", "Time")
             table.addColumn('str', 'EventsS')
             table.addColumn("int", "Events")
 
-        table = mtd[output]
+        table = mtd[output_ws]
+        assert table
 
-    def live_reduce(self):
-        ws = input
+    def live_reduce(self, input_ws, output_ws):
+        ws = input_ws
         counter_ws = mtd['counter']
 
         index = int(counter_ws.readX(0)[0])
@@ -79,8 +81,8 @@ class VulcanExperimentRecordView(QMainWindow):
         print('Iteration {0}: Number of events = {1}'.format(index, ws.getNumberEvents()))
 
         curr_ws_name = 'output_{0}'.format(index)
-        CloneWorkspace(InputWorkspace=input, OutputWorkspace=curr_ws_name)
-        Rebin(InputWorkspace=input, OutputWorkspace=output, Params='5000., -0.001, 50000.')
+        CloneWorkspace(InputWorkspace=input_ws, OutputWorkspace=curr_ws_name)
+        Rebin(InputWorkspace=input_ws, OutputWorkspace=output_ws, Params='5000., -0.001, 50000.')
         AlignAndFocusPowder(InputWorkspace=mtd[curr_ws_name],
                             OutputWorkspace=curr_ws_name,
                             CalFileName='/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/VULCAN_calibrate_2017_08_17.h5',

@@ -178,7 +178,7 @@ class AtomicReduced1DViewer(QMainWindow):
                     chop_note = 'original GSAS'
                 else:
                     chop_note = 'chopped run {}'.format(chop_seq_index)
-                GuiUtility.pop_dialog_error(self, 'Unable to load {} of IPTS {} Run {}: '
+                GuiUtility.pop_dialog_error(self, 'Unable to load {} of IPTS {} Run {}: {}'
                                                   ''.format(chop_note, ipts_number, run_number,
                                                             run_err))
                 return

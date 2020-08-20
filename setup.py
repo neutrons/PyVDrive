@@ -4,7 +4,7 @@ import os
 import re
 import versioneer  # https://github.com/warner/python-versioneer
 from shutil import copyfile
-from setuptools import setup, find_packages
+from setuptools import setup
 
 if sys.argv[-1] == 'pyuic':
     # copy UI files in designer to builds

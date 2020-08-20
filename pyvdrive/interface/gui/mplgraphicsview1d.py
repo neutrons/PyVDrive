@@ -1218,7 +1218,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
             try:
                 self.axes_main[row_index, col_index].lines.remove(self._mainLineDict[plot_key])
             except ValueError as r_error:
-                error_message = 'Unable to remove to 1D line {} (ID=%d) due to {}.' \
+                error_message = 'Unable to remove to 1D line {} (ID={}) due to {}.' \
                                 ''.format(self._mainLineDict[plot_key], plot_key, str(r_error))
                 raise RuntimeError(error_message)
             # remove the plot key from dictionary
