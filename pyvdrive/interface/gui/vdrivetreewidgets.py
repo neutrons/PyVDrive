@@ -4,11 +4,11 @@
 import os
 
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QTreeView, QAbstractItemView, QFileSystemModel, QAction
     from PyQt5.QtGui import QStandardItem
-except ImportError as import_err:
+except ImportError:
     from PyQt4 import QtCore
     from PyQt4.QtGui import QTreeView, QAbstractItemView, QFileSystemModel, QStandardItem
     from PyQt4.QtGui import QAction
@@ -33,7 +33,7 @@ class FileSystemTreeView(QTreeView):
         # Model
         cur_dir = os.path.expanduser('~')
         file_model = QFileSystemModel()
-        #file_model.setRootPath(QtCore.QString(cur_dir))
+        # file_model.setRootPath(QtCore.QString(cur_dir))
         file_model.setRootPath(str(cur_dir))
 
         self.setModel(file_model)
@@ -92,7 +92,6 @@ class SinglePeakFitManageTree(treeView.CustomizedTreeView):
 
         # Review all the actions
         for action in self.actions():
-            print '[DB] Action %s is enabled.' % str(action.text())
             action.setEnabled(True)
 
         self._mainWindow = parent
@@ -116,7 +115,7 @@ class SinglePeakFitManageTree(treeView.CustomizedTreeView):
             main_leaf_value = '%s' % str(ipts_number)
         status, message = self.add_main_item(main_leaf_value, False)
         if status is False:
-            print '[Log] %s' % message
+            print('[Log] %s' % message)
 
         # Add runs
         run_number_list.sort()
@@ -146,7 +145,7 @@ class SinglePeakFitManageTree(treeView.CustomizedTreeView):
                 run = int(run_str)
                 run_list.append(run)
             except ValueError as error:
-                print '[Error] Unable to convert run item with text %s to integer due to %s.' % (run_str, str(error))
+                print('[Error] Unable to convert run item with text %s to integer due to %s.' % (run_str, str(error)))
         # END-FOR
 
         # sort
@@ -203,7 +202,7 @@ class SinglePeakFitManageTree(treeView.CustomizedTreeView):
         status, current_run = self.get_current_run(allow_str=True)
 
         if self._mainWindow is not None:
-            print '[INFO] Load and plot data with key = %s.' % str(current_run)
+            print('[INFO] Load and plot data with key = %s.' % str(current_run))
             self._mainWindow.plot_reduced_data(current_run)
 
         return
@@ -264,7 +263,7 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
             main_leaf_value = '%s' % str(ipts_number)
         status, message = self.add_main_item(main_leaf_value, False)
         if status is False:
-            print '[Log] %s' % message
+            print('[Log] %s' % message)
 
         # Add runs
         run_number_list.sort()
@@ -276,7 +275,7 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
             else:
                 raise RuntimeError('Item in run number list is not dictionary but is %s!' % str(type(item)))
             child_value = '%d' % run_number
-            print 'Main leaf value = ', main_leaf_value
+            print('Main leaf value = ', main_leaf_value)
             self.add_child_main_item(main_leaf_value, child_value)
 
         return
@@ -294,9 +293,8 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
             try:
                 run = int(run_str)
                 run_list.append(run)
-            except ValueError as exception:
-                print '[Error] Unable to convert run item with text %s to integer' % run_str
-                #raise exception
+            except ValueError as val_err:
+                print('[Error] Unable to convert run item with text {} to integer as {}'.format(run_str, val_err))
         # END-FOR
 
         # sort
@@ -361,4 +359,3 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
         self._mainWindow = main_window
 
         return
-

@@ -19,10 +19,7 @@ except ImportError:
 
 from mplgraphicsview import MplGraphicsView
 import ndav_widgets.NTableWidget as baseTable
-import ndav_widgets.CustomizedTreeView as baseTree
-from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
 from mantid.api import AnalysisDataService
-import mantid.simpleapi
 import os
 
 try:
@@ -207,8 +204,6 @@ class WorkspaceViewWidget(QWidget):
         script = script.strip()
         # get command name
         command = script.split(',')[0]
-
-        print '[INFO] Executing reserved command: {}'.format(script)
 
         if command.startswith('plot'):
             status, exec_message = self.exec_command_plot(script)
@@ -754,14 +749,9 @@ class WorkspaceTableWidget(baseTable.NTableWidget):
         """
         selected_rows = self.get_selected_rows(True)
 
-        print '[DB...BAT] selected rows: ', selected_rows
-
         ws_name_list = list()
         for i_row in selected_rows:
             ws_name = self.get_cell_value(i_row, 0)
             ws_name_list.append(ws_name)
 
         return ws_name_list
-
-
-

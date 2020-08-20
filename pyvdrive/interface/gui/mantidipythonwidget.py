@@ -1,11 +1,9 @@
 import threading
 import types
 import inspect
-import sys
-import os
 from os import path
 
-home_dir = os.path.expanduser('~')
+# home_dir = os.path.expanduser('~')
 # # NOTE: This is the entry point to define the path to Mantid
 # if home_dir.startswith('/SNS/'):
 #     # analysis
@@ -34,14 +32,14 @@ try:
     # This is PyQt5 compatible
     from qtconsole.rich_ipython_widget import RichIPythonWidget
     from qtconsole.inprocess import QtInProcessKernelManager
-    print ('mantidipythonwidget: import PyQt5')
+    print('mantidipythonwidget: import PyQt5')
 except ImportError as import_err:
     # This is PyQt4 compatible
-    print ('mantidipythonwidget import PyQt5 error: {}'.format(import_err))
+    print('mantidipythonwidget import PyQt5 error: {}'.format(import_err))
     from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
     from IPython.qt.inprocess import QtInProcessKernelManager
-    print ('mantidipythonwidget: import PyQt4')
-from mantid.api import AnalysisDataService as mtd
+    print('mantidipythonwidget: import PyQt4')
+from mantid.api import AnalysisDataService as mtd  # noqa: E402
 
 try:
     from PyQt5.QtWidgets import QApplication
@@ -64,8 +62,8 @@ def our_run_code(self, code_obj, result=None):
     t = threading.Thread()
     # ipython 3.0 introduces a third argument named result
     nargs = len(inspect.getargspec(self.ipython_run_code).args)
-    if (nargs == 3):
-        t = threading.Thread(target=self.ipython_run_code, args=[code_obj,result])
+    if nargs == 3:
+        t = threading.Thread(target=self.ipython_run_code, args=[code_obj, result])
     else:
         t = threading.Thread(target=self.ipython_run_code, args=[code_obj])
     t.start()
@@ -164,7 +162,7 @@ class MantidIPythonWidget(RichIPythonWidget):
         # result message: append plain text to the console
         if is_reserved_command:
             #
-            print ('[DB...BAT] Append Plain Text To Console: {}'.format(exec_message))
+            print('[DB...BAT] Append Plain Text To Console: {}'.format(exec_message))
             self._append_plain_text('\n%s\n' % exec_message)
 
         # update workspaces for inline workspace operation
@@ -220,5 +218,3 @@ class MantidIPythonWidget(RichIPythonWidget):
         self.input_buffer = command
 
         return
-
-

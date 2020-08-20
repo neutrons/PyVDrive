@@ -1,7 +1,6 @@
-#!/usr/bin/python
 # Test pyvdrive.lib.vulcan_slice_reduce.SliceFocusVulcan
+import pytest
 import pyvdrive.lib.vulcan_slice_reduce as vulcan_slice_reduce
-import pyvdrive.lib.mantid_reduction as mantid_reduce
 
 
 def test_vanadium():
@@ -25,7 +24,8 @@ def test_vanadium():
     reducer.diffraction_focus(ref_id, binning='-0.0004', apply_det_efficiency=False)
     reducer.save_nexus(ref_id, output_file_name='vulcan_raw_27banks.nxs')
 
-    print (reducer)
+    print(reducer)
+
 
 if __name__ == '__main__':
-    test_vanadium()
+    pytest.main(__file__)

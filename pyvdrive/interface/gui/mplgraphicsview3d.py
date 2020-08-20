@@ -4,26 +4,24 @@
 #     NScD Oak Ridge National Laboratory, European Spallation Source
 #     & Institut Laue - Langevin
 # SPDX - License - Identifier: GPL - 3.0 +
-#pylint: disable=R0901,R0902,R0904
+#pylint: disable=R0901,R0902,R0904  # noqa: E265
 from __future__ import (absolute_import, division, print_function)
 from six.moves import range
 import numpy as np
 import os
 
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5.QtCore import pyqtSignal
     from PyQt5.QtWidgets import QWidget, QSizePolicy, QVBoxLayout
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
     from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar2
 except ImportError:
-    from PyQt4.QtGui import QWidget, QSizePolicy, QVBoxLayout
-    from PyQt4.QtCore import pyqtSignal
+    from PyQt4.QtGui import QWidget, QSizePolicy, QVBoxLayout  # noqa: F401
+    from PyQt4.QtCore import pyqtSignal  # noqa: F401
     from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-    from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar2
+    from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar2  # noqa: F401
 
-# from qtpy.QtWidgets import QSizePolicy
-# from MPLwidgets import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib

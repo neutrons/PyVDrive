@@ -5,6 +5,7 @@ class SetupVanadiumCalibrationWindow(QtGui.QMainWindow):
     """
 
     """
+
     def __init__(self):
         """
 
@@ -26,4 +27,3 @@ class SetupVanadiumCalibrationWindow(QtGui.QMainWindow):
         """
         # TODO/NOW/FIXME
         raise NotImplementedError('ASAP')
-

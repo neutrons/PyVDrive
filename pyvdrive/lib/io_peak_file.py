@@ -1,34 +1,34 @@
 ########
 # Read/Write peak file in GSAS format for single peak fitting
 #
-# $ bank, name, number of peak, position, width					
+# $ bank, name, number of peak, position, width
 # 1	bcc110	2	2.101	2.07	0.03
 # 1	Fcc111	2	2.173	2.028	0.03
-# 1	Fcc200	1	1.879	0.035	
-# 1	bcc200	1	1.486	0.03	
-# 1	Fcc220	1	1.326	0.03	
-# 1	bcc211	1	1.214	0.03	
-# 1	Fcc311	1	1.134	0.03	
+# 1	Fcc200	1	1.879	0.035
+# 1	bcc200	1	1.486	0.03
+# 1	Fcc220	1	1.326	0.03
+# 1	bcc211	1	1.214	0.03
+# 1	Fcc311	1	1.134	0.03
 # 1	Fcc222	2	0.9374	1.017	0.03
 # $1 	Bcc220	2	1.017	1.039	0.03
-# $1 	bcc310FCC400	1	0.9039	0.03	
+# $1 	bcc310FCC400	1	0.9039	0.03
 # $1 	bcc222	2	0.829	0.8038	0.02
 # $1 	fcc331	2	0.8038	0.83	0.02
-# $1 	bcc321	1	0.768	0.02	
-# $ bank, name, number of peak, position, width					
+# $1 	bcc321	1	0.768	0.02
+# $ bank, name, number of peak, position, width
 # 2	bcc110	2	2.101	2.07	0.03
 # 2	Fcc111	2	2.173	2.028	0.03
-# 2	Fcc200	1	1.879	0.035	
-# 2	bcc200	1	1.486	0.03	
-# 2	Fcc220	1	1.326	0.03	
-# 2	bcc211	1	1.214	0.03	
-# 2	Fcc311	1	1.134	0.03	
+# 2	Fcc200	1	1.879	0.035
+# 2	bcc200	1	1.486	0.03
+# 2	Fcc220	1	1.326	0.03
+# 2	bcc211	1	1.214	0.03
+# 2	Fcc311	1	1.134	0.03
 # 2	Fcc222	2	0.9374	1.017	0.03
 # $2 	Bcc220	2	1.017	1.039	0.03
-# $2 	bcc310FCC400	1	0.9039	0.03	
+# $2 	bcc310FCC400	1	0.9039	0.03
 # $2 	bcc222	2	0.829	0.8038	0.02
 # $2 	fcc331	2	0.8038	0.83	0.02
-# $2 	bcc321	1	0.768	0.02	
+# $2 	bcc321	1	0.768	0.02
 ########
 
 
@@ -59,9 +59,11 @@ class GSASPeakFileManager(object):
         """
         # Check requirements
         assert isinstance(bank, int), 'Bank number must be an integer but not %s.' % str(type(bank))
-        assert isinstance(position, float), 'Peak position %s must be a float but not %s.' % (str(position), type(position))
+        assert isinstance(position, float), 'Peak position %s must be a float but not %s.' % (
+            str(position), type(position))
         assert position > 0., 'Peak position must be greater than 0, but given %f.' % position
-        assert isinstance(width, float), 'Peak width must be a string but not %s.' % str(type(width))
+        assert isinstance(
+            width, float), 'Peak width must be a string but not %s.' % str(type(width))
         assert width > 0., 'Peak width must be greater than 0 but not %f.' % width
         assert isinstance(group_id, int), 'Group ID (%s) must be an integer but not %s.' \
                                           '' % (str(group_id), str(type(group_id)))
@@ -112,7 +114,8 @@ class GSASPeakFileManager(object):
         :return:
         """
         # Check requirements
-        assert isinstance(peak_file, str), 'Peak file path must be a string but not %s.' % str(type(peak_file))
+        assert isinstance(peak_file, str), 'Peak file path must be a string but not %s.' % str(
+            type(peak_file))
         assert len(self._peakDict) > 0, 'There must be at least one peak added.'
 
         # For each bank, create a list sortable by group positions
@@ -195,7 +198,7 @@ class GSASPeakFileManager(object):
             out_file = open(peak_file, 'w')
             out_file.write(w_buf)
             out_file.close()
-        except IOError, err:
+        except IOError as err:
             raise IOError('Unable to write to file %s due to %s.' % (peak_file, str(err)))
 
         return
@@ -263,7 +266,7 @@ class GSASPeakFileManager(object):
                     overlapped_peak_list = None
                 else:
                     overlapped_peak_list = list()
-                    for i_peak in xrange(num_peaks-1):
+                    for i_peak in range(num_peaks-1):
                         over_peak_pos = float(terms[4+i_peak])
                         overlapped_peak_list.append(over_peak_pos)
                 # END-IF
@@ -274,7 +277,8 @@ class GSASPeakFileManager(object):
             except IndexError:
                 raise IndexError('Number of items in line "%s" is not right!' % line)
             except TypeError as err:
-                raise TypeError('Line "%s" is not in a supported format.' % line)
+                raise TypeError('Line {} is not in a supported format but of type {}. FYI: {}.'
+                                ''.format(line, type(line), err))
 
         return
 
@@ -300,9 +304,9 @@ def format_significant_4(float_number):
 
 
 if __name__ == '__main__':
-    print format_significant_4(0.012345)
-    print format_significant_4(0.12345)
-    print format_significant_4(1.2345)
+    print(format_significant_4(0.012345))
+    print(format_significant_4(0.12345))
+    print(format_significant_4(1.2345))
 
     peak_manager = GSASPeakFileManager()
     peak_manager.import_peaks('/home/wzz/Projects/PyVDrive/tests/peak_processing/peak.txt')

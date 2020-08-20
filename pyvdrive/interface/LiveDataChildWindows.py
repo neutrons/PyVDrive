@@ -1,6 +1,6 @@
 import os
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
@@ -10,9 +10,7 @@ except ImportError:
     from PyQt4.QtGui import QVBoxLayout
     from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QDialog, QFileDialog
-import gui.GuiUtility as GuiUtility
-from pyvdrive.interface.gui.LiveDataWidgets import LogSelectorTable
-from pyvdrive.interface.gui.LiveDataWidgets import LivePlotYAxisTable
+import pyvdrive.interface.gui.GuiUtility as GuiUtility
 from pyvdrive.interface.gui.LiveDataWidgets import LogSelectorTable
 from pyvdrive.interface.gui.LiveDataWidgets import LivePlotYAxisTable
 
@@ -21,6 +19,7 @@ class LiveViewSetupDialog(QDialog):
     """
     A dialog to set up the Live data viewing parameters
     """
+
     def __init__(self, parent):
         """
         initialization
@@ -312,7 +311,8 @@ class SampleLogPlotSetupDialog(QDialog):
 
         peak_info_str = '* Peak: {0}'.format(peak_type)
 
-        self.ui.tableWidget_plotYAxis.add_peak_parameter(peak_info_str, is_main, min_d, max_d, norm_by_van)
+        self.ui.tableWidget_plotYAxis.add_peak_parameter(
+            peak_info_str, is_main, min_d, max_d, norm_by_van)
 
         return
 
@@ -353,14 +353,16 @@ class SampleLogPlotSetupDialog(QDialog):
             GuiUtility.pop_dialog_error(self, 'Y-axis list is empty!')
             return
         elif len(y_axis_name_list) > 2:
-            GuiUtility.pop_dialog_error(self, 'More than 2 items are selected to plot.  It is NOT OK.')
+            GuiUtility.pop_dialog_error(
+                self, 'More than 2 items are selected to plot.  It is NOT OK.')
             return
         elif len(y_axis_name_list) == 2 and is_main_list[0] == is_main_list[1]:
             GuiUtility.pop_dialog_error(self, 'Two items cannot be on the same side of axis.')
             return
 
         # now it is the time to send message
-        self.PlotSignal.emit(x_axis_name, y_axis_name_list, is_main_list, peak_range_list, norm_by_van_list)
+        self.PlotSignal.emit(x_axis_name, y_axis_name_list, is_main_list,
+                             peak_range_list, norm_by_van_list)
 
         return
 

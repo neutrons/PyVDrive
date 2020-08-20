@@ -27,6 +27,7 @@ class VDriveAPI(object):
     It is a pure python layer that does not consider GUI.
     VDrivePlot is a GUI application built upon this class
     """
+
     def __init__(self, instrument_name, module_location=None):
         """
         Initialization
@@ -135,7 +136,8 @@ class VDriveAPI(object):
                 ipts_number = None
             else:
                 # not supported type
-                raise RuntimeError('Run information must be an instance of dictionary but not %s.' % type(run_info))
+                raise RuntimeError(
+                    'Run information must be an instance of dictionary but not %s.' % type(run_info))
             # END-IF
 
             # add
@@ -186,7 +188,8 @@ class VDriveAPI(object):
         :return: list of 2-tuples.  Each tuple is a float as d-spacing and a list of HKL's
         """
         # Check requirements
-        assert isinstance(phase, list), 'Input Phase must be a list but not %s.' % (str(type(phase)))
+        assert isinstance(phase, list), 'Input Phase must be a list but not %s.' % (
+            str(type(phase)))
         assert len(phase) == 5, 'Input phase  of type list must have 5 elements'
         assert min_d < max_d
         assert min_d > 0.01
@@ -219,7 +222,7 @@ class VDriveAPI(object):
         # Sort by d-space... NOT FINISHED YET
         num_ref = len(reflections)
         ref_dict = dict()
-        for i_ref in xrange(num_ref):
+        for i_ref in range(num_ref):
             ref_tup = reflections[i_ref]
             assert isinstance(ref_tup, tuple)
             assert len(ref_tup) == 2
@@ -278,7 +281,8 @@ class VDriveAPI(object):
         :return:
         """
         # check requirements
-        assert isinstance(bank_peak_dict, dict), 'Input must be a dict but not %s.' % str(type(bank_peak_dict))
+        assert isinstance(bank_peak_dict, dict), 'Input must be a dict but not %s.' % str(
+            type(bank_peak_dict))
         assert isinstance(out_file_name, str)
 
         # create a manager
@@ -305,58 +309,6 @@ class VDriveAPI(object):
 
         return
 
-    # def find_peaks(self, data_key, bank_number, x_range,
-    #                auto_find, profile='Gaussian',
-    #                peak_positions=None, hkl_list=None):
-    #     """
-    #     Find peaks in a given diffraction pattern
-    #     Requirements:
-    #      - by run number, a workspace containing the reduced run must be found
-    #      - either auto (mode) is on or peak positions are given;
-    #      - peak profile is default as Gaussian and is limited to the peak profile supported by Mantid
-    #     :param data_key: a data key (for loaded previously reduced data) or run number
-    #     :param bank_number:
-    #     :param x_range:
-    #     :param peak_positions:
-    #     :param hkl_list:
-    #     :param profile:
-    #     :param auto_find:
-    #     :return: list of tuples for peak information as (peak center, height, width)
-    #     """
-    #     try:
-    #         # raise exceptions if the input parameters are not allowed.
-    #         if isinstance(peak_positions, list) and auto_find:
-    #             raise RuntimeError('It is not allowed to specify both peak positions and turn on auto mode.')
-    #         if peak_positions is None and auto_find is False:
-    #             raise RuntimeError('Either peak positions is given. Or auto mode is turned on.')
-    #
-    #         peak_info_list = self._myProject.find_diffraction_peaks(data_key, bank_number, x_range,
-    #                                                                 peak_positions, hkl_list,
-    #                                                                 profile)
-    #     except RuntimeError as run_err:
-    #         return False, 'Failed to find peaks due to {0}'.format(run_err)
-    #
-    #     return True, peak_info_list
-
-    # def gen_data_slice_manual(self, run_number, relative_time, time_segment_list, slice_tag):
-    #     """ generate event slicer for data manually
-    #     :param run_number:
-    #     :param relative_time:
-    #     :param time_segment_list:
-    #     :param slice_tag: string for slice tag name
-    #     :return: slice tag. if user gives slice tag as None, then the returned one is the auto-generated.
-    #     """
-    #     # TODO FIXME - NIGHT - This method can be removed
-    #     # get the chopper
-    #     chopper = self._myProject.get_chopper(run_number)
-    #
-    #     status, slice_tag = chopper.generate_events_filter_manual(run_number=run_number,
-    #                                                               split_list=time_segment_list,
-    #                                                               relative_time=relative_time,
-    #                                                               splitter_tag=slice_tag)
-    #
-    #     return status, slice_tag
-
     def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step, raw_nexus_name=None):
         """
         Generate data slicer by time
@@ -380,7 +332,8 @@ class VDriveAPI(object):
             chopper = self._myProject.get_chopper(run_number, nxs_file_name=None)
 
         # generate data slicer
-        status, slicer_key = chopper.set_time_slicer(start_time=start_time, time_step=time_step, stop_time=end_time)
+        status, slicer_key = chopper.set_time_slicer(
+            start_time=start_time, time_step=time_step, stop_time=end_time)
 
         return status, slicer_key
 
@@ -524,16 +477,10 @@ class VDriveAPI(object):
 
         else:
             # unsupported case
-            raise AssertionError('run number %s and data key %s is not supported.' % (str(run_number), str(data_key)))
+            raise AssertionError('run number %s and data key %s is not supported.' %
+                                 (str(run_number), str(data_key)))
 
         return True, info
-
-    # def get_reduced_runs(self, with_ipts=True):
-    #     """ Get the runs (run numbers) that have been reduced successfully
-    #     :param with_ipts: if true, then return 2-tuple as (run number, IPTS)
-    #     :return: list of strings?
-    #     """
-    #     return self._myProject.reduction_manager.get_reduced_runs(with_ipts)
 
     def get_reduced_workspace_name(self, run_id):
         """
@@ -582,7 +529,8 @@ class VDriveAPI(object):
         """
         # check inputs
         assert ipts_number is None or isinstance(ipts_number, int), \
-            'IPTS number %s must either be None or an integer but not %s.' % (str(ipts_number), type(ipts_number))
+            'IPTS number %s must either be None or an integer but not %s.' % (
+                str(ipts_number), type(ipts_number))
 
         # if IPTS number is not given, set IPTS number from run information list
         if ipts_number is None:
@@ -713,7 +661,8 @@ class VDriveAPI(object):
 
         try:
             archive_key = self._myArchiveManager.scan_vulcan_record(log_file_path)
-            scanned_runs_information = self._myArchiveManager.get_experiment_run_info(archive_key=archive_key)
+            scanned_runs_information = self._myArchiveManager.get_experiment_run_info(
+                archive_key=archive_key)
             self._myProject.add_scanned_information(scanned_runs_information)
             status = True
             ret_obj = archive_key
@@ -733,7 +682,8 @@ class VDriveAPI(object):
         # check input
         assert isinstance(archive_key, str), 'Archive key %s must be a string but not of type %s.' \
                                              '' % (str(archive_key), type(archive_key))
-        run_info_dict_list = self._myArchiveManager.get_experiment_run_info(archive_key, range(begin_run, end_run+1))
+        run_info_dict_list = self._myArchiveManager.get_experiment_run_info(
+            archive_key, range(begin_run, end_run+1))
         self._myProject.add_scanned_information(run_info_dict_list)
 
         if len(run_info_dict_list) > 0:
@@ -747,14 +697,14 @@ class VDriveAPI(object):
 
     def get_archived_data_dir(self, ipts_number, run_number, chopped_data):
         """
-        get the directory of the SNS archived data (GSAS file) by ITPS number, Run number and whether it is the 
+        get the directory of the SNS archived data (GSAS file) by ITPS number, Run number and whether it is the
         previously chopped and reduced data
         :param ipts_number:
         :param run_number:
         :param chopped_data:
         :return:
         """
-        import vdrive_constants
+        from pyvdrive.lib import vdrive_constants
         if chopped_data:
             # chopped data
             sns_dir = self.archive_manager.get_vulcan_chopped_gsas_dir(ipts_number, run_number)
@@ -775,13 +725,13 @@ class VDriveAPI(object):
             # chopped runs
             # from archive
             loaded_runs_list = self._myProject.data_loading_manager.get_loaded_chopped_runs()
-            print ('[DB...BAT] API: Loaded chopped gsas: {}'.format(loaded_runs_list))
+            print('[DB...BAT] API: Loaded chopped gsas: {}'.format(loaded_runs_list))
 
             # from memory
             if False:
                 # FIXME TODO - TODAY 191 - only runs loaded from GSASs
                 reduced_runs_list = self._myProject.reduction_manager.get_reduced_chopped_runs()
-                print ('[DB...BAT] API: In-Memory chopped runs: {}'.format(reduced_runs_list))
+                print('[DB...BAT] API: In-Memory chopped runs: {}'.format(reduced_runs_list))
 
         else:
             # from archive
@@ -791,7 +741,7 @@ class VDriveAPI(object):
             if False:
                 # FIXME TODO - TODAY 191 - only runs loaded from GSASs
                 reduced_runs_list = self._myProject.reduction_manager.get_reduced_single_runs()
-                print ('[DB...BAT] API: In-Memory reduced single-runs: {}'.format(reduced_runs_list))
+                print('[DB...BAT] API: In-Memory reduced single-runs: {}'.format(reduced_runs_list))
 
         # END-IF-ELSE
 
@@ -913,7 +863,8 @@ class VDriveAPI(object):
         :param run_list:
         :return:
         """
-        status, error_message, available_runs = self._myProject.check_runs(ipts_number, run_list, check_archive=True)
+        status, error_message, available_runs = self._myProject.check_runs(
+            ipts_number, run_list, check_archive=True)
 
         return status, error_message, available_runs
 
@@ -938,7 +889,7 @@ class VDriveAPI(object):
             else:
                 i_end_run = run_list.index(end_run)
         except IndexError as ie:
-            return False, 'Either start run %d or end run %d is not added to project.' % (start_run, end_run)
+            return False, 'Either start run {} or end run {} is not added to project. {}'.format(start_run, end_run, ie)
 
         ret_list = run_list[i_start_run:i_end_run+1]
 
@@ -1005,14 +956,15 @@ class VDriveAPI(object):
 
         # check input
         assert data_key is not None, 'Data key cannot be None.'
-        print ('Data Key / current run number = {}'.format(data_key))
+        print('Data Key / current run number = {}'.format(data_key))
 
         # 2 cases: run_number is workspace or run_number is run number
         if isinstance(data_key, str) and mantid_helper.workspace_does_exist(data_key):
             # input (run number) is workspace's name
             ws_name = data_key
 
-            vec_times, vec_log_x, vec_log_y = mantid_helper.map_sample_logs(ws_name, log_name_x, log_name_y)
+            vec_times, vec_log_x, vec_log_y = mantid_helper.map_sample_logs(
+                ws_name, log_name_x, log_name_y)
 
         else:
             # get chopper for (integer) run number
@@ -1027,8 +979,8 @@ class VDriveAPI(object):
             #                                                relative=relative)
         # END-IF
 
-
-        # TODO - TONIGHT 0 (ISSUE 164) - Add a place to store vec_times, vec_log_x, vec_log_y (external method in chopper?)
+        # TODO - TONIGHT 0 (ISSUE 164) -
+        # TODO - Add a place to store vec_times, vec_log_x, vec_log_y (external method in chopper?)
         # TODO - UI - (1) add a section for line integral (2) option: section length, smooth, plot
         # TODO - Lib - (1) algorithm to smooth (X intact) (2) trace back from X/Y to time (using vec T, vecX, vecY)
         # TODO - UI - Table to show the result
@@ -1131,7 +1083,8 @@ class VDriveAPI(object):
                 ipts_number = self._myProject.get_ipts_number(run_number)
             # END-IF
 
-            file_name = self._myArchiveManager.locate_event_nexus(ipts_number, run_number=run_number)
+            file_name = self._myArchiveManager.locate_event_nexus(
+                ipts_number, run_number=run_number)
             if file_name is None:
                 raise RuntimeError('Unable to find or access NeXus file of IPTS-{} Run-{}'
                                    ''.format(ipts_number, run_number))
@@ -1200,10 +1153,11 @@ class VDriveAPI(object):
         :return:
         """
         # get information
-        proton_charge = self._myArchiveManager.get_proton_charge(ipts_number, run_number, chop_sequence)
+        proton_charge = self._myArchiveManager.get_proton_charge(
+            ipts_number, run_number, chop_sequence)
 
         workspace = mantid_helper.retrieve_workspace(ws_name, True)
-        print '[DB...BAT...TRACE] PC = {0}, Acting on workspace {1}'.format(proton_charge, workspace)
+        print('[DB...BAT...TRACE] PC = {0}, Acting on workspace {1}'.format(proton_charge, workspace))
 
         workspace *= (1./proton_charge)
 
@@ -1247,9 +1201,11 @@ class VDriveAPI(object):
         if raw_data_directory is None:
             # raw data is not given, then search the data in archive
             try:
-                raw_file_list = self._myArchiveManager.locate_chopped_nexus(ipts_number, run_number, chop_child_list)
+                raw_file_list = self._myArchiveManager.locate_chopped_nexus(
+                    ipts_number, run_number, chop_child_list)
             except AssertionError as assert_err:
-                raise AssertionError('Error in calling ArchiveManager.get_data_chopped_nexus(): {0}'.format(assert_err))
+                raise AssertionError(
+                    'Error in calling ArchiveManager.get_data_chopped_nexus(): {0}'.format(assert_err))
             except RuntimeError as run_err:
                 return False, 'Failed to locate chopped NeXus files. FYI: {0}.'.format(run_err)
         else:
@@ -1260,13 +1216,14 @@ class VDriveAPI(object):
 
                 # raw_file_list = chop_utility.scan_chopped_nexus(raw_data_directory)
             except AssertionError as assert_err:
-                raise AssertionError('Error in scanning files in {0}: {1}'.format(raw_data_directory, assert_err))
+                raise AssertionError('Error in scanning files in {0}: {1}'.format(
+                    raw_data_directory, assert_err))
         # END-IF-ELSE
 
         if len(raw_file_list) == 0:
             # return False if there is not file found
             return False, 'Unable to find chopped files for IPTS-{0} Run {1} directory {2}' \
-                          ''.format(ipts_number,run_number, raw_data_directory)
+                          ''.format(ipts_number, run_number, raw_data_directory)
         # END-IF
 
         # reduce
@@ -1349,7 +1306,8 @@ class VDriveAPI(object):
                 return False, 'Run {0} has not been searched and thus found in archive.'.format(run_number)
         # END-FOR
         if len(ipts_set) != 1:
-            raise RuntimeError('There are runs from different IPTS.  It is not supported in PyVDrive.')
+            raise RuntimeError(
+                'There are runs from different IPTS.  It is not supported in PyVDrive.')
         ipts_number = ipts_set.pop()
 
         # check ROI list and Mask list: force ROI/MASK file list to be 'list()'
@@ -1441,7 +1399,7 @@ class VDriveAPI(object):
         reduction_state_list = None
         self._myProject.mark_runs_reduced(runs_to_reduce, reduction_state_list)
 
-        print ('[DB......BAT.......BAT] status = {}, error: "{}"'.format(status, error_message))
+        print('[DB......BAT.......BAT] status = {}, error: "{}"'.format(status, error_message))
 
         return status, error_message
 
@@ -1463,8 +1421,10 @@ class VDriveAPI(object):
 
         # check inputs' validity
         assert isinstance(ipts_number, int), 'IPTS number %s must be an integer.' % str(ipts_number)
-        assert isinstance(run_numbers, list), 'Run numbers must be a list but not %s.' % type(run_numbers)
-        assert isinstance(output_dir, str) or output_dir is None, 'Output directory must be a string or None (auto).'
+        assert isinstance(
+            run_numbers, list), 'Run numbers must be a list but not %s.' % type(run_numbers)
+        assert isinstance(
+            output_dir, str) or output_dir is None, 'Output directory must be a string or None (auto).'
         assert isinstance(is_dry_run, bool), 'Is-Dry-Run must be a boolean'
 
         status = True
@@ -1477,7 +1437,8 @@ class VDriveAPI(object):
             reduce_setup.set_ipts_number(ipts_number)
             reduce_setup.set_run_number(run_number)
             # set and check input file
-            nxs_file_name = '/SNS/VULCAN/IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs' % (ipts_number, run_number, run_number)
+            nxs_file_name = '/SNS/VULCAN/IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs' % (
+                ipts_number, run_number, run_number)
             raise NotImplementedError('ASAP {0} is old file path.'.format(nxs_file_name))
             assert os.path.exists(nxs_file_name), 'NeXus file %s does not exist.' % nxs_file_name
             reduce_setup.set_event_file(nxs_file_name)
@@ -1519,7 +1480,7 @@ class VDriveAPI(object):
 
         return status, error_message
 
-    def scan_ipts_runs(self, ipts_number, start_run, stop_run ):
+    def scan_ipts_runs(self, ipts_number, start_run, stop_run):
         """
 
         :param ipts_number:
@@ -1611,7 +1572,8 @@ class VDriveAPI(object):
             self._myProject.mark_runs_to_reduce(run_numbers)
         except RuntimeError as re:
             return_status = False
-            error_message = 'Unable to set runs %s to reduce due to %s.' % (str(run_numbers), str(re))
+            error_message = 'Unable to set runs %s to reduce due to %s.' % (
+                str(run_numbers), str(re))
 
         return return_status, error_message
 
@@ -1630,12 +1592,14 @@ class VDriveAPI(object):
         assert isinstance(log_file_name, str), 'get_mts_log_data(): Log file %s must be a string but not %s.' \
                                                '' % (str(log_file_name), str(type(log_file_name)))
         assert log_file_name in self._mtsLogDict, 'Log file %s has not been loaded. Current loaded are' \
-                                                  '%s.' % (log_file_name, str(self._mtsLogDict.keys()))
+                                                  '%s.' % (log_file_name, str(
+                                                      self._mtsLogDict.keys()))
         assert isinstance(header_list, list), 'Header list must a list'
         for name in header_list:
             assert name in self._mtsLogDict[log_file_name], 'Header %s is not in Pandas series, which ' \
                                                             'current has headers as %s.' % \
-                                                            (name, self._mtsLogDict[log_file_name].keys())
+                                                            (name,
+                                                             self._mtsLogDict[log_file_name].keys())
 
         # form the return by converting to numpy array
         return_dict = dict()
@@ -1681,10 +1645,10 @@ class VDriveAPI(object):
                     van_file_name = self._myArchiveManager.get_smoothed_vanadium(ipts_number, run_number,
                                                                                  check_exist=True)
                 else:
-                    van_file_name = self._myArchiveManager.get_gsas_file(ipts_number, run_number, check_exist=True)
-                print '[DB...BAT...TRACE] ', van_file_name
+                    van_file_name = self._myArchiveManager.get_gsas_file(
+                        ipts_number, run_number, check_exist=True)
             except RuntimeError as run_err:
-                print '[WARNING]: {0}'.format(run_err)
+                print('[WARNING]: {0}'.format(run_err))
                 van_file_name = None
         # END-IF
 
@@ -1720,7 +1684,7 @@ class VDriveAPI(object):
         # END-IF-ELSE
 
         # convert unit
-        print '[DB...BAT] Load vanadium and convert unit???  from {0}'.format(van_file_name)
+        print('[DB...BAT] Load vanadium and convert unit???  from {0}'.format(van_file_name))
         mantid_helper.mtd_convert_units(van_ws_key, unit)
 
         return True, van_ws_key
@@ -1751,14 +1715,8 @@ class VDriveAPI(object):
         data_line_number = block_start_line + start_point_index
         num_points = min(end_point_index - start_point_index, block_end_line - data_line_number)
 
-        print '[DB.,,,,..BAT] Read MTS Block %d, Start Point = %d, End Point = %d: block : %d, %d ' % (
-            block_index, start_point_index, end_point_index, block_start_line, block_end_line),
-        print 'read from line %d with number of points = %d' % (data_line_number, num_points)
-
         # load file
         # TODO/FIXME - sep is fixed to \t now.  It might not be a good approach
-        print '[DB...BAT] File name = ', log_file_name, 'Skip = ', data_line_number, 'Names: ', header,
-        print 'Number of points = ', num_points
         mts_series = pd.read_csv(log_file_name, skiprows=data_line_number,
                                  names=header, nrows=num_points,
                                  sep='\t')
@@ -1800,7 +1758,7 @@ class VDriveAPI(object):
         # Out file name
         if os.path.isabs(out_file_name) is False:
             out_file_name = os.path.join(self._myWorkDir, out_file_name)
-            print '[INFO] Session file is saved to working directory as %s.' % out_file_name
+            print('[INFO] Session file is saved to working directory as %s.' % out_file_name)
 
         archivemanager.save_to_xml(save_dict, out_file_name)
 
@@ -1848,7 +1806,8 @@ class VDriveAPI(object):
         # check
         datatypeutility.check_int_variable('IPTS number', ipts_number, (1, 9999999))
         assert isinstance(data_dir, str) and os.path.exists(data_dir), \
-            'Data directory %s of type (%s) must be a string and exists.' % (str(data_dir), type(data_dir))
+            'Data directory %s of type (%s) must be a string and exists.' % (
+                str(data_dir), type(data_dir))
         assert isinstance(binned_data_dir, str) and os.path.exists(binned_data_dir), \
             'Binned data directory %s of type (%s) must be a string and exists.' % (str(binned_data_dir),
                                                                                     type(binned_data_dir))
@@ -1872,7 +1831,8 @@ class VDriveAPI(object):
         datatypeutility.check_int_variable('Vanadium run number', van_run_number, (1, None))
 
         # locate vanadium GSAS file
-        file_exist, van_file_name = self._myArchiveManager.locate_vanadium_gsas_file(ipts_number, van_run_number)
+        file_exist, van_file_name = self._myArchiveManager.locate_vanadium_gsas_file(
+            ipts_number, van_run_number)
         if not file_exist:
             return False, 'Unable to locate vanadium GSAS file'
 

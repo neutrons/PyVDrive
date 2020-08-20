@@ -63,7 +63,7 @@ class VanadiumPeak(VDriveCommand):
             try:
                 self.set_ipts()
             except RuntimeError as run_err:
-                return False, 'Without option'.format(run_err)
+                return False, 'Unable to set IPTS: {}'.format(run_err)
 
             # get run v
             if 'RUNV' not in self._commandArgsDict:
@@ -102,9 +102,10 @@ class VanadiumPeak(VDriveCommand):
             # load GSAS file or ProcessedNeXus file
             van_file_name = self._controller.archive_manager.locate_gsas(self._iptsNumber, self._vanRunNumber)
             self._myVanDataKey = self._controller.project.data_loading_manager.load_binned_data(van_file_name, 'gsas',
-                                                                                        max_int=10, prefix='van',
-                                                                                        data_key=None,
-                                                                                        target_unit='dSpacing')
+                                                                                                max_int=10,
+                                                                                                prefix='van',
+                                                                                                data_key=None,
+                                                                                                target_unit='dSpacing')
 
             # load logs for future
             if True:

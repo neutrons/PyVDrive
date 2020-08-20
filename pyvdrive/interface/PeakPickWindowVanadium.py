@@ -12,6 +12,7 @@ UNIT = {'d': 'dSpacing', 'tof': 'TOF'}
 class PeakPickerWindowChildVanadium(object):
     """ Class to handle all the vanadium processing related issues in the peak processing window
     """
+
     def __init__(self, parent, ui_class):
         """ Init
         :param ui_class:
@@ -65,10 +66,10 @@ class PeakPickerWindowChildVanadium(object):
         :return:
         """
         if self._curr_bank == 0:
-            print ('[DB...BAT] Nothing to plot/show')
+            print('[DB...BAT] Nothing to plot/show')
             return
 
-        print ('[DB...BAT] show/hide: current bank = {}, current unit = {}'.format(self._curr_bank, self._curr_unit))
+        print('[DB...BAT] show/hide: current bank = {}, current unit = {}'.format(self._curr_bank, self._curr_unit))
 
         if show_raw_vanadium:
             # show
@@ -89,17 +90,20 @@ class PeakPickerWindowChildVanadium(object):
         """ Handling event that show or hide vanadium peaks on the figure (the dashed indicators)
         :return:
         """
-        datatypeutility.check_bool_variable('Flag to indicate show or hide vanadium peaks', show_v_peaks)
+        datatypeutility.check_bool_variable(
+            'Flag to indicate show or hide vanadium peaks', show_v_peaks)
 
         if show_v_peaks and self._is_v_peaks_shown is False:
             # show peaks
             if self._curr_unit != UNIT['d']:
-                GuiUtility.pop_dialog_error(self._parent, 'Vanadium peaks can only been shown when unit is dSpacing')
+                GuiUtility.pop_dialog_error(
+                    self._parent, 'Vanadium peaks can only been shown when unit is dSpacing')
                 self.ui.checkBox_vpeakShowPeakPos.setChecked(False)
                 return
             else:
                 # show!:
-                self._vpeak_indicators = self.ui.graphicsView_main.add_vanadium_peaks(VANADIUM_PEAKS_D)
+                self._vpeak_indicators = self.ui.graphicsView_main.add_vanadium_peaks(
+                    VANADIUM_PEAKS_D)
                 self._is_v_peaks_shown = True
         elif not show_v_peaks and self._is_v_peaks_shown:
             # hide/delete vanadium peaks
@@ -134,7 +138,7 @@ class PeakPickerWindowChildVanadium(object):
         else:
             bank_id = None   # all banks
 
-        print ('[DB...BAT] Current bank: {}'.format(bank_id))
+        print('[DB...BAT] Current bank: {}'.format(bank_id))
 
         return bank_id
 
@@ -182,12 +186,13 @@ class PeakPickerWindowChildVanadium(object):
         :param data_key:
         :return:
         """
-        print ('[DB...BAT] Init vanadium session with data key (workspace) {}'.format(data_key))
+        print('[DB...BAT] Init vanadium session with data key (workspace) {}'.format(data_key))
 
         # generate a temporary gsas file name
         gsas_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
         if not os.path.exists(gsas_dir) or not os.access(gsas_dir, os.W_OK):
-            GuiUtility.pop_dialog_information(self._parent, 'User cannot write GSAS file to {}'.format(gsas_dir))
+            GuiUtility.pop_dialog_information(
+                self._parent, 'User cannot write GSAS file to {}'.format(gsas_dir))
             gsas_dir = os.path.expanduser('~')
         temp_out_gda_name = os.path.join(gsas_dir, '{}-s.gda'.format(self._run_number))
 
@@ -218,7 +223,8 @@ class PeakPickerWindowChildVanadium(object):
 
         try:
             processor = self._myController.project.vanadium_processing_manager
-            processor.strip_v_peaks(bank_id, peak_fwhm, tolerance, background_type, is_high_background)
+            processor.strip_v_peaks(bank_id, peak_fwhm, tolerance,
+                                    background_type, is_high_background)
             self._peak_fwhm_dict[bank_id] = peak_fwhm
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self._parent, 'Unable to strip vanadium peaks on bank {} due to {}'
@@ -282,9 +288,11 @@ class PeakPickerWindowChildVanadium(object):
         if self._raw_van_dspace_line:
             self.ui.graphicsView_main.remove_line(self._raw_van_dspace_line)
         # draw a new raw vanadium line in dSpacing
-        vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_raw_data(bank_id, UNIT['d'])
+        vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_raw_data(
+            bank_id, UNIT['d'])
         self._raw_van_dspace_line = self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='black',
-                                                                          label='Raw Vanadium Bank {}'.format(bank_id),
+                                                                          label='Raw Vanadium Bank {}'.format(
+                                                                              bank_id),
                                                                           x_label='dSpacing')
         # set unit and bank
         self._curr_unit = UNIT['d']
@@ -307,7 +315,8 @@ class PeakPickerWindowChildVanadium(object):
             self.ui.graphicsView_main.remove_line(self._raw_van_tof_line)
 
         # Set up class variables
-        vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_raw_data(bank_id, UNIT['tof'])
+        vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_raw_data(
+            bank_id, UNIT['tof'])
         self._raw_van_tof_line = self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='black',
                                                                        x_label='TOF',
                                                                        label='Raw Vanadium Bank {}'.format(bank_id))
@@ -327,7 +336,8 @@ class PeakPickerWindowChildVanadium(object):
         datatypeutility.check_int_variable('Bank ID', bank_id, (1, 100))
 
         # get vector X and Y
-        vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_peak_striped_data(bank_id)
+        vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_peak_striped_data(
+            bank_id)
 
         self._remove_smoothed_line()
         self._remove_striped_peaks_line()
@@ -346,7 +356,8 @@ class PeakPickerWindowChildVanadium(object):
 
         # plot v-line
         self._no_peak_van_line = self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='red',
-                                                                       label='Bank {} Peak Striped'.format(bank_id),
+                                                                       label='Bank {} Peak Striped'.format(
+                                                                           bank_id),
                                                                        x_label='dSpacing')
 
         # reset X Y limit
@@ -373,7 +384,8 @@ class PeakPickerWindowChildVanadium(object):
         self.show_hide_v_peaks(show_v_peaks=False)  # hide vanadium peaks indicators
 
         # get vector X and Y
-        vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_peak_smoothed_data(bank_id)
+        vec_x, vec_y = self._myController.project.vanadium_processing_manager.get_peak_smoothed_data(
+            bank_id)
         vec_x_list = [vec_x]
         vec_y_list = [vec_y]
 
@@ -498,7 +510,8 @@ class PeakPickerWindowChildVanadium(object):
 
         setting_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
         if not os.path.exists(setting_dir) or not os.access(setting_dir, os.W_OK):
-            GuiUtility.pop_dialog_information(self._parent, 'User cannot write file to {}'.format(setting_dir))
+            GuiUtility.pop_dialog_information(
+                self._parent, 'User cannot write file to {}'.format(setting_dir))
             setting_dir = os.path.expanduser('~')
 
         setting_name = os.path.join(setting_dir, 'vanadium_setting.txt')
@@ -511,14 +524,16 @@ class PeakPickerWindowChildVanadium(object):
                 set_buffer += 'Smooth n     = {}\n'.format(self._smooth_n_dict[bank_id])
                 set_buffer += 'Smooth order = {}\n'.format(self._smooth_order_dict[bank_id])
             except KeyError as key_err:
-                GuiUtility.pop_dialog_error(self._parent, 'Bank {} has not been processed: {}'.format(bank_id, key_err))
+                GuiUtility.pop_dialog_error(
+                    self._parent, 'Bank {} has not been processed: {}'.format(bank_id, key_err))
                 return
 
         setting_file = open(setting_name, 'w')
         setting_file.write(set_buffer)
         setting_file.close()
 
-        GuiUtility.pop_dialog_information(self._parent, 'Vanadium process setting is saved to {}'.format(setting_name))
+        GuiUtility.pop_dialog_information(
+            self._parent, 'Vanadium process setting is saved to {}'.format(setting_name))
 
         return
 

@@ -2,7 +2,7 @@
 # This QMainWindow is implemented in order to use WorkspaceViewWidget, which contains
 # IPython console, table view and figure inside, while it cannot be called directly
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout, QSizePolicy, QLabel, QMenuBar, QStatusBar, QToolBar
     from PyQt5 import QtCore
 except ImportError:
@@ -14,7 +14,7 @@ from workspaceviewwidget import WorkspaceViewWidget
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    _fromUtf8 = lambda s: s  # noqa: E731
 
 
 class IPythonWorkspaceViewer(QMainWindow):

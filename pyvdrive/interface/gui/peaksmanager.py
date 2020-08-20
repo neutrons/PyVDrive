@@ -74,7 +74,7 @@ class GroupedPeaksManager(object):
 
         # check
         vec_size = len(self._vecX)
-        for index in xrange(1, vec_size):
+        for index in range(1, vec_size):
             if self._vecX[index-1] >= self._vecX[index]:
                 # previous element is not smaller than the current element
                 return False
@@ -122,7 +122,7 @@ class GroupedPeaksManager(object):
 
         # search entry for this indicator by brute force
         updated = False
-        for index in xrange(len(self._vecID)):
+        for index in range(len(self._vecID)):
             if indicator_id == self._vecID[index]:
                 # find the item in the list with desired indicator ID
                 if check:
@@ -175,7 +175,7 @@ class GroupedPeaksManager(object):
         self._add_item(new_group.right_boundary, new_group.right_boundary_id, group_id, 2)
 
         # debug output
-        print '[DB] Add new group %d\nGroup list information:\n%s' % (group_id, self.pretty())
+        print('[DB] Add new group %d\nGroup list information:\n%s' % (group_id, self.pretty()))
 
         return
 
@@ -198,7 +198,7 @@ class GroupedPeaksManager(object):
         self._add_item(position=peak_pos, indicator=peak_id, group_id=group_id, item_type=1)
 
         # debug output
-        print '[DB] Group list information:\n%s' % self.pretty()
+        print('[DB] Group list information:\n%s' % self.pretty())
 
         return
 
@@ -225,9 +225,9 @@ class GroupedPeaksManager(object):
         left_bound_index = bisect.bisect_right(self._vecX, left_boundary)
         right_bound_index = bisect.bisect_right(self._vecX, right_boundary)
 
-        print '[DB... Try to add group] New group region: ', left_boundary, ', ', right_boundary,
-        print '; Boundary index = ', left_bound_index, ', ', right_bound_index
-        print self.pretty()
+        print('[DB... Try to add group] New group region: ', left_boundary, ', ', right_boundary,)
+        print('; Boundary index = ', left_bound_index, ', ', right_bound_index)
+        print(self.pretty())
 
         # indexes of left boundary and right boundary should be same because there must not be any indicator
         # between these 2 boundaries
@@ -264,7 +264,7 @@ class GroupedPeaksManager(object):
 
         # locate item by search for item_id in the vecID
         index = None
-        for id_index in xrange(len(self._vecID)):
+        for id_index in range(len(self._vecID)):
             if self._vecID[id_index] == item_id:
                 index = id_index
         # END-FOR (id_index)
@@ -314,7 +314,7 @@ class GroupedPeaksManager(object):
 
         # remove from the maps
         index_remove_list = list()
-        for index in xrange(len(self._vecGroupID)):
+        for index in range(len(self._vecGroupID)):
             if self._vecGroupID[index] == group_id:
                 index_remove_list.append(index)
         # END-IF
@@ -387,7 +387,7 @@ class GroupedPeaksManager(object):
 
         elif index_x == len(self._vecX):
             # right to everything
-            left_bound  = self._vecX[-1]
+            left_bound = self._vecX[-1]
             right_bound = x_limit[1]
 
         else:
@@ -439,7 +439,7 @@ class GroupedPeaksManager(object):
         for group in self._myGroupList:
             gid_list.append(group.get_id())
 
-        print '[DB...] From dictionary: Keys = ', self._myGroupDict.keys()
+        print('[DB...] From dictionary: Keys = ', self._myGroupDict.keys())
 
         return gid_list
 
@@ -565,7 +565,7 @@ class GroupedPeaksManager(object):
             msg += 'Group information: \n%s\n' % self.pretty()
             msg += '[DB] Unable to move left boundary to left as Left wall @ %f of group %d is hit' % (left_wall,
                                                                                                        left_group)
-            print msg
+            print(msg)
             return False
 
         return True
@@ -593,8 +593,8 @@ class GroupedPeaksManager(object):
 
         # return False if the right bound is hit
         if item_pos + delta_x >= right_wall:
-            print '[DB] Unable to move group to right as right wall @ %f of group %d is hit.' % (right_wall,
-                                                                                                 right_group)
+            print('[DB] Unable to move group to right as right wall @ %f of group %d is hit.' % (right_wall,
+                                                                                                 right_group))
             return False
 
         return True
@@ -640,8 +640,8 @@ class GroupedPeaksManager(object):
                                   check=False)
         for peak_info in group_2_move.get_peaks():
             peak_pos, peak_id = peak_info
-            print '[DB...] Peak position = ', peak_pos, 'of type ', type(peak_pos)
-            print '[DB...] Peak Id       = ', peak_id, 'of type', type(peak_id)
+            print('[DB...] Peak position = ', peak_pos, 'of type ', type(peak_pos))
+            print('[DB...] Peak Id       = ', peak_id, 'of type', type(peak_id))
             self._update_map_item_pos(indicator_id=peak_id,
                                       new_pos=peak_pos,
                                       check=False)
@@ -774,7 +774,7 @@ class GroupedPeaksManager(object):
 
         w_buf += '%-10s\t%-5s\t%-5s\t%-5s\n' % ('X', 'ID', 'Type', 'Group')
         number = len(self._vecX)
-        for index in xrange(number):
+        for index in range(number):
             w_buf += '%.9f\t%-4d\t%-4d\t%-4d\n' % (self._vecX[index], self._vecID[index],
                                                    self._vecType[index], self._vecGroupID[index])
 
@@ -826,69 +826,66 @@ class GroupedPeaksInfo(object):
 
         # group ID
         self._groupID = -1
-    
-        #
+        # set left and right ID
         self._leftID = left_boundary_id
         self._rightID = right_boundary_id
-    
         self._leftX = left_x
         self._rightX = right_x
-    
         self._peakPosIDList = list()  # a list of 2-tuple as peak position and indicator ID
 
         # mode controller: only in edit mode allows the moving of boundary of peak center
         self._inEditMode = True
-    
+
         return
-    
+
     def __str__(self):
         """ Pretty print for Grouped PeaksInfo
         :return:
         """
         out_str = 'Group %d: ' % self._groupID
         out_str += '[Left boundary (%d): %.7f, ' % (self.left_boundary_id, self.left_boundary)
-        for i_peak in xrange(len(self._peakPosIDList)):
+        for i_peak in range(len(self._peakPosIDList)):
             out_str += 'P_%d (%d): %.7f, ' % (i_peak, self._peakPosIDList[i_peak][1],
                                               self._peakPosIDList[i_peak][0])
         out_str += 'Right boundary (%d): %.7f]' % (self.right_boundary_id, self.right_boundary)
-    
+
         return out_str
-    
+
     @property
     def left_boundary(self):
         """
         """
         return self._leftX
-    
+
     @left_boundary.setter
     def left_boundary(self, x):
         """
         """
         assert isinstance(x, float)
         self._leftX = x
-    
+
         return
-    
+
     @property
     def left_boundary_id(self):
         """ Indicator ID of the left boundary
         :return:
         """
         return self._leftID
-    
+
     @property
     def right_boundary_id(self):
         """ Indicator ID of the right boundary
         :return:
         """
         return self._rightID
-    
+
     @property
     def right_boundary(self):
         """
         """
         return self._rightX
-    
+
     @right_boundary.setter
     def right_boundary(self, x):
         """
@@ -897,7 +894,7 @@ class GroupedPeaksInfo(object):
         assert x > self._leftX
         self._rightX = x
         return
-    
+
     def add_peak(self, indicator_id, peak_pos):
         """
         Add a peak
@@ -908,12 +905,12 @@ class GroupedPeaksInfo(object):
         # check
         assert isinstance(indicator_id, int)
         assert isinstance(peak_pos, float)
-    
+
         # add to peak list
         self._peakPosIDList.append((peak_pos, indicator_id))
-    
+
         return
-    
+
     def delete_peak(self, peak_id):
         """
         Delete a peak by its indicator ID
@@ -922,16 +919,16 @@ class GroupedPeaksInfo(object):
         """
         # check
         assert isinstance(peak_id, int)
-    
+
         # remove
         found_peak = False
-        for i_peak in xrange(len(self._peakPosIDList)):
+        for i_peak in range(len(self._peakPosIDList)):
             p_id = self._peakPosIDList[i_peak][1]
             if p_id == peak_id:
                 found_peak = True
                 self._peakPosIDList.pop(i_peak)
                 break
-    
+
         return found_peak
 
     def get_id(self):
@@ -940,7 +937,7 @@ class GroupedPeaksInfo(object):
         :return:
         """
         return self._groupID
-    
+
     def get_number_peaks(self):
         """ Get number of peaks in this peaks group
         :return:
@@ -963,14 +960,14 @@ class GroupedPeaksInfo(object):
                 return peak_pos_i
 
         return None
-    
+
     def get_peaks(self):
         """ Get all the peaks' tuple
         :return: a list of 2-tuples (peak position and peak ID)
         """
         self._peakPosIDList.sort()
         #  print '[DB...] get_peaks: return...', self._peakPosIDList
-    
+
         return self._peakPosIDList[:]
 
     def has_peak(self, peak_id):
@@ -1019,12 +1016,12 @@ class GroupedPeaksInfo(object):
         # set up
         self._leftID = left_bound_id
         self._rightID = right_bound_id
-        for i_peak in xrange(num_peaks):
+        for i_peak in range(num_peaks):
             peak_pos = self._peakPosIDList[i_peak][0]
             self._peakPosIDList[i_peak] = (peak_pos, peak_id_list[i_peak])
 
         return
-    
+
     def is_editable(self):
         """
         """
@@ -1045,7 +1042,7 @@ class GroupedPeaksInfo(object):
         self._rightID = -1
 
         num_peaks = len(self._peakPosIDList)
-        for i_peak in xrange(num_peaks):
+        for i_peak in range(num_peaks):
             peak_pos = self._peakPosIDList[i_peak][0]
             self._peakPosIDList[i_peak] = (peak_pos, -1)
         # END-FOR
@@ -1085,7 +1082,7 @@ class GroupedPeaksInfo(object):
         assert check is False, 'It is not supported for check is True'
 
         num_peaks = len(self._peakPosIDList)
-        for i_peak in xrange(num_peaks):
+        for i_peak in range(num_peaks):
             peak_pos_i, peak_id_i = self._peakPosIDList[i_peak]
             if peak_id is None or peak_id == peak_id_i:
                 assert isinstance(peak_pos_i+shift, float)
@@ -1106,9 +1103,9 @@ class GroupedPeaksInfo(object):
         assert isinstance(peak_id, int)
         assert isinstance(x, float)
         assert isinstance(is_displacement, bool)
-    
+
         found_peak = False
-        for i_peak in xrange(len(self._peakPosIDList)):
+        for i_peak in range(len(self._peakPosIDList)):
             p_id = self._peakPosIDList[i_peak][1]
             if p_id == peak_id:
                 # peak is found
@@ -1121,13 +1118,12 @@ class GroupedPeaksInfo(object):
                     # x is new peak position
                     new_peak_pos = x
 
-                print '[DB.... update peak %d position] peak ID = %d new position is %f.' % (
-                    i_peak, p_id, new_peak_pos)
+                print('[DB.... update peak %d position] peak ID = %d new position is %f.' % (
+                    i_peak, p_id, new_peak_pos))
 
                 self._peakPosIDList[i_peak] = (new_peak_pos, peak_id)
                 found_peak = True
                 break
         # END-FOR
-    
-        return found_peak
 
+        return found_peak

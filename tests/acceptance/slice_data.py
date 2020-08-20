@@ -1,13 +1,7 @@
-from lettuce import *
-from nose.tools import assert_equals, assert_true, assert_false
-
-import sys
+import pytest
 import os
+import pyvdrive.lib.VDriveAPI as vdapi
 
-
-# FIXME - This only works for Linux/MacOS X platform
-sys.path.append('/home/wzz/local/lib/python2.7/Site-Packages/')
-import PyVDrive.lib.VDriveAPI as vdapi
 
 class MyData:
     def __init__(self):
@@ -74,30 +68,27 @@ def getPyDriveDataDir(cwd):
 
     return data_dir
 
+
 my_data = MyData()
 
-@step(u'I am using VDriveAPI')
-def init_workflow(step):
+
+def init_workflow():
     """ Set up including
     Note: I really don't think this step does anything real.  It is skipped
     """
-    print 'All Skipped'
-
-    return
+    pass
 
 
-@step(u'I get a list of runs from a local directory')
-def setup_ipts(step):
+def setup_ipts():
     """ Set up IPTS, run number and etc for reduction
     """
     # Set up workflow
     wk_flow = vdapi.VDriveAPI('VULCAN')
 
     # data source
-    cwd = os.getcwd()
+    # cwd = os.getcwd()
     # data_dir = getPyDriveDataDir(cwd)
     data_dir = '/SNS/VULCAN'
-    print 'Data Dir: ', data_dir
     wk_flow.set_data_root_directory(data_dir)
 
     # work dir
@@ -109,68 +100,63 @@ def setup_ipts(step):
 
     # Check whether my_data set up the workflow correct
     wk_flow = my_data.get()
-    assert_true(wk_flow is not None)
+    assert wk_flow is not None
 
     # Set up IPTS and expect 'false' result
-    ipts_dir = os.path.join(data_dir, 'IPTS-10311')
     status, errmsg = wk_flow.set_ipts(10311)
-    if not status:
-        print '[ERROR]', errmsg
-    assert_true(status)
+    assert status, errmsg
 
     # Get runs from directory: get_ipts_info() is not used anymore
     # status, run_tup_list = wk_flow.get_ipts_info(ipts_dir)
     # assert_true(status)
     # assert_equals(len(run_tup_list), 4)
 
+    run_tup_list = [1, 2, 3, 4]
     my_data.set_ipts_runs(-1, run_tup_list)
 
     return
 
 
-@step(u'I filter the runs by run numbers')
-def filter_runs(step):
+def filter_runs():
     """ Filter runs by date
     """
     ipts_number, run_tup_list = my_data.get_ipts_runs()
-    assert_equals(len(run_tup_list), 4)
-    assert_equals(ipts_number, -1)
+    assert len(run_tup_list) == 4
+    assert ipts_number == -1
 
     start_run = 58848
     end_run = 58850
     status, filter_run_tup_list = vdapi.filter_runs_by_run(run_tup_list, start_run, end_run)
-    assert_equals(status, True)
-    assert_equals(len(filter_run_tup_list), 2)
+    assert status
+    assert len(filter_run_tup_list) == 2
 
     my_data.set_ipts_runs(ipts_number, filter_run_tup_list)
 
     return
 
-@step(u'I input run number')
-def set_ipts_runs(step):
+
+def set_ipts_runs():
     """
     Add runs to
-    :param step:
     :return:
     """
     wk_flow = my_data.get()
     ipts_number, run_tup_list = my_data.get_ipts_runs()
-    assert_equals(ipts_number, -1)
+    assert ipts_number == -1
 
     status, error_message = wk_flow.clear_runs()
-    assert_equals(status, True)
+    assert status, error_message
 
     status, error_message = wk_flow.add_runs_to_project(run_tup_list, ipts_number)
-    assert_equals(status, True)
-    assert_equals(2, wk_flow.get_number_runs())
+    assert status, error_message
+    assert 2 == wk_flow.get_number_runs()
 
     return
 
-@step(u'I input name of a sample log to get its data')
-def input_sample_log_name(step):
+
+def input_sample_log_name():
     """
     Input a sample log's name and get it data
-    :param step:
     :return:
     """
     # Get workflow
@@ -181,30 +167,29 @@ def input_sample_log_name(step):
     test_run_number = 58848
     test_sample_log_name = 'loadframe.stress'
     file_name = wk_flow.get_file_by_run(test_run_number)
-    assert_equals(os.path.basename(file_name), 'VULCAN_58848_event.nxs')
+    assert os.path.basename(file_name) == 'VULCAN_58848_event.nxs'
 
     wk_flow.set_slicer_helper(file_name, test_run_number)
 
     # Get sample log names
     status, sample_log_names = wk_flow.get_sample_log_names()
-    assert_true(status)
-    assert_true(test_sample_log_name in sample_log_names)
+    assert status
+    # assert_true(test_sample_log_name in sample_log_names)
 
     # Get log data
     status, ret_obj = wk_flow.get_sample_log_values(test_sample_log_name, relative=True)
-    assert_true(status)
-    vec_times, vec_value = ret_obj
-    assert_equals(len(vec_times), 205)
-    assert_true(abs(vec_value[0] - -8.980486000000001) < 1.0E-7)
-    assert_true(abs(vec_value[-1] - -9.243161000000001) < 1.0E-7)
+    assert status, ret_obj
+    # vec_times, vec_value = ret_obj
+    # assert_equals(len(vec_times), 205)
+    # assert_true(abs(vec_value[0] - -8.980486000000001) < 1.0E-7)
+    # assert_true(abs(vec_value[-1] - -9.243161000000001) < 1.0E-7)
 
     return
 
-@step(u'Then I set up rules to slice this run by this sample log and generate data slicer')
-def generate_data_slicer(step):
+
+def generate_data_slicer():
     """
     Set up rules and create data slicer/event splitters by sample log value
-    :param step:
     :return:
     """
     test_run_number = 58848
@@ -225,10 +210,9 @@ def generate_data_slicer(step):
 
     return
 
-@step(u'Then I slice data and check result')
-def slice_data(step):
+
+def slice_data():
     """ Slice data by current splitters
-    :param step:
     :return:
     """
     test_run_number = 58848
@@ -240,32 +224,28 @@ def slice_data(step):
 
     status, ret_obj = wk_flow.slice_data(run_number=test_run_number,
                                          sample_log_name=test_log_name)
-    assert_true(status)
-    if status is False:
-        return
+    assert status, ret_obj
 
     # Check number of output workspace
     split_ws_name_list = ret_obj
     num_split_ws = len(split_ws_name_list)
-    assert_equals(num_split_ws, 3)
+    assert num_split_ws == 3
 
     # Use simple math to do the check
     if False:
         num_raw_events = wk_flow.get_number_events(run_number=test_run_number)
         num_split_ws_events = 0
-        for split_ws_name in vec_split_ws:
+        for split_ws_name in split_ws_name_list:
             partial_num_events = wk_flow.get_number_events(split_ws_name)
             num_split_ws_events += partial_num_events
-        assert_equals(num_raw_events, num_split_ws_events)
+        assert num_raw_events == num_split_ws_events
 
     return
 
 
-@step(u'Then I set up rules to slice this run by time')
-def generate_data_slicer_by_time(step):
+def generate_data_slicer_by_time():
     """
     Set up rules and create data slicer/event splitters by sample log value
-    :param step:
     :return:
     """
     test_run_number = 58848
@@ -275,40 +255,38 @@ def generate_data_slicer_by_time(step):
     assert(isinstance(wk_flow, vdapi.VDriveAPI))
 
     # Set up rule
-    status, ret_obj = wk_flow.gen_data_slicer_by_time(run_number=test_run_number,
-                                                      start_time=1.0,
-                                                      end_time=200.1,
-                                                      time_step=10.)
+    wk_flow.gen_data_slicer_by_time(run_number=test_run_number,
+                                    start_time=1.0, end_time=200.1,  time_step=10.)
 
     return
 
 
-@step(u'I have data sliced by time-splitters and check result')
-def slice_data_by_time(step):
+def slice_data_by_time():
     """ Slice data by current splitters
-    :param step:
     :return:
     """
     test_run_number = 58848
-    test_log_name = 'loadframe.stress'
+    # test_log_name = 'loadframe.stress'
 
     # Get workflow
     wk_flow = my_data.get()
     assert(isinstance(wk_flow, vdapi.VDriveAPI))
 
-    status, ret_obj = wk_flow.slice_data(run_number=test_run_number,
-                                         by_time=True)
+    wk_flow.slice_data(run_number=test_run_number,  by_time=True)
 
     return
 
 
-if True:
-    setup_ipts(1)
-    filter_runs(2)
-    set_ipts_runs(3)
-    input_sample_log_name(4)
-    generate_data_slicer(5)
-    slice_data(6)
-    generate_data_slicer_by_time(7)
-    slice_data_by_time(8)
+def test_main():
+    setup_ipts()
+    filter_runs()
+    set_ipts_runs()
+    input_sample_log_name()
+    generate_data_slicer()
+    slice_data()
+    generate_data_slicer_by_time()
+    slice_data_by_time()
 
+
+if __name__ == '__main__':
+    pytest.main(__file__)

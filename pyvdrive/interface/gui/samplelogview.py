@@ -1,7 +1,7 @@
 import numpy as np
 import bisect
 try:
-    import qtconsole.inprocess
+    # import qtconsole.inprocess
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QMenu, QAction
     from PyQt5.QtGui import QCursor
@@ -109,7 +109,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
                 try:
                     distance = x - array[left_index]
                 except TypeError as type_err:
-                    print '[DB...BAT] x = {0}, array = {1}'.format(x, array)
+                    print('[DB...BAT] x = {0}, array = {1}'.format(x, array))
                     raise type_err
             else:
                 dist_left = x - array[left_index]
@@ -145,15 +145,9 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         :param picker_id_to_remove:
         :return:
         """
-        if False:
-            # TODO - TODAY 190 - Remove after testing
-            self._pickerRangeDict = {pos_x: picker_id for pos_x, picker_id in
-                                     self._pickerRangeDict.items() if picker_id != picker_id_to_remove}
-        else:
-            for pos_x, picker_id in self._pickerRangeDict.items():
-                if picker_id == picker_id_to_remove:
-                    del self._pickerRangeDict[pos_x]
-        # ...
+        for pos_x, picker_id in self._pickerRangeDict.items():
+            if picker_id == picker_id_to_remove:
+                del self._pickerRangeDict[pos_x]
 
         return
 
@@ -175,7 +169,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         # update the new list to parent window
         picker_pos_list = list()
-        print ('[DB...BAT] Clear picker: emit signal with empty position list')
+        print('[DB...BAT] Clear picker: emit signal with empty position list')
         self.mySlicerUpdatedSignal.emit(picker_pos_list)
 
         return
@@ -385,17 +379,8 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
             right_bound = self._rightPickerLimit - self._pickerRange
             if left_bound < self._currMousePosX < right_bound:
                 # free to move
-                if False:
-                    # TODO - TODAY 190 - Remove after testing
-                    self.set_indicator_position(self._currentSelectedPicker, pos_x=self._currMousePosX,
-                                                pos_y=self._currMousePosY)
-                    # update the position dictionary
-                    self._remove_picker_from_range_dictionary(self._currentSelectedPicker)
-                    self._pickerRangeDict[self._currMousePosX] = self._currentSelectedPicker
-                else:
-                    self.update_splitter_picker(self._currentSelectedPicker, self._currMousePosX,
-                                                self._currMousePosY)
-
+                self.update_splitter_picker(self._currentSelectedPicker, self._currMousePosX,
+                                            self._currMousePosY)
                 # update the pickers' positions with parent window
                 updated_picker_positions = self.get_pickers_positions()
                 self.mySlicerUpdatedSignal.emit(updated_picker_positions)
@@ -704,13 +689,13 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # TODO - FIXME - TODAY 190 - Need a use case for target as REAL string
         vec_target_ws = vec_target_ws.astype('int16')
         unique_target_ws_set = set(vec_target_ws)
-        num_segments = len(unique_target_ws_set)
+        # num_segments = len(unique_target_ws_set)
         segment_list = sorted(list(unique_target_ws_set))
         if -1 in segment_list:
             minus_one_index = segment_list.index(-1)
             segment_list.pop(minus_one_index)
 
-        print ('[DB...BAT] Segments: {}'.format(segment_list))
+        print('[DB...BAT] Segments: {}'.format(segment_list))
 
         # construct the data sets for each segments
         seg_dict = dict()
@@ -720,7 +705,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         vec_log_times, vec_log_value = self.canvas().get_data(self._currPlotID)
 
-        print ('[DEBUG...BAT] Log X and Y: size = {}, {}'.format(vec_log_times.shape, vec_log_value.shape))
+        print('[DEBUG...BAT] Log X and Y: size = {}, {}'.format(vec_log_times.shape, vec_log_value.shape))
 
         for i_target in range(vec_target_ws.shape[0] - 1):
             # ignore the non-interesting section
@@ -747,9 +732,9 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
             vec_x_i = vec_log_times[log_time0_index:log_timef_index+1]
             vec_y_i = vec_log_value[log_time0_index:log_timef_index+1]
 
-            print ('[DB...BAT] Locate: Time range {}, {} @ ({}, {}) and ({}, {})'
-                   ''.format(t_start, t_stop, vec_log_times[log_time0_index], vec_log_value[log_time0_index],
-                             vec_log_times[log_timef_index], vec_log_value[log_time0_index]))
+            print('[DB...BAT] Locate: Time range {}, {} @ ({}, {}) and ({}, {})'
+                  ''.format(t_start, t_stop, vec_log_times[log_time0_index], vec_log_value[log_time0_index],
+                            vec_log_times[log_timef_index], vec_log_value[log_time0_index]))
 
             if seg_dict[target_name_i] is None:
                 seg_dict[target_name_i] = vec_x_i, vec_y_i
@@ -792,13 +777,9 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         # get data from the figure
         # Note: remove_all_lines() is nevered call in this class and LogPickerWindow
-        if False:
-            # this is incorrect as the data points on the plot is fewer than real data for fast plotting
-            curr_vec_x, curr_vec_y = self.canvas().get_data(self._currPlotID)
-        else:
-            # TODO - TONIGHT 0 - Make this work!  This is where the bug coming from!
-            full_log_vec_x, full_log_vec_y = self._myParent.get_sample_log_data(self._curr_log_name)
-            curr_vec_x, curr_vec_y = full_log_vec_x, full_log_vec_y
+        # TODO - TONIGHT 0 - Make this work!  This is where the bug coming from!
+        full_log_vec_x, full_log_vec_y = self._myParent.get_sample_log_data(self._curr_log_name)
+        curr_vec_x, curr_vec_y = full_log_vec_x, full_log_vec_y
         # END-IF
 
         num_seg_to_show = vec_targets.shape[0]
@@ -820,9 +801,9 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
             vec_x_i = curr_vec_x[log_time0_index:log_timef_index+1]
             vec_y_i = curr_vec_y[log_time0_index:log_timef_index+1]
 
-            print ('[DB...BAT] Locate: Time range {}, {} @ ({}, {}) and ({}, {})'
-                   ''.format(t_start, t_stop, curr_vec_x[log_time0_index], curr_vec_y[log_time0_index],
-                             curr_vec_x[log_timef_index], curr_vec_y[log_timef_index]))
+            print('[DB...BAT] Locate: Time range {}, {} @ ({}, {}) and ({}, {})'
+                  ''.format(t_start, t_stop, curr_vec_x[log_time0_index], curr_vec_y[log_time0_index],
+                            curr_vec_x[log_timef_index], curr_vec_y[log_timef_index]))
 
             # plot
             target_name = vec_targets[i_seg]
@@ -843,7 +824,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         :param vec_target_ws:
         :return:
         """
-        print ('[DB...BAT] Vector of times: {}'.format(vec_times))
+        print('[DB...BAT] Vector of times: {}'.format(vec_times))
 
         # check state
         if self._currPlotID is None:
@@ -855,11 +836,11 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         # get data from the figure
         # TODO - TODAY 190 - Check whether remove_all_lines() is ever called
-        print ('[DB...BAT] Current Plot ID = {}'.format(self._currPlotID))
+        print('[DB...BAT] Current Plot ID = {}'.format(self._currPlotID))
         vec_x, vec_y = self.canvas().get_data(self._currPlotID)
 
-        print ('[DB...BAT] Sample log vector X range: {}, {}'.format(vec_x[0], vec_x[-1]))
-        print ('[DB...BAT] Slicer times range: {}, {}'.format(vec_times[0], vec_times[-1]))
+        print('[DB...BAT] Sample log vector X range: {}, {}'.format(vec_x[0], vec_x[-1]))
+        print('[DB...BAT] Slicer times range: {}, {}'.format(vec_times[0], vec_times[-1]))
 
         num_color = len(COLOR_LIST)
 
@@ -878,23 +859,22 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
             x_start = vec_times[i_seg]
             x_stop = vec_times[i_seg+1]
-            print ('[DB...BAT] Segment {}: Time range = {}, {}'.format(i_seg, x_start, x_stop))
+            print('[DB...BAT] Segment {}: Time range = {}, {}'.format(i_seg, x_start, x_stop))
 
             # get start time and stop time's index
             i_start = (np.abs(vec_x - x_start)).argmin()
             i_stop = (np.abs(vec_x - x_stop)).argmin()
             if i_start == i_stop:
                 # empty!
-                print '[SampleLogView WARNING] splitter start @ {} ({}), stop @ {} ({}). Unable to generate ' \
-                      'time segment vector. FYI from index {} to {}: {}' \
-                      ''.format(x_start, i_start, x_stop, i_stop, i_start-1, i_stop+1,
-                                vec_x[i_start-1:i_stop+2])
+                print('[SampleLogView WARNING] splitter start @ {} ({}), stop @ {} ({}). '
+                      'Unable to generate time segment vector. FYI from index {} to {}: {}'
+                      ''.format(x_start, i_start, x_stop, i_stop, i_start-1, i_stop+1, vec_x[i_start-1:i_stop+2]))
                 continue
             elif i_start > i_stop:
                 raise RuntimeError('It is impossible to have start index {0} > stop index {1}'
                                    ''.format(i_start, i_stop))
 
-            print ('[DB...BAT] Segment {}: Index range = {}, {}'.format(i_seg, i_start, i_stop))
+            print('[DB...BAT] Segment {}: Index range = {}, {}'.format(i_seg, i_start, i_stop))
 
             # get the partial for plot
             vec_x_i = vec_x[i_start:i_stop+1]

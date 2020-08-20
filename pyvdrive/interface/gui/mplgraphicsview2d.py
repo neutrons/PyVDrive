@@ -1,9 +1,9 @@
-#pylint: disable=invalid-name,too-many-public-methods,too-many-arguments,non-parent-init-called,R0902,too-many-branches,C0302
+#pylint: disable=invalid-name,too-many-public-methods,too-many-arguments,non-parent-init-called,R0902,too-many-branches,C0302  # noqa: E265, E501
 import os
 import numpy as np
 
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5.QtCore import pyqtSignal
     from PyQt5.QtWidgets import QWidget, QSizePolicy, QVBoxLayout
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -180,7 +180,7 @@ class MplGraphicsView2D(QWidget):
         # reset zoom in X range
         self._zoomInXRange = None
 
-        print ('[DB...FIND] Tool Bar Home Triggered')
+        print('[DB...FIND] Tool Bar Home Triggered')
 
         return
 
@@ -188,7 +188,7 @@ class MplGraphicsView2D(QWidget):
         """ Event handling as canvas size updated
         :return:
         """
-        print ('[DB...FIND] View is updated.  From {}'.format(self.__class__.__name__))
+        print('[DB...FIND] View is updated.  From {}'.format(self.__class__.__name__))
 
         # # update the indicator
         # new_x_range = self.getXLimit()
@@ -428,7 +428,7 @@ class Qt4Mpl2DCanvas(FigureCanvas):
         self.setParent(parent)
 
         # Set size policy to be able to expanding and resizable with frame
-        FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding,QSizePolicy.Expanding)
+        FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
         # Variables to manage all lines/subplot
@@ -520,7 +520,7 @@ class Qt4Mpl2DCanvas(FigureCanvas):
         # Do plot: resolution on Z axis (color bar is set to 100)
         self.axes.clear()
         if use_contour:
-            contour_plot = self.axes.contourf(grid_x, grid_y, matrix_z, 100)
+            self._imagePlot = self.axes.contourf(grid_x, grid_y, matrix_z, 100)
         else:
             self._imagePlot = self.axes.imshow(matrix_z,
                                                extent=[grid_x.min(), grid_x.max(),
@@ -529,7 +529,7 @@ class Qt4Mpl2DCanvas(FigureCanvas):
         # END-IF-ELSE: Try different plotting option
 
         labels = [item.get_text() for item in self.axes.get_yticklabels()]
-        print '[DB...BAT] Number of Y labels = ', len(labels), ', Number of Y = ', len(vec_y)
+        print('[DB...BAT] Number of Y labels = ', len(labels), ', Number of Y = ', len(vec_y))
 
         # TODO/ISSUE/NOW: how to make this part more flexible
         if len(labels) == 2*len(vec_y) - 1:
@@ -542,15 +542,6 @@ class Qt4Mpl2DCanvas(FigureCanvas):
         # explicitly set aspect ratio of the image
         self.axes.set_aspect('auto')
 
-        if False:  # contour
-            # Set color bar.  plt.colorbar() does not work!
-            if self._colorBar is None:
-                # set color map type
-                contour_plot.set_cmap('spectral')
-                self._colorBar = self.fig.colorbar(contour_plot)
-            else:
-                self._colorBar.update_bruteforce(contour_plot)
-
         # Flush...
         self._flush()
 
@@ -562,7 +553,6 @@ class Qt4Mpl2DCanvas(FigureCanvas):
         @param xmax:
         @param ymin:
         @param ymax:
-        @param holdprev:
         @param yticklabels: list of string for y ticks
         @return:
         """
@@ -573,12 +563,12 @@ class Qt4Mpl2DCanvas(FigureCanvas):
         # show image
         self._imagePlot = self.axes.imshow(array2d, extent=[xmin, xmax, ymin, ymax], interpolation='none')
 
-        print (self._imagePlot, type(self._imagePlot))
+        print(self._imagePlot, type(self._imagePlot))
 
         # set y ticks as an option:
         if yticklabels is not None:
             # it will always label the first N ticks even image is zoomed in
-            print ("[FIXME]: The way to set up the Y-axis ticks is wrong!")
+            print("[FIXME]: The way to set up the Y-axis ticks is wrong!")
             self.axes.set_yticklabels(yticklabels)
 
         # explicitly set aspect ratio of the image
@@ -601,8 +591,6 @@ class Qt4Mpl2DCanvas(FigureCanvas):
     def add_image_file(self, imagefilename):
         """ Add an image by file
         """
-        #import matplotlib.image as mpimg
-
         # set aspect to auto mode
         self.axes.set_aspect('auto')
 
@@ -633,25 +621,6 @@ class Qt4Mpl2DCanvas(FigureCanvas):
         assert isinstance(array2d, np.ndarray), 'blabla'
         if array2d.shape[1] < 3:
             raise RuntimeError('blabla3')
-
-        if False:
-            array2d = np.ndarray(shape=(100, 3), dtype='float')
-            array2d[0][0] = 0
-            array2d[0][1] = 0
-            array2d[0][2] = 1
-
-            import random
-            for index in range(1, 98):
-                x = random.randint(1, 255)
-                y = random.randint(1, 255)
-                z = random.randint(1, 20000)
-                array2d[index][0] = float(x)
-                array2d[index][1] = float(y)
-                array2d[index][2] = float(z)
-
-            array2d[99][0] = 255
-            array2d[99][1] = 255
-            array2d[99][2] = 1
 
         self._scatterPlot = self.axes.scatter(array2d[:, 0], array2d[:, 1], s=80, c=array2d[:, 2],
                                               marker='s')
@@ -786,7 +755,6 @@ class Qt4Mpl2DCanvas(FigureCanvas):
         assert isinstance(title, str), 'Title must be a string but not a {0}.'.format(type(title))
         assert isinstance(color, str), 'Color must be a string but not a {0}.'.format(type(color))
 
-        print '[DB...BAT] Set {0} in color {1} as the figure\'s title.'.format(title, color)
         self.setWindowTitle(title)
 
         self.draw()
@@ -878,9 +846,9 @@ class Qt4Mpl2DCanvas(FigureCanvas):
         num_markers = len(MplLineMarkers)
         num_colors = len(MplBasicColors)
 
-        for i in xrange(num_markers):
+        for i in range(num_markers):
             marker = MplLineMarkers[i]
-            for j in xrange(num_colors):
+            for j in range(num_colors):
                 color = MplBasicColors[j]
                 combo_list.append((marker, color))
             # ENDFOR (j)
@@ -1060,7 +1028,7 @@ class MyNavigationToolbar(NavigationToolbar2):
         try:
             super(MyNavigationToolbar, self).release_zoom(event)
         except ValueError as run_err:
-            print ('[ERROR-Caught] Release Zoom: {}'.format(run_err))
+            print('[ERROR-Caught] Release Zoom: {}'.format(run_err))
 
         self.canvas_zoom_released.emit()
 

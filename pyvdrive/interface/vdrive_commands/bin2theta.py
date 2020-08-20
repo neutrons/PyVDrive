@@ -1,14 +1,9 @@
 import os
-import time
 from process_vcommand import VDriveCommand
-from process_vcommand import convert_string_to
-from pyvdrive.lib import datatypeutility
 try:
-    from PyQt5 import QtCore
     from PyQt5.QtCore import pyqtSignal
 except (ImportError, RuntimeError) as import_err:
-    print ('CHOP: {}'.format(import_err))
-    from PyQt4 import QtCore
+    print('CHOP: {}'.format(import_err))
     from PyQt4.QtCore import pyqtSignal
 
 
@@ -27,11 +22,11 @@ class BinBy2Theta(VDriveCommand):
     """
     Process command MERGE
     """
-    SupportedArgs = ['HELP', 'IPTS', 'RUNS','RUNV', 'IPARM',
+    SupportedArgs = ['HELP', 'IPTS', 'RUNS', 'RUNV', 'IPARM',
                      'PANEL', 'MIN', 'MAX', 'STEP', 'SCALE',
                      'BINFOLDER', 'DRYRUN', 'FULLPROF']
 
-    reduceSignal = QtCore.pyqtSignal(str)  # signal to send out
+    reduceSignal = pyqtSignal(str)  # signal to send out
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -192,7 +187,7 @@ class BinBy2Theta(VDriveCommand):
             if output_dir is None:
                 # default output directory
                 output_dir = os.path.join('/SNS/VULCAN/IPTS-{}/shared/'.format(self._iptsNumber),
-                                          'binned_data/'.format(run_number_list[0]))
+                                          'binned_data/')
         except RuntimeError as run_err:
             return False, 'Error in parsing BINBY2THETA parameters: {0}'.format(run_err)
 
@@ -217,4 +212,3 @@ class BinBy2Theta(VDriveCommand):
             return False, 'Unable to reduce by 2theta: {}'.format(run_err)
 
         return True, ''
-

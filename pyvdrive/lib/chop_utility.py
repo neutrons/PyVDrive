@@ -1,11 +1,9 @@
 # Classes to process sample log and chopping
 import os
 import random
-import math
 import numpy
 import mantid_helper
-from mantid.api import ITableWorkspace, MatrixWorkspace
-from mantid.dataobjects import SplittersWorkspace
+from mantid.api import ITableWorkspace
 import datatypeutility
 
 FifteenYearsInSecond = 15*356*24*3600
@@ -20,6 +18,7 @@ class TimeSegment(object):
     - start time (_data[0]) and stop time (_data[1]) can be either epoch time or relative time.
       and their units are SECONDS
     """
+
     def __init__(self, start_time, stop_time, target_id):
         """
         Initialization
@@ -91,6 +90,7 @@ class DataChopper(object):
     1. No 2 NeXus data files have the same name
     2. Run number can be retrieved
     """
+
     def __init__(self, run_number, nxs_file_name):
         """
         Initialization
@@ -126,7 +126,8 @@ class DataChopper(object):
         :return:
         """
         # get workspace and proton charge log
-        proton_charges = mantid_helper.get_workspace_property(self._meta_ws_name, 'proton_charge', False)
+        proton_charges = mantid_helper.get_workspace_property(
+            self._meta_ws_name, 'proton_charge', False)
         vec_np_times = proton_charges.times
         vec_pc_value = proton_charges.value
 
@@ -188,11 +189,11 @@ class DataChopper(object):
         # auto target (1, 2, 3, ...) or user specified target
         # TODO - TONIGHT - better to check all the splitters
         if len(split_list) == 0:
-            raise WhatEver
+            raise RuntimeError('Splitter has zero size')
         else:
             splitter0 = split_list[0]
             if len(splitter0) < 2:
-                raise WhatEver
+                raise RuntimeError('Splitter 0 shall have at least 2 values')
             elif len(splitter0) == 2:
                 auto_target = True
             elif splitter0[2] is None:
@@ -230,7 +231,8 @@ class DataChopper(object):
         info_str = 'Run {0}:\t'.format(self._myRunNumber)
 
         # get proton charge
-        proton_charge_property = mantid_helper.get_sample_log_tsp(self._meta_ws_name, 'proton_charge')
+        proton_charge_property = mantid_helper.get_sample_log_tsp(
+            self._meta_ws_name, 'proton_charge')
         pc_times = proton_charge_property.times
         # these are numpy.datetime64 object.  cannot be add to string like {}.format()
         info_str += 'run start: {0}; run stop:  {1}' \
@@ -257,8 +259,10 @@ class DataChopper(object):
 
     def map_sample_logs(self, log_name_x, log_name_y, start_time, stop_time):
         # return with relative time
-        vec_times, vec_log_x, vec_log_y = mantid_helper.map_sample_logs(self._meta_ws_name, log_name_x, log_name_y)
-        # # TODO - TONIGHT 0 - compare with merge_2_logs shall be a static in the utility and called by plot_sample_log()!
+        vec_times, vec_log_x, vec_log_y = mantid_helper.map_sample_logs(
+            self._meta_ws_name, log_name_x, log_name_y)
+        # TODO - TONIGHT 0 - compare with merge_2_logs shall be a static in the utility and
+        # called by plot_sample_log()!
         # vec_log_x, vec_log_y = vdrivehelper.merge_2_logs(vec_times_x, vec_value_x, vec_times, vec_value_y)
 
         return vec_times, vec_log_x, vec_log_y
@@ -328,11 +332,11 @@ class DataChopper(object):
             run_start_time = mantid_helper.get_run_start(self._meta_ws_name, time_unit='second')
         else:
             run_start_time = None
-        print '[INFO] Run start time = ', run_start_time, 'of type ', type(run_start_time)
+        print('[INFO] Run start time = ', run_start_time, 'of type ', type(run_start_time))
 
         # get workspace
         slice_ws_name = chopper['splitter']
-        print ('[DB...BAT] Slicer name: {}'.format(slice_ws_name))
+        print('[DB...BAT] Slicer name: {}'.format(slice_ws_name))
         try:
             vec_times, vec_ws_index = mantid_helper.convert_splitters_workspace_to_vectors(
                 split_ws=slice_ws_name, run_start_time=run_start_time)
@@ -395,12 +399,16 @@ class DataChopper(object):
         assert isinstance(log_name, str), 'Log name must be a string.'
         assert isinstance(log_value_step, float) or log_value_step is None,\
             'Log value step must be float or None but not %s.' % type(log_value_step)
-        assert isinstance(start_time, float) or start_time is None, 'Start time must be None or float.'
+        assert isinstance(
+            start_time, float) or start_time is None, 'Start time must be None or float.'
         assert isinstance(stop_time, float) or stop_time is None, 'Stop time must be None or float'
-        assert isinstance(min_log_value, float) or min_log_value is None, 'Min log value must be None or float'
-        assert isinstance(max_log_value, float) or max_log_value is None, 'Max log value must be None or float'
+        assert isinstance(
+            min_log_value, float) or min_log_value is None, 'Min log value must be None or float'
+        assert isinstance(
+            max_log_value, float) or max_log_value is None, 'Max log value must be None or float'
 
-        assert isinstance(direction, str), 'Direction must be a string but not %s.' % type(direction)
+        assert isinstance(
+            direction, str), 'Direction must be a string but not %s.' % type(direction)
         if direction not in ['Both', 'Increase', 'Decrease']:
             return False, 'Value change direction %s is not supported.' % direction
 
@@ -456,15 +464,18 @@ class DataChopper(object):
         """
         # Check inputs
         if start_time is not None:
-            datatypeutility.check_float_variable('Event filters starting time', start_time, (0., None))
+            datatypeutility.check_float_variable(
+                'Event filters starting time', start_time, (0., None))
         if stop_time is not None:
-            datatypeutility.check_float_variable('Event filtering stopping time', stop_time, (1.E-10, None))
+            datatypeutility.check_float_variable(
+                'Event filtering stopping time', stop_time, (1.E-10, None))
         if start_time is not None and stop_time is not None and start_time >= stop_time:
             raise RuntimeError('User specified event filters starting time {} is after stopping time {}'
                                ''.format(start_time, stop_time))
 
         datatypeutility.check_float_variable('Time interval', time_interval, (0., None))
-        datatypeutility.check_float_variable('Overlap time interval', overlap_time_interval, (0., None))
+        datatypeutility.check_float_variable(
+            'Overlap time interval', overlap_time_interval, (0., None))
         if time_interval <= overlap_time_interval:
             raise RuntimeError('Time step/interval {} cannot be equal or less than overlapped time period '
                                '{}'.format(time_interval, overlap_time_interval))
@@ -474,7 +485,7 @@ class DataChopper(object):
             start_time = 0
         if stop_time is None:
             stop_time = mantid_helper.get_run_stop(self._meta_ws_name, 'second', is_relative=True)
-        print ('[DB...BAT] Run stop = {}'.format(stop_time))
+        print('[DB...BAT] Run stop = {}'.format(stop_time))
 
         split_list = list()
         split_t0 = start_time
@@ -513,7 +524,7 @@ class DataChopper(object):
             # good
             splitter_tag_list.append(splitter_tag_i)
             self._chopSetupDict[splitter_tag_i] = {'splitter': splitter_tag_i,
-                                                 'info': splitter_info_i}
+                                                   'info': splitter_info_i}
         # END-FOR
 
         return True, splitter_tag_list
@@ -526,9 +537,11 @@ class DataChopper(object):
 
         # Check inputs
         if start_time is not None:
-            datatypeutility.check_float_variable('Event filters starting time', start_time, (0., None))
+            datatypeutility.check_float_variable(
+                'Event filters starting time', start_time, (0., None))
         if stop_time is not None:
-            datatypeutility.check_float_variable('Event filtering stopping time', stop_time, (1.E-10, None))
+            datatypeutility.check_float_variable(
+                'Event filtering stopping time', stop_time, (1.E-10, None))
         if start_time is not None and stop_time is not None and start_time >= stop_time:
             raise RuntimeError('User specified event filters starting time {} is after stopping time {}'
                                ''.format(start_time, stop_time))
@@ -566,6 +579,7 @@ class CurveSlicerGenerator(object):
     """
     A slicer generator for slicing data along a curve
     """
+
     def __init__(self, vec_times, vec_x, vec_y):
         """
         initialization
@@ -625,7 +639,8 @@ class CurveSlicerGenerator(object):
         if method == 'fft':
             self._smooth_vec_y = mantid_helper.fft_smooth(self._vec_x, self._vec_y, params)
         elif method == 'nearest':
-            self._smooth_vec_y = mantid_helper.nearest_neighbor_smooth(self._vec_x, self._vec_y, params)
+            self._smooth_vec_y = mantid_helper.nearest_neighbor_smooth(
+                self._vec_x, self._vec_y, params)
 
         return
 
@@ -648,6 +663,7 @@ class CurveSlicerGenerator(object):
 
         return
 # END-CLASS
+
 
 def get_standard_manual_tag(run_number):
     """
@@ -710,8 +726,8 @@ def is_overlap_splitter(split_ws_name):
     # return True if the number of splitters is too large, i.e., exceeds 10,000
     split_number = get_splitters_number(split_ws)
     if split_number >= LARGE_NUMBER_SPLITTER:
-        print '[Notice] Number of splitters = {0}.  It is too large to check. Return True instead' \
-              ''.format(split_number)
+        print('[Notice] Number of splitters = {0}.  It is too large to check. Return True instead'
+              ''.format(split_number))
         return True
 
     vec_splitter = get_splitters(split_ws)

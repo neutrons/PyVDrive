@@ -94,6 +94,7 @@ class VdriveView(VDriveCommand):
             self.set_ipts()
         except RuntimeError as run_err:
             # TODO - 20180807 Shall check with SHOW
+            print('[ERROR] Failed to set IPTS due to {}'.format(run_err))
             return True, ''
 
         # parse RUNS and RUNE

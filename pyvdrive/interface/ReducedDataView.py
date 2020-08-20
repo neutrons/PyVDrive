@@ -8,7 +8,7 @@
 import os
 import numpy
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5.QtWidgets import QMainWindow
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
@@ -26,12 +26,12 @@ try:
 except AttributeError:
     def _fromUtf8(s):
         return s
-        
+
 from pyvdrive.interface.gui.generalrunview import GeneralRunView
 import pyvdrive.lib.datatypeutility
 from pyvdrive.lib import datatypeutility
 import atomic_data_viewers
-from gui.samplelogview import LogGraphicsView
+from pyvdrive.interface.gui.samplelogview import LogGraphicsView
 from pyvdrive.lib import reduce_VULCAN
 from pyvdrive.lib import vdrive_constants
 from atomic_data_viewers import PlotInformation
@@ -68,6 +68,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
     """ Class for general-purposed plot window to view reduced data
     """
     # class
+
     def __init__(self, parent=None):
         """ Init
         """
@@ -102,19 +103,24 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._curr_data_key = None  # current (last loaded) workspace name as data key
         self._currRunNumber = None   # run number of single run reduced
         # single runs: single run combo box items and other information
-        self._single_combo_data_key_dict = dict()  # [single run combo box name] = run number (aka data key)
+        # [single run combo box name] = run number (aka data key)
+        self._single_combo_data_key_dict = dict()
         self._single_combo_name_list = list()  # single run combo box name list with orders sync with combo box
-        self._single_run_plot_option = dict()  # [data key] = dict() such as van_norm, van_run, pc_norm...
+        # [data key] = dict() such as van_norm, van_run, pc_norm...
+        self._single_run_plot_option = dict()
         self._single_run_data_dict = dict()  # [run number/reduced file name] = data key
         self._data_key_run_seq = dict()  # [data key] = run number, chop-seq
 
         # chopped runs: chop run combo box items and other information
-        self._chop_combo_data_key_dict = dict()  # [chop run combo box name] = run number, slicer key;
+        # [chop run combo box name] = run number, slicer key;
+        self._chop_combo_data_key_dict = dict()
         # sync with comboBox_choppedRunNumber
         self._chop_combo_name_list = list()  # chop run combo box names with orders sync with combo box
         self._chop_seq_combo_name_list = list()   # chop sequence combo box names with orders sync with combo box
-        self._chop_run_plot_option = dict()  # [chop key] = dict() such as van_norm, van_run, pc_norm...
-        self._chopped_run_data_dict = dict()  # [run number] = [seq index]: run + seq = key to find the data
+        # [chop key] = dict() such as van_norm, van_run, pc_norm...
+        self._chop_run_plot_option = dict()
+        # [run number] = [seq index]: run + seq = key to find the data
+        self._chopped_run_data_dict = dict()
         # self._curr_chop_data_key = None   # run number of sliced case
 
         # record of X value range
@@ -125,8 +131,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._log_data_key = None
         self._log_display_name_dict = dict()   # [log display name] = log full name (to look up)
         self._sample_log_dict = dict()  # [IPTS][RUN] = {'ProtonCharge': xxx, 'MTS': xxx, ...}
-        self._sliced_log_dict = dict()  # [RUN] = {'start': ..., 'mean': ..., 'end': ..., 'IPTS': xxx}
-        self._sliced_h5_log_dict = dict()  # [RUN] = {[CHOP-INDEX]: dict(1) , [CHOP-INDEX]:dict(2)...}
+        # [RUN] = {'start': ..., 'mean': ..., 'end': ..., 'IPTS': xxx}
+        self._sliced_log_dict = dict()
+        # [RUN] = {[CHOP-INDEX]: dict(1) , [CHOP-INDEX]:dict(2)...}
+        self._sliced_h5_log_dict = dict()
         # dict(i):  {'ProtonCharge': (vec Time, vec Value), ...}
         self._sample_log_name_list = generate_sample_log_list()  # list of sample logs that are viable to plot
         self._sample_log_info_dict = dict()  # [meta_data_key] = ipts, run number
@@ -141,7 +149,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # FIND OUT: self._choppedSampleDict = dict()  # key: data workspace name. value: sample (NeXus) workspace name
 
         # Controlling data structure on lines that are plotted on graph
-        self._currentPlotDataKeyDict = dict()  # (UI-key): tuple (data key, bank ID, unit); value: value = vec x, vec y
+        # (UI-key): tuple (data key, bank ID, unit); value: value = vec x, vec y
+        self._currentPlotDataKeyDict = dict()
         self._currentPlotID = None   # ID of current plot
         # this is a temporary storage of reduced data loaded and cached
 
@@ -165,7 +174,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.pushButton_refreshList.clicked.connect(self.do_refresh_existing_runs)  # refresh
 
         # what to plot
-        self.ui.radioButton_chooseSingleRun.toggled.connect(self.evt_toggle_run_type)   # w/ radioButton_chooseChopped
+        self.ui.radioButton_chooseSingleRun.toggled.connect(
+            self.evt_toggle_run_type)   # w/ radioButton_chooseChopped
 
         # section: plot single run
         self.ui.pushButton_prevRun.clicked.connect(self.do_plot_prev_single_run)
@@ -176,8 +186,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # section: plot chopped run
         self.ui.pushButton_prevChopped.clicked.connect(self.do_plot_prev_chopped_sequence)
         self.ui.pushButton_nextChopped.clicked.connect(self.do_plot_next_chopped_sequence)
-        self.ui.comboBox_choppedRunNumber.currentIndexChanged.connect(self.evt_plot_different_chopped_run)
-        self.ui.comboBox_chopSeq.currentIndexChanged.connect(self.evt_plot_different_chopped_sequence)
+        self.ui.comboBox_choppedRunNumber.currentIndexChanged.connect(
+            self.evt_plot_different_chopped_run)
+        self.ui.comboBox_chopSeq.currentIndexChanged.connect(
+            self.evt_plot_different_chopped_sequence)
 
         # section: plot sample log
         self.ui.pushButton_loadLogs.clicked.connect(self.do_load_sample_log)
@@ -316,11 +328,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # TODO - TONIGHT 196 - Disabled to load data from memory
             # load from memory
             # FIXME - TOMORROW - NOT TEST YET! Need to be on analysis cluster!
-            data_key_dict, run_number_str = self._myController.something.load_chopped_data(run_number, chopped_seq_list)
+            data_key_dict, run_number_str = self._myController.something.load_chopped_data(
+                run_number, chopped_seq_list)
             raise NotImplementedError('ASAP: What shall be chop key?')
         elif ipts_number is not None and run_number is not None:
             # load data from archive
-            data_key, loaded_seq_list = self.load_reduced_data(ipts_number, run_number, chopped_seq_list)
+            data_key, loaded_seq_list = self.load_reduced_data(
+                ipts_number, run_number, chopped_seq_list)
         else:
             raise NotImplementedError('Not sure how to load from an arbitrary directory!')
 
@@ -384,7 +398,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 self._single_run_data_dict[reduced_data_file] = data_key
                 self._data_key_run_seq[data_key] = reduced_data_file, None
             except RuntimeError as run_err:
-                GuiUtility.pop_dialog_error(self, 'Unable to load {} due to {}'.format(reduced_data_file, run_err))
+                GuiUtility.pop_dialog_error(
+                    self, 'Unable to load {} due to {}'.format(reduced_data_file, run_err))
                 return
         # END-IF-ELSE
 
@@ -465,7 +480,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             sample_log_names = self._sample_log_name_list
         else:
             try:
-                log_files = self._myController.archive_manager.locate_sliced_h5_logs(ipts_number, run_number)
+                log_files = self._myController.archive_manager.locate_sliced_h5_logs(
+                    ipts_number, run_number)
             except RuntimeError as any_err:
                 GuiUtility.pop_dialog_error(self, 'Unable to load log files of IPTS-{} Run-{} due to {}'
                                                   ''.format(ipts_number, run_number, any_err))
@@ -544,9 +560,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         status, data_bank_list = self._myController.get_reduced_run_info(run_number=run_number,
                                                                          data_key=data_key_temp)  # , info_type='bank')
         if not status:
-            print ('[ERROR-POP] Unable to get bank list from {0}'.format(data_key))
+            print('[ERROR-POP] Unable to get bank list from {0}'.format(data_key))
             return
-        print data_bank_list
+        print(data_bank_list)
 
         # number of banks are same
         if len(data_bank_list) == len(self._bankIDList):
@@ -577,7 +593,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # get chopped runs in the memory (loaded or real time reduced)
         # FIXME TODO - TODAY 196 - only runs loaded from GSASs
-        chopped_run_list = self._myController.get_focused_runs(chopped=True)  # chop keys: list of tuples
+        chopped_run_list = self._myController.get_focused_runs(
+            chopped=True)  # chop keys: list of tuples
 
         # FIXME - delete after #191
         # # get the current (chopped) run's name
@@ -609,7 +626,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 if slicer_key_i:
                     # chopped run in memory
                     chop_run_name = '{}: {}' \
-                                    ''.format(run_number_i, slicer_key_i.lower().split('_')[0].replace('slicer', ''))
+                                    ''.format(run_number_i, slicer_key_i.lower().split(
+                                        '_')[0].replace('slicer', ''))
                     chop_key = run_number_i, slicer_key_i
                 else:
                     # chopped run from GSAS
@@ -666,7 +684,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             self._currentPlotID = None
             self.ui.graphicsView_logPlot.reset()
 
-            # TODO - TONIGHT 191.1 - May need to clear the chop sequence combo box... But there are other variables to set
+            # TODO - TONIGHT 191.1 - May need to clear the chop sequence combo box...
+            # TODO - But there are other variables to set
         else:
             # set the chop run to 'current'/previous chopped name
             combo_index = self._chop_combo_name_list.index(curr_chopped_run_name)
@@ -697,8 +716,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             single_runs_list.sort()
 
             for run_number, data_key in single_runs_list:
-                print ('[INFO] Add loaded run {} (type = {}) data key = {}'
-                       ''.format(run_number, type(run_number), data_key))
+                print('[INFO] Add loaded run {} (type = {}) data key = {}'
+                      ''.format(run_number, type(run_number), data_key))
 
                 # come up an entry name
                 # convert run  number from integer to string as the standard
@@ -706,7 +725,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
                 # add to combo box as the data key that can be used to refer
                 self.ui.comboBox_runs.addItem(item_name_i)
-                self._single_combo_name_list.append(item_name_i)  # synchronize single_run_list with combo box
+                # synchronize single_run_list with combo box
+                self._single_combo_name_list.append(item_name_i)
                 self._single_combo_data_key_dict[item_name_i] = data_key
             # END-FOR
         # END-IF
@@ -960,9 +980,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # END-IF
 
             # convert log name from display name to MTS log name
-            print ('[DB...BAT] Display Y name: {}'.format(y_log_name))
+            print('[DB...BAT] Display Y name: {}'.format(y_log_name))
             y_log_name = self._nexus_mtd_log_name_map[y_log_name]
-            print ('[DB...BAT] Mapped to {}'.format(y_log_name))
+            print('[DB...BAT] Mapped to {}'.format(y_log_name))
             if x_log_name != 'Time':
                 x_log_name = self._nexus_mtd_log_name_map[x_log_name]
 
@@ -983,7 +1003,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         elif self.ui.radioButton_plotDetailedSlicedLog.isChecked() and True:  # Data not in memory
             # Plot sliced sample logs in details (all data points)
             try:
-                log_file_tuples = self._myController.archive_manager.locate_sliced_h5_logs(ipts_number, run_number)
+                log_file_tuples = self._myController.archive_manager.locate_sliced_h5_logs(
+                    ipts_number, run_number)
                 log_value_dict = self.load_chopped_h5_logs(log_file_tuples)
                 self.set_sliced_h5_logs(log_value_dict)
             except RuntimeError as run_err:
@@ -1004,19 +1025,22 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 if x_log_name == 'Time':
                     vec_time = self._sliced_h5_log_dict[chop_index][y_log_name][0]
                     vec_splitter_time, vec_splitter_value = self._sliced_h5_log_dict[chop_index]['splitter']
-                    vec_x, vec_y = self.process_sliced_log(vec_time, vec_y, vec_splitter_time, vec_splitter_value)
+                    vec_x, vec_y = self.process_sliced_log(
+                        vec_time, vec_y, vec_splitter_time, vec_splitter_value)
 
                     # add a vector along with splitter
                     num_splitters = vec_splitter_time.shape[0] - 1
                     # for step function
                     max_y = vec_y.max()
                     min_y = vec_y.min()
-                    step_vec_x = numpy.ndarray(shape=(num_splitters * 2 + 1,), dtype=vec_splitter_time.dtype)
+                    step_vec_x = numpy.ndarray(
+                        shape=(num_splitters * 2 + 1,), dtype=vec_splitter_time.dtype)
                     step_vec_y = numpy.ndarray(shape=step_vec_x.shape, dtype='float')
 
                     # set up step function: times
                     step_vec_x[::2] = vec_splitter_time  # original splitter time
-                    step_vec_x[1::2] = step_vec_x[2::2] - 0.001  # shorter than a pulse... good enough
+                    # shorter than a pulse... good enough
+                    step_vec_x[1::2] = step_vec_x[2::2] - 0.001
                     step_vec_y[0::4] = step_vec_y[1::4] = min_y
                     step_vec_y[2::4] = step_vec_y[3::4] = max_y
 
@@ -1049,26 +1073,29 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         else:
             # From memory:
-            raise NotImplementedError('It has not been implemented to load sliced logs from memory/workspaces')
+            raise NotImplementedError(
+                'It has not been implemented to load sliced logs from memory/workspaces')
 
-            workspace_key = str(self.ui.comboBox_chopSeq.currentText())
-            workspace_key_list = [workspace_key]
-
-            for workspace_key in workspace_key_list:
-                # get the name of the workspace containing sample logs
-                if workspace_key in self._choppedSampleDict:
-                    # this is for loaded GSAS and NeXus file
-                    sample_key = self._choppedSampleDict[workspace_key]
-                else:
-                    # just reduced workspace
-                    sample_key = workspace_key
-
-                # get the sample log time and value
-                vec_times, vec_value = self._myController.get_sample_log_values(sample_key, sample_name, relative=True)
-
-                # plot
-                self.ui.graphicsView_logPlot.plot_sample_data(vec_times, vec_value, workspace_key, sample_name)
-                # END-FOR
+            # workspace_key = str(self.ui.comboBox_chopSeq.currentText())
+            # workspace_key_list = [workspace_key]
+            #
+            # for workspace_key in workspace_key_list:
+            #     # get the name of the workspace containing sample logs
+            #     if workspace_key in self._choppedSampleDict:
+            #         # this is for loaded GSAS and NeXus file
+            #         sample_key = self._choppedSampleDict[workspace_key]
+            #     else:
+            #         # just reduced workspace
+            #         sample_key = workspace_key
+            #
+            #     # get the sample log time and value
+            #     vec_times, vec_value = self._myController.get_sample_log_values(
+            #         sample_key, sample_name, relative=True)
+            #
+            #     # plot
+            #     self.ui.graphicsView_logPlot.plot_sample_data(
+            #         vec_times, vec_value, workspace_key, sample_name)
+            #     # END-FOR
         # END-FOR
 
         return
@@ -1214,7 +1241,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._mutexChopRunList = False
         self._mutexChopSeqList = False
 
-
         # # could be an integer as run number: convert to string
         # if isinstance(set_to, int):
         #     set_to = str(set_to)
@@ -1224,12 +1250,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # datatypeutility.check_bool_variable('Flag to indicate whether the next will be set to chopped runs'
         #                                     'single run', is_chopped)
 
-
-
         # TODO - TONIGHT 191 - ....
         # .. get current name
-
-
 
         # TODO - TONIGHT 191 - ....
         # .. set back to current name (if existed)
@@ -1252,7 +1274,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         #     # NOTE: be careful about non-existing chop name and seq name
         #     if set_to in self._chop_combo_name_list:
         #         new_chop_index = self._chop_combo_name_list.index(set_to)
-        #         self.ui.comboBox_choppedRunNumber.setCurrentIndex(new_chop_index)  # this will trigger the event to plot
+        #         self.ui.comboBox_choppedRunNumber.setCurrentIndex(new_chop_index)
+        #         # this will trigger the event to plot
         #         if set_to_seq in self._chop_seq_combo_name_list:
         #             new_seq_index = self._chop_seq_combo_name_list.index(set_to_seq)
         #             self.ui.comboBox_chopSeq.setCurrentIndex(new_seq_index)
@@ -1292,8 +1315,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         if chop_run_name is None:
             # use the current name
             chop_run_name = str(self.ui.comboBox_choppedRunNumber.currentText())
-            print ('[.....] current name = {} / {}'
-                   ''.format(chop_run_name, self.ui.comboBox_choppedRunNumber.currentIndex()))
+            print('[.....] current name = {} / {}'
+                  ''.format(chop_run_name, self.ui.comboBox_choppedRunNumber.currentIndex()))
 
             # exception for empty box
             if chop_run_name == '':
@@ -1304,8 +1327,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # focus to the new one
             item_index = self._chop_combo_name_list.index(chop_run_name)
 
-            print ('[.....] target name = {}, focus to {}... combo name list: {}'
-                   ''.format(chop_run_name, item_index, self._chop_combo_name_list))
+            print('[.....] target name = {}, focus to {}... combo name list: {}'
+                  ''.format(chop_run_name, item_index, self._chop_combo_name_list))
 
             self.ui.comboBox_choppedRunNumber.setCurrentIndex(item_index)
 
@@ -1325,7 +1348,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         chop_run_key = self._chop_combo_data_key_dict[chop_run_name]
         seq_list = self._myController.project.get_chopped_sequence(chop_run_key)
-        print ('[DB...BAT] Reduced View Chopped sequence of {}: {}'.format(chop_run_key, seq_list))
+        print('[DB...BAT] Reduced View Chopped sequence of {}: {}'.format(chop_run_key, seq_list))
 
         # clean combo box
         self.ui.comboBox_chopSeq.clear()
@@ -1346,13 +1369,12 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             seq_index = self._chop_seq_combo_name_list.index(slice_sequence_name)
             self.ui.comboBox_chopSeq.setCurrentIndex(seq_index)
         else:
-            print ('[WARNING] Unable to focus chop run {} to sequence {}'.format(chop_run_name, slice_sequence_name))
-            debug_string = ''
+            print('[WARNING] Unable to focus chop run {} to sequence {}'.format(
+                chop_run_name, slice_sequence_name))
             # focus sequence
             # for name in self._chop_seq_combo_name_list:
             #     print (name, type(name))
             # print (slice_sequence_name, type(slice_sequence_name))
-
 
         self._mutexChopSeqList = False  # unlock
 
@@ -1388,7 +1410,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :return:
         """
 
-
         # could be an integer as run number: convert to string
         if isinstance(set_to, int):
             set_to = str(set_to)
@@ -1408,7 +1429,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                         set_to = combo_name
                         break
             new_single_index = self._single_combo_name_list.index(set_to)
-            self.ui.comboBox_runs.setCurrentIndex(new_single_index)  # this will trigger the event to plot!
+            # this will trigger the event to plot!
+            self.ui.comboBox_runs.setCurrentIndex(new_single_index)
 
         elif set_to is not None and is_chopped:
             # need to update the focus to chopped run and plot
@@ -1416,7 +1438,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # NOTE: be careful about non-existing chop name and seq name
             if set_to in self._chop_combo_name_list:
                 new_chop_index = self._chop_combo_name_list.index(set_to)
-                self.ui.comboBox_choppedRunNumber.setCurrentIndex(new_chop_index)  # this will trigger the event to plot
+                self.ui.comboBox_choppedRunNumber.setCurrentIndex(
+                    new_chop_index)  # this will trigger the event to plot
                 if set_to_seq in self._chop_seq_combo_name_list:
                     new_seq_index = self._chop_seq_combo_name_list.index(set_to_seq)
                     self.ui.comboBox_chopSeq.setCurrentIndex(new_seq_index)
@@ -1428,7 +1451,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                     # self._mutexChopSeqList = False
                     return
             else:
-                GuiUtility.pop_dialog_error(self, '{} does not exist in chopped runs'.format(set_to))
+                GuiUtility.pop_dialog_error(
+                    self, '{} does not exist in chopped runs'.format(set_to))
                 # self._mutexChopRunList = False
                 # self._mutexChopSeqList = False
                 return
@@ -1643,8 +1667,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         Handle the event if there is a change in chopped run to plot
         :return:
         """
-        print ('[DB.............BAT] Chopped run is changed... size = {}'
-               ''.format(self.ui.comboBox_choppedRunNumber.size()))
+        print('[DB.............BAT] Chopped run is changed... size = {}'
+              ''.format(self.ui.comboBox_choppedRunNumber.size()))
 
         # skip if mutex is on
         if self._mutexChopRunList is True:
@@ -1653,8 +1677,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # get current chop name
         curr_chop_name = str(self.ui.comboBox_choppedRunNumber.currentText())
         if curr_chop_name == '':
-            print ('[DB...BAT] Is ChoppedRun combo box empty? {}'
-                   ''.format(self.ui.comboBox_choppedRunNumber.size()))
+            print('[DB...BAT] Is ChoppedRun combo box empty? {}'
+                  ''.format(self.ui.comboBox_choppedRunNumber.size()))
             return
 
         curr_data_key = self._chop_combo_data_key_dict[curr_chop_name]
@@ -1668,7 +1692,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._mutexChopSeqList = False
 
         # plot the first one
-        print ('[DB...BAT] Tending to update/plot run {} chop-seq {}'.format(curr_chop_name, chopped_sequence_list[0]))
+        print('[DB...BAT] Tending to update/plot run {} chop-seq {}'.format(curr_chop_name,
+                                                                            chopped_sequence_list[0]))
         if len(chopped_sequence_list) > 0:
             seq_name_0 = '{}'.format(chopped_sequence_list[0])
             self.ui.comboBox_chopSeq.addItem(seq_name_0)
@@ -1833,7 +1858,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         label_str = 'Run {0}'.format(run_number)
         if is_chopped:
-            assert isinstance(chop_seq_list, list), 'If is chopped data, then neec to give chop sequence list.'
+            assert isinstance(
+                chop_seq_list, list), 'If is chopped data, then neec to give chop sequence list.'
             chop_seq_list.sort()
             label_str += ': chopped sequence {0} - {1}'.format(chop_seq_list[0], chop_seq_list[-1])
 
@@ -1853,7 +1879,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # original run
             if run_number is not None and self._is_run_in_memory(run_number):
                 # load from memory
-                data_key = self._myController.project.reduction_manager.get_reduced_workspace(run_number)
+                data_key = self._myController.project.reduction_manager.get_reduced_workspace(
+                    run_number)
             else:
                 # load from archived disk
                 reduced_file_name = self._myController.archive_manager.get_gsas_file(ipts_number, run_number,
@@ -1885,10 +1912,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 # if never been added: add a new list considering the case of loading chop indexes a few at a time
                 # but for many times
                 self._chopped_run_data_dict[run_number] = list()
-            self._chopped_run_data_dict[run_number].extend(data_set_dict.keys())  # run number + seq index --> find it!
+            self._chopped_run_data_dict[run_number].extend(
+                data_set_dict.keys())  # run number + seq index --> find it!
 
             for key in self._chopped_run_data_dict[run_number]:
-                print (key, type(key))
+                print(key, type(key))
 
             data_key = data_set_dict
         # END-IF-ELSE
@@ -1921,7 +1949,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return sample_log_dict
 
-    def retrieve_loaded_reduced_data(self, data_key, ipts_number, run_number, chop_seq_index, bank_id, unit, pc_norm, van_run):
+    def retrieve_loaded_reduced_data(self, data_key, ipts_number, run_number, chop_seq_index,
+                                     bank_id, unit, pc_norm, van_run):
         """
         Retrieve reduced data from workspace (via run number) to _reducedDataDict.
         Note: this method is used to talk with myController
@@ -1950,9 +1979,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                                                 bank_id, unit)
         else:
             # raw GSAS
-            print (type(data_key))
-            print (data_key)
-            data_set = self._myController.get_reduced_data(run_id=data_key, target_unit=unit, bank_id=bank_id)
+            print(type(data_key))
+            print(data_key)
+            data_set = self._myController.get_reduced_data(
+                run_id=data_key, target_unit=unit, bank_id=bank_id)
             # convert to 2 vectors
             vec_x = data_set[bank_id][0]
             vec_y = data_set[bank_id][1]
@@ -2041,7 +2071,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
     def get_vanadium_spectrum(self, van_run, bank_id):
 
         from pyvdrive.lib import mantid_helper
-        print ('[DB...BAT] Vanadium workspace = {}'.format(self._vanadium_dict[van_run]))
+        print('[DB...BAT] Vanadium workspace = {}'.format(self._vanadium_dict[van_run]))
         van_ws_name = self._vanadium_dict[van_run]
         mantid_helper.mtd_convert_units(van_ws_name, 'dSpacing')
         van_ws = mantid_helper.retrieve_workspace(van_ws_name, True)
@@ -2115,12 +2145,14 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # pop the child atomic window
         if not main_only:
-            status, bank_ids = self._myController.get_reduced_run_info(run_number=None, data_key=data_key)
+            status, bank_ids = self._myController.get_reduced_run_info(
+                run_number=None, data_key=data_key)
             if not status:
                 raise NotImplementedError('It is not possible to unable to get reduced run info!')
 
             run_number, none = self._data_key_run_seq[data_key]
-            for bank_id_i in sorted(bank_ids):  # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
+            # FIXME TODO FUTURE - This could be an issue for Not-3 bank data
+            for bank_id_i in sorted(bank_ids):
                 child_window = self.launch_single_run_view()
                 vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=data_key, ipts_number=self._iptsNumber,
                                                                  run_number=self._currRunNumber,
@@ -2139,8 +2171,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 #     # END-IF
 
                 child_window.set_x_range(curr_min_x, curr_max_x)
-                plot_information = PlotInformation(self._iptsNumber, run_number, None, pc_norm, van_run_temp)
-                child_window.plot_data(vec_x, vec_y, data_key, self._currUnit, bank_id_i, plot_information)
+                plot_information = PlotInformation(
+                    self._iptsNumber, run_number, None, pc_norm, van_run_temp)
+                child_window.plot_data(vec_x, vec_y, data_key, self._currUnit,
+                                       bank_id_i, plot_information)
             # END-FOR
         # END-IF
 
@@ -2182,7 +2216,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
                     # normalize by proton charge
                     if do_pc_norm:
-                        p_charge_i = self.get_proton_charge(self._iptsNumber, self._currRunNumber, chop_seq_i)
+                        p_charge_i = self.get_proton_charge(
+                            self._iptsNumber, self._currRunNumber, chop_seq_i)
                         vec_y_i /= p_charge_i
                     # normalize by vanadium spectrum
                     if do_van_norm:
@@ -2191,19 +2226,21 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                     data_sets.append((vec_x_i, vec_y_i))
                     new_seq_list.append(chop_seq_i)
                 except (RuntimeError, KeyError) as run_err_i:
-                    error_msg += 'Unable to load chopped sequence {}: {}\n'.format(chop_seq_i, run_err_i)
+                    error_msg += 'Unable to load chopped sequence {}: {}\n'.format(
+                        chop_seq_i, run_err_i)
             # END-FOR
 
             if len(new_seq_list) == 0:
-                raise RuntimeError('There is no available data from {}:\n{}'.format(chop_data_key, error_msg))
+                raise RuntimeError('There is no available data from {}:\n{}'.format(
+                    chop_data_key, error_msg))
             if error_msg != '':
                 GuiUtility.pop_dialog_error(self, error_msg)
 
             # check ... FIXME TODO - TONIGHT 0 - delete this session after debugging/problem being fixed
             for data_set in data_sets:
-                print ('min = {} @ {},  max = {} @ {}'
-                       ''.format(data_set[1].min(), numpy.argmin(data_set[1]),
-                                 data_set[1].max(), numpy.argmax(data_set[1])))
+                print('min = {} @ {},  max = {} @ {}'
+                      ''.format(data_set[1].min(), numpy.argmin(data_set[1]),
+                                data_set[1].max(), numpy.argmax(data_set[1])))
 
             return new_seq_list, data_sets
 
@@ -2229,8 +2266,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
             return vec_data_x, vec_data_y
 
-        print ('[DB....................BAT.................LOOK] chop data key: {} of type {}'
-               ''.format(chop_key, type(chop_key)))
+        print('[DB....................BAT.................LOOK] chop data key: {} of type {}'
+              ''.format(chop_key, type(chop_key)))
         # check inputs
         datatypeutility.check_int_variable('Bank ID', bank_id, (None, None))
         if pc_norm is None:
@@ -2251,7 +2288,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # check whether any sequence exists
         if len(existing_seq_list) == 0:
-            GuiUtility.pop_dialog_error(self, 'There is no chopped sequences for (chop key) {}'.format(chop_key))
+            GuiUtility.pop_dialog_error(
+                self, 'There is no chopped sequences for (chop key) {}'.format(chop_key))
             return
 
         if seq_list is None:
@@ -2327,7 +2365,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                                       over_plot=True,
                                                                       run_id=chop_key,
                                                                       bank_id=bank_id,
-                                                                      chop_tag='{}'.format(curr_seq),
+                                                                      chop_tag='{}'.format(
+                                                                          curr_seq),
                                                                       label=plot_label,
                                                                       line_color='black')
         self._currentPlotID = plot_id
@@ -2360,11 +2399,14 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                     run_number = chop_key[0]
                 else:
                     run_number = chop_key
-                child_window.set_title('Run {} Chop-index {} Bank {}'.format(run_number, curr_seq, bank_id))
+                child_window.set_title(
+                    'Run {} Chop-index {} Bank {}'.format(run_number, curr_seq, bank_id))
                 child_window.set_x_range(min_x, max_x)
                 ipts_number = vdrive_constants.run_ipts_dict[run_number]
-                plot_information = PlotInformation(ipts_number, run_number, curr_seq, pc_norm, van_run_tmp)
-                child_window.plot_data(vec_x, vec_y, chop_key, self._currUnit, bank_id, plot_information)
+                plot_information = PlotInformation(
+                    ipts_number, run_number, curr_seq, pc_norm, van_run_tmp)
+                child_window.plot_data(vec_x, vec_y, chop_key, self._currUnit,
+                                       bank_id, plot_information)
             # END-FOR
         # END-IF-NOT (main)
 
@@ -2383,7 +2425,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                     seq_list, data_set_list = construct_chopped_data(chop_key, seq_list, bank_id, pc_norm,
                                                                      van_norm, van_vec_y_i)
                 except RuntimeError as run_err:
-                    GuiUtility.pop_dialog_error(self, 'Unable to plot chopped data due to {}'.format(run_err))
+                    GuiUtility.pop_dialog_error(
+                        self, 'Unable to plot chopped data due to {}'.format(run_err))
                     return
 
                 # 2D Contours
@@ -2417,7 +2460,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
     def set_chopped_logs(self, ipts_number, run_number, log_header, log_set, log_id='start'):
         # TODO - TONIGHT 0 - Document! & consider the case of hdf5 logs!
         if run_number not in self._sliced_log_dict[ipts_number]:
-            self._sliced_log_dict[run_number] = {'start': None, 'mean': None, 'end': None, 'IPTS': ipts_number}
+            self._sliced_log_dict[run_number] = {'start': None,
+                                                 'mean': None, 'end': None, 'IPTS': ipts_number}
         self._sliced_log_dict[run_number][log_id] = log_header, log_set
 
         return
@@ -2524,7 +2568,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         assert isinstance(fwhm, float) or isinstance(fwhm, int) and fwhm > 0, 'FWHM {0} must be a float or integer,' \
                                                                               'but not a {1}.' \
-                                                                              ''.format(fwhm, type(fwhm))
+                                                                              ''.format(
+                                                                                  fwhm, type(fwhm))
 
         if fwhm <= 0:
             raise RuntimeError('Peak FWHM ({0}) must be positive!'.format(fwhm))
@@ -2556,4 +2601,3 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # self.do_set_x_range()
 
         return
-

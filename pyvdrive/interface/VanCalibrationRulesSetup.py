@@ -2,8 +2,6 @@
 # Beta Version: Set up automatic vanadium calibration run
 #               location rules
 ########################################################
-import os
-
 from PyQt4 import QtGui, QtCore
 
 try:
@@ -18,6 +16,7 @@ import DialogVanCalibRules as dlgrule
 class SetupVanCalibRuleDialog(QtGui.QDialog):
     """ Pop up dialog window to add runs by IPTS
     """
+
     def __init__(self, parent):
         """ Init
         """

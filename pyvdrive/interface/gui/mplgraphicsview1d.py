@@ -1,12 +1,11 @@
-#pylint: disable=invalid-name,too-many-public-methods,too-many-arguments,non-parent-init-called,R0902,too-many-branches,C0302
+#pylint: disable=invalid-name,too-many-public-methods,too-many-arguments,non-parent-init-called,R0902,too-many-branches,C0302  # noqa: E265, E501
 """
 Graphics class with matplotlib backend specific for advanced 1D plot
 """
-import os
 import numpy as np
 
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5.QtWidgets import QWidget, QSizePolicy, QVBoxLayout
     from PyQt5.QtCore import pyqtSignal
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -18,7 +17,6 @@ except ImportError:
     from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar2
 
 from matplotlib.figure import Figure
-import matplotlib.image
 
 MplLineStyles = ['-', '--', '-.', ':', 'None', ' ', '']
 MplLineMarkers = [
@@ -246,7 +244,6 @@ class MplGraphicsView1D(QWidget):
         """
         # check whether the input is empty
         if len(vec_y) == 0:
-            print '[WARNING] Input is an empty vector set'
             return False
 
         if is_right:
@@ -649,8 +646,8 @@ class MplGraphicsView1D(QWidget):
                                            line_id=ikey, remove_line=False,
                                            vec_y=vec_y, label=None)  # let callee to determine label
 
-        self._myCanvas.update_plot_line(row_index, col_index, ikey, is_main, vec_x, vec_y, line_style, line_color, marker,
-                                               marker_color)
+        self._myCanvas.update_plot_line(row_index, col_index, ikey, is_main, vec_x, vec_y, line_style,
+                                        line_color, marker, marker_color)
 
         return
 
@@ -699,7 +696,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
             self.set_subplots(row_size, col_size)
 
         # Set size policy to be able to expanding and resizable with frame
-        FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding,QSizePolicy.Expanding)
+        FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
         return
@@ -789,7 +786,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         :param show_legend:
         :return: line ID (i.e., new key)
         """
-        print '[DB...BAT] Add Main Y-label : {0}; Line-label : {1}'.format(y_label, label)
+        print('[DB...BAT] Add Main Y-label : {0}; Line-label : {1}'.format(y_label, label))
 
         # Check input
         self._check_subplot_index(row_index, col_index, is_main=True)
@@ -870,8 +867,6 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         :param linewidth:
         :return:
         """
-        print '[DB...BAT] Add Right Y-label : {0}; Line-label : {1}'.format(y_label, label)
-
         # check
         try:
             self._check_subplot_index(row_index, col_index, is_main=False)
@@ -922,7 +917,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         else:
             msg = 'Return from plot is a %d-tuple: %s.. \n' % (len(plot_info), plot_info)
             for i_r in range(len(plot_info)):
-                msg += 'r[%d] = %s\n' % (i_r, str(r[i_r]))
+                msg += 'r[%d] = %s\n' % (i_r, str(plot_info[i_r]))
             raise NotImplementedError(msg)
 
         # Flush/commit
@@ -960,8 +955,8 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
                     try:
                         self.axes_main[row_index, col_index].lines.remove(mpl_line)
                     except ValueError as e:
-                        print "[Error] Plot %s is not in axes_main.lines which has %d lines. Error message: %s" % (
-                            str(line_key), len(self.axes_main[row_index, col_index].lines), str(e))
+                        print("[Error] Plot %s is not in axes_main.lines which has %d lines. Error message: %s"
+                              "" % (str(line_key), len(self.axes_main[row_index, col_index].lines), str(e)))
                 # END-IF-ELSE
 
                 # remove record
@@ -991,8 +986,8 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
                     try:
                         self.axes_right[row_index, col_index].lines.remove(mpl_line)
                     except ValueError as e:
-                        print "[Error] Plot %s is not in axes_right.lines which has %d lines. Error message: %s" % (
-                                str(line_key), len(self.axes_main[row_index, col_index].lines), str(e))
+                        print("[Error] Plot %s is not in axes_right.lines which has %d lines. Error message: %s" % (
+                                str(line_key), len(self.axes_main[row_index, col_index].lines), str(e)))
                 # END-IF-ELSE
 
                 # remove record
@@ -1198,7 +1193,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         assert isinstance(title, str), 'Title must be a string but not a {0}.'.format(type(title))
         assert isinstance(color, str), 'Color must be a string but not a {0}.'.format(type(color))
 
-        print '[DB...BAT] Set {0} in color {1} as the figure\'s title.'.format(title, color)
+        print('[DB...BAT] Set {0} in color {1} as the figure\'s title.'.format(title, color))
         self.setWindowTitle(title)
 
         self.draw()
@@ -1223,8 +1218,8 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
             try:
                 self.axes_main[row_index, col_index].lines.remove(self._mainLineDict[plot_key])
             except ValueError as r_error:
-                error_message = 'Unable to remove to 1D line %s (ID=%d) due to %s.' % (str(self._mainLineDict[plot_key]),
-                                                                                       plot_key, str(r_error))
+                error_message = 'Unable to remove to 1D line {} (ID={}) due to {}.' \
+                                ''.format(self._mainLineDict[plot_key], plot_key, str(r_error))
                 raise RuntimeError(error_message)
             # remove the plot key from dictionary
             del self._mainLineDict[plot_key][row_index, col_index]
@@ -1326,7 +1321,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
 
         # check
         if plot_line is None:
-            print '[ERROR] Line (key = %d) is None. Unable to update' % plot_key
+            print('[ERROR] Line (key = %d) is None. Unable to update' % plot_key)
             return
 
         # TODO/NOW - clean up
@@ -1423,9 +1418,9 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         num_markers = len(MplLineMarkers)
         num_colors = len(MplBasicColors)
 
-        for i in xrange(num_markers):
+        for i in range(num_markers):
             marker = MplLineMarkers[i]
-            for j in xrange(num_colors):
+            for j in range(num_colors):
                 color = MplBasicColors[j]
                 combo_list.append((marker, color))
             # ENDFOR (j)
@@ -1610,8 +1605,6 @@ class MyNavigationToolbar(NavigationToolbar2):
         else:
             # into pan mode
             self._myMode = MyNavigationToolbar.NAVIGATION_MODE_PAN
-
-        print 'PANNED'
 
         return
 

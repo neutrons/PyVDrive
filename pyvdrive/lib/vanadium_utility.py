@@ -10,6 +10,7 @@ class VanadiumProcessingManager(object):
     """
     Controller of the workflow to process vanadium data for calibration purpose
     """
+
     def __init__(self, parent):
         """
         initialization
@@ -18,7 +19,8 @@ class VanadiumProcessingManager(object):
         self._myParent = parent
 
         # state flag
-        self._is_setup = False   # flag such that a parent workspace (to smooth from) has been set up
+        # flag such that a parent workspace (to smooth from) has been set up
+        self._is_setup = False
         self._output_ws_name = None  # workspace from merged smoothed/vanadium-peaks-striped workspace
         # NOTE: output workspace shall be of the same range, number of spectra and instrument geometry as input
 
@@ -63,10 +65,12 @@ class VanadiumProcessingManager(object):
         :return:
         """
         if self._is_setup:
-            source_ws = mantid_helper.retrieve_workspace(self._van_workspace_name, raise_if_not_exist=True)
+            source_ws = mantid_helper.retrieve_workspace(
+                self._van_workspace_name, raise_if_not_exist=True)
             output_str = 'Process (reduced) vanadium (workspace) {} with {} banks\n' \
                          ''.format(self._van_workspace_name, source_ws.getNumberHistograms())
-            output_str += 'Internal workspaces with vanadium peaks striped: {}\n'.format(self._striped_peaks_ws_dict)
+            output_str += 'Internal workspaces with vanadium peaks striped: {}\n'.format(
+                self._striped_peaks_ws_dict)
             output_str += 'Internal workspaces smoothed: {}\n'.format(self._smoothed_ws_dict)
         else:
             output_str = 'No workspace has been set up for vanadium processing.\n'
@@ -145,7 +149,8 @@ class VanadiumProcessingManager(object):
         if unit == 'TOF':
             if self._van_workspace_name_tof is None:
                 self._van_workspace_name_tof = self._van_workspace_name + '_tof'
-                mantid_helper.mtd_convert_units(self._van_workspace_name, 'TOF', self._van_workspace_name_tof)
+                mantid_helper.mtd_convert_units(
+                    self._van_workspace_name, 'TOF', self._van_workspace_name_tof)
             workspace = mantid_helper.retrieve_workspace(self._van_workspace_name_tof)
         else:
             workspace = mantid_helper.retrieve_workspace(self._van_workspace_name)
@@ -219,7 +224,7 @@ class VanadiumProcessingManager(object):
         try:
             raw_van_ws = mantid_helper.retrieve_workspace(self._van_workspace_name)
         except RuntimeError as run_err:
-            raise False, 'Unable to process vanadium due to {}'.format(run_err)
+            return False, 'Unable to process vanadium due to {}'.format(run_err)
 
         for ws_index in range(mantid_helper.get_number_spectra(raw_van_ws)):
             # strip vanadium peaks
@@ -280,7 +285,7 @@ class VanadiumProcessingManager(object):
         #  copy file to 2nd location
         try:
             gsas_copy = '/SNS/VULCAN/IPTS-{}/shared/Instrument/{}'.format(self._ipts_number,
-                                                                      os.path.basename(self._output_gsas_name))
+                                                                          os.path.basename(self._output_gsas_name))
             shutil.copyfile(self._output_gsas_name, gsas_copy)
         except (IOError, OSError) as io_error:
             raise RuntimeError('Unable to save to {} due to {}'.format(gsas_copy, io_error))
@@ -350,14 +355,15 @@ class VanadiumProcessingManager(object):
             bank_list = [bank_id]
 
         output_ws_name = input_ws_name + '_NoPeak'
-        output_ws_dict = mantid_helper.strip_vanadium_peaks(input_ws_name=input_ws_name,
-                                                            output_ws_name=output_ws_name,
-                                                            bank_list=bank_list,
-                                                            binning_parameter=None,
-                                                            fwhm=peak_fwhm,  # PEAK FWHM must be integer (legacy)
-                                                            peak_pos_tol=pos_tolerance,
-                                                            background_type=background_type,
-                                                            is_high_background=is_high_background)
+        mantid_helper.strip_vanadium_peaks(input_ws_name=input_ws_name,
+                                           output_ws_name=output_ws_name,
+                                           bank_list=bank_list,
+                                           binning_parameter=None,
+                                           # PEAK FWHM must be integer (legacy)
+                                           fwhm=peak_fwhm,
+                                           peak_pos_tol=pos_tolerance,
+                                           background_type=background_type,
+                                           is_high_background=is_high_background)
         self._striped_peaks_ws_dict[bank_id] = output_ws_name
 
         return output_ws_name

@@ -8,11 +8,11 @@ from process_vcommand import convert_string_to
 from pyvdrive.lib import datatypeutility
 try:
     from PyQt5 import QtCore
-    from PyQt5.QtCore import pyqtSignal
+    # from PyQt5.QtCore import pyqtSignal
 except (ImportError, RuntimeError) as import_err:
-    print ('CHOP: {}'.format(import_err))
+    print('CHOP: {}'.format(import_err))
     from PyQt4 import QtCore
-    from PyQt4.QtCore import pyqtSignal
+    # from PyQt4.QtCore import pyqtSignal
 
 
 class VdriveChop(VDriveCommand):
@@ -20,7 +20,7 @@ class VdriveChop(VDriveCommand):
     Process command MERGE
     """
     SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'DBIN', 'LOADFRAME', 'FURNACE', 'BIN', 'PICKDATA', 'OUTPUT',
-                     'BINFOLDER','MYTOFMIN', 'MYTOFMAX', 'BINW',
+                     'BINFOLDER', 'MYTOFMIN', 'MYTOFMAX', 'BINW',
                      'PULSETIME', 'DT', 'RUNV', 'ROI', 'MASK', 'NEXUS', 'STARTTIME', 'STOPTIME',
                      'NUMBANKS', 'SAVECHOPPED2NEXUS', 'IPARM', 'DRYRUN', 'FULLPROF']
 
@@ -142,7 +142,8 @@ class VdriveChop(VDriveCommand):
             slicer_key = ret_obj
 
         # chop and reduce
-        print ('[DB...BAT] user_bin_parameters = {}  ... type = {}'.format(binning_parameters, type(binning_parameters)))
+        print('[DB...BAT] user_bin_parameters = {}  ... type = {}'
+              ''.format(binning_parameters, type(binning_parameters)))
         status, message = self._controller.project.chop_run(run_number, slicer_key, reduce_flag=reduce_flag,
                                                             vanadium=vanadium, save_chopped_nexus=save_to_nexus,
                                                             output_dir=output_dir,
@@ -214,15 +215,15 @@ class VdriveChop(VDriveCommand):
             return False, 'Unable to generate data slicer by time due to %s.' % error_msg
 
         # chop and reduce
-        if chop_loadframe_log:
-            exp_log_type = 'loadframe'
-        elif chop_furnace_log:
-            exp_log_type = 'furnace'
-        else:
-            exp_log_type = None
+        # if chop_loadframe_log:
+        #     exp_log_type = 'loadframe'
+        # elif chop_furnace_log:
+        #     exp_log_type = 'furnace'
+        # else:
+        #     exp_log_type = None
 
         # chop
-        print ('[DB...BAT...UND] Slicer key = {}'.format(slicer_key))
+        print('[DB...BAT...UND] Slicer key = {}'.format(slicer_key))
         status, message = self._controller.project.chop_run(run_number, slicer_key,
                                                             reduce_flag=reduce_flag,
                                                             fullprof=self._write_to_fullprof,
@@ -264,7 +265,8 @@ class VdriveChop(VDriveCommand):
         # dry run: return input options
         if dry_run:
             outputs = 'Slice IPTS-{0} Run {1} by time with ({2}, {3}, {4}) and dt = {5}' \
-                      ''.format(self._iptsNumber, run_number, start_time, time_interval, stop_time, overlap_time_interval)
+                      ''.format(self._iptsNumber, run_number, start_time, time_interval,
+                                stop_time, overlap_time_interval)
             if reduce_flag:
                 outputs += 'and reduce (to GSAS) '
             else:
@@ -304,7 +306,7 @@ class VdriveChop(VDriveCommand):
                                                                 overlap_mode=False,
                                                                 gda_start=i_slice)
 
-            print ('[DB...BAT] Processed: {} '.format(slice_key))
+            print('[DB...BAT] Processed: {} '.format(slice_key))
 
             if not status:
                 return False, message
@@ -400,7 +402,7 @@ class VdriveChop(VDriveCommand):
             else:
                 is_dry_run = False
         except ValueError as run_err:
-            raise RuntimeError('DRYRUN value {} cannot be recognized due to {}.' \
+            raise RuntimeError('DRYRUN value {} cannot be recognized due to {}'
                                ''.format(self._commandArgsDict['DRYRUN'], run_err))
 
         return is_dry_run
@@ -585,7 +587,7 @@ class VdriveChop(VDriveCommand):
             archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber,
                                                                                                  run_number_list)
             if len(error_message) > 0:
-                print '[DB...BAT] Error archive key: ', archive_key
+                print(f'[DB...BAT] Error archive key: {archive_key}')
                 return False, error_message
             run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
             self._controller.add_runs_to_project(run_info_list)
@@ -619,22 +621,25 @@ class VdriveChop(VDriveCommand):
             return False, 'Both run start {} and run end {} must be integer' \
                           ''.format(run_start, run_end)
 
-        # Auto check the
+        # Auto check the beam down
+        # This feature is not implemented
         if not self._user_know_beam_down:
             has_beam_down = False
             message = ''
             for run_number in sorted(self._runNumberList):
-                proton_charges = self._load_sample_log(self._iptsNumber, self._runNumberList[run_number])
-                has_down_i = vulcan_util.analyze_beam_down(proton_charges, beam_down_tolerance)
-                if has_beam_i:
-                    has_beam_down = True
-                    message += 'IPTS-{} Run-{} has beam down with tolerance {} seconds\n' \
-                               ''.format()
+                # TODO
+                raise RuntimeError('The following is not implemented yet for {}'.format(run_number))
+                # proton_charges = self._load_sample_log(self._iptsNumber, self._runNumberList[run_number])
+                # has_down_i = vulcan_util.analyze_beam_down(proton_charges, beam_down_tolerance)
+                # if has_beam_i:
+                #     has_beam_down = True
+                #     message += 'IPTS-{} Run-{} has beam down with tolerance {} seconds\n' \
+                #                ''.format()
             # END-FOR
 
             if has_beam_down:
-                message += 'User must specify: ProcessBeamDown as 0, 1 or 2 ' \
-                           '(0: include all events; 1: exclude down time events and include downtime in output order; ' \
+                message += 'User must specify: ProcessBeamDown as 0, 1 or 2 (0: include all events; ' \
+                           '1: exclude down time events and include downtime in output order; ' \
                            '2: exclude downtime events and exclude downtime from output GSAS)'
                 return False, message
         # END-IF
@@ -686,7 +691,6 @@ class VdriveChop(VDriveCommand):
         # set run numbers
         if self._iptsNumber:
             run_number_list = range(run_start, run_end + 1)
-            event_nexus_file = None
         else:
             run_number_list = [-1]
         # END-IF
@@ -753,14 +757,15 @@ class VdriveChop(VDriveCommand):
                 try:
                     # TODO FIXME - NIGHT
                     """
-                      File "/home/wzz/Projects/PyVDrive/build/lib.linux-x86_64-2.7/pyvdrive/interface/vdrive_commands/chop.py", line 715, in exec_cmd
+                      File "/home/wzz/Projects/PyVDrive/build/lib.linux-x86_64-2.7/pyvdrive/
+                      interface/vdrive_commands/chop.py", line 715, in exec_cmd
                       slicer_list = self.parse_pick_data(user_slice_file)
                       NameError: global name 'user_slice_file' is not defined
                     """
                     user_slice_file = chop_option_dict['PICKDATA']
                     slicer_list = self.parse_pick_data(user_slice_file)
 
-                    print ('[DB...BAT] slice list: {}'.format(slicer_list))
+                    print('[DB...BAT] slice list: {}'.format(slicer_list))
 
                     status, message = self.chop_data_manually(run_number=run_number,
                                                               slicer_list=slicer_list,
@@ -780,15 +785,16 @@ class VdriveChop(VDriveCommand):
 
             elif 'LOG' in chop_option_dict:
                 # chop by log value
-                # FIXME/TODO/ISSUE/FUTURE - shall we implement this?
-                status, message = self.chop_data_by_log(run_number=run_number,
-                                                        start_time=None,
-                                                        stop_time=None,
-                                                        log_name=log_name,
-                                                        log_value_stepl=delta_log_value,
-                                                        reduce_flag=output_to_gsas,
-                                                        output_dir=output_dir,
-                                                        dry_run=is_dry_run)
+                # FIXME/TODO/ISSUE/FUTURE -
+                raise RuntimeError('shall we implement this?')
+                # status, message = self.chop_data_by_log(run_number=run_number,
+                #                                         start_time=None,
+                #                                         stop_time=None,
+                #                                         log_name=log_name,
+                #                                         log_value_stepl=delta_log_value,
+                #                                         reduce_flag=output_to_gsas,
+                #                                         output_dir=output_dir,
+                #                                         dry_run=is_dry_run)
 
             else:
                 # do nothing but launch log window
@@ -833,7 +839,7 @@ class VdriveChop(VDriveCommand):
                               '' % chop_dir)
         else:
             os.mkdir(chop_dir)
-            os.chmod(chop_dir, 0777)
+            os.chmod(chop_dir, 0o777)
 
         # create the Chopped data for the run
         default_dir = os.path.join(chop_dir, '%d' % run_number)
@@ -843,7 +849,7 @@ class VdriveChop(VDriveCommand):
                               '' % default_dir)
         else:
             os.mkdir(default_dir)
-            os.chmod(default_dir, 0777)
+            os.chmod(default_dir, 0o777)
 
         return default_dir
 
@@ -954,7 +960,8 @@ CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1
 
 
 Current Example:
-CHOP,IPTS=13183,RUNS=68607,PICKDATA="/SNS/VULCAN/IPTS-13183/SHARED/VARIABLECHOP_SERRATION_2ND SERIES_4.TXT",BIN=1,LOADFRAME=1,PULSETIME=1
+CHOP,IPTS=13183,RUNS=68607,PICKDATA="/SNS/VULCAN/IPTS-13183/SHARED/VARIABLECHOP_SERRATION_2ND SERIES_4.TXT",
+BIN=1,LOADFRAME=1,PULSETIME=1
 
 PICKDATA FILE
 801266555.006	801266615.006
@@ -990,6 +997,3 @@ PICKDATA FILE
 801267505.008	801267530.008
 
 """
-
-
-

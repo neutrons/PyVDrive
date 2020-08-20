@@ -8,6 +8,7 @@ class PeakGroupCollection(object):
     It is assumed that each time that the user changes setting on peaks or peak group,
     a new PeakGroupCollection will be created
     """
+
     def __init__(self, starting_group_id):
         """
         Initialization
@@ -104,6 +105,7 @@ class PeakGroupCollection(object):
         :return:
         """
 
+
 HALF_PEAK_FIT_RANGE_FACTOR = 6.
 
 
@@ -163,7 +165,7 @@ def calculate_peak_integral_intensity(vec_d, vec_y, left_x_index, right_x_index,
 
 def calculate_peak_average_d_space(vec_d, vec_y, left_x_index, right_x_index, bkgd_a, bkgd_b):
     """
-    mu = 1/A \int x f(x) dx = 1/A \sum x * f(x) * delta(x)
+    mu = 1/A int x f(x) dx = 1/A sum x * f(x) * delta(x)
     :param vec_d:
     :param vec_y:
     :param left_x_index:
@@ -201,7 +203,7 @@ def calculate_peak_average_d_space(vec_d, vec_y, left_x_index, right_x_index, bk
 
 def calculate_peak_variance(vec_d, vec_y, left_x_index, right_x_index, bkgd_a, bkgd_b):
     """
-    var = \int (x-mu)**2 f(x) dx = \sum (x-mu)**2 * f(x) * dx
+    var = int (x-mu)**2 f(x) dx = sum (x-mu)**2 * f(x) * dx
     :param vec_d:
     :param vec_y:
     :param left_x_index:
@@ -336,4 +338,3 @@ def estimate_background(vec_d, vec_y, min_x_index, max_x_index):
     bkgd_b = vec_bkgd[1]
 
     return bkgd_a, bkgd_b
-

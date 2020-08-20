@@ -1,14 +1,12 @@
 #!/usr/bin/python
 import sys
 import pyvdrive
-from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
+from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget  # noqa: F401
 import os
 try:
-    from PyQt5 import QtCore as QtCore
     from PyQt5.QtWidgets import QDialog, QApplication
     from PyQt5.uic import loadUi as load_ui
 except ImportError:
-    from PyQt4 import QtCore as QtCore
     from PyQt4.QtGui import QDialog, QApplication
     from PyQt4.uic import loadUi as load_ui
 
@@ -101,7 +99,8 @@ class LauncherManager(QDialog):
         :return:
         """
 
-        self._myPeakPickerWindow = PeakPickWindow.PeakPickerWindow(self._mainReducerWindow, self._mainReducerWindow.get_controller())
+        self._myPeakPickerWindow = PeakPickWindow.PeakPickerWindow(self._mainReducerWindow,
+                                                                   self._mainReducerWindow.get_controller())
         # self._myPeakPickerWindow.set_controller(self._mainReducerWindow.get_controller())
         self._myPeakPickerWindow.show()
 
@@ -178,7 +177,7 @@ else:
 if isinstance(option, str):
     option = option.lower()
 else:
-    print ('Lava option must be a string.  Execute "lava --help" for help')
+    print('Lava option must be a string.  Execute "lava --help" for help')
     sys.exit(-1)
 
 app = lava_app()
@@ -188,15 +187,15 @@ launcher.show()
 
 
 if option in ['-h', '--help']:
-    print 'Options:'
-    print '  -t: launch IPython terminal'
-    print '  -c: launch chopping/slicing interface'
-    print '  --view (-v): launch reduced data view interface'
-    print '  --peak (-p): launch peak processing interface'
-    print '  --main (-m): launch main PyVDrive GUI control panel'
-    print '  --live (-l): launch live data view interface in auto mode'
-    print '  --live-prof: launch live data view interface in professional mode'
-    print '  --record: launch experimental record manager'
+    print('Options:')
+    print('  -t: launch IPython terminal')
+    print('  -c: launch chopping/slicing interface')
+    print('  --view (-v): launch reduced data view interface')
+    print('  --peak (-p): launch peak processing interface')
+    print('  --main (-m): launch main PyVDrive GUI control panel')
+    print('  --live (-l): launch live data view interface in auto mode')
+    print('  --live-prof: launch live data view interface in professional mode')
+    print('  --record: launch experimental record manager')
     sys.exit(1)
 
 elif option in ['-v', '--view']:

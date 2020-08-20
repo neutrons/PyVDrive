@@ -1,8 +1,7 @@
 # This is a class to slice and focus data for parallelization (multiple threading)
-import time
-from mantid.simpleapi import Load, LoadEventNexus, GenerateEventsFilter, FilterEvents, LoadDiffCal, AlignAndFocusPowder
-from mantid.simpleapi import AlignDetectors, ConvertUnits, RenameWorkspace, ExtractSpectra, CloneWorkspace, Rebin
-from mantid.simpleapi import DiffractionFocussing, CreateEmptyTableWorkspace, CreateWorkspace
+from mantid.simpleapi import Load, LoadEventNexus, FilterEvents
+from mantid.simpleapi import AlignDetectors, ConvertUnits
+from mantid.simpleapi import DiffractionFocussing, CreateWorkspace
 from mantid.simpleapi import EditInstrumentGeometry, GeneratePythonScript
 import threading
 import os
@@ -18,6 +17,7 @@ import reduce_VULCAN
 class SliceFocusVulcan(object):
     """ Class to handle the slice and focus on vulcan data
     """
+
     def __init__(self, number_banks, focus_instrument_dict, num_threads=24, output_dir=None):
         """
         initialization
@@ -33,7 +33,8 @@ class SliceFocusVulcan(object):
         # other directories
         self._output_dir = '/tmp/'
         if output_dir is not None:
-            datatypeutility.check_file_name(output_dir, True, True, True, 'Output directory for generated GSAS')
+            datatypeutility.check_file_name(
+                output_dir, True, True, True, 'Output directory for generated GSAS')
             self._output_dir = output_dir
 
         # run number (current or coming)
@@ -81,10 +82,12 @@ class SliceFocusVulcan(object):
 
         for index, ws_name in enumerate(split_ws_names):
             ws_i = mantid_helper.retrieve_workspace(ws_name, True)
-            out_file_name = os.path.join(output_dir, '{}.hdf5'.format(index + gsas_file_index_start))
+            out_file_name = os.path.join(
+                output_dir, '{}.hdf5'.format(index + gsas_file_index_start))
             gda_name = '{}.gda'.format(index + gsas_file_index_start)
             attribute_dict = {'GSAS': gda_name, 'Workspace': ws_name}
-            file_utilities.save_sample_logs(ws_i, log_names, out_file_name, run_start_time, attribute_dict)
+            file_utilities.save_sample_logs(
+                ws_i, log_names, out_file_name, run_start_time, attribute_dict)
             info += '{}  \t{}  \t{}\n'.format(index, out_file_name, gda_name)
         # END-FOR
 
@@ -122,9 +125,11 @@ class SliceFocusVulcan(object):
             # focus (simple) it is the same but simplied version in diffraction_focus()
             ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='dSpacing')
             # diffraction focus
-            DiffractionFocussing(InputWorkspace=ws_name, OutputWorkspace=ws_name, GroupingWorkspace=group_ws_name)
+            DiffractionFocussing(InputWorkspace=ws_name, OutputWorkspace=ws_name,
+                                 GroupingWorkspace=group_ws_name)
             # convert unit to TOF
-            ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='TOF', ConvertFromPointData=False)
+            ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name,
+                         Target='TOF', ConvertFromPointData=False)
             # edit instrument
             try:
                 EditInstrumentGeometry(Workspace=ws_name,
@@ -134,8 +139,8 @@ class SliceFocusVulcan(object):
                                        Polar=self._focus_instrument_dict['Polar'],
                                        Azimuthal=self._focus_instrument_dict['Azimuthal'])
             except RuntimeError as run_err:
-                print ('[WARNING] Non-critical error from EditInstrumentGeometry for {}: {}'
-                       ''.format(ws_name, run_err))
+                print('[WARNING] Non-critical error from EditInstrumentGeometry for {}: {}'
+                      ''.format(ws_name, run_err))
         # END-FOR
 
         return
@@ -146,7 +151,8 @@ class SliceFocusVulcan(object):
         :param event_file_name:
         :return:
         """
-        out_ws_name = os.path.basename(event_file_name).split('.')[0] + '_{0}banks'.format(self._number_banks)
+        out_ws_name = os.path.basename(event_file_name).split(
+            '.')[0] + '_{0}banks'.format(self._number_banks)
         ref_id = out_ws_name
 
         return out_ws_name, ref_id
@@ -157,7 +163,8 @@ class SliceFocusVulcan(object):
         :param file_name:
         :return:
         """
-        datatypeutility.check_file_name(file_name, check_exist=True, note='Detector efficiency (HDF5) file')
+        datatypeutility.check_file_name(file_name, check_exist=True,
+                                        note='Detector efficiency (HDF5) file')
 
         try:
             returned = file_utilities.import_detector_efficiency(file_name)
@@ -285,7 +292,8 @@ class SliceFocusVulcan(object):
         # get output workspaces' names
         output_names = mantid_helper.get_filter_events_outputs(result)
         if output_names is None:
-            raise RuntimeError('There is no workspace found in the result of FilterEvents (vulcan_slice_reduce)')
+            raise RuntimeError(
+                'There is no workspace found in the result of FilterEvents (vulcan_slice_reduce)')
 
         t2 = time.time()
 
@@ -305,8 +313,8 @@ class SliceFocusVulcan(object):
         number_ws_per_thread = int(num_outputs / self._number_threads)
         extra = num_outputs % self._number_threads
 
-        print ('[DB...IMPORTANT] Output workspace number = {0}, workspace per thread = {1}\n'
-               'Output workspaces names: {2}'.format(num_outputs, number_ws_per_thread, output_names))
+        print('[DB...IMPORTANT] Output workspace number = {0}, workspace per thread = {1}\n'
+              'Output workspaces names: {2}'.format(num_outputs, number_ws_per_thread, output_names))
 
         thread_pool = dict()
         # create threads and start
@@ -323,9 +331,9 @@ class SliceFocusVulcan(object):
                                                       args=(workspace_names_i, gsas_workspace_name_list,
                                                             group_ws_name,))
             thread_pool[thread_id].start()
-            print ('[DB] thread {0}: [{1}: {2}) ---> {3} workspaces'.
-                   format(thread_id, start_sliced_ws_index,  end_sliced_ws_index,
-                          end_sliced_ws_index-start_sliced_ws_index))
+            print('[DB] thread {0}: [{1}: {2}) ---> {3} workspaces'.
+                  format(thread_id, start_sliced_ws_index,  end_sliced_ws_index,
+                         end_sliced_ws_index-start_sliced_ws_index))
         # END-FOR
 
         # join the threads after the diffraction focus is finished
@@ -352,7 +360,7 @@ class SliceFocusVulcan(object):
                                        '{}_{}.py'.format(self._run_number, split_ws_name))
             GeneratePythonScript(InputWorkspace=output_names[0], Filename=python_name)
         else:
-            print ('[ERROR] No output workspace to export to GSAS!')
+            print('[ERROR] No output workspace to export to GSAS!')
 
         # write all the processed workspaces to GSAS:  IPTS number and parm_file_name shall be passed
         run_date_time = vulcan_util.get_run_date(event_ws_name, '')
@@ -389,8 +397,9 @@ class SliceFocusVulcan(object):
         process_info = '{0}: Runtime = {1}   Total output workspaces = {2}' \
                        ''.format(event_ws_name, tf - t0, len(output_names))
         process_info += 'Details for thread = {4}:\n\tLoading  = {0}\n\tChopping = {1}\n\tFocusing = {2}\n\t' \
-                        'SaveGSS = {3}'.format(t1 - t0, t2 - t1, t3 - t2, tf - t3, self._number_threads)
-        print ('[INFO] {}'.format(process_info))
+                        'SaveGSS = {3}'.format(t1 - t0, t2 - t1, t3 - t2,
+                                               tf - t3, self._number_threads)
+        print('[INFO] {}'.format(process_info))
 
         # FIXME - FUTURE - Whether this for-loop is useful?
         end_sliced_ws_index = 0
@@ -398,9 +407,9 @@ class SliceFocusVulcan(object):
             start_sliced_ws_index = end_sliced_ws_index
             end_sliced_ws_index = min(start_sliced_ws_index + number_ws_per_thread + int(thread_id < extra),
                                       num_outputs)
-            print ('thread {0}: [{1}: {2}) ---> {3} workspaces'
-                   .format(thread_id, start_sliced_ws_index, end_sliced_ws_index,
-                           end_sliced_ws_index-start_sliced_ws_index))
+            print('thread {0}: [{1}: {2}) ---> {3} workspaces'
+                  .format(thread_id, start_sliced_ws_index, end_sliced_ws_index,
+                          end_sliced_ws_index-start_sliced_ws_index))
 
         return process_info, output_names
 
@@ -420,7 +429,8 @@ class SliceFocusVulcan(object):
         write to all log workspaces
         :return:
         """
-        log_writer = reduce_adv_chop.WriteSlicedLogs(chopped_data_dir=self._output_dir, run_number=self._run_number)
+        log_writer = reduce_adv_chop.WriteSlicedLogs(
+            chopped_data_dir=self._output_dir, run_number=self._run_number)
 
         log_writer.generate_sliced_logs(workspace_name_list, log_type)
 
@@ -468,7 +478,7 @@ class SliceFocusVulcan(object):
                 mantid_helper.workspace_divide(ws_name, van_ws_name)
 
             fp_file_name = os.path.join(output_dir, '{}.dat'.format(index_ws + 1))
-            print ('Export {} to {}'.format(ws_name, fp_file_name))
+            print('Export {} to {}'.format(ws_name, fp_file_name))
             mantid_helper.export_fullprof(ws_name, fp_file_name)
 
         return
@@ -518,16 +528,16 @@ class SliceFocusVulcan(object):
                 raise RuntimeError('Number of GSAS file names ({}) does not equal to number of workspaces '
                                    '({}) to export for thread {}'
                                    ''.format(len(gsas_file_name_list), len(workspace_names_i), thread_id))
-            
+
             thread_pool[thread_id] = threading.Thread(target=self.write_gsas_files,
                                                       args=(workspace_names_i, ipts_number, van_diff_ws_name,
                                                             parm_file_name, gsas_writer, run_start_date,
                                                             gsas_file_name_list,))
 
             thread_pool[thread_id].start()
-            print ('[DB...Write GSAS] thread {0}: [{1}: {2}) ---> {3} workspaces'.
-                   format(thread_id, start_sliced_ws_index,  end_sliced_ws_index,
-                          end_sliced_ws_index-start_sliced_ws_index))
+            print('[DB...Write GSAS] thread {0}: [{1}: {2}) ---> {3} workspaces'.
+                  format(thread_id, start_sliced_ws_index,  end_sliced_ws_index,
+                         end_sliced_ws_index-start_sliced_ws_index))
         # END-FOR
 
         # join the threads after the diffraction focus is finished
@@ -545,8 +555,9 @@ class SliceFocusVulcan(object):
             ws_name_i = workspace_name_list[index_ws]
             if ws_name_i == '':
                 continue
-            gsas_file_name = os.path.join(self._output_dir, '{0}.gda'.format(index_ws + gsas_file_index_start))
-            print ('[DB...BAT]: {}'.format(self._gsas_buffer_dict.keys()))
+            gsas_file_name = os.path.join(
+                self._output_dir, '{0}.gda'.format(index_ws + gsas_file_index_start))
+            print('[DB...BAT]: {}'.format(self._gsas_buffer_dict.keys()))
             gsas_content = self._gsas_buffer_dict[ws_name_i]
             gsas_file = open(gsas_file_name, 'w')
             gsas_file.write(gsas_content)

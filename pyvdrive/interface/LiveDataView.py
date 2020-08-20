@@ -1,7 +1,7 @@
 from datetime import datetime
 import os
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
@@ -33,7 +33,7 @@ from gui import GuiUtility
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    def _fromUtf8(s): return s
 
 # TODO/ISSUE/FUTURE - Consider https://www.tutorialspoint.com/pyqt/pyqt_qsplitter_widget.htm
 #
@@ -41,7 +41,6 @@ except AttributeError:
 
 # Note: Atomic workspace: output_xxxx
 #       Accumulated workspace: adding output_xxx together
-
 """
 Note:
 1. workspace (output) only has 10 seconds log and refreshed each time how to resolve this issue?
@@ -81,7 +80,8 @@ class VulcanLiveDataView(QMainWindow):
         self._workspaceSet = set()
 
         # define data structure by setting some default
-        self._myAccumulationWorkspaceNumber = 360  # default as 360 * 0.5 (min) = = 180 min = 3 hours
+        # default as 360 * 0.5 (min) = = 180 min = 3 hours
+        self._myAccumulationWorkspaceNumber = 360
         self._myUpdateTimePeriod = 10   # seconds.  time interval to update live view
         self._myAccumulationTime = 30   # seconds.  time interval to start a new slice/chopped = 5 min per accumulation
         # decide whether a new workspace shall be started
@@ -89,10 +89,12 @@ class VulcanLiveDataView(QMainWindow):
         # containing 2 sets of incremental workspaces for safe
         self._myIncrementalWorkspaceNumber = self._myAccumulationTime / self._myUpdateTimePeriod * 2
         # incremental workspace list
-        self._myIncrementalWorkspaceList = [None] * self._myIncrementalWorkspaceNumber  # a holder for workspace names
+        self._myIncrementalWorkspaceList = [
+            None] * self._myIncrementalWorkspaceNumber  # a holder for workspace names
         self._myIncrementalListIndex = 0  # This is always the next index to write except in add...()
         # summed workspace list and index for accumulated workspaces
-        self._myAccumulationWorkspaceList = [None] * self._myAccumulationWorkspaceNumber  # name of summed workspaces
+        self._myAccumulationWorkspaceList = [
+            None] * self._myAccumulationWorkspaceNumber  # name of summed workspaces
         self._myAccumulationListIndex = 0
 
         # GSAS workspaces recorded in dictionary: key = run number, value = workspace name
@@ -125,9 +127,15 @@ class VulcanLiveDataView(QMainWindow):
         self._currRightYLogValueVector = None
 
         # peak integration: recorded for peak upgrading
-        self._minDPeakIntegration = {1: None, 0: None}  # 1 for True/main axis, 0 for False/right axis
-        self._maxDPeakIntegration = {1: None, 0: None}  # 1 for True/main axis, 0 for False/right axis
-        self._plotPeakVanadiumNorm = {1: False, 0: False}  # 1 for True/main axis, 0 for False/right axis
+        # 1 for True/main axis, 0 for False/right axis
+        self._minDPeakIntegration = {1: None, 0: None}
+        # 1 for True/main axis, 0 for False/right axis
+        self._maxDPeakIntegration = {1: None, 0: None}
+        # 1 for True/main axis, 0 for False/right axis
+        self._plotPeakVanadiumNorm = {1: False, 0: False}
+
+        # flag to plot
+        self._plotRun = None
 
         # other time
         self._liveStartTimeStamp = None  # shall be of time numpy.datetime64
@@ -213,7 +221,8 @@ class VulcanLiveDataView(QMainWindow):
         elif not os.access(self._snap_shot_dir, os.W_OK):
             err_msg = 'User does not have writing permission to {}'.format(self._snap_shot_dir)
         else:
-            self._snap_shot_image = os.path.join(self._snap_shot_dir, 'Vulcan_LiveDataView_SnapShot.png')
+            self._snap_shot_image = os.path.join(
+                self._snap_shot_dir, 'Vulcan_LiveDataView_SnapShot.png')
             if os.path.exists(self._snap_shot_image) and os.access(self._snap_shot_image, os.W_OK) is False:
                 err_msg = 'User cannot overwrite {}'.format(self._snap_shot_image)
             else:
@@ -221,7 +230,8 @@ class VulcanLiveDataView(QMainWindow):
         # END-IF
 
         if err_msg != '':
-            GuiUtility.pop_dialog_error(self, 'Auto snap shot generator is disabled due to {}'.format(err_msg))
+            GuiUtility.pop_dialog_error(
+                self, 'Auto snap shot generator is disabled due to {}'.format(err_msg))
             self._enable_snap_shot = False
         else:
             self._enable_snap_shot = True
@@ -275,14 +285,14 @@ class VulcanLiveDataView(QMainWindow):
             try:
                 p = QPixmap.grabWindow(self.winId())
             except AttributeError as att_err:
-                print ('[ERROR] Unable to save screen shot due to {}'.format(att_err))
+                print('[ERROR] Unable to save screen shot due to {}'.format(att_err))
             else:
                 p.save(self._snap_shot_image, 'png')  # or jpg
                 # print ('[DB...BAT] shot taken at {} and saved to {}'.format(time_message, self._snap_shot_image))
         else:
             date = datetime.now()
             time_message = date.strftime('%Y-%m-%d_%H-%M-%S')
-            print ('[DB...BAT] {}: Snap show it not take or saved is not saved'.format(time_message))
+            print('[DB...BAT] {}: Snap show it not take or saved is not saved'.format(time_message))
 
         return
 
@@ -292,7 +302,7 @@ class VulcanLiveDataView(QMainWindow):
         :return:
         """
         action = self.ui.dockWidget_multiPurposeView.toggleViewAction()
-        print '[DB...PROTOTYPE] action : {0} of type {1}'.format(action, type(action))
+        print('[DB...PROTOTYPE] action : {0} of type {1}'.format(action, type(action)))
         action.setVisible(True)
         self.ui.dockWidget_multiPurposeView.show()
 
@@ -333,7 +343,8 @@ class VulcanLiveDataView(QMainWindow):
                                                    'an integer but not a {1}'.format(max_acc_ws_number,
                                                                                      type(max_acc_ws_number))
         assert isinstance(accumulation_time, int), 'Data accumulation time {0} ({1}) must be an integer but not other' \
-                                                   'type.'.format(accumulation_time, type(accumulation_time))
+                                                   'type.'.format(accumulation_time,
+                                                                  type(accumulation_time))
         assert isinstance(update_time, int), 'Update/refresh time {0} ({1}) must be an integer but not any other ' \
                                              'type.'.format(update_time, type(update_time))
 
@@ -342,7 +353,8 @@ class VulcanLiveDataView(QMainWindow):
             raise RuntimeError('Maximum accumulation workspace number (now {0}) must be larger or equal to 2.'
                                ''.format(max_acc_ws_number))
         if update_time <= 0:
-            raise RuntimeError('Update/refresh time (in second) {0} must be a positive integer.'.format(update_time))
+            raise RuntimeError(
+                'Update/refresh time (in second) {0} must be a positive integer.'.format(update_time))
         if accumulation_time < update_time:
             raise RuntimeError('Accumulation time {0} cannot be shorted than update time {1}.'
                                ''.format(accumulation_time, update_time))
@@ -355,12 +367,14 @@ class VulcanLiveDataView(QMainWindow):
         else:
             # accumulation time is not a multiplication to update/refresh time
             # reset define the accumulation time to be nearest integer multiplication to update time period
-            accumulation_time = (accumulation_time/self._myUpdateTimePeriod+1)*self._myUpdateTimePeriod
+            accumulation_time = (accumulation_time/self._myUpdateTimePeriod+1) * \
+                self._myUpdateTimePeriod
             self._myAccumulationTime = accumulation_time
             self.write_log(level='warning', message='Accumulation time is modified to {0}'
                                                     ''.format(self._myAccumulationTime))
         # END-IF
-        self._myIncrementalWorkspaceNumber = self._myAccumulationTime / self._myUpdateTimePeriod * 2  # leave some space
+        # leave some space for workspace number
+        self._myIncrementalWorkspaceNumber = self._myAccumulationTime // self._myUpdateTimePeriod * 2
         self._myMaxIncrementalNumber = self._myAccumulationTime / self._myUpdateTimePeriod
 
         # set the lists
@@ -464,9 +478,9 @@ class VulcanLiveDataView(QMainWindow):
             'Graphics view {0} must be a Q GraphicsView instance but not a {1}.' \
             ''.format(graphics_view, type(graphics_view))
         assert isinstance(x_min_widget, QLineEdit), 'Min X widget {0} must be a QLineEdit but not a ' \
-                                                          '{1}'.format(x_min_widget, type(x_min_widget))
+            '{1}'.format(x_min_widget, type(x_min_widget))
         assert isinstance(x_max_widget, QLineEdit), 'Max X widget {0} must be a QLineEdit but not a ' \
-                                                          '{1}'.format(x_max_widget, type(x_max_widget))
+            '{1}'.format(x_max_widget, type(x_max_widget))
 
         try:
             x_min = float(str(x_min_widget.text()))
@@ -589,7 +603,8 @@ class VulcanLiveDataView(QMainWindow):
                     left_x_bound = None
             else:
                 assert isinstance(left_x_bound, float), 'Left boundary {0} must be either QLineEdit, None or float, ' \
-                                                        'but not of {1}'.format(left_x_bound, type(left_x_bound))
+                                                        'but not of {1}'.format(
+                                                            left_x_bound, type(left_x_bound))
         # END-IF
 
         if right_x_bound is not None:
@@ -603,7 +618,7 @@ class VulcanLiveDataView(QMainWindow):
                                                          'float, but not of {1}'.format(right_x_bound,
                                                                                         type(right_x_bound))
         # END-IF
-    
+
         # set
         self._bankViewDict[bank_id].set_roi(left_x_bound, right_x_bound)
         self._bankViewDict[bank_id].rescale_y_axis(left_x_bound, right_x_bound)
@@ -732,7 +747,8 @@ class VulcanLiveDataView(QMainWindow):
         """
         # check inputs
         assert isinstance(last_n_round, int), 'Last N ({0}) round for accumulated workspaces must be given by ' \
-                                              'an integer, but not a {1}.'.format(last_n_round, type(last_n_round))
+                                              'an integer, but not a {1}.'.format(
+                                                  last_n_round, type(last_n_round))
 
         # if less than 0, then it means that all the available workspace shall be contained
         if last_n_round <= 0:
@@ -742,11 +758,14 @@ class VulcanLiveDataView(QMainWindow):
         ws_name_list = list()
         ws_index_list = list()
         try:
-            print '[DB...BAT...BAT] Index = {0} ' \
+            print('[DB...BAT...BAT] Index = {0} '
                   'Workspace Name = {1}'.format(self._myAccumulationListIndex,
-                                                self._myAccumulationWorkspaceList[self._myAccumulationListIndex])
+                                                self._myAccumulationWorkspaceList[self._myAccumulationListIndex]))
         except IndexError as index_err:
-            raise RuntimeError('In get_accumulation_workspaces(), _myAccumulationListIndex = {} out of range of _myAccumulationWorksapceList'.format(self._myAccumulationListIndex, len(self._myAccumulationWorkspaceList)))
+            raise RuntimeError('In get_accumulation_workspaces(), _myAccumulationListIndex = {} out of {} '
+                               'range of _myAccumulationWorksapceList.  Error info: {}'
+                               ''.format(self._myAccumulationListIndex, len(self._myAccumulationWorkspaceList),
+                                         index_err))
 
         for ws_count in range(last_n_round):
             # get accumulation workspace list index
@@ -987,7 +1006,8 @@ class VulcanLiveDataView(QMainWindow):
         # END-IF
 
         # get the previous-N cycle accumulated workspace's name: remember that currentIndex is 1 beyond what it is
-        prev_ws_index = (self._myAccumulationListIndex - 1 - int(self.ui.lineEdit_showPrevNCycles.text()))
+        prev_ws_index = (self._myAccumulationListIndex - 1 -
+                         int(self.ui.lineEdit_showPrevNCycles.text()))
         prev_ws_index %= self._myAccumulationWorkspaceNumber
         if self._myAccumulationWorkspaceList[prev_ws_index] is None:
             message = 'There are only {0} previously accumulated and reduced workspace. ' \
@@ -1013,7 +1033,8 @@ class VulcanLiveDataView(QMainWindow):
         # get new unit
         target_unit = str(self.ui.comboBox_currUnits.currentText())
         prev_ws_name_tmp = '_temp_prev_ws_{0}'.format(random.randint(1, 10000))
-        prev_ws, is_new_ws = self._controller.convert_unit(prev_ws_name, target_unit, prev_ws_name_tmp)
+        prev_ws, is_new_ws = self._controller.convert_unit(
+            prev_ws_name, target_unit, prev_ws_name_tmp)
 
         # plot
         line_label = '{0}'.format(prev_ws_name)
@@ -1053,7 +1074,8 @@ class VulcanLiveDataView(QMainWindow):
             ws_name_list, index_list = self.get_accumulation_workspaces(last_n_accumulation)
 
         # get log values
-        time_vec, log_value_vec, last_pulse_time = self._controller.parse_sample_log(ws_name_list, y_axis_name)
+        time_vec, log_value_vec, last_pulse_time = self._controller.parse_sample_log(
+            ws_name_list, y_axis_name)
         if time_vec is None:
             raise RuntimeError('No log value found in {}'.format(ws_name_list))
 
@@ -1081,8 +1103,8 @@ class VulcanLiveDataView(QMainWindow):
         curr_run_number = int(self.ui.lineEdit_runNumber.text())
 
         if self._controller.has_loaded_logs(ipts_number, self._2dStartRunNumber, curr_run_number):
-            x_axis_vec, y_axis_vec = self._controller.get_loaded_logs(self._2dStartRunNumber, curr_run_number,
-                                                                      self._inAccumulationWorkspaceName)
+            self._controller.get_loaded_logs(self._2dStartRunNumber, curr_run_number,
+                                             self._inAccumulationWorkspaceName)
         else:
             self._controller.load_nexus_sample_logs(ipts_number, self._2dStartRunNumber, curr_run_number,
                                                     run_on_thread=True)
@@ -1101,15 +1123,13 @@ class VulcanLiveDataView(QMainWindow):
         :param x_axis_name:
         :param y_axis_name_list:
         :param side_list: Flag for left/right side to plot list of boolean. True = left/main axis; False = right axis
-        :param d_min:
-        :param d_max:
-        :param norm_by_van:
         :return:
         """
         # parse the user-specified X and Y axis name and process name in case of 'name (#)'
         # check inputs
         datatypeutility.check_list('Log names for Y axis', y_axis_name_list)
-        datatypeutility.check_list('Flag for the axis-side (left/right) of sample log to plot', side_list)
+        datatypeutility.check_list(
+            'Flag for the axis-side (left/right) of sample log to plot', side_list)
 
         if len(y_axis_name_list) != len(side_list):
             raise RuntimeError('Number of Y-axis names ({0}) must be same as number of sides ({1}).'
@@ -1139,7 +1159,8 @@ class VulcanLiveDataView(QMainWindow):
             raise RuntimeError('At most 1 (now {0}) log/peak parameter can be assigned to main axis.'
                                ''.format(num_left))
         elif num_left + num_right == 0:
-            raise RuntimeError('At least one log/peak parameter must be assigned either main or right axis.')
+            raise RuntimeError(
+                'At least one log/peak parameter must be assigned either main or right axis.')
 
         # plot
         for index, y_axis_name in enumerate(y_axis_name_list):
@@ -1242,16 +1263,20 @@ class VulcanLiveDataView(QMainWindow):
                 # append
                 if is_main:
                     if len(time_vec) == 1 and time_vec[0] <= self._currMainYLogTimeVector[-1]:
-                        print '[DEBUG] CRAP Main: {0} comes after {1}'.format(time_vec[0],
-                                                                              self._currMainYLogTimeVector[-1])
-                    self._currMainYLogTimeVector = numpy.append(self._currMainYLogTimeVector, time_vec)
-                    self._currMainYLogValueVector = numpy.append(self._currMainYLogValueVector, value_vec)
+                        print('[DEBUG] CRAP Main: {0} comes after {1}'.format(time_vec[0],
+                                                                              self._currMainYLogTimeVector[-1]))
+                    self._currMainYLogTimeVector = numpy.append(
+                        self._currMainYLogTimeVector, time_vec)
+                    self._currMainYLogValueVector = numpy.append(
+                        self._currMainYLogValueVector, value_vec)
                 else:
                     if len(time_vec) == 1 and time_vec[0] <= self._currRightYLogTimeVector[-1]:
-                        print '[DEBUG] CRAP Right: {0} comes after {1}'.format(time_vec[0],
-                                                                               self._currRightYLogTimeVector[-1])
-                    self._currRightYLogTimeVector = numpy.append(self._currRightYLogTimeVector, time_vec)
-                    self._currRightYLogValueVector = numpy.append(self._currRightYLogValueVector, value_vec)
+                        print('[DEBUG] CRAP Right: {0} comes after {1}'.format(time_vec[0],
+                                                                               self._currRightYLogTimeVector[-1]))
+                    self._currRightYLogTimeVector = numpy.append(
+                        self._currRightYLogTimeVector, time_vec)
+                    self._currRightYLogValueVector = numpy.append(
+                        self._currRightYLogValueVector, value_vec)
                 # END-IF-ELSE
 
                 debug_message = '[Append Mode] New time stamps: {0}... Log T0 = {1}' \
@@ -1274,7 +1299,7 @@ class VulcanLiveDataView(QMainWindow):
 
                     append = False  # For plot
                 except RuntimeError as run_err:
-                    print ('[ERROR] Unable to get and thus plot {} due to {}'.format(log_name, run_err))
+                    print('[ERROR] Unable to get and thus plot {} due to {}'.format(log_name, run_err))
                     return
             # END-IF-ELSE
 
@@ -1295,7 +1320,8 @@ class VulcanLiveDataView(QMainWindow):
                                                                  include_right=not is_main)
 
             # plot!  FIXME - why APPEND is not passed to plot_sample_log!??
-            print ('[DB...BAT...TODAY] Print sample log {}: {}, {}'.format(label_line, time_vec, value_vec))
+            print('[DB...BAT...TODAY] Print sample log {}: {}, {}'.format(
+                label_line, time_vec, value_vec))
 
             self.ui.graphicsView_comparison.plot_sample_log(time_vec, value_vec, is_main=is_main,
                                                             x_label=None,
@@ -1323,7 +1349,8 @@ class VulcanLiveDataView(QMainWindow):
         hours = total_seconds / 3600
         minutes = total_seconds % 3600 / 60
         seconds = total_seconds % 60
-        self.ui.lineEdit_collectionTime.setText('{0:02}:{1:02}:{2:02}'.format(hours, minutes, seconds))
+        self.ui.lineEdit_collectionTime.setText(
+            '{0:02}:{1:02}:{2:02}'.format(hours, minutes, seconds))
 
         # return if there is no new workspace to process
         if len(ws_name_list) == 0:
@@ -1346,7 +1373,8 @@ class VulcanLiveDataView(QMainWindow):
             if mantid_helper.get_workspace_unit(ws_name_i) != 'dSpacing':
                 mantid_helper.mtd_convert_units(ws_name_i, 'dSpacing')
             else:
-                self.write_log('information', 'Input workspace {0} has unit dSpacing.'.format(ws_name_i))
+                self.write_log(
+                    'information', 'Input workspace {0} has unit dSpacing.'.format(ws_name_i))
             # END-IF-ELSE
 
             # rebin
@@ -1358,7 +1386,8 @@ class VulcanLiveDataView(QMainWindow):
             ws_x_info = ''
             for iws in range(3):
                 ws_x_info += 'Workspace {0}: From {1} to {2}, # of bins = {3}\n'.format(iws, workspace_i.readX(0)[0],
-                                                                                        workspace_i.readX(0)[-1],
+                                                                                        workspace_i.readX(
+                                                                                            0)[-1],
                                                                                         len(workspace_i.readX(0)))
             self.write_log('debug', ws_x_info)
 
@@ -1384,7 +1413,8 @@ class VulcanLiveDataView(QMainWindow):
             # skip non-matrix workspace or workspace sounds not right
             if not (mantid_helper.is_matrix_workspace(ws_name_i) and 3 <= workspace_i.getNumberHistograms() < 20):
                 # skip weird workspace
-                log_message = 'Workspace {0} of type {1} is not expected.\n'.format(workspace_i, type(workspace_i))
+                log_message = 'Workspace {0} of type {1} is not expected.\n'.format(
+                    workspace_i, type(workspace_i))
                 self.write_log('error', log_message)
                 continue
 
@@ -1404,11 +1434,8 @@ class VulcanLiveDataView(QMainWindow):
                                                           self._bankViewDMin, self._bankViewDMax)
             self.write_log('debug', db_msg)
             if str(self.ui.comboBox_currUnits.currentText()) == 'dSpacing':
-                print '[DB...BAT...BAT...BAT] Set bank View of ROI'
                 for bank_id in [1, 2, 3]:
                     self.set_bank_view_roi(bank_id=bank_id, left_x_bound=None, right_x_bound=None)
-            else:
-                print '[DB...BAT...BAT...BAT] Set bank View to original'
 
             # update log
             if self._currSampleLogX is not None:
@@ -1417,7 +1444,8 @@ class VulcanLiveDataView(QMainWindow):
                 peak_range_list = [(self._minDPeakIntegration[1], self._maxDPeakIntegration[1]),
                                    (self._minDPeakIntegration[0], self._maxDPeakIntegration[0])]
                 norm_by_van_list = [self._plotPeakVanadiumNorm[1], self._plotPeakVanadiumNorm[0]]
-                self.plot_log_live(self._currSampleLogX, y_axis_list, side_list, peak_range_list, norm_by_van_list)
+                self.plot_log_live(self._currSampleLogX, y_axis_list,
+                                   side_list, peak_range_list, norm_by_van_list)
         # END-FOR
 
         return
@@ -1430,7 +1458,8 @@ class VulcanLiveDataView(QMainWindow):
         """
         # check
         assert isinstance(accumulation_time, int), 'Accumulation time {0} to set must be an integer but not a {1}.' \
-                                                   ''.format(accumulation_time, type(accumulation_time))
+                                                   ''.format(accumulation_time,
+                                                             type(accumulation_time))
 
         self._set_workspace_manager(max_acc_ws_number=self._myAccumulationWorkspaceNumber,
                                     accumulation_time=accumulation_time,
@@ -1457,7 +1486,8 @@ class VulcanLiveDataView(QMainWindow):
                                                ''.format(start_run, int(start_run))
 
             if start_run <= 0:
-                raise RuntimeError('Starting run number {0} cannot be less than 1.'.format(start_run))
+                raise RuntimeError(
+                    'Starting run number {0} cannot be less than 1.'.format(start_run))
 
             self._2dStartRunNumber = start_run
         else:
@@ -1537,7 +1567,7 @@ class VulcanLiveDataView(QMainWindow):
                                ''.format(workspace_i, type(workspace_i), att_err))
 
         if self._inAccumulationWorkspaceName is None or \
-                        len(self._inAccumulationIncrementalWorkspaceList) == self._myMaxIncrementalNumber:
+                len(self._inAccumulationIncrementalWorkspaceList) == self._myMaxIncrementalNumber:
             # reset if pre-existing of accumulated workspace. It is a time of a new accumulation workspace
             self._inAccumulationIncrementalWorkspaceList = list()
 
@@ -1567,7 +1597,8 @@ class VulcanLiveDataView(QMainWindow):
 
         else:
             # add to existing accumulation workspace
-            ws_in_acc = mantid_helper.retrieve_workspace(self._inAccumulationWorkspaceName, raise_if_not_exist=True)
+            ws_in_acc = mantid_helper.retrieve_workspace(
+                self._inAccumulationWorkspaceName, raise_if_not_exist=True)
 
             # more check on histogram number and spectrum size
             if ws_in_acc.getNumberHistograms() != workspace_i.getNumberHistograms():
@@ -1688,9 +1719,11 @@ class VulcanLiveDataView(QMainWindow):
         for ws_name in new_ws_name_list:
             ws_i = mantid_helper.retrieve_workspace(ws_name)
             if ws_i is None:
-                self.write_log('error', 'In update-timer: unable to retrieve workspace {0}'.format(ws_name))
+                self.write_log(
+                    'error', 'In update-timer: unable to retrieve workspace {0}'.format(ws_name))
             elif ws_i.id() == 'Workspace2D' or ws_i.id() == 'EventWorkspace' and ws_i.name().startswith('output'):
-                message += 'New workspace {0}: number of spectra = {1}'.format(ws_name, ws_i.getNumberHistograms())
+                message += 'New workspace {0}: number of spectra = {1}'.format(
+                    ws_name, ws_i.getNumberHistograms())
         # END-FOR
         if len(message) > 0:
             self.write_log('information', message)
@@ -1730,6 +1763,7 @@ class TwoDimPlotUpdateThread(QtCore.QThread):
     """
     blabla
     """
+
     def __init__(self):
         """
 

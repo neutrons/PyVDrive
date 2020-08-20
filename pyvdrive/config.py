@@ -26,8 +26,8 @@ for datapath in datapaths:
 # ENDFOR
 
 # Vanadium
-vanadiumDataBaseFiles = [ 
-    '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium/VRecord.txt', 
+vanadiumDataBaseFiles = [
+    '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium/VRecord.txt',
     '~/Projects/SNSData/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium/VRecord.txt']
 defaultVanadiumDataBaseFile = None
 for vanfilename in vanadiumDataBaseFiles:
@@ -40,13 +40,12 @@ for vanfilename in vanadiumDataBaseFiles:
         break
 # ENDFOR
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Finally
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Build the configuration dictionry
-configdict = {}
+configdict = dict()
 configdict['default.BaseDataPath'] = defaultDataPath
 configdict['default.VanadiumDataBaseFile'] = defaultVanadiumDataBaseFile
 configdict['default.timeFocusFile'] = '/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal'
-
-configdict['vanadium.SampleLogToMatch'] = [('Guide', 'float'), ('BandWidth', 'float'), ('Frequency', 'float')]
+# configdict['vanadium.SampleLogToMatch'] = [('Guide', 'float'), ('BandWidth', 'float'), ('Frequency', 'float')]

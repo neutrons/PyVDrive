@@ -6,7 +6,7 @@
 import os
 import numpy
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore as QtCore
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
@@ -15,7 +15,7 @@ except ImportError:
     from PyQt4 import QtCore as QtCore
     from PyQt4.QtGui import QVBoxLayout
     from PyQt4.uic import loadUi as load_ui
-    from PyQt4.QtGui import QMainWindow, QButtonGroup, QFileDialog
+    from PyQt4.QtGui import QMainWindow, QButtonGroup, QFileDialog  # noqa: F401
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -46,6 +46,7 @@ class WindowLogPicker(QMainWindow):
     """ Class for general-puposed plot window
     """
     # class
+
     def __init__(self, parent=None, init_ipts_number=None, init_run=None):
         """ Init
         blabla
@@ -112,7 +113,8 @@ class WindowLogPicker(QMainWindow):
         self.ui.checkBox_showSlicer.stateChanged.connect(self.evt_show_slicer)
 
         # manual slicer picker
-        self.ui.pushButton_showManualSlicerTable.clicked.connect(self.do_show_manual_slicer_setup_ui)
+        self.ui.pushButton_showManualSlicerTable.clicked.connect(
+            self.do_show_manual_slicer_setup_ui)
         self.ui.pushButton_loadSlicerFile.clicked.connect(self.do_load_splitter_file)
 
         # Slicer table
@@ -355,7 +357,7 @@ class WindowLogPicker(QMainWindow):
             """
             # cache current
             self._cached_slicers_dict[self._current_slicer_type] = self._current_slicer_type
-            prev_slicer = self._current_slicer_type
+            # prev_slicer = self._current_slicer_type
 
             # get the next
             self._current_slicer_type = mode_name
@@ -423,7 +425,7 @@ class WindowLogPicker(QMainWindow):
 
         elif self.ui.radioButton_curveSlicer.isChecked():
             # curve/manual slicer
-            print ('ASAP')
+            print('ASAP')
             # TODO - TONIGHT 1 - Need a use case: such as launch a controlling dialog
 
         else:
@@ -512,7 +514,8 @@ class WindowLogPicker(QMainWindow):
             raise RuntimeError('Unable to find out run number due to {0}'.format(val_error))
 
         # pop up the dialog
-        self._quickChopDialog = QuickChopDialog.QuickChopDialog(self, self._curr_run_number, raw_file_name)
+        self._quickChopDialog = QuickChopDialog.QuickChopDialog(
+            self, self._curr_run_number, raw_file_name)
         result = self._quickChopDialog.exec_()
 
         # quit if user cancels the operation
@@ -571,21 +574,23 @@ class WindowLogPicker(QMainWindow):
             default_dir = self._myParent.get_controller().get_working_dir()
             slicer_file_name = GuiUtility.get_load_file_by_dialog(self, 'Read Slicer File', default_dir,
                                                                   'Data File (*.dat);;Text (*.txt)')
-            print ('[DB...BAT] Slicer file: {}'.format(slicer_file_name))
+            print('[DB...BAT] Slicer file: {}'.format(slicer_file_name))
 
         if len(slicer_file_name) == 0:
             # return if operation is cancelled
             return
 
         try:
-            slicer_list = file_utilities.load_event_slicers_file(slicer_file_name)  # missing: ref_run, run_start_time,
+            slicer_list = file_utilities.load_event_slicers_file(
+                slicer_file_name)  # missing: ref_run, run_start_time,
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self, '{}'.format(run_err))
             return
 
         # check
         if len(slicer_list) == 0:
-            GuiUtility.pop_dialog_error(self, 'There is no valid slicers in file {0}'.format(slicer_file_name))
+            GuiUtility.pop_dialog_error(
+                self, 'There is no valid slicers in file {0}'.format(slicer_file_name))
             return
         else:
             # sort
@@ -593,16 +598,17 @@ class WindowLogPicker(QMainWindow):
 
         # get run start time in second
         # TODO - TONIGHT 0 - Fix this: TypeError: 'TimeSegment' object does not support indexing
-        slicer_start_time = slicer_list[0][0]   # Error:  TypeError: 'TimeSegment' object does not support indexing
+        # Error:  TypeError: 'TimeSegment' object does not support indexing
+        # slicer_start_time = slicer_list[0][0]
         # Error above line
 
         # automatically determine the type of slicer time: epoch (nano seconds or relative)
-        if slicer_start_time > 3600 * 24 * 365:
-            # larger than 1 year. then must be an absolute time
-            run_start_s = int(self.ui.label_runStartEpoch.text())
-        else:
-            # relative time: no experiment in 1991
-            run_start_s = 0.
+        # if slicer_start_time > 3600 * 24 * 365:
+        #     # larger than 1 year. then must be an absolute time
+        #     run_start_s = int(self.ui.label_runStartEpoch.text())
+        # else:
+        #     # relative time: no experiment in 1991
+        #     run_start_s = 0.
 
         # add slicers to table
         # TODO - TODAY 190 - Test
@@ -651,7 +657,7 @@ class WindowLogPicker(QMainWindow):
                                                          default_dir=self.get_controller().working_dir(),
                                                          file_filter='HDF5 (*.hdf5);;HDF5 (*.hdf)')
 
-        sample_log_dict = file_utilities.load_sample_logs_h5(log_h5_name=h5_log_name)
+        file_utilities.load_sample_logs_h5(log_h5_name=h5_log_name)
 
         # TODO - TODAY - Need to find out what is the next step after loading sample logs
 
@@ -665,7 +671,8 @@ class WindowLogPicker(QMainWindow):
         # get file and match
         mts_log_file = str(self.ui.lineEdit_logFileName.text())
         assert mts_log_file in self._mtsLogFormat, 'MTS log format has not key for log file %s. Current keys are' \
-                                                   '%s.' % (mts_log_file, str(self._mtsLogFormat.keys()))
+                                                   '%s.' % (mts_log_file, str(
+                                                       self._mtsLogFormat.keys()))
 
         # block ID and set up average step size
         block_index = int(self.ui.comboBox_blockList.currentText())
@@ -673,9 +680,8 @@ class WindowLogPicker(QMainWindow):
         # get this dictionary
         mts_log_dict = self._mtsLogFormat[mts_log_file]
 
-        print '[DB...BAT] mts log dict: ', mts_log_dict
-
-        duration = mts_log_dict['duration'][block_index][1] - mts_log_dict['duration'][block_index][0]
+        duration = mts_log_dict['duration'][block_index][1] - \
+            mts_log_dict['duration'][block_index][0]
         num_points = mts_log_dict['data'][block_index][1] - mts_log_dict['data'][block_index][0]
         self._averagePointsPerSecond = int(num_points / duration)
         assert self._averagePointsPerSecond > 1, 'Number of data points per seconds %d must be large than 0.' \
@@ -705,7 +711,7 @@ class WindowLogPicker(QMainWindow):
         delta_points = self.get_data_size_to_load()
         if delta_points <= 0:
             # no point to load
-            print '[DB INFO] calculated delta-points = %d < 0. No loading' % delta_points
+            print('[DB INFO] calculated delta-points = %d < 0. No loading' % delta_points)
 
         # get the file
         mts_log_file = str(self.ui.lineEdit_logFileName.text())
@@ -765,7 +771,8 @@ class WindowLogPicker(QMainWindow):
         ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber)
         run_number = GuiUtility.parse_integer(self.ui.lineEdit_runNumber)
         if run_number is None or ipts_number is None:
-            GuiUtility.pop_dialog_error(self, 'Unable to load: both IPTS or run value must be specified.')
+            GuiUtility.pop_dialog_error(
+                self, 'Unable to load: both IPTS or run value must be specified.')
             return
 
         # Get sample logs
@@ -812,7 +819,8 @@ class WindowLogPicker(QMainWindow):
         # get current index of the combo box and find out the next
         current_index = self.ui.comboBox_logNames.currentIndex()
         max_index = self.ui.comboBox_logNames.size()
-        # TODO - TODAY - Test - logNames.size() may not a correction method to find total number of entries of a combo box
+        # TODO - TODAY - Test - logNames.size() may not a correction method to find total number
+        # of entries of a combo box
         next_index = (current_index + 1) % int(max_index)
 
         # advance to the next one
@@ -892,9 +900,10 @@ class WindowLogPicker(QMainWindow):
             info_dict = self.get_controller().get_chopped_data_info(self._curr_run_number,
                                                                     slice_key=self._currSlicerKey,
                                                                     reduced=True)
-            print ('[DB...BAT] Chopped data info: {}'.format(info_dict))
+            print('[DB...BAT] Chopped data info: {}'.format(info_dict))
             data_key = self.get_controller().project.current_chopped_key()
-            view_window.do_refresh_existing_runs(set_to=data_key, plot_selected=True, is_chopped=True)
+            view_window.do_refresh_existing_runs(
+                set_to=data_key, plot_selected=True, is_chopped=True)
 
             if False:
                 # chopped_workspace_list = info_dict['workspaces']
@@ -971,7 +980,8 @@ class WindowLogPicker(QMainWindow):
                                                                             time_step=step)
             if status:
                 self._currSlicerKey = ret_obj
-                message = 'Uniform Time slicer: from %s to %s with step %f.' % (str(start_time), str(stop_time), step)
+                message = 'Uniform Time slicer: from %s to %s with step %f.' % (
+                    str(start_time), str(stop_time), step)
             else:
                 GuiUtility.pop_dialog_error(self, 'Failed to generate data slicer by time due to %s.'
                                                   '' % str(ret_obj))
@@ -1010,7 +1020,8 @@ class WindowLogPicker(QMainWindow):
 
         else:
             # bad coding
-            GuiUtility.pop_dialog_error(self, 'Bad coding: Neither time nor log value chopping is selected.')
+            GuiUtility.pop_dialog_error(
+                self, 'Bad coding: Neither time nor log value chopping is selected.')
             return
 
         # set up message
@@ -1149,7 +1160,6 @@ class WindowLogPicker(QMainWindow):
 
     def show_slicers(self, time_vector, ws_vector, color):
         self.ui.graphicsView_main.highlight_slicers(time_vector, ws_vector, color)
-
 
     def get_current_slicer(self):
         status, ret_obj = self.get_controller().get_slicer(self._curr_run_number, self._currSlicerKey)
@@ -1368,7 +1378,7 @@ class WindowLogPicker(QMainWindow):
         try:
             vec_x = mts_data_set[x_axis_log]
             vec_y = mts_data_set[log_name]
-            print (vec_x.shape, vec_y.shape)
+            print(vec_x.shape, vec_y.shape)
             assert isinstance(vec_x, numpy.ndarray)
             assert isinstance(vec_y, numpy.ndarray)
         except KeyError as key_err:
@@ -1395,7 +1405,8 @@ class WindowLogPicker(QMainWindow):
             vec_x, vec_y = self._sampleLogDict[self._curr_run_number][log_name]
         else:
             # get sample log data from driver
-            vec_x, vec_y = self._myParent.get_sample_log_value(self._curr_run_number, log_name, relative=True)
+            vec_x, vec_y = self._myParent.get_sample_log_value(
+                self._curr_run_number, log_name, relative=True)
             self._sampleLogDict[self._curr_run_number][log_name] = vec_x, vec_y
             # END-IF
 
@@ -1428,7 +1439,8 @@ class WindowLogPicker(QMainWindow):
             elif use_num_res:
                 resolution = GuiUtility.parse_float(self.ui.lineEdit_resolutionMaxPoints)
             else:
-                GuiUtility.pop_dialog_error(self, 'Either time or number resolution should be selected.')
+                GuiUtility.pop_dialog_error(
+                    self, 'Either time or number resolution should be selected.')
                 return
 
             # get the sample log data
@@ -1472,7 +1484,8 @@ class WindowLogPicker(QMainWindow):
                                                       sample_log_name=log_name,
                                                       sample_log_name_x=x_axis_log)
 
-            self._cached_slicers_dict = controller.create_curve_slicer_generator(vec_times, plot_x, plot_y)
+            self._cached_slicers_dict = controller.create_curve_slicer_generator(
+                vec_times, plot_x, plot_y)
 
         # END-IF
 
@@ -1509,7 +1522,8 @@ class WindowLogPicker(QMainWindow):
         else:
             max_x = min(vec_x[-1], max_x)
 
-        index_array = numpy.searchsorted(vec_x, [min_x - 1.E-20, max_x + 1.E-20])   # TODO - TONIGHT - replace!
+        index_array = numpy.searchsorted(
+            vec_x, [min_x - 1.E-20, max_x + 1.E-20])   # TODO - TONIGHT - replace!
         i_start = index_array[0]
         i_stop = index_array[1]
 
@@ -1549,7 +1563,8 @@ class WindowLogPicker(QMainWindow):
         Set run
         :return:
         """
-        datatypeutility.check_int_variable('Run number set to Log Picker Window', run_number, (0, None))
+        datatypeutility.check_int_variable(
+            'Run number set to Log Picker Window', run_number, (0, None))
         run_number = int(run_number)
         self.ui.lineEdit_runNumber.setText('%d' % run_number)
 
@@ -1584,6 +1599,6 @@ class WindowLogPicker(QMainWindow):
         return
 
     def smooth_sample_log_curve(self):
-        print (self._cached_slicers_dict)
+        print(self._cached_slicers_dict)
 
         self._cached_slicers_dict.smooth_curve('nearest', 1)

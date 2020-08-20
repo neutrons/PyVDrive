@@ -1,33 +1,31 @@
 #!/usr/bin/python
 # TODO TODO FIXME FIXME - Evaluate to remove!
-
-import sys
+import os
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtGui, QtCore
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QMainWindow
 except ImportError:
-    from PyQt4 import QtGui, QtCore
-    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4 import QtGui, QtCore  # noqa: F401
+    from PyQt4.QtGui import QVBoxLayout  # noqa: F401
     from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QMainWindow
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    def _fromUtf8(s): return s
 
 import gui.GuiUtility as gutil
-
 
 
 class FinalSelectRunToReduceDialog(QMainWindow):
     """ GUI (sub) for select run to reduce as final decision before reduction
     """
     # Define signal
-    mySelectSignal = QtCore.pyqtSignal(str, list) # list of int
+    mySelectSignal = QtCore.pyqtSignal(str, list)  # list of int
     myCancelSignal = QtCore.pyqtSignal(int)
 
     def __init__(self, parent):
@@ -68,29 +66,27 @@ class FinalSelectRunToReduceDialog(QMainWindow):
 
         return
 
-
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     # Methods to handle GUI events
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+
     def doClearAllSelection(self):
         """ Clear all selected runs for not reduction
         """
         numrows = self.ui.tableWidget.rowCount()
-        for irow in xrange(numrows):
+        for irow in range(numrows):
             self.ui.tableWidget.cellWidget(irow, 3).setChecked(False)
 
         return
-
 
     def doSelectAll(self):
         """ Select all runs to reduce
         """
         numrows = self.ui.tableWidget.rowCount()
-        for irow in xrange(numrows):
+        for irow in range(numrows):
             self.ui.tableWidget.cellWidget(irow, 3).setChecked(True)
 
         return
-
 
     def doQuitContinueReduce(self):
         """ Quit dialog window and continue to reduce data
@@ -98,11 +94,11 @@ class FinalSelectRunToReduceDialog(QMainWindow):
         # Collect runs to reduce
         retlist = []
         numrows = self.ui.tableWidget.rowCount()
-        for irow in xrange(numrows):
+        for irow in range(numrows):
             if self.ui.tableWidget.cellWidget(irow, 3).isChecked() is True:
                 retlist.append(int(str(self.ui.tableWidget.item(irow, 0).text())))
 
-        print "[DB] Runs to reduce: ", retlist
+        print("[DB] Runs to reduce: ", retlist)
 
         self.mySelectSignal.emit(self._myProjectName, retlist)
 
@@ -111,11 +107,10 @@ class FinalSelectRunToReduceDialog(QMainWindow):
 
         return
 
-
-
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     # Methods to access, set up and update table
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+
     def appendRow(self, ipts, run, vanrun, select):
         """ Append a row to the project table
 
@@ -175,8 +170,7 @@ class FinalSelectRunToReduceDialog(QMainWindow):
         self._myIPTS = int(ipts)
 
         title = "Project %s :  Add runs of IPTS-%d" % (self._myProjectName,
-                self._myIPTS)
+                                                       self._myIPTS)
         self.setWindowTitle(title)
 
         return
-

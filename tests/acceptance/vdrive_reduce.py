@@ -1,13 +1,8 @@
-from lettuce import *
-from nose.tools import assert_equals, assert_true
-
-import sys
+import pytest
 import os
 import os.path
+import pyvdrive.lib.VDriveAPI as vdapi
 
-# FIXME - This only works for Linux platform
-sys.path.append('/home/wzz/local/lib/python2.7/Site-Packages/')
-import PyVDrive.lib.VDriveAPI as vdapi
 
 class MyData:
     def __init__(self):
@@ -22,7 +17,6 @@ class MyData:
         """
         return str(self.myObject)
 
-
     def get(self):
         """ Get
         """
@@ -34,7 +28,6 @@ class MyData:
         :return:
         """
         return self._ipts, self._runs[:]
-
 
     def set(self, inputobject):
         """ Set
@@ -55,7 +48,7 @@ class MyData:
         """
         self._ipts = int(ipts_number)
         self._runs = run_tup_list[:]
-        assert(self._runs, list)
+        assert isinstance(self._runs, list)
 
 
 my_data = MyData()
@@ -64,8 +57,7 @@ my_data = MyData()
 ipts_number = 10311
 
 
-@step(u'I am using VDriveAPI')
-def init_workflow(step):
+def init_workflow():
     """ Set up including
     """
     # We don't need this!
@@ -73,8 +65,7 @@ def init_workflow(step):
     return
 
 
-@step(u'I get a list of runs belonged to an IPTS number')
-def setup_ipts(step):
+def setup_ipts():
     """ Set up IPTS, run number and etc for reduction
     """
     # Initialize work flow
@@ -96,77 +87,46 @@ def setup_ipts(step):
 
     # Get runs
     status, run_tup_list = wk_flow.get_ipts_info(ipts_number)
-    assert_equals(status, True)
-    assert_equals(len(run_tup_list), 1777)
+    assert status
+    assert len(run_tup_list) == 1777
 
     my_data.set_ipts_runs(ipts_number, run_tup_list)
 
     return
 
 
-@step(u'I filter the runs by date')
-def filter_runs(step):
+def filter_runs():
     """ Filter runs by date
     """
-    wk_flow = my_data.get()
     ipts_number, run_tup_list = my_data.get_ipts_runs()
-    assert_equals(len(run_tup_list), 1777)
+    assert len(run_tup_list) == 1777
 
     start_date = '02/09/2015'
     end_date = '02/10/2015'
     status, filter_run_tup_list = vdapi.filter_runs_by_date(run_tup_list, start_date, end_date)
-    assert_equals(status, True)
-    assert_equals(len(filter_run_tup_list), 69)
+    assert status
+    assert len(filter_run_tup_list) == 69
 
     my_data.set_ipts_runs(ipts_number, filter_run_tup_list)
 
     return
 
-@step(u'I input IPTS, run numbers')
-def set_ipts_runs(step):
+
+def set_ipts_runs():
     """
     """
     wk_flow = my_data.get()
     ipts_number, run_tup_list = my_data.get_ipts_runs()
 
     status, error_message = wk_flow.clear_runs()
-    assert_equals(status, True)
+    assert status
 
     status, error_message = wk_flow.add_runs_to_project(run_tup_list, ipts_number)
-    assert_equals(status, True)
-    assert_equals(69, wk_flow.get_number_runs())
+    assert status, True
+    assert 69 == wk_flow.get_number_runs()
 
 
-    """
-    # new project
-    wkflow.newProject(projname = "Test001", projtype = "reduction")
-    # set data path with default
-    wkflow.setDataPath(projname = 'Test001')
-    # IPTS and runs
-    ipts = 10311
-    runs= range(57070, 57078)
-
-    # FIXME : Should be put to 2 different test cases in future
-    if False:
-        # Manual setup
-        wkflow.setVanadiumFile('/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium/VRecord.txt')
-        criterialist = [('Frequency', 'float'), ('Guide', 'float'), ('Collimator', 'float')]
-        # set vanadium calibration (new project should add data and locate calibration file automatically)
-        wkflow.setVanadiumCalibrationMatchCriterion('Test001', criterialist)
-        # add experiment 
-        status, errmsg, datafilesets = wkflow.addExperimentRuns('Test001', 'reduction', ipts, runs, True)
-
-    else:
-        # Automatic setup
-        r = wkflow.addExperimentRuns(projname='Test001', operation='Add Experiment Runs', ipts=ipts, 
-                runnumberlist=runs, autofindcal=True)
-    # ENDIFELSE
-    """
-
-    return
-
-@step(u'I save current session to a file')
-def save_session(step):
+def save_session():
     """ Save sessions
     """
     wk_flow = my_data.get()
@@ -174,16 +134,12 @@ def save_session(step):
 
     status, filename = wk_flow.save_session('test1234.xml')
     work_dir = wk_flow.get_working_dir()
-    assert_true(status)
-    assert_equals(filename, os.path.join(work_dir, 'test1234.xml'))
-
-    return
+    assert status
+    assert filename == os.path.join(work_dir, 'test1234.xml')
 
 
-@step(u'I create a new VDriveAPI project and load saved session file to it')
-def load_session(step):
+def load_session():
     """ Load session to a new workflow instance
-    :param step:
     :return:
     """
     # Current workflow
@@ -197,16 +153,12 @@ def load_session(step):
     new_wk_flow.load_session(saved_file_name)
 
     # Compare the new workflow and old one
-    assert_equals(wk_flow.get_number_runs(), new_wk_flow.get_number_runs())
-    assert_equals(wk_flow.get_working_dir(), new_wk_flow.get_working_dir())
-
-    return
+    assert wk_flow.get_number_runs() == new_wk_flow.get_number_runs()
+    assert wk_flow.get_working_dir() == new_wk_flow.get_working_dir()
 
 
-@step(u'Then I add add a run number to the VDrive project for reduction')
-def add_run_to_reduce(step):
+def add_run_to_reduce():
     """ Add a run to reduce
-    :param step:
     :return:
     """
     workflow = my_data.get()
@@ -215,8 +167,8 @@ def add_run_to_reduce(step):
 
     return
 
-@step(u'Then I reduce the data')
-def reduce_data(step):
+
+def reduce_data():
     """ Set up reduction parametera and reduce data
     """
     workflow = my_data.get()
@@ -231,8 +183,8 @@ def reduce_data(step):
     paramdict = {
         "Extension": "_event.nxs",
         "PreserveEvents": True,
-        "Binning" : -0.001,
-        "OutputDirectory" : outputdir,
+        "Binning": -0.001,
+        "OutputDirectory": outputdir,
         "NormalizeByCurrent":  False,
         "FilterBadPulses": False,
         "CompressTOFTolerance": False,
@@ -247,17 +199,12 @@ def reduce_data(step):
     workflow.set_reduction_flag(file_flag_list=reduction_list, clear_flags=True)
 
     status, ret_obj = workflow.reduce_data_set(norm_by_vanadium=False)
-    print\
-        '[Message] ', str(ret_obj)
-    print
-    assert_true(status, str(ret_obj))
+    print('[Message] ', str(ret_obj))
+    assert status == str(ret_obj)
 
-    return
 
-@step(u'Then I check a matrix workspace generated from that run')
-def retrieve_reduced_data(step=9):
+def retrieve_reduced_data():
     """ Test retrieve reduced data
-    :param step:
     :return:
     """
     # Get workflow
@@ -265,34 +212,35 @@ def retrieve_reduced_data(step=9):
 
     reduced_run_list = work_flow.get_reduced_runs()
     num_reduced_runs = len(reduced_run_list)
-    assert_equals(num_reduced_runs, 1)
+    assert num_reduced_runs == 1
     status, reduced_data = work_flow.get_reduced_data(reduced_run_list[0], 'dspace')
-    assert_true(status)
-    assert_true(isinstance(reduced_data, dict))
-    assert_equals(len(reduced_data.keys()), 2)
-    assert_equals(len(reduced_data), 2)
-    assert_equals(len(reduced_data[0]), 3)
+    assert status
+    assert isinstance(reduced_data, dict)
+    assert len(reduced_data.keys()) == 2
+    assert len(reduced_data) == 2
+    assert len(reduced_data[0]) == 3
 
 
-@step(u'Reduce 2 runs and check results')
-def reduce_2_runs(step=10):
+def reduce_2_runs():
     """ Test to reduce multiple runs
-    :param step:
     :return:
     """
     # Get workflow
     work_flow = my_data.get()
+    assert work_flow
+
+
+def test_workflow():
+    init_workflow()
+    setup_ipts()
+    filter_runs()
+    set_ipts_runs()
+    save_session()
+    load_session()
+    add_run_to_reduce()
+    reduce_data()
+    retrieve_reduced_data()
+
 
 if __name__ == "__main__":
-
-    if False:
-        init_workflow(1)
-        setup_ipts(2)
-        filter_runs(3)
-        set_ipts_runs(4)
-        save_session(5)
-        load_session(6)
-        add_run_to_reduce(7)
-        reduce_data(8)
-        retrieve_reduced_data(9)
-
+    pytest.main(__file__)

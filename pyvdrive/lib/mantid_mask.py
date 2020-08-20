@@ -7,6 +7,7 @@ class MantidMaskingManager(object):
     """
     A workspace management and operation class for masking workspace (for Mask and ROI) in Mantid
     """
+
     def __init__(self):
         """
         initialization
@@ -99,7 +100,8 @@ class MantidMaskingManager(object):
             mantid_helper.mask_workspace(ws_name, roi_ws_list[0])
         else:
             # multiple mask workspaces of ROI
-            raise NotImplementedError('It need to be prototyped for how to combine (OR) for multiple mask workspaces')
+            raise NotImplementedError(
+                'It need to be prototyped for how to combine (OR) for multiple mask workspaces')
 
         return
 

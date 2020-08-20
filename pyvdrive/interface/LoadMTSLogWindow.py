@@ -1,6 +1,6 @@
 import os
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
@@ -136,7 +136,8 @@ class LoadMTSLogFileWindow(QMainWindow):
         """
         # check
         if self._logFileName is None or self._summaryDict is None:
-            GUtil.pop_dialog_error(self, 'MTS log file is not given AND/OR log file format is not scanned!')
+            GUtil.pop_dialog_error(
+                self, 'MTS log file is not given AND/OR log file format is not scanned!')
             return
 
         # send signal
@@ -162,7 +163,7 @@ class LoadMTSLogFileWindow(QMainWindow):
         # get the run number
         # get the run start and run stop time of the
         # TODO/ISSUE/NEXT - Get the run start time and run stop time and COMPLETE THIS METHOD!
-        raise NotImplementedError('Implement this in NEXT issue.')
+        raise NotImplementedError('Implement this in NEXT issue for {}.'.format(run_number))
         # run_start_time = 0
         # run_stop_time = 0
 
@@ -191,7 +192,8 @@ class LoadMTSLogFileWindow(QMainWindow):
                 if len(ipts_number_str) > 0:
                     ipts_number = int(ipts_number_str)
                 else:
-                    GUtil.pop_dialog_error(self, 'IPTS number is not given! Unable to locate archive.')
+                    GUtil.pop_dialog_error(
+                        self, 'IPTS number is not given! Unable to locate archive.')
                     return
             else:
                 ipts_number = self._iptsNumber
@@ -271,7 +273,7 @@ class LoadMTSLogFileWindow(QMainWindow):
 
         # set to dictionary
         format_dict = ret_obj
-        print '[DB...BAT] Format dictionary: ', format_dict
+        print('[DB...BAT] Format dictionary: ', format_dict)
 
         # parse
         self.set_format(format_dict)
@@ -304,7 +306,7 @@ class LoadMTSLogFileWindow(QMainWindow):
         # clear the table and reset the summary dictionary to the table with proper check up the
         self.ui.tableWidget_preview.remove_all_rows()
         for block_key in block_key_list:
-            start_line_number = int(block_key)
+            # start_line_number = int(block_key)
             for line_index, line in self._summaryDict[block_key]:
                 row_number = line_index
                 self.ui.tableWidget_preview.append_line(row_number=row_number, mts_line=line)
@@ -339,7 +341,7 @@ class LoadMTSLogFileWindow(QMainWindow):
         # dictionary to return
         self._logFormatDict.clear()
         self._logFormatDict['block'] = dict()  # block start information
-        self._logFormatDict['header'] = dict() # header item list
+        self._logFormatDict['header'] = dict()  # header item list
         self._logFormatDict['unit'] = dict()   # unit item list
         self._logFormatDict['data'] = dict()   # data range (list with 2 items)
         self._logFormatDict['duration'] = dict()
@@ -348,8 +350,8 @@ class LoadMTSLogFileWindow(QMainWindow):
         row_number = self.ui.tableWidget_preview.rowCount()
 
         block_index = -1
-        block_data_start_line = None
-        block_data_stop_line = None
+        # block_data_start_line = None
+        # block_data_stop_line = None
         for i_row in range(row_number):
             # read the line content anyway
             # UNIT LINE IS AN EXCEPTION ... TODO/FIXME
@@ -364,7 +366,8 @@ class LoadMTSLogFileWindow(QMainWindow):
             if self.ui.tableWidget_preview.is_block_start(i_row):
                 # block header. set block index and start the new list
                 block_index += 1
-                self._logFormatDict['block'][block_index] = self.ui.tableWidget_preview.get_content(i_row)
+                self._logFormatDict['block'][block_index] = self.ui.tableWidget_preview.get_content(
+                    i_row)
                 self._logFormatDict['data'][block_index] = None
                 self._logFormatDict['duration'][block_index] = None
 
@@ -401,7 +404,8 @@ class LoadMTSLogFileWindow(QMainWindow):
         # debug output for debugging
         for field in self._logFormatDict:
             for block_index in self._logFormatDict[field]:
-                print '%s: block %s : %s' % (str(field), str(block_index), str(self._logFormatDict[field][block_index]))
+                print('%s: block %s : %s' % (str(field), str(block_index),
+                                             str(self._logFormatDict[field][block_index])))
             print
         # FIXMe: DELETE THE SECTION
 
@@ -443,7 +447,6 @@ class LoadMTSLogFileWindow(QMainWindow):
         lines = list()
         for i_line in range(num_lines):
             lines.append(mts_file.readline())
-            print lines[-1]
         mts_file.close()
 
         # write the line to table

@@ -1,7 +1,7 @@
 # import PyQt modules
 import os
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore
     from PyQt5.Qt import QVariant
     from PyQt5.QtWidgets import QVBoxLayout
@@ -10,7 +10,7 @@ try:
 except ImportError:
     from PyQt4 import QtCore
     from PyQt4.Qt import QVariant
-    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.QtGui import QVBoxLayout  # noqa: F401
     from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QDialog, QFileDialog
 
@@ -18,7 +18,7 @@ except ImportError:
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    def _fromUtf8(s): return s
 
 import gui.GuiUtility as gutil
 from pyvdrive.lib import datatypeutility
@@ -30,7 +30,8 @@ class VanadiumProcessControlDialog(QDialog):
     # Define signals
     myStripPeakSignal = QtCore.pyqtSignal(int, int, float, str, bool)  # signal to send out
     myUndoStripPeakSignal = QtCore.pyqtSignal()  # signal to undo the peak strip
-    mySmoothVanadiumSignal = QtCore.pyqtSignal(int, str, int, int)  # signal to smooth vanadium spectra
+    mySmoothVanadiumSignal = QtCore.pyqtSignal(
+        int, str, int, int)  # signal to smooth vanadium spectra
     myUndoSmoothVanadium = QtCore.pyqtSignal()  # signal to undo vanadium peak smooth to raw data
     myApplyResultSignal = QtCore.pyqtSignal(str, int)  # signal to apply/save the smoothed vanadium
     myShowVPeaksSignal = QtCore.pyqtSignal(bool, name='ShowVanPeaks')
@@ -68,8 +69,10 @@ class VanadiumProcessControlDialog(QDialog):
         # tab for peak striping
         self.ui.pushButton_stripVanadiumPeaks.clicked.connect(self.do_strip_vanadium_peaks)
         self.ui.pushButton_undoPeakStrip.clicked.connect(self.do_undo_strip)
-        self.ui.pushButton_setPeakStripParamToDefaults.clicked.connect(self.do_restore_peak_strip_parameters)
-        self.ui.pushButton_savePeakStripParamAsDefaults.clicked.connect(self.do_save_peak_strip_parameters)
+        self.ui.pushButton_setPeakStripParamToDefaults.clicked.connect(
+            self.do_restore_peak_strip_parameters)
+        self.ui.pushButton_savePeakStripParamAsDefaults.clicked.connect(
+            self.do_save_peak_strip_parameters)
 
         # self.ui.pushButton_showVPeaks.clicked.connect(self.do_show_vanadium_peaks)
         self.ui.pushButton_nDecrease.clicked.connect(self.do_decrease_smooth_n)
@@ -82,8 +85,10 @@ class VanadiumProcessControlDialog(QDialog):
         # tab for smoothing vanadium
         self.ui.pushButton_smoothVanadium.clicked.connect(self.do_smooth_vanadium)
         self.ui.pushButton_undoSmooth.clicked.connect(self.do_undo_smooth_vanadium)
-        self.ui.pushButton_setPeakStripParamToDefaults.clicked.connect(self.do_restore_smooth_vanadium_parameters)
-        self.ui.pushButton_saveSmoothParamAsDefaults.clicked.connect(self.do_save_vanadium_smooth_parameters)
+        self.ui.pushButton_setPeakStripParamToDefaults.clicked.connect(
+            self.do_restore_smooth_vanadium_parameters)
+        self.ui.pushButton_saveSmoothParamAsDefaults.clicked.connect(
+            self.do_save_vanadium_smooth_parameters)
         self.ui.pushButton_setSmoothNRange.clicked.connect(self.do_set_smooth_n_range)
         self.ui.pushButton_setSmoothOrderRange.clicked.connect(self.do_set_smooth_order_range)
 
@@ -275,7 +280,8 @@ class VanadiumProcessControlDialog(QDialog):
         """
         self._defaultDict['FWHM'] = gutil.parse_integer(self.ui.lineEdit_vanPeakFWHM)
         self._defaultDict['Tolerance'] = gutil.parse_integer(self.ui.lineEdit_vanPeakFWHM)
-        self._defaultDict['BackgroundType'] = str(self.ui.comboBox_vanPeakBackgroundType.currentText())
+        self._defaultDict['BackgroundType'] = str(
+            self.ui.comboBox_vanPeakBackgroundType.currentText())
         self._defaultDict['IsHighBackground'] = self.ui.checkBox_isHighBackground.isChecked()
 
         return
@@ -289,7 +295,8 @@ class VanadiumProcessControlDialog(QDialog):
         try:
             run_number = gutil.parse_integer(self.ui.lineEdit_runNumber, allow_blank=False)
         except RuntimeError as run_err:
-            gutil.pop_dialog_error(self, 'IPTS and run number must be specified in order to save for GSAS.')
+            gutil.pop_dialog_error(
+                self, 'IPTS and run number must be specified in order to save for GSAS. {}.'.format(run_err))
             return
 
         # get default directory
@@ -358,7 +365,7 @@ class VanadiumProcessControlDialog(QDialog):
 
     def do_smooth_bf(self):
         """
-        Use brute force to 
+        Use brute force to
         :return:
         """
 
@@ -403,14 +410,15 @@ class VanadiumProcessControlDialog(QDialog):
         try:
             smoother_type = str(self.ui.comboBox_smoothFilterTiype.currentText())
             smoother_n = gutil.parse_integer(self.ui.lineEdit_smoothParameterN, allow_blank=False)
-            smoother_order = gutil.parse_integer(self.ui.lineEdit_smoothParameterOrder, allow_blank=False)
+            smoother_order = gutil.parse_integer(
+                self.ui.lineEdit_smoothParameterOrder, allow_blank=False)
         except RuntimeError:
             gutil.pop_dialog_error(self, 'Smoothing parameter N or order is specified incorrectly.')
             return
 
         # emit signal
-        print ('[DB...BAT] Smooth type = {}, n = {}, order = {}'.format(smoother_type, smoother_n,
-                                                                        smoother_order))
+        print('[DB...BAT] Smooth type = {}, n = {}, order = {}'.format(smoother_type, smoother_n,
+                                                                       smoother_order))
         self.mySmoothVanadiumSignal.emit(1, smoother_type, smoother_n, smoother_order)
 
         return
@@ -423,7 +431,8 @@ class VanadiumProcessControlDialog(QDialog):
         # collect the parameters from the UI
         try:
             peak_fwhm = gutil.parse_integer(self.ui.lineEdit_vanPeakFWHM, allow_blank=False)
-            fit_tolerance = gutil.parse_float(self.ui.lineEdit_stripPeakTolerance, allow_blank=False)
+            fit_tolerance = gutil.parse_float(
+                self.ui.lineEdit_stripPeakTolerance, allow_blank=False)
         except RuntimeError:
             gutil.pop_dialog_error(self, 'Both FWHM and Tolerance must be specified.')
             return
@@ -441,7 +450,8 @@ class VanadiumProcessControlDialog(QDialog):
         background_type = str(self.ui.comboBox_vanPeakBackgroundType.currentText())
         is_high_background = self.ui.checkBox_isHighBackground.isChecked()
 
-        self.myStripPeakSignal.emit(1, peak_fwhm, fit_tolerance, background_type, is_high_background)
+        self.myStripPeakSignal.emit(1, peak_fwhm, fit_tolerance,
+                                    background_type, is_high_background)
 
         return
 
@@ -517,8 +527,10 @@ class VanadiumProcessControlDialog(QDialog):
         # strip vanadium peaks
         self._defaultDict['FWHM'] = load_setting_integer(settings, 'FWHM', 7)
         self._defaultDict['Tolerance'] = load_setting_float(settings, 'Tolerance', 0.05)
-        self._defaultDict['BackgroundType'] = load_setting_str(settings, 'BackgroundType', 'Quadratic')
-        self._defaultDict['IsHighBackground'] = load_setting_bool(settings, 'IsHightBackground', True)
+        self._defaultDict['BackgroundType'] = load_setting_str(
+            settings, 'BackgroundType', 'Quadratic')
+        self._defaultDict['IsHighBackground'] = load_setting_bool(
+            settings, 'IsHightBackground', True)
 
         # smooth spectra
         self._defaultDict['Order'] = load_setting_integer(settings, 'Order', 2)
@@ -584,7 +596,8 @@ class VanadiumProcessControlDialog(QDialog):
 
         # get the original raw data
         ws_name = self._myController.project.vanadium_processing_manager.get_raw_vanadium()[bank_id]
-        vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=ws_name, bank_id=1, unit=plot_unit)
+        vec_x, vec_y = self.retrieve_loaded_reduced_data(
+            data_key=ws_name, bank_id=1, unit=plot_unit)
 
         # plot
         self._raw_van_plot_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y),
@@ -597,10 +610,13 @@ class VanadiumProcessControlDialog(QDialog):
                                                                                           ''.format(run_id))
 
         if is_smoothed_data:
-            ws_name = self._myController.project.vanadium_processing_manager.get_smoothed_vanadium()[bank_id]
+            ws_name = self._myController.project.vanadium_processing_manager.get_smoothed_vanadium()[
+                bank_id]
         else:
-            ws_name = self._myController.project.vanadium_processing_manager.get_peak_striped_vanadium()[bank_id]
-        vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=ws_name, bank_id=1, unit=plot_unit)
+            ws_name = self._myController.project.vanadium_processing_manager.get_peak_striped_vanadium()[
+                bank_id]
+        vec_x, vec_y = self.retrieve_loaded_reduced_data(
+            data_key=ws_name, bank_id=1, unit=plot_unit)
         # plot vanadium
         self._strip_van_plot_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y),
                                                                                       unit=plot_unit,
@@ -632,7 +648,8 @@ def load_setting_bool(qsettings, param_name, default_value):
     try:
         bool_value = bool(str(value_str))
     except TypeError:
-        raise RuntimeError('QSetting cannot cast {0} with value {1} to a boolean.'.format(param_name, value_str))
+        raise RuntimeError(
+            'QSetting cannot cast {0} with value {1} to a boolean.'.format(param_name, value_str))
 
     return bool_value
 
@@ -655,7 +672,8 @@ def load_setting_integer(qsettings, param_name, default_value):
         int_value = int_value_str.toInt()
     else:
         # case as Unicode
-        print ('[DB...BAT] QSetting {}: {} is of type {}'.format(param_name, int_value_str, type(int_value_str)))
+        print('[DB...BAT] QSetting {}: {} is of type {}'.format(
+            param_name, int_value_str, type(int_value_str)))
         try:
             int_value = int(str(int_value_str))
         except (TypeError, ValueError):
@@ -686,7 +704,8 @@ def load_setting_float(qsettings, param_name, default_value):
         float_value = float_value_str.toFloat()
     else:
         # case as Unicode
-        print ('[DB...BAT] QSetting {}: {} is of type {}'.format(param_name, float_value_str, type(float_value_str)))
+        print('[DB...BAT] QSetting {}: {} is of type {}'.format(
+            param_name, float_value_str, type(float_value_str)))
         try:
             float_value = int(str(float_value_str))
         except (TypeError, ValueError):
@@ -714,5 +733,3 @@ def load_setting_str(qsettings, param_name, default_value):
     value_str = qsettings.value(param_name, default_value)
 
     return value_str
-
-

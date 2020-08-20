@@ -146,7 +146,7 @@ class LivePlotYAxisTable(NTableWidget.NTableWidget):
         # check input
         assert isinstance(log_name, str), 'Log name {0} must be given in a string but not a {1}.' \
                                           ''.format(log_name, type(log_name))
-        assert isinstance(side, bool), 'Side {0} to add log {1} must be a boolean but not a {1}' \
+        assert isinstance(side, bool), 'Side {} to add log {} must be a boolean but not a {}' \
                                        ''.format(side, log_name, type(side))
 
         # select/name/side/dmin/dmax/norm by van
@@ -187,7 +187,6 @@ class LivePlotYAxisTable(NTableWidget.NTableWidget):
             min_d = self.get_cell_value(row_number, self._iColMinD, allow_blank=True)
             max_d = self.get_cell_value(row_number, self._iColMaxD, allow_blank=True)
             norm_by_van = self.get_cell_value(row_number, self._iColNormByVan)
-            print '[DB...BAT] {0} {1}'.format(min_d, max_d)
 
             item_name_list.append(item_name)
             side_list.append(is_main)

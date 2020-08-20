@@ -3,11 +3,10 @@ import os
 import pyvdrive.lib.VDriveAPI as VdriveAPI
 from pyvdrive.lib import datatypeutility
 from pyvdrive.lib import file_utilities
-from pyvdrive.interface.gui import GuiUtility
 try:
     from PyQt5.QtCore import QObject
 except (ImportError, RuntimeError) as import_err:
-    print ('Process_VCommand: {}'.format(import_err))
+    print('Process_VCommand: {}'.format(import_err))
     from PyQt4.QtCore import QObject
 
 
@@ -23,7 +22,7 @@ def convert_string_to(string, datatype):
     except ValueError as value_err:
         raise RuntimeError('Unable to parse string "{}" to a {} due to {}'.format(string, datatype, value_err))
     except TypeError as type_err:
-        raise RuntimeError('Unable to convert a string due to {}'.format(string, type_err))
+        raise RuntimeError('Unable to convert a string {} due to {}'.format(string, type_err))
 
     return value
 
@@ -94,7 +93,7 @@ class VDriveCommand(QObject):
             if arg_key not in upper_args:
                 error_message = 'Command %s\'s argument "%s" is not recognized. Supported ' \
                                 'arguments are %s.' % (self._commandName, arg_key, str(supported_arg_list))
-                print '[ERROR] {0}'.format(error_message)
+                print('[ERROR] {0}'.format(error_message))
                 raise CommandKeyError(error_message)
         # END-FOF
 
@@ -132,7 +131,8 @@ class VDriveCommand(QObject):
         """
         raise NotImplementedError('Method exec_cmd must be override')
 
-    def get_help(self):
+    @staticmethod
+    def get_help():
         """
         Get help message
         :return:
@@ -329,10 +329,10 @@ class VDriveCommand(QObject):
             # create workspace if not existing
             if os.path.exists(standard_dir) is False:
                 self._create_standard_directory(standard_dir, material_type)
-            print (material_type, standard_dir)
+            print(material_type, standard_dir)
         else:
             standard_tuple = None
-            print self._commandArgsDict.keys()
+            print(self._commandArgsDict.keys())
 
         return standard_tuple
 
@@ -350,13 +350,11 @@ class VDriveCommand(QObject):
                                         note='Standard (tag) directory')
 
         try:
-            os.mkdir(standard_dir, 0777)
-            print ('[INFO VBIN TAG] Created directory {}'.format(standard_dir))
+            os.mkdir(standard_dir, 0o777)
+            print('[INFO VBIN TAG] Created directory {}'.format(standard_dir))
         except OSError as os_err:
-            raise RuntimeError('Failed to create {} for standard material {}'
+            raise RuntimeError('Failed to create {} for standard material {} due to {}'
                                ''.format(standard_dir, material_type, os_err))
-        except IOError as io_error:
-            raise RuntimeError('Unable to create directory {0} due to {1}'.format(standard_dir, io_error))
 
         return
 

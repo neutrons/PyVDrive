@@ -1,8 +1,8 @@
-#pylint: disable=C0103,R0904
+#pylint: disable=C0103,R0904  # noqa: E265
 # N(DAV)TableWidget
 #
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QCheckBox
 except ImportError:
@@ -12,7 +12,7 @@ except ImportError:
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    _fromUtf8 = lambda s: s  # noqa: E731
 
 
 class NTableWidget(QTableWidget):
@@ -66,7 +66,7 @@ class NTableWidget(QTableWidget):
             ret_msg = ''
 
         # Set values
-        for i_col in xrange(min(len(row_value_list), self.columnCount())):
+        for i_col in range(min(len(row_value_list), self.columnCount())):
             if type_list[i_col] == 'checkbox':
                 # special case: check box
                 self.set_check_box(row_number, i_col, row_value_list[i_col])
@@ -115,7 +115,7 @@ class NTableWidget(QTableWidget):
         self.insertRow(row_number)
 
         # Set values
-        for i_col in xrange(min(len(row_value_list), self.columnCount())):
+        for i_col in range(min(len(row_value_list), self.columnCount())):
             if type_list[i_col] == 'checkbox':
                 # special case: check box
                 self.set_check_box(row_number, i_col, row_value_list[i_col])
@@ -219,7 +219,7 @@ class NTableWidget(QTableWidget):
             raise IndexError('Index of row (%d) is out of range.' % row_index)
 
         ret_list = list()
-        for i_col in xrange(len(self._myColumnTypeList)):
+        for i_col in range(len(self._myColumnTypeList)):
             c_type = self._myColumnTypeList[i_col]
 
             if c_type == 'checkbox':
@@ -250,7 +250,7 @@ class NTableWidget(QTableWidget):
     def get_selected_columns(self):
         """
         Get selected columns with mouse actions
-        
+
         NOTE: QModelIndexList QItemSelectionModel::selectedColumns
         """
         col_indexes = self.selectionModel().selectedColumns()
@@ -275,7 +275,7 @@ class NTableWidget(QTableWidget):
 
         # loop over all the rows
         row_index_list = list()
-        for i_row in xrange(self.rowCount()):
+        for i_row in range(self.rowCount()):
             # check status
             is_checked = self.get_cell_value(i_row, index_status)
             if is_checked == status:
@@ -333,7 +333,7 @@ class NTableWidget(QTableWidget):
         :return:
         """
         num_rows = self.rowCount()
-        for i_row in xrange(1, num_rows+1):
+        for i_row in range(1, num_rows+1):
             self.removeRow(num_rows - i_row)
 
         return
@@ -375,7 +375,7 @@ class NTableWidget(QTableWidget):
 
         # Loop over all rows. If any row's status is not same as target status, then set it
         num_rows = self.rowCount()
-        for row_index in xrange(num_rows):
+        for row_index in range(num_rows):
             if self.get_cell_value(row_index, status_col_index) != status:
                 self.update_cell_value(row_index, status_col_index, status)
         # END-FOR
@@ -470,7 +470,7 @@ class NTableWidget(QTableWidget):
         # get rows
         num_rows = self.rowCount()
         row_content_dict = dict()
-        for i_row in xrange(num_rows):
+        for i_row in range(num_rows):
             row_items = self.get_row_value(i_row)
             key_value = self.get_cell_value(i_row, column_index)
             row_content_dict[key_value] = row_items
@@ -480,14 +480,14 @@ class NTableWidget(QTableWidget):
         reverse_order = False
         if sort_order == 1:
             reverse_order = True
-        key_list = row_content_dict.keys()
+        key_list = list(row_content_dict.keys())
         key_list.sort(reverse=reverse_order)
 
         # clear all rows
         self.remove_all_rows()
 
         # add rows back
-        print '[DB-BAT] Sort by column %d. Keys = ' % column_index, key_list, 'sort_order = ', sort_order
+        print('[DB-BAT] Sort by column %d. Keys = ' % column_index, key_list, 'sort_order = ', sort_order)
         for key_value in key_list:
             self.append_row(row_content_dict[key_value])
         # END-FOR

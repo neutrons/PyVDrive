@@ -1,12 +1,12 @@
 import os
 try:
-    import qtconsole.inprocess
+    import qtconsole.inprocess  # noqa: F401
     from PyQt5.QtWidgets import QMainWindow, QFileDialog
     from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.uic import loadUi as load_ui
     from PyQt5 import QtCore
 except ImportError:
-    from PyQt4.QtGui import QMainWindow, QFileDialog
+    from PyQt4.QtGui import QMainWindow, QFileDialog  # noqa: F401
     from PyQt4.QtGui import QVBoxLayout
     from PyQt4.uic import loadUi as load_ui
     from PyQt4 import QtCore
@@ -32,6 +32,7 @@ class PlotInformation(object):
     """
     Record as the information for plot
     """
+
     def __init__(self, ipts_number, run_number, chop_index, norm_pc, van_run):
         """
         constructor for plotting information
@@ -69,6 +70,7 @@ class AtomicReduced1DViewer(QMainWindow):
     """ Class for 1D reduced data viewer
     """
     # class
+
     def __init__(self, parent=None):
         """ Init
         """
@@ -176,7 +178,7 @@ class AtomicReduced1DViewer(QMainWindow):
                     chop_note = 'original GSAS'
                 else:
                     chop_note = 'chopped run {}'.format(chop_seq_index)
-                GuiUtility.pop_dialog_error(self, 'Unable to load {} of IPTS {} Run {}: '
+                GuiUtility.pop_dialog_error(self, 'Unable to load {} of IPTS {} Run {}: {}'
                                                   ''.format(chop_note, ipts_number, run_number,
                                                             run_err))
                 return
@@ -200,7 +202,8 @@ class AtomicReduced1DViewer(QMainWindow):
         # plot
         plot_information = PlotInformation(ipts_number, run_number, chop_seq_index, self._norm_proton_charge,
                                            self._van_number)
-        self.plot_data(vec_x, vec_y, 'data key', unit=None, bank_id=bank_id, plot_info=plot_information)
+        self.plot_data(vec_x, vec_y, 'data key', unit=None,
+                       bank_id=bank_id, plot_info=plot_information)
 
         return
 
@@ -381,6 +384,7 @@ class AtomicReduced1DViewer(QMainWindow):
 class AtomicReduction2DViewer(QMainWindow):
     """ Class for 2D reduced data viewer
     """
+
     def __init__(self, parent=None):
         """
         Init
@@ -433,7 +437,8 @@ class AtomicReduction2DViewer(QMainWindow):
         size_set = set()
         for data_set in data_set_list:
             vec_x, vec_y = data_set
-            assert len(vec_x) == len(vec_y), 'Size of vector X (%d) and vector Y (%d) must be same!' % (len(vec_x), len(vec_y))
+            assert len(vec_x) == len(vec_y), 'Size of vector X (%d) and vector Y (%d) must be same!' % (
+                len(vec_x), len(vec_y))
             size_set.add(len(vec_x))
         # END-FOR
         assert len(size_set) == 1, 'All the reduced data must have equal sizes but not %s.' % str(size_set)
@@ -473,6 +478,7 @@ class AtomicReduction2DViewer(QMainWindow):
 class AtomicReduction3DViewer(QMainWindow):
     """ Class for 2D reduced data viewer
     """
+
     def __init__(self, parent=None):
         """
         Init
@@ -528,6 +534,7 @@ class AtomicReduction3DViewer(QMainWindow):
         flatten_vec_x = vec_x_matrix.flatten()
         flatten_vec_y = vec_y_matrix.flatten()
 
-        self.ui.graphicsView_mainPlot.plot_surface_lines(flatten_vec_seq, flatten_vec_x, flatten_vec_y)
+        self.ui.graphicsView_mainPlot.plot_surface_lines(
+            flatten_vec_seq, flatten_vec_x, flatten_vec_y)
 
         return

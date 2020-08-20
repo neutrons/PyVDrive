@@ -16,6 +16,7 @@ class SaveVulcanGSS(object):
     class to save VULCAN GSAS
     mostly it is used as static
     """
+
     def __init__(self, vulcan_ref_name=None):
         """ constructor of GSAS writer for VDRIVE
         :param vulcan_ref_name:
@@ -35,9 +36,11 @@ class SaveVulcanGSS(object):
         # key = 'bank type', value = TOF vec, binning parameters
         self._mantid_bin_param_dict = dict()
         # lower resolution: east/west
-        self._mantid_bin_param_dict['lower'] = lower_res_tof_vec, self._create_binning_parameters(lower_res_tof_vec)
+        self._mantid_bin_param_dict['lower'] = lower_res_tof_vec, self._create_binning_parameters(
+            lower_res_tof_vec)
         # higher resolution: high angle bank
-        self._mantid_bin_param_dict['higher'] = high_res_tof_vec, self._create_binning_parameters(high_res_tof_vec)
+        self._mantid_bin_param_dict['higher'] = high_res_tof_vec, self._create_binning_parameters(
+            high_res_tof_vec)
 
         # about vanadium
         self._van_ws_names = dict()
@@ -126,9 +129,9 @@ class SaveVulcanGSS(object):
             try:
                 utctime = datetime.strptime(runstart_sec, '%Y-%m-%dT%H:%M:%S')
                 time0 = datetime.strptime("1990-01-01T0:0:0", '%Y-%m-%dT%H:%M:%S')
-                print ('UTC time: {}, Time 0: {}'.format(str(utctime), str(time0)))
+                print('UTC time: {}, Time 0: {}'.format(str(utctime), str(time0)))
             except AttributeError as attrib_error:
-                print ('[DB...BAT] run start sec = {}'.format(str(runstart_sec)))
+                print('[DB...BAT] run start sec = {}'.format(str(runstart_sec)))
                 raise RuntimeError('Unable to convert run start {} to UTC time due to {}'
                                    ''.format(runstart_sec, attrib_error))
 
@@ -139,8 +142,8 @@ class SaveVulcanGSS(object):
                 total_seconds = delta.days * 24 * 3600 + delta.seconds
                 total_nanosecond_start = total_seconds * int(1.0E9) + int(runstart_ns)
             total_nanosecond_stop = total_nanosecond_start + int(duration * 1.0E9)
-            print ('[DB...BAT...CHECK...Method 1] Run start/stop = {}, {}'.format(total_nanosecond_start,
-                                                                                  total_nanosecond_stop))
+            print('[DB...BAT...CHECK...Method 1] Run start/stop = {}, {}'.format(total_nanosecond_start,
+                                                                                 total_nanosecond_stop))
         else:
             # no sample logs for start and stop
             raise RuntimeError('There is no sample log (proton_charge, run_start/duration) existing '
@@ -186,7 +189,8 @@ class SaveVulcanGSS(object):
         new_header += "%-80s\n" % ("#IPTS: %s" % str(ipts))
         if run_number is not None:
             new_header += "%-80s\n" % ("#RUN: %s" % str(run_number))
-        new_header += "%-80s\n" % ("#binned by: Mantid. From refrence workspace: {})".format(str(gsas_workspace)))
+        new_header += "%-80s\n" % (
+            "#binned by: Mantid. From refrence workspace: {})".format(str(gsas_workspace)))
         if extra_info:
             new_header += "%-80s\n" % ("#%s" % extra_info)
         new_header += "%-80s\n" % ("#GSAS file name: %s" % os.path.basename(gsas_file_name))
@@ -409,7 +413,8 @@ class SaveVulcanGSS(object):
         # Example:
         # Total flight path 45.754m, tth 90deg, DIFC 16356.3
         # Data for spectrum :0
-        bank_buffer += '%-80s\n' % '# Total flight path {}m, tth {}deg, DIFC {}'.format(l1, two_theta, difc)
+        bank_buffer += '%-80s\n' % '# Total flight path {}m, tth {}deg, DIFC {}'.format(
+            l1, two_theta, difc)
         if norm_factor is None:
             bank_buffer += '%-80s\n' % '# Data for spectrum :{}'.format(bank_id - 1)
         else:
@@ -426,7 +431,8 @@ class SaveVulcanGSS(object):
 
         if gsas_bank_id is None:
             gsas_bank_id = bank_id
-        bank_header = 'BANK %d %d %d %s %s %s %s 0 FXYE' % (gsas_bank_id, data_size, data_size, 'SLOG', bc1, bc2, bc3)
+        bank_header = 'BANK %d %d %d %s %s %s %s 0 FXYE' % (
+            gsas_bank_id, data_size, data_size, 'SLOG', bc1, bc2, bc3)
         bank_buffer += '%-80s\n' % bank_header
 
         # write lines: not multiplied by bin width
@@ -494,7 +500,8 @@ class SaveVulcanGSS(object):
         :return:
         """
         datatypeutility.check_string_variable('Diffraction workspace (group) name', diff_ws_name)
-        datatypeutility.check_file_name(gsas_file_name, False, True, False, 'Smoothed vanadium GSAS file')
+        datatypeutility.check_file_name(gsas_file_name, False, True,
+                                        False, 'Smoothed vanadium GSAS file')
         datatypeutility.check_int_variable('IPTS', ipts_number, (1, None))
         datatypeutility.check_string_variable('Sample log workspace name', sample_log_ws_name)
 
@@ -595,7 +602,8 @@ class SaveVulcanGSS(object):
                     # check vanadium bin edges
                     if van_ws is not None:
                         # check whether the bins are same between GSAS workspace and vanadium workspace
-                        unmatched, reason = self._compare_workspaces_dimension(van_ws, bank_id_i, tof_vector)
+                        unmatched, reason = self._compare_workspaces_dimension(
+                            van_ws, bank_id_i, tof_vector)
                         if unmatched:
                             raise RuntimeError('Vanadium GSAS workspace {} does not match workspace {}: {}'
                                                ''.format(van_ws_name, diff_ws_name, reason))
@@ -615,13 +623,14 @@ class SaveVulcanGSS(object):
                                                                 norm_factor=norm_factor,
                                                                 scale_factor=scale_factor)
                     gsas_bank_buffer_dict[bank_id_i] = gsas_section_i
-                    print ('[DB...BAT] Write bank {} to GSAS bank {}'.format(source_bank_id, bank_id_i))
+                    print('[DB...BAT] Write bank {} to GSAS bank {}'.format(source_bank_id, bank_id_i))
             # END-FOR
 
             # header
             diff_ws = mantid_helper.retrieve_workspace(diff_ws_name)
             gsas_file_name = os.path.join(output_dir, '{}.gda'.format(tth_id+1))
-            extra_info = '2theta {} to {}'.format(two_theta_array[tth_id], two_theta_array[[tth_id+1]])
+            extra_info = '2theta {} to {}'.format(
+                two_theta_array[tth_id], two_theta_array[[tth_id+1]])
             gsas_header = self._generate_vulcan_gda_header(diff_ws, gsas_file_name, ipts_number, run_number,
                                                            gsas_param_file_name, True, extra_info)
 
@@ -638,7 +647,6 @@ class SaveVulcanGSS(object):
             g_file.close()
 
         # END-FOR (tth_id)
-
 
         return
 
@@ -682,12 +690,14 @@ class SaveVulcanGSS(object):
         if van_ws_name is not None:
             # check whether a workspace exists
             if not mantid_helper.workspace_does_exist(van_ws_name):
-                raise RuntimeError('Vanadium workspace {} does not exist in Mantid ADS'.format(van_ws_name))
+                raise RuntimeError(
+                    'Vanadium workspace {} does not exist in Mantid ADS'.format(van_ws_name))
             van_ws = mantid_helper.retrieve_workspace(van_ws_name)
 
             # check number of histograms
             if mantid_helper.get_number_spectra(van_ws) != mantid_helper.get_number_spectra(diff_ws):
-                raise RuntimeError('Numbers of histograms between vanadium spectra and output GSAS are different')
+                raise RuntimeError(
+                    'Numbers of histograms between vanadium spectra and output GSAS are different')
         else:
             van_ws = None
         # END-IF
@@ -710,14 +720,16 @@ class SaveVulcanGSS(object):
                 # check vanadium bin edges
                 if van_ws is not None:
                     # check whether the bins are same between GSAS workspace and vanadium workspace
-                    unmatched, reason = self._compare_workspaces_dimension(van_ws, bank_id, tof_vector)
+                    unmatched, reason = self._compare_workspaces_dimension(
+                        van_ws, bank_id, tof_vector)
                     if unmatched:
                         raise RuntimeError('Vanadium GSAS workspace {} does not match workspace {}: {}'
                                            ''.format(van_ws_name, diff_ws_name, reason))
                 # END-IF
 
                 # write GSAS head considering vanadium
-                gsas_section_i = self._write_slog_bank_gsas(diff_ws_name, bank_id, tof_vector, van_ws)
+                gsas_section_i = self._write_slog_bank_gsas(
+                    diff_ws_name, bank_id, tof_vector, van_ws)
                 gsas_bank_buffer_dict[bank_id] = gsas_section_i
         # END-FOR
 
@@ -751,8 +763,8 @@ class SaveVulcanGSS(object):
         :return:
         """
         Divide(LHSWorkspace=diff_ws,
-                   RHSWorkspace=van_ws,
-                   OutputWorkspace=diff_ws_name)
+               RHSWorkspace=van_ws,
+               OutputWorkspace=diff_ws_name)
         diff_ws = mantid_helper.retrieve_workspace(diff_ws_name)
 
         return diff_ws
@@ -774,14 +786,17 @@ class SaveVulcanGSS(object):
         diff_vec_x = diff_tof_vec
         if len(van_vec_x) != len(diff_vec_x):
             return True, 'Numbers of bins are different between vanadium workspace {} ws-index {}' \
-                         ' and diffraction pattern: {}  != {}'.format(van_ws, iws, len(van_vec_x), len(diff_tof_vec))
+                         ' and diffraction pattern: {}  != {}'.format(
+                             van_ws, iws, len(van_vec_x), len(diff_tof_vec))
 
         if abs(van_vec_x[0] - diff_vec_x[0]) / (van_vec_x[0]) > 1.E-5:
             # return True, 'X[0] are different for spectrum {}: {} != {}'.format(iws, van_vec_x[0], diff_vec_x[0])
-            print ('X[0] are different for spectrum {}: {} != {}'.format(iws, van_vec_x[0], diff_vec_x[0]))
+            print('X[0] are different for spectrum {}: {} != {}'.format(
+                iws, van_vec_x[0], diff_vec_x[0]))
         if abs(van_vec_x[-1] - diff_vec_x[-1]) / (van_vec_x[-1]) > 1.E-5:
             # return True, 'X[-1] are different for spectrum {}; {} != {}'.format(iws, van_vec_x[-1], diff_vec_x[-1])
-            print ('X[-1] are different for spectrum {}; {} != {}'.format(iws, van_vec_x[-1], diff_vec_x[-1]))
+            print('X[-1] are different for spectrum {}; {} != {}'.format(iws,
+                                                                         van_vec_x[-1], diff_vec_x[-1]))
         # END-IF-ELSE
 
         return False, None

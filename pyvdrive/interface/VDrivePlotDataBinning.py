@@ -6,6 +6,7 @@ class VulcanGuiReduction(object):
     """
     A utility class to set up reduction/binning by gathering information from GUI.
     """
+
     def __init__(self, usr_interface, wf_controller):
         """
         initialization
@@ -81,7 +82,8 @@ class VulcanGuiReduction(object):
             bin_pixel_size = GuiUtil.parse_integer(self.user_interface.lineEdit_pixelSizeHorizontal)
             bin_pixel_direction = 'horizontal'
         else:
-            raise RuntimeError('Binning pixels: neither of 2 radio buttons (vertical/horizontal) is selected.')
+            raise RuntimeError(
+                'Binning pixels: neither of 2 radio buttons (vertical/horizontal) is selected.')
 
         # form output
         par_dict = {'direction': bin_pixel_direction,
@@ -164,8 +166,6 @@ class VulcanGuiReduction(object):
             raise NotImplementedError('Binning by pixels is not implemented yet!')
         else:
             # regular binning
-            print '[DB] GUI reducer setup: {0}.'.format(arg_dict)
-
             # check something:
             if arg_dict['auto_reduce'] and arg_dict['dspace']:
                 return False, 'Auto reduction and reducing to dSpacing cannot be selected together'
@@ -179,7 +179,3 @@ class VulcanGuiReduction(object):
             return False, error_msg
 
         return True, None
-
-
-
-
