@@ -1,5 +1,5 @@
 # Methods to work with data binning for VDrivePlot
-import gui.GuiUtility as GuiUtil
+from pyvdrive.interface.gui import GuiUtility
 
 
 class VulcanGuiReduction(object):
@@ -54,9 +54,9 @@ class VulcanGuiReduction(object):
             bin_par = None
         elif self.user_interface.radioButton_binCustomized.isChecked():
             # customized bin parameters
-            bin_width = GuiUtil.parse_float(self.user_interface.lineEdit_binWidth)
-            min_tof = GuiUtil.parse_float(self.user_interface.lineEdit_binMinTOF)
-            max_tof = GuiUtil.parse_float(self.user_interface.lineEdit_binMaxTOF)
+            bin_width = GuiUtility.parse_float(self.user_interface.lineEdit_binWidth)
+            min_tof = GuiUtility.parse_float(self.user_interface.lineEdit_binMinTOF)
+            max_tof = GuiUtility.parse_float(self.user_interface.lineEdit_binMaxTOF)
             bin_par = (min_tof, bin_width, max_tof)
         else:
             # violate requirements
@@ -76,10 +76,10 @@ class VulcanGuiReduction(object):
 
         # process the binning parameters
         if self.user_interface.radioButton_binVerticalPixels.isChecked():
-            bin_pixel_size = GuiUtil.parse_integer(self.user_interface.lineEdit_pixelSizeVertical)
+            bin_pixel_size = GuiUtility.parse_integer(self.user_interface.lineEdit_pixelSizeVertical)
             bin_pixel_direction = 'vertical'
         elif self.user_interface.radioButton_binHorizontalPixels.isChecked():
-            bin_pixel_size = GuiUtil.parse_integer(self.user_interface.lineEdit_pixelSizeHorizontal)
+            bin_pixel_size = GuiUtility.parse_integer(self.user_interface.lineEdit_pixelSizeHorizontal)
             bin_pixel_direction = 'horizontal'
         else:
             raise RuntimeError(

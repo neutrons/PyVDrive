@@ -4,9 +4,9 @@
 import os
 import math
 import numpy
-import mantid_helper
+from pyvdrive.lib import mantid_helper
 from mantid.simpleapi import CreateGroupingWorkspace
-import datatypeutility
+from pyvdrive.lib import datatypeutility
 import pandas as pd
 import reduce_VULCAN
 

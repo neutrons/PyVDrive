@@ -1365,11 +1365,9 @@ class VdriveMainWindow(QMainWindow):
         set up the auto-seek vanadium file
         :return:
         """
-        import VanCalibrationRulesSetup as vanSetup
-        setup_dialog = vanSetup.SetupVanCalibRuleDialog(self)
+        from pyvdrive.interface.VanCalibrationRulesSetup import SetupVanCalibRuleDialog
+        setup_dialog = SetupVanCalibRuleDialog(self)
         setup_dialog.exec_()
-
-        return
 
     def load_project(self, project_file_name):
         """

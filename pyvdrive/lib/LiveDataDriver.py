@@ -3,9 +3,9 @@ import numpy  # type: ignore
 import mantid.simpleapi as mantidsimple  # type: ignore
 from mantid.api import AlgorithmManager  # type: ignore
 from mantid.api import AnalysisDataService as ADS  # type: ignore
-import pyvdrive.lib.mantid_helper
-import pyvdrive.lib.peak_util
-import pyvdrive.lib.archivemanager
+from pyvdrive.lib import mantid_helper
+from pyvdrive.lib import peak_util
+from pyvdrive.lib import archivemanager
 try:
     from PyQt5 import QtCore  # type: ignore
 except ImportError:

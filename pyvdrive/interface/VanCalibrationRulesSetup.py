@@ -10,7 +10,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-import DialogVanCalibRules as dlgrule
+# import DialogVanCalibRules as dlgrule
 
 
 class SetupVanCalibRuleDialog(QtGui.QDialog):
@@ -27,5 +27,6 @@ class SetupVanCalibRuleDialog(QtGui.QDialog):
         self.quit = False
 
         # Set up widgets
-        self.ui = dlgrule.Ui_Dialog()
-        self.ui.setupUi(self)
+        # self.ui = dlgrule.Ui_Dialog()
+        # self.ui.setupUi(self)
+        raise NotImplementedError('DialogVancCalibRules has not been implemented')
