@@ -6,12 +6,12 @@ from mantid.simpleapi import EditInstrumentGeometry, GeneratePythonScript
 import threading
 import os
 import time
-import datatypeutility
-import mantid_helper
-import reduce_adv_chop
-import vulcan_util
-import file_utilities
-import reduce_VULCAN
+from pyvdrive.lib import datatypeutility
+from pyvdrive.lib import mantid_helper
+from pyvdrive.lib import reduce_adv_chop
+from pyvdrive.lib import vulcan_util
+from pyvdrive.lib import file_utilities
+from pyvdrive.lib import reduce_VULCAN
 
 
 class SliceFocusVulcan(object):
