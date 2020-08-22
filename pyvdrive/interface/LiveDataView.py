@@ -16,18 +16,18 @@ import random
 import time
 import numpy
 
-from LiveDataChildWindows import SampleLogPlotSetupDialog
-from LiveDataChildWindows import LiveViewSetupDialog
+from pyvdrive.interface.LiveDataChildWindows import SampleLogPlotSetupDialog
+from pyvdrive.interface.LiveDataChildWindows import LiveViewSetupDialog
 from pyvdrive.interface.gui.livedatagraphicswidgets import SingleBankView
 from pyvdrive.interface.gui.livedatagraphicswidgets import GeneralPurpose1DView
 from pyvdrive.interface.gui.livedatagraphicswidgets import Live2DView
 import pyvdrive.lib.LiveDataDriver as ld
 import pyvdrive.lib.optimize_utilities as optimize_utilities
 from pyvdrive.lib import mantid_helper
-from gui.pvipythonwidget import IPythonWorkspaceViewer
+from pyvdrive.interface.gui.pvipythonwidget import IPythonWorkspaceViewer
 from pyvdrive.lib import vdrivehelper
 from pyvdrive.lib import datatypeutility
-from gui import GuiUtility
+from pyvdrive.interface.gui import GuiUtility
 
 # include this try/except block to remap QString needed when using IPython
 try:

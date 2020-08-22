@@ -33,17 +33,17 @@ from pyvdrive.interface.gui.vdrivetreewidgets import FileSystemTreeView
 from pyvdrive.interface.gui.vdrivetablewidgets import VdriveRunTableWidget
 from pyvdrive.interface.gui.vdrivetablewidgets import TimeSegmentsTable
 from pyvdrive.lib import file_utilities
-import PeakPickWindow as PeakPickWindow
-import snapgraphicsview as SnapGView
-import ReducedDataView as DataView
-import gui.GuiUtility as GuiUtility
-import AddRunsIPTS as dlgrun
-import LogPickerWindow as LogPicker
-import LogSnapView as dlgSnap
-from vcommand_processor import VdriveCommandProcessor
-import VDrivePlotDataBinning as ReductionUtil
-import configwindow
-import config
+import pyvdrive.interface.PeakPickWindow as PeakPickWindow
+import pyvdrive.interface.snapgraphicsview as SnapGView
+import pyvdrive.interface.ReducedDataView as DataView
+import pyvdrive.interface.gui.GuiUtility as GuiUtility
+import pyvdrive.interface.AddRunsIPTS as dlgrun
+import pyvdrive.interface.LogPickerWindow as LogPicker
+import pyvdrive.interface.LogSnapView as dlgSnap
+from pyvdrive.interface.vcommand_processor import VdriveCommandProcessor
+import pyvdrive.interface.VDrivePlotDataBinning as ReductionUtil
+from pyvdrive.interface import configwindow
+from pyvdrive.interface import config
 
 """ import PyVDrive library """
 import pyvdrive as PyVDrive
