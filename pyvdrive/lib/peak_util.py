@@ -1,6 +1,5 @@
 # This module contains algorithms to process peaks
 import numpy  # type: ignore
-from typing import Dict
 
 
 class PeakGroupCollection(object):

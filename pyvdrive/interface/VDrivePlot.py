@@ -33,7 +33,7 @@ from pyvdrive.interface.gui.vdrivetreewidgets import FileSystemTreeView
 from pyvdrive.interface.gui.vdrivetablewidgets import VdriveRunTableWidget
 from pyvdrive.interface.gui.vdrivetablewidgets import TimeSegmentsTable
 from pyvdrive.lib import file_utilities
-from  pyvdrive.interface import PeakPickWindow
+from pyvdrive.interface import PeakPickWindow
 from pyvdrive.interface import snapgraphicsview
 from pyvdrive.interface import ReducedDataView
 from pyvdrive.interface.gui import GuiUtility

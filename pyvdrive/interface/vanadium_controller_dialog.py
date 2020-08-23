@@ -332,10 +332,10 @@ class VanadiumProcessControlDialog(QDialog):
         """
         try:
             min_value, max_value = GuiUtility.parse_integer_list(self.ui.lineEdit_smoothNRange, 2, check_order=True,
-                                                            increase=True)
+                                                                 increase=True)
         except RuntimeError:
-            GuiUtility.pop_dialog_error(self, 'Smoothing parameter N\'s range must have 2 integers'
-                                         'in increase order.')
+            GuiUtility.pop_dialog_error(self, 'Smoothing parameter N\'s range must have 2 integers '
+                                              'in increase order.')
             return
 
         self.ui.horizontalSlider_smoothN.setRange(min_value, max_value)
@@ -350,11 +350,11 @@ class VanadiumProcessControlDialog(QDialog):
         :return:
         """
         try:
-            min_value, max_value = GuiUtility.parse_integer_list(self.ui.lineEdit_smoothOrderRange, 2, check_order=True,
-                                                            increase=True)
+            min_value, max_value = GuiUtility.parse_integer_list(self.ui.lineEdit_smoothOrderRange, 2,
+                                                                 check_order=True, increase=True)
         except RuntimeError:
-            GuiUtility.pop_dialog_error(self, 'Smoothing parameter order\'s range must have 2 integers'
-                                         'in increasing order.')
+            GuiUtility.pop_dialog_error(self, 'Smoothing parameter order\'s range must have 2 integers '
+                                              'in increasing order.')
             return
 
         self.ui.horizontalSlider_smoothOrder.setRange(min_value, max_value)
