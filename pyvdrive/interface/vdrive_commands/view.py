@@ -8,7 +8,7 @@
 # View sequential data in 2D contour and 3D surface: (short name: VIEW)
 # VIEW, IPTS=####, RUNS=####, RUNE=#### [,CHOPRUN=####] [, MinV=#.#, MaxV=#.#,
 # RUNV=####, NORM=1 , PCSENV=1]
-from process_vcommand import VDriveCommand
+from pyvdrive.interface.vdrive_commands.process_vcommand import VDriveCommand
 from pyvdrive.lib import vulcan_util
 
 

@@ -3,7 +3,7 @@
 # General-purposed plotting window
 #
 ########################################################################
-from mantidipythonwidget import MantidIPythonWidget
+from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
 import datetime
 
 try:
@@ -17,8 +17,8 @@ except ImportError:
     from PyQt4.QtGui import QVBoxLayout
     from PyQt4.uic import loadUi as load_ui
 
-from mplgraphicsview import MplGraphicsView
-import ndav_widgets.NTableWidget as baseTable
+from pyvdrive.interface.gui.mplgraphicsview import MplGraphicsView
+import pyvdrive.interface.gui.ndav_widgets.NTableWidget as baseTable
 from mantid.api import AnalysisDataService
 import os
 

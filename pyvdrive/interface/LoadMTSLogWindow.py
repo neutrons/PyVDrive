@@ -17,7 +17,9 @@ except AttributeError:
         return s
 
 from pyvdrive.interface.gui.vdrivetablewidgets import MTSFormatTable
-import gui.GuiUtility as GUtil
+from pyvdrive.interface.gui import GuiUtility
+from pyvdrive.interface.gui.dialogwidgets import DateDialog
+
 
 __author__ = 'wzz'
 
@@ -136,7 +138,7 @@ class LoadMTSLogFileWindow(QMainWindow):
         """
         # check
         if self._logFileName is None or self._summaryDict is None:
-            GUtil.pop_dialog_error(
+            GuiUtility.pop_dialog_error(
                 self, 'MTS log file is not given AND/OR log file format is not scanned!')
             return
 
@@ -155,7 +157,7 @@ class LoadMTSLogFileWindow(QMainWindow):
         # get run number
         run_number_str = str(self.ui.lineEdit_runNumber.text()).strip()
         if not run_number_str.isdigit():
-            GUtil.pop_dialog_error(self, 'Run number is not set up right.')
+            GuiUtility.pop_dialog_error(self, 'Run number is not set up right.')
             return
         else:
             run_number = int(run_number_str)
@@ -192,7 +194,7 @@ class LoadMTSLogFileWindow(QMainWindow):
                 if len(ipts_number_str) > 0:
                     ipts_number = int(ipts_number_str)
                 else:
-                    GUtil.pop_dialog_error(
+                    GuiUtility.pop_dialog_error(
                         self, 'IPTS number is not given! Unable to locate archive.')
                     return
             else:
@@ -246,10 +248,8 @@ class LoadMTSLogFileWindow(QMainWindow):
         Set up experimental time
         :return:
         """
-        import gui.dialogwidgets as cdw
-
         # app = QtGui.QApplication([])
-        date, time, ok = cdw.DateDialog.getDateTime()
+        date, time, ok = DateDialog.getDateTime()
         print("{0} {1} {2}".format(date, time, ok))
         # app.exec_()
 
@@ -280,7 +280,7 @@ class LoadMTSLogFileWindow(QMainWindow):
 
         # check
         if self._logFileName is None:
-            GUtil.pop_dialog_error('MTS log file name has not been set.')
+            GuiUtility.pop_dialog_error('MTS log file name has not been set.')
             return
 
         assert self._blockStartFlag is not None, 'Block start is not set up yet'

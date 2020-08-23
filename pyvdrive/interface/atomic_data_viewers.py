@@ -10,7 +10,7 @@ except ImportError:
     from PyQt4.QtGui import QVBoxLayout
     from PyQt4.uic import loadUi as load_ui
     from PyQt4 import QtCore
-from gui import GuiUtility
+from pyvdrive.interface.gui import GuiUtility
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:

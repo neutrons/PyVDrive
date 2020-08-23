@@ -9,14 +9,13 @@ except ImportError:
     from PyQt4.QtGui import QMainWindow
     from PyQt4.QtCore import pyqtSignal
 
-import vdrive_commands.chop
-import vdrive_commands.show_info
-import vdrive_commands.vbin
-import vdrive_commands.vmerge
-import vdrive_commands.view
-import vdrive_commands.vpeak
-import vdrive_commands.process_vcommand
-import pyvdrive.lib.datatypeutility
+from pyvdrive.interface.vdrive_commands import chop
+from pyvdrive.interface.vdrive_commands import show_info
+from pyvdrive.interface.vdrive_commands import vbin
+from pyvdrive.interface.vdrive_commands import vmerge
+from pyvdrive.interface.vdrive_commands import view
+from pyvdrive.interface.vdrive_commands import vpeak
+from pyvdrive.interface.vdrive_commands import process_vcommand
 from pyvdrive.lib import datatypeutility
 import time
 from pyvdrive.lib import vulcan_util
@@ -225,11 +224,11 @@ class VdriveCommandProcessor(object):
         :param arg_dict:
         :return:
         """
-        from vdrive_commands import bin2theta
+        from pyvdrive.interface.vdrive_commands import bin2theta
 
         try:
             processor = bin2theta.BinBy2Theta(self._myController, arg_dict)
-        except vdrive_commands.process_vcommand.CommandKeyError as comm_err:
+        except process_vcommand.CommandKeyError as comm_err:
             return False, 'Bin-by-2theta encountered command argument error: {}'.format(comm_err)
 
         status, message = self._process_command(processor, arg_dict)
@@ -243,8 +242,8 @@ class VdriveCommandProcessor(object):
         :return:
         """
         try:
-            processor = vdrive_commands.vbin.AutoReduce(self._myController, arg_dict)
-        except vdrive_commands.process_vcommand.CommandKeyError as com_err:
+            processor = vbin.AutoReduce(self._myController, arg_dict)
+        except process_vcommand.CommandKeyError as com_err:
             return False, 'Command argument error: %s.' % str(com_err)
 
         if len(arg_dict) == 0:
@@ -263,9 +262,9 @@ class VdriveCommandProcessor(object):
         """
         # create a new VdriveChop instance
         try:
-            processor = vdrive_commands.chop.VdriveChop(
+            processor = chop.VdriveChop(
                 self._myController, arg_dict, self._mainWindow)
-        except vdrive_commands.process_vcommand.CommandKeyError as comm_err:
+        except process_vcommand.CommandKeyError as comm_err:
             return False, str(comm_err)
 
         # execute
@@ -303,8 +302,8 @@ class VdriveCommandProcessor(object):
         """
         # create a new Info query instance
         try:
-            processor = vdrive_commands.show_info.RunsInfoQuery(self._myController, arg_dict)
-        except vdrive_commands.process_vcommand.CommandKeyError as comm_err:
+            processor = show_info.RunsInfoQuery(self._myController, arg_dict)
+        except process_vcommand.CommandKeyError as comm_err:
             return False, str(comm_err)
 
         # call and execute
@@ -320,8 +319,8 @@ class VdriveCommandProcessor(object):
         """
         # create a new VdriveMerge instance
         try:
-            processor = vdrive_commands.vmerge.VdriveMerge(self._myController, arg_dict)
-        except vdrive_commands.process_vcommand.CommandKeyError as comm_err:
+            processor = vmerge.VdriveMerge(self._myController, arg_dict)
+        except process_vcommand.CommandKeyError as comm_err:
             return False, str(comm_err)
 
         # execute
@@ -337,8 +336,8 @@ class VdriveCommandProcessor(object):
         """
         # create a new VdriveView instance
         try:
-            processor = vdrive_commands.view.VdriveView(self._myController, arg_dict)
-        except vdrive_commands.process_vcommand.CommandKeyError as comm_err:
+            processor = view.VdriveView(self._myController, arg_dict)
+        except process_vcommand.CommandKeyError as comm_err:
             return False, str(comm_err)
 
         # execute
@@ -368,7 +367,8 @@ class VdriveCommandProcessor(object):
         run_number, ipts_number = processor.get_run_tuple_list()[0]
         if run_number in self._myController.project.reduction_manager.get_reduced_chopped_runs():
             # TODO - TONIGHT 196 - Need to make this False @ end
-            load_gsas = True
+            load_gsas = False
+            raise NotImplementedError(f'Case for load_gsas = {load_gsas} has not been implemented  yet')
         else:
             load_gsas = True
 
@@ -502,7 +502,7 @@ class VdriveCommandProcessor(object):
         :return:
         """
         # generate a VanadiumPeak object to process the command
-        processor = vdrive_commands.vpeak.VanadiumPeak(self._myController, arg_dict)
+        processor = vpeak.VanadiumPeak(self._myController, arg_dict)
 
         # process command
         status, message = self._process_command(processor, arg_dict)
@@ -539,8 +539,8 @@ class VdriveCommandProcessor(object):
          :return:
          """
         try:
-            processor = vdrive_commands.vbin.VBin(self._myController, arg_dict)
-        except vdrive_commands.process_vcommand.CommandKeyError as comm_err:
+            processor = vbin.VBin(self._myController, arg_dict)
+        except process_vcommand.CommandKeyError as comm_err:
             return False, str(comm_err)
 
         status, message = self._process_command(processor, arg_dict)
@@ -554,12 +554,12 @@ class VdriveCommandProcessor(object):
         :param arg_dict:
         :return:
         """
-        assert isinstance(command_processor, vdrive_commands.process_vcommand.VDriveCommand), \
+        assert isinstance(command_processor, process_vcommand.VDriveCommand), \
             'VDrive IDL-compatible command processor {} must be an instance of ' \
             'vdrive_commands.process_vcommand.VDriveCommandbut but not of type {}' \
             ''.format(command_processor, type(command_processor))
 
-        pyvdrive.lib.datatypeutility.check_dict('VDrive IDL-compatible command arguments', arg_dict)
+        datatypeutility.check_dict('VDrive IDL-compatible command arguments', arg_dict)
 
         if len(arg_dict) == 0:
             # if there is no argument, just print out the help information

@@ -9,8 +9,8 @@ except ImportError:
     from PyQt4.QtGui import QApplication, QMenu, QAction, QCursor, QMainWindow
     from PyQt4 import QtCore
 
-import mplgraphicsview
-import peaksmanager
+from pyvdrive.interface.gui import mplgraphicsview
+from pyvdrive.interface.gui import peaksmanager
 from pyvdrive.lib import datatypeutility
 
 __author__ = 'wzz'
@@ -129,16 +129,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         # menu
         self._menu = None
-
-        """
-        self._boundaryRightEdge = -0.
-        self._boundaryLeftEdge = -0.
-
-        # flag to reconstruct the peak list maps including ... and ...
-        min_data_resolution = 0.003  # For Vulcan
-        """
-
-        return
 
     def add_item(self, pos_x):
         """ Add item, which may be peak, peak group or peak group with 1 peak depending on the

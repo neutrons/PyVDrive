@@ -1,4 +1,4 @@
-import ndav_widgets.NTableWidget as NTableWidget
+from pyvdrive.interface.gui.ndav_widgets import NTableWidget
 
 
 class LogSelectorTable(NTableWidget.NTableWidget):

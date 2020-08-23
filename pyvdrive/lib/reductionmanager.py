@@ -2,14 +2,14 @@
 # Manage the reduced VULCAN runs
 ################################################################################
 import os
-import reduce_VULCAN
-import mantid_helper
-import reduce_adv_chop
-import mantid_reduction
-import datatypeutility
 import datetime
-import save_vulcan_gsas
-import vulcan_util
+from pyvdrive.lib import reduce_VULCAN
+from pyvdrive.lib import mantid_helper
+from pyvdrive.lib import reduce_adv_chop
+from pyvdrive.lib import mantid_reduction
+from pyvdrive.lib import datatypeutility
+from pyvdrive.lib import save_vulcan_gsas
+from pyvdrive.lib import vulcan_util
 import mantid.simpleapi as mantid_api
 
 EVENT_WORKSPACE_ID = "EventWorkspace"

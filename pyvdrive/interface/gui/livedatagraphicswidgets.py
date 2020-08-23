@@ -1,9 +1,9 @@
 # Zoo of graphics view widgets for "Live Data"
 import numpy
 
-from mplgraphicsview import MplGraphicsView
-from mplgraphicsview1d import MplGraphicsView1D
-from mplgraphicsview2d import MplGraphicsView2D
+from pyvdrive.interface.gui.mplgraphicsview import MplGraphicsView
+from pyvdrive.interface.gui.mplgraphicsview1d import MplGraphicsView1D
+from pyvdrive.interface.gui.mplgraphicsview2d import MplGraphicsView2D
 from pyvdrive.lib import datatypeutility
 
 

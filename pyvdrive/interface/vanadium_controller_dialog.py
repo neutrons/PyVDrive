@@ -20,7 +20,7 @@ try:
 except AttributeError:
     def _fromUtf8(s): return s
 
-import gui.GuiUtility as gutil
+from pyvdrive.interface.gui import GuiUtility
 from pyvdrive.lib import datatypeutility
 
 
@@ -278,8 +278,8 @@ class VanadiumProcessControlDialog(QDialog):
         save current vanadium-peak-striping parameters as defaults
         :return:
         """
-        self._defaultDict['FWHM'] = gutil.parse_integer(self.ui.lineEdit_vanPeakFWHM)
-        self._defaultDict['Tolerance'] = gutil.parse_integer(self.ui.lineEdit_vanPeakFWHM)
+        self._defaultDict['FWHM'] = GuiUtility.parse_integer(self.ui.lineEdit_vanPeakFWHM)
+        self._defaultDict['Tolerance'] = GuiUtility.parse_integer(self.ui.lineEdit_vanPeakFWHM)
         self._defaultDict['BackgroundType'] = str(
             self.ui.comboBox_vanPeakBackgroundType.currentText())
         self._defaultDict['IsHighBackground'] = self.ui.checkBox_isHighBackground.isChecked()
@@ -293,9 +293,9 @@ class VanadiumProcessControlDialog(QDialog):
         """
         # get IPTS number and run number
         try:
-            run_number = gutil.parse_integer(self.ui.lineEdit_runNumber, allow_blank=False)
+            run_number = GuiUtility.parse_integer(self.ui.lineEdit_runNumber, allow_blank=False)
         except RuntimeError as run_err:
-            gutil.pop_dialog_error(
+            GuiUtility.pop_dialog_error(
                 self, 'IPTS and run number must be specified in order to save for GSAS. {}.'.format(run_err))
             return
 
@@ -319,8 +319,8 @@ class VanadiumProcessControlDialog(QDialog):
         save the vanadium smoothing parameters
         :return:
         """
-        self._defaultDict['Order'] = gutil.parse_integer(self.ui.lineEdit_smoothParameterOrder)
-        self._defaultDict['n'] = gutil.parse_integer(self.ui.lineEdit_smoothParameterN)
+        self._defaultDict['Order'] = GuiUtility.parse_integer(self.ui.lineEdit_smoothParameterOrder)
+        self._defaultDict['n'] = GuiUtility.parse_integer(self.ui.lineEdit_smoothParameterN)
         self._defaultDict['Smoother'] = str(self.ui.comboBox_smoothFilterTiype.currentText())
 
         return
@@ -331,10 +331,10 @@ class VanadiumProcessControlDialog(QDialog):
         :return:
         """
         try:
-            min_value, max_value = gutil.parse_integer_list(self.ui.lineEdit_smoothNRange, 2, check_order=True,
+            min_value, max_value = GuiUtility.parse_integer_list(self.ui.lineEdit_smoothNRange, 2, check_order=True,
                                                             increase=True)
         except RuntimeError:
-            gutil.pop_dialog_error(self, 'Smoothing parameter N\'s range must have 2 integers'
+            GuiUtility.pop_dialog_error(self, 'Smoothing parameter N\'s range must have 2 integers'
                                          'in increase order.')
             return
 
@@ -350,10 +350,10 @@ class VanadiumProcessControlDialog(QDialog):
         :return:
         """
         try:
-            min_value, max_value = gutil.parse_integer_list(self.ui.lineEdit_smoothOrderRange, 2, check_order=True,
+            min_value, max_value = GuiUtility.parse_integer_list(self.ui.lineEdit_smoothOrderRange, 2, check_order=True,
                                                             increase=True)
         except RuntimeError:
-            gutil.pop_dialog_error(self, 'Smoothing parameter order\'s range must have 2 integers'
+            GuiUtility.pop_dialog_error(self, 'Smoothing parameter order\'s range must have 2 integers'
                                          'in increasing order.')
             return
 
@@ -409,11 +409,11 @@ class VanadiumProcessControlDialog(QDialog):
         # get smoothing parameter
         try:
             smoother_type = str(self.ui.comboBox_smoothFilterTiype.currentText())
-            smoother_n = gutil.parse_integer(self.ui.lineEdit_smoothParameterN, allow_blank=False)
-            smoother_order = gutil.parse_integer(
+            smoother_n = GuiUtility.parse_integer(self.ui.lineEdit_smoothParameterN, allow_blank=False)
+            smoother_order = GuiUtility.parse_integer(
                 self.ui.lineEdit_smoothParameterOrder, allow_blank=False)
         except RuntimeError:
-            gutil.pop_dialog_error(self, 'Smoothing parameter N or order is specified incorrectly.')
+            GuiUtility.pop_dialog_error(self, 'Smoothing parameter N or order is specified incorrectly.')
             return
 
         # emit signal
@@ -430,11 +430,11 @@ class VanadiumProcessControlDialog(QDialog):
         """
         # collect the parameters from the UI
         try:
-            peak_fwhm = gutil.parse_integer(self.ui.lineEdit_vanPeakFWHM, allow_blank=False)
-            fit_tolerance = gutil.parse_float(
+            peak_fwhm = GuiUtility.parse_integer(self.ui.lineEdit_vanPeakFWHM, allow_blank=False)
+            fit_tolerance = GuiUtility.parse_float(
                 self.ui.lineEdit_stripPeakTolerance, allow_blank=False)
         except RuntimeError:
-            gutil.pop_dialog_error(self, 'Both FWHM and Tolerance must be specified.')
+            GuiUtility.pop_dialog_error(self, 'Both FWHM and Tolerance must be specified.')
             return
 
         # append the banks
@@ -496,12 +496,12 @@ class VanadiumProcessControlDialog(QDialog):
         """
         # change parameters
         self._slidersMutex = True
-        param_n = gutil.parse_integer(self.ui.lineEdit_smoothParameterN, allow_blank=False)
+        param_n = GuiUtility.parse_integer(self.ui.lineEdit_smoothParameterN, allow_blank=False)
         if param_n is None or param_n == 0:
             param_n = 1
         self.ui.horizontalSlider_smoothN.setValue(param_n)
 
-        param_order = gutil.parse_integer(self.ui.lineEdit_smoothParameterOrder, allow_blank=False)
+        param_order = GuiUtility.parse_integer(self.ui.lineEdit_smoothParameterOrder, allow_blank=False)
         if param_order is None or param_order == 0:
             param_order = 1
         self.ui.horizontalSlider_smoothOrder.setValue(param_order)

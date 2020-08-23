@@ -4,8 +4,8 @@ import os
 import time
 import platform
 import h5py
-import datatypeutility
-from chop_utility import TimeSegment
+from pyvdrive.lib import datatypeutility
+from pyvdrive.lib.chop_utility import TimeSegment
 from mantid.simpleapi import SaveNexusProcessed, LoadNexusProcessed
 
 

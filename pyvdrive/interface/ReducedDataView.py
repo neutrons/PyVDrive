@@ -18,7 +18,7 @@ except ImportError:
     from PyQt4.QtGui import QVBoxLayout
     from PyQt4.uic import loadUi as load_ui
     from PyQt4 import QtCore
-import gui.GuiUtility as GuiUtility
+from pyvdrive.interface.gui import GuiUtility
 from pyvdrive.lib import vulcan_util
 from pyvdrive.lib import file_utilities
 try:
@@ -30,11 +30,11 @@ except AttributeError:
 from pyvdrive.interface.gui.generalrunview import GeneralRunView
 import pyvdrive.lib.datatypeutility
 from pyvdrive.lib import datatypeutility
-import atomic_data_viewers
 from pyvdrive.interface.gui.samplelogview import LogGraphicsView
 from pyvdrive.lib import reduce_VULCAN
 from pyvdrive.lib import vdrive_constants
-from atomic_data_viewers import PlotInformation
+from pyvdrive.interface.atomic_data_viewers import PlotInformation, AtomicReduced1DViewer, AtomicReduction2DViewer,\
+    AtomicReduction3DViewer
 
 
 def generate_sample_log_list():
@@ -1998,7 +1998,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """ Launch a reduced data view window for single run
         :return:
         """
-        view_window = atomic_data_viewers.AtomicReduced1DViewer(self)
+        view_window = AtomicReduced1DViewer(self)
         view_window.show()
 
         self._atomic_viewer_list.append(view_window)
@@ -2009,7 +2009,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """ Launch a reduced data view window for multiple runs (chopped or single) in contour plot
         :return:
         """
-        view_window = atomic_data_viewers.AtomicReduction2DViewer(self)
+        view_window = AtomicReduction2DViewer(self)
         view_window.show()
 
         self._atomic_viewer_list.append(view_window)
@@ -2020,7 +2020,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """ Launch a reduced data view window for multiple runs (chopped or single) in 3d line plot
         :return:
         """
-        view_window = atomic_data_viewers.AtomicReduction3DViewer(self)
+        view_window = AtomicReduction3DViewer(self)
         view_window.show()
 
         self._atomic_viewer_list.append(view_window)

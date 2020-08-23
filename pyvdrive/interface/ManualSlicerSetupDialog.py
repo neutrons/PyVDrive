@@ -16,7 +16,8 @@ except (ImportError, RuntimeError):
 #     def _fromUtf8(s):
 #         return s
 from pyvdrive.interface.gui.vdrivetablewidgets import DataSlicerSegmentTable
-import gui.GuiUtility as GuiUtil
+from pyvdrive.interface.gui import GuiUtility
+import numpy
 
 
 class ManualSlicerSetupTableDialog(QDialog):
@@ -116,7 +117,7 @@ class ManualSlicerSetupTableDialog(QDialog):
         try:
             split_tup_list = self.ui.tableWidget_segments.get_splitter_list()
         except RuntimeError as e:
-            GuiUtil.pop_dialog_error(self, str(e))
+            GuiUtility.pop_dialog_error(self, str(e))
             return
 
         # pop a dialog for the name of the slicer
@@ -158,8 +159,7 @@ class ManualSlicerSetupTableDialog(QDialog):
         # get the selected slicers
         selected_rows = self.ui.tableWidget_segments.get_selected_rows(True)
         if len(selected_rows) == 0:
-            GuiUtil.pop_dialog_information(
-                self, 'No splitter (row) in the table is selected to expand.')
+            GuiUtility.pop_dialog_information(self, 'No splitter (row) in the table is selected to expand.')
             return
 
         # get the slicers
@@ -179,8 +179,8 @@ class ManualSlicerSetupTableDialog(QDialog):
                 time_step = float(str(self.ui.lineEdit_timeStep.text()))
                 log_step = None
             except ValueError:
-                GuiUtil.pop_dialog_error(self, 'Time step {0} cannot be converted to float.'
-                                         ''.format(self.ui.lineEdit_timeStep.text()))
+                GuiUtility.pop_dialog_error(self, 'Time step {0} cannot be converted to float.'
+                                                  ''.format(self.ui.lineEdit_timeStep.text()))
                 return
 
         elif self.ui.radioButton_logValueStep.isChecked():
@@ -189,8 +189,8 @@ class ManualSlicerSetupTableDialog(QDialog):
                 time_step = None
                 log_step = float(str(self.ui.lineEdit_logValueStepLevel2.text()))
             except ValueError:
-                GuiUtil.pop_dialog_error(self, 'Log step {0} cannot be converted to float.'
-                                               ''.format(self.ui.lineEdit_logValueStepLevel2.text()))
+                GuiUtility.pop_dialog_error(self, 'Log step {0} cannot be converted to float.'
+                                                  ''.format(self.ui.lineEdit_logValueStepLevel2.text()))
                 return
 
         else:
@@ -247,14 +247,14 @@ class ManualSlicerSetupTableDialog(QDialog):
         try:
             split_tup_list = self.ui.tableWidget_segments.get_splitter_list()
         except RuntimeError as e:
-            GuiUtil.pop_dialog_error(self, str(e))
+            GuiUtility.pop_dialog_error(self, str(e))
             return
 
         # pop a dialog for the name of the slicer
         file_filter = 'Data Files (*.dat);; All Files (*.*)'
-        file_name = GuiUtil.get_save_file_by_dialog(self, title='Time slicer file name',
-                                                    default_dir=self.controller.get_working_dir(),
-                                                    file_filter=file_filter)
+        file_name = GuiUtility.get_save_file_by_dialog(self, title='Time slicer file name',
+                                                       default_dir=self.controller.get_working_dir(),
+                                                       file_filter=file_filter)
 
         if len(file_name) == 0:
             return
@@ -267,7 +267,7 @@ class ManualSlicerSetupTableDialog(QDialog):
             # TODO/ISSUE/33/NOW - Let _myParent to handle this! send a signal to parent with list!
             status, err_msg = self.controller.save_time_slicers(split_tup_list, file_name)
             if not status:
-                GuiUtil.pop_dialog_error(self, err_msg)
+                GuiUtility.pop_dialog_error(self, err_msg)
                 return
         # END-IF
 
@@ -278,8 +278,6 @@ class ManualSlicerSetupTableDialog(QDialog):
         blabla
         :return:
         """
-        import numpy
-
         # disable control from main window
         self._myParent.ui.checkBox_showSlicer.setChecked(False)
 
@@ -331,7 +329,7 @@ class ManualSlicerSetupTableDialog(QDialog):
                                                                              {target_ws_1: color_ws_1})
 
         except Exception as e:
-            GuiUtil.pop_dialog_error(self, 'blabla 1: {}'.format(e))
+            GuiUtility.pop_dialog_error(self, 'blabla 1: {}'.format(e))
             return
 
         return
@@ -375,7 +373,7 @@ class ManualSlicerSetupTableDialog(QDialog):
         # check whether any rows are selected
         row_list = self.ui.tableWidget_segments.get_selected_rows(True)
         if len(row_list) == 0:
-            GuiUtil.pop_dialog_information(self, 'No row is selected to set target.')
+            GuiUtility.pop_dialog_information(self, 'No row is selected to set target.')
             return
 
         # get the name of the target
@@ -400,7 +398,7 @@ class ManualSlicerSetupTableDialog(QDialog):
         try:
             target_ws = str(self.ui.lineEdit_target1.text()).strip()
         except Exception as e:
-            GuiUtil.pop_dialog_error(self, 'blabla 2: {}'.format(e))
+            GuiUtility.pop_dialog_error(self, 'blabla 2: {}'.format(e))
             return
 
         slicer_time_vec, slicer_ws_vec = self._myParent.get_current_slicer()
