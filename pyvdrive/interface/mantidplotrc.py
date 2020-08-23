@@ -22,7 +22,7 @@ from mantid.api import AnalysisDataService as mtd
 
 if __name__ == '__main__':
     # Import MantidPlot python commands
-    import mantidplot
+    import mantidplot  # type: ignore
     from mantidplot import *
 
     # Make Mantid available
@@ -36,7 +36,7 @@ if __name__ == '__main__':
 
     # Define a helper class for the autocomplete
     import inspect
-    import __main__
+    import __main__  # type: ignore
 
     def _ScopeInspector_GetFunctionAttributes(definitions):
         if type(definitions) != dict:

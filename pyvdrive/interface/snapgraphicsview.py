@@ -4,7 +4,7 @@ try:
     from PyQt5.QtWidgets import QComboBox, QRadioButton
 except ImportError:
     from PyQt4.QtGui import QComboBox, QRadioButton
-from gui.mplgraphicsview import MplGraphicsView
+from pyvdrive.interface.gui.mplgraphicsview import MplGraphicsView
 
 
 class SnapGraphicsView(object):

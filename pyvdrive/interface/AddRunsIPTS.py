@@ -22,7 +22,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-import gui.GuiUtility as gutil
+from pyvdrive.interface.gui import GuiUtility
 
 
 class AddRunsByIPTSDialog(QDialog):
@@ -226,14 +226,14 @@ class AddRunsByIPTSDialog(QDialog):
         workflow_controller = self._myParent.get_controller()
 
         # get start run and end run
-        begin_run = gutil.parse_integer(self.ui.lineEdit_begin)
-        end_run = gutil.parse_integer(self.ui.lineEdit_end)
+        begin_run = GuiUtility.parse_integer(self.ui.lineEdit_begin)
+        end_run = GuiUtility.parse_integer(self.ui.lineEdit_end)
 
         # two ways to add date by run numbers
         if self._skipScanData:
             # easy to add run numbers
             if begin_run is None:
-                gutil.pop_dialog_error(self, 'In skip scanning mode, first run must be given!')
+                GuiUtility.pop_dialog_error(self, 'In skip scanning mode, first run must be given!')
                 return False
             # if end run is not given, just add 1 run
             if end_run is None:
@@ -263,7 +263,7 @@ class AddRunsByIPTSDialog(QDialog):
                 run_info_dict_list = ret_obj
             else:
                 error_message = ret_obj
-                gutil.pop_dialog_error(self, error_message)
+                GuiUtility.pop_dialog_error(self, error_message)
                 return False
         # END-IF-ELSE
 
@@ -334,7 +334,8 @@ class AddRunsByIPTSDialog(QDialog):
         elif self.ui.radioButton_scanLogFile.isChecked():
             # scan the log file
             self._skipScanData = False
-            self.scan_record_file()
+            self.scan_record_file(record_data_only=True,
+                                  is_archive=True)
 
         else:
             # scan the HD
@@ -355,9 +356,9 @@ class AddRunsByIPTSDialog(QDialog):
         :return:
         """
         # Get IPTS number
-        ipts_number = gutil.parse_integer(self.ui.lineEdit_iptsNumber)
+        ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber)
         if ipts_number is None:
-            gutil.pop_dialog_error(self, 'IPTS number must be given!')
+            GuiUtility.pop_dialog_error(self, 'IPTS number must be given!')
             return
         self._iptsNumber = ipts_number
 
@@ -366,15 +367,15 @@ class AddRunsByIPTSDialog(QDialog):
 
         # Get and check IPTS directory
         if self._dataDir is None:
-            gutil.pop_dialog_error(self, 'Data directory is not set up!')
+            GuiUtility.pop_dialog_error(self, 'Data directory is not set up!')
             return
 
         # build IPTS directory and check existence of data
         ipts_dir_1 = os.path.join(self._dataDir, 'IPTS-%d/data/' % ipts_number)
         ipts_dir_2 = os.path.join(self._dataDir, 'IPTS-%d/nexus/' % ipts_number)
         if not os.path.exists(ipts_dir_1) and not os.path.exists(ipts_dir_2):
-            gutil.pop_dialog_error(self, 'IPTS number %d cannot be found under %s or %s. ' % (
-                ipts_number, ipts_dir_1, ipts_dir_2))
+            GuiUtility.pop_dialog_error(self, 'IPTS number %d cannot be found under %s or %s.'
+                                              '' % (ipts_number, ipts_dir_1, ipts_dir_2))
             self.ui.lineEdit_iptsNumber.setStyleSheet('color:red')
             return
         else:
@@ -415,8 +416,8 @@ class AddRunsByIPTSDialog(QDialog):
         # Check whether it is fine to leave with 'OK'
         if self._iptsDir is None:
             # error message and return: data directory must be given!
-            gutil.pop_dialog_error(self, 'IPTS or data directory has not been set up.'
-                                   'Unable to add runs.')
+            GuiUtility.pop_dialog_error(self, 'IPTS or data directory has not been set up.'
+                                        'Unable to add runs.')
             return
 
         # try to get the IPTS from IPTS directory
@@ -426,7 +427,7 @@ class AddRunsByIPTSDialog(QDialog):
             if status is False:
                 # use IPTS = 0 for no-IPTS
                 message = 'Unable to get IPTS number due to %s. Using user directory.' % ret_obj
-                gutil.pop_dialog_error(self, message)
+                GuiUtility.pop_dialog_error(self, message)
                 self._iptsNumber = 0
             else:
                 # good IPTS
@@ -449,7 +450,7 @@ class AddRunsByIPTSDialog(QDialog):
 
         # return with error
         if run_tup_list is False:
-            gutil.pop_dialog_error(self, 'Unable to get runs with information.')
+            GuiUtility.pop_dialog_error(self, 'Unable to get runs with information.')
             return
 
         # add runs to workflow
@@ -460,7 +461,7 @@ class AddRunsByIPTSDialog(QDialog):
         status, err_msg = self._myParent.add_runs_trees(
             self._iptsNumber, self._iptsDir, run_tup_list)
         if not status:
-            gutil.pop_dialog_error(self, error_message)
+            GuiUtility.pop_dialog_error(self, error_message)
 
         return
 
@@ -532,7 +533,7 @@ class AddRunsByIPTSDialog(QDialog):
         # scan file
         status, ret_obj = self._myParent.get_controller().scan_ipts_archive(self._iptsDir)
         if not status:
-            gutil.pop_dialog_error(self, 'Unable to get IPTS information due to %s.' % ret_obj)
+            GuiUtility.pop_dialog_error(self, 'Unable to get IPTS information due to %s.' % ret_obj)
             self.ui.label_loadingStatus.setText('Failed to access %s.' % self._iptsDir)
             return False
         else:
@@ -588,14 +589,14 @@ class AddRunsByIPTSDialog(QDialog):
             else:
                 # error in retrieving
                 error_message = ret_obj
-                gutil.pop_dialog_error(self, 'Unable to get IPTS information from log file %s due to %s.' % (
-                    log_file_path, error_message))
+                GuiUtility.pop_dialog_error(self, 'Unable to get IPTS information from log file %s due to %s.'
+                                                  '' % (log_file_path, error_message))
                 self.ui.label_loadingStatus.setText('Failed to access %s.' % log_file_path)
                 return False
 
         else:
             error_message = ret_str
-            gutil.pop_dialog_error(self, error_message)
+            GuiUtility.pop_dialog_error(self, error_message)
 
         return True
 
@@ -608,7 +609,7 @@ class AddRunsByIPTSDialog(QDialog):
         assert (isinstance(run_tup_list, list)) and len(run_tup_list) > 0
 
         if len(run_tup_list) == 1:
-            gutil.pop_dialog_information(self, 'Only 1 run is given!')
+            GuiUtility.pop_dialog_information(self, 'Only 1 run is given!')
 
         # set up run information
         first_run = run_tup_list[0][0]
@@ -621,10 +622,10 @@ class AddRunsByIPTSDialog(QDialog):
         first_run_time = run_tup_list[0][1]
         last_run_time = run_tup_list[-1][1]
 
-        date_begin = gutil.convert_to_qdate(first_run_time)
+        date_begin = GuiUtility.convert_to_qdate(first_run_time)
         self.ui.dateEdit_begin.setDate(date_begin)
 
-        date_end = gutil.convert_to_qdate(last_run_time)
+        date_end = GuiUtility.convert_to_qdate(last_run_time)
         self.ui.dateEdit_end.setDate(date_end)
 
         self.ui.label_loadingStatus.setText('IPTS directory %s: Run %d - %d.'

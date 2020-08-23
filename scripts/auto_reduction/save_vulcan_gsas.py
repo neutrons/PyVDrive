@@ -1,13 +1,10 @@
 # THIS IS A DEBUGGING VERSION TO IDENTIFY THE ISSUES IN PYVDRIVE
-from mantid.api import AnalysisDataService as ADS
-import mantid.simpleapi as api
+from mantid.api import AnalysisDataService as ADS  # type: ignore
+import mantid.simpleapi as api  # type: ignore
 from datetime import datetime
 import os
 import os.path
-import numpy
-import sys
-sys.path.append("/opt/mantidnightly/bin")
-sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')
+import numpy  # type: ignore
 
 
 def align_to_vdrive_bin(input_ws, vec_ref_tof, output_ws_name):

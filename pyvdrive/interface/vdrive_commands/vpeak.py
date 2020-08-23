@@ -1,4 +1,4 @@
-from process_vcommand import VDriveCommand
+from pyvdrive.interface.vdrive_commands.process_vcommand import VDriveCommand
 import os
 
 

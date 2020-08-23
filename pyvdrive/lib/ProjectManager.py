@@ -3,16 +3,16 @@ import os.path
 import numpy
 import shutil
 import random
-from chop_utility import DataChopper
-import datatypeutility
-import mantid_helper
-import reductionmanager as prl
-import archivemanager
-import loaded_data_manager
-import vanadium_utility
-import peak_util
-import vulcan_util
-import reduce_adv_chop
+from pyvdrive.lib.chop_utility import DataChopper
+from pyvdrive.lib import datatypeutility
+from pyvdrive.lib import mantid_helper
+from pyvdrive.lib import reductionmanager as prl
+from pyvdrive.lib import archivemanager
+from pyvdrive.lib import loaded_data_manager
+from pyvdrive.lib import vanadium_utility
+from pyvdrive.lib import peak_util
+from pyvdrive.lib import vulcan_util
+from pyvdrive.lib import reduce_adv_chop
 
 
 # TODO... NEED A DOC FOR HOW TO STORE DATA KEY (WORKSPACE NAME) ..

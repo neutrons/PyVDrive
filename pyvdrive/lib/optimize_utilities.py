@@ -1,5 +1,5 @@
-import numpy
-from scipy.optimize import curve_fit
+import numpy  # type: ignore
+from scipy.optimize import curve_fit  # type: ignore
 
 
 # Define model function to be used to fit to the data above:

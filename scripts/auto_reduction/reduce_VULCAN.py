@@ -45,10 +45,10 @@
 #     1. To be Python3 compatible
 #
 ################################################################################
-import save_vulcan_gsas
-from mantid.api import AnalysisDataService
-import mantid
-import mantid.simpleapi as mantidsimple
+import save_vulcan_gsas  # type: ignore
+from mantid.api import AnalysisDataService  # type: ignore
+import mantid  # type: ignore
+import mantid.simpleapi as mantidsimple  # type: ignore
 import getopt
 import os
 import datetime
@@ -56,9 +56,9 @@ import stat
 import shutil
 import xml.etree.ElementTree as ET
 import sys
-import numpy
+import numpy  # type: ignore
 import bisect
-import h5py
+import h5py  # type: ignore
 
 sys.path.insert(0, "/opt/mantid50/bin")
 sys.path.insert(1, "/opt/mantid50/lib")

@@ -33,17 +33,18 @@ from pyvdrive.interface.gui.vdrivetreewidgets import FileSystemTreeView
 from pyvdrive.interface.gui.vdrivetablewidgets import VdriveRunTableWidget
 from pyvdrive.interface.gui.vdrivetablewidgets import TimeSegmentsTable
 from pyvdrive.lib import file_utilities
-import PeakPickWindow as PeakPickWindow
-import snapgraphicsview as SnapGView
-import ReducedDataView as DataView
-import gui.GuiUtility as GuiUtility
-import AddRunsIPTS as dlgrun
-import LogPickerWindow as LogPicker
-import LogSnapView as dlgSnap
-from vcommand_processor import VdriveCommandProcessor
-import VDrivePlotDataBinning as ReductionUtil
-import configwindow
-import config
+from pyvdrive.interface import PeakPickWindow
+from pyvdrive.interface import snapgraphicsview
+from pyvdrive.interface import ReducedDataView
+from pyvdrive.interface.gui import GuiUtility
+from pyvdrive.interface import AddRunsIPTS
+from pyvdrive.interface import LogPickerWindow
+from pyvdrive.interface import LogSnapView
+from pyvdrive.interface.vcommand_processor import VdriveCommandProcessor
+from pyvdrive.interface import VDrivePlotDataBinning
+from pyvdrive.interface import configwindow
+from pyvdrive.interface import config
+from pyvdrive.interface.gui.workspaceviewwidget import WorkspaceViewWidget
 
 """ import PyVDrive library """
 import pyvdrive as PyVDrive
@@ -363,8 +364,6 @@ class VdriveMainWindow(QMainWindow):
                 Init
                 :param parent:
                 """
-                from gui.workspaceviewwidget import WorkspaceViewWidget
-
                 QMainWindow.__init__(self)
 
                 # set up
@@ -456,13 +455,13 @@ class VdriveMainWindow(QMainWindow):
         found = False
         for i_radio in range(self._numSnapViews):
             if self._groupedSnapViewList[i_radio].is_selected() is True:
-                self._currSlicerLogName = SnapGView.SampleLogView(
+                self._currSlicerLogName = snapgraphicsview.SampleLogView(
                     self._groupedSnapViewList[i_radio], self).get_log_name()
                 found = True
                 break
 
         if found is False:
-            GuiUtility.pop_dialog_error('Unable to locate any sample log to be picked up.')
+            GuiUtility.pop_dialog_error(self, 'Unable to locate any sample log to be picked up.')
 
         # self._apply_slicer_snap_view() : disabled because there is no need to do this
 
@@ -497,7 +496,7 @@ class VdriveMainWindow(QMainWindow):
             If the data slicing is selected, then reduce the sliced data.
         :return:
         """
-        reducer = ReductionUtil.VulcanGuiReduction(self.ui, self._myWorkflow)
+        reducer = VDrivePlotDataBinning.VulcanGuiReduction(self.ui, self._myWorkflow)
 
         status, error_message = reducer.reduce_data()
         if status:
@@ -617,7 +616,7 @@ class VdriveMainWindow(QMainWindow):
         # create the instance of a reduction data view window
         if self._reducedDataViewWindow is None:
             # initialize a window instance it has not been
-            self._reducedDataViewWindow = DataView.GeneralPurposedDataViewWindow(self)
+            self._reducedDataViewWindow = ReducedDataView.GeneralPurposedDataViewWindow(self)
             self._reducedDataViewWindow.init_setup(self._myWorkflow)
             self._myChildWindows.append(self._reducedDataViewWindow)
         # END-IF
@@ -809,7 +808,7 @@ class VdriveMainWindow(QMainWindow):
                     'GUI changed but python code is not changed accordingly: %s' % (str(e)))
             else:
                 # set up group
-                graph_group = SnapGView.SnapGraphicsView(graph_view, combo1, combo2, radio_button)
+                graph_group = snapgraphicsview.SnapGraphicsView(graph_view, combo1, combo2, radio_button)
                 self._groupedSnapViewList.append(graph_group)
         # END_FOR(i)
 
@@ -860,7 +859,7 @@ class VdriveMainWindow(QMainWindow):
         :return: None
         """
         # Launch window
-        child_window = dlgrun.AddRunsByIPTSDialog(self)
+        child_window = AddRunsIPTS.AddRunsByIPTSDialog(self)
 
         # init set up
         if self._addedIPTSNumber is not None:
@@ -961,7 +960,7 @@ class VdriveMainWindow(QMainWindow):
             # apply change to status record
             self._group_left_box_values[i] = curr_index
             # plot
-            SnapGView.SampleLogView(
+            snapgraphicsview.SampleLogView(
                 self._groupedSnapViewList[i], self).plot_sample_log(snap_resolution)
         # END-FOR
 
@@ -1093,7 +1092,7 @@ class VdriveMainWindow(QMainWindow):
         for i in range(min(self._numSnapViews, len(log_name_list))):
             # create a log_widget from base snap view widgets and set up
             snap_widget = self._groupedSnapViewList[i]
-            log_widget = SnapGView.SampleLogView(snap_widget, self)
+            log_widget = snapgraphicsview.SampleLogView(snap_widget, self)
 
             log_widget.reset_log_names(log_name_list)
             log_widget.set_current_log_name(i)
@@ -1365,11 +1364,9 @@ class VdriveMainWindow(QMainWindow):
         set up the auto-seek vanadium file
         :return:
         """
-        import VanCalibrationRulesSetup as vanSetup
-        setup_dialog = vanSetup.SetupVanCalibRuleDialog(self)
+        from pyvdrive.interface.VanCalibrationRulesSetup import SetupVanCalibRuleDialog
+        setup_dialog = SetupVanCalibRuleDialog(self)
         setup_dialog.exec_()
-
-        return
 
     def load_project(self, project_file_name):
         """
@@ -1450,7 +1447,7 @@ class VdriveMainWindow(QMainWindow):
         :return: handler to log picker window
         """
         # Start
-        if isinstance(self._logPickerWindow, LogPicker.WindowLogPicker):
+        if isinstance(self._logPickerWindow, LogPickerWindow.WindowLogPicker):
             self._logPickerWindow.show()
         else:
             # Get selected run number from sidebar tree view
@@ -1472,7 +1469,7 @@ class VdriveMainWindow(QMainWindow):
                 ipts_number = None
 
             # create the log processing window
-            self._logPickerWindow = LogPicker.WindowLogPicker(self, ipts_number, run_number)
+            self._logPickerWindow = LogPickerWindow.WindowLogPicker(self, ipts_number, run_number)
             self._myChildWindows.append(self._logPickerWindow)
         # END-IF-ELSE
 
@@ -1495,7 +1492,7 @@ class VdriveMainWindow(QMainWindow):
         # Create a Snap view window if needed
         if self._snapViewWindow is None:
             # Create a new window
-            self._snapViewWindow = dlgSnap.DialogLogSnapView(self)
+            self._snapViewWindow = LogSnapView.DialogLogSnapView(self)
 
         # Refresh?
         if self._snapViewWindow.allow_new_session() is False:
@@ -1505,7 +1502,7 @@ class VdriveMainWindow(QMainWindow):
         # END-IF
 
         # Get the final data
-        sample_log_view = SnapGView.SampleLogView(
+        sample_log_view = snapgraphicsview.SampleLogView(
             self._groupedSnapViewList[self._currentSnapViewIndex], self)
         sample_log_name = sample_log_view.get_log_name()
         num_skipped_second = GuiUtility.parse_float(self.ui.lineEdit_numSecLogSkip)

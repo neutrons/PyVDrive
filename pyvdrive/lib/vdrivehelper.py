@@ -4,10 +4,10 @@ import pytz
 from dateutil.parser import parse
 import datetime
 from dateutil import tz
-import datatypeutility
-import mantid
+from pyvdrive.lib import datatypeutility
+import mantid    # type: ignore
 import stat
-import numpy as np
+import numpy as np  # type: ignore
 import pyvdrive.lib.reduce_VULCAN as reduce_VULCAN
 
 __author__ = 'wzz'

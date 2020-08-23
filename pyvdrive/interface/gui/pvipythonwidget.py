@@ -8,7 +8,7 @@ try:
 except ImportError:
     from PyQt4.QtGui import QMainWindow, QWidget, QGridLayout, QSizePolicy, QLabel, QMenuBar, QStatusBar, QToolBar
     from PyQt4 import QtCore
-from workspaceviewwidget import WorkspaceViewWidget
+from pyvdrive.interface.gui.workspaceviewwidget import WorkspaceViewWidget
 
 # include this try/except block to remap QString needed when using IPython
 try:

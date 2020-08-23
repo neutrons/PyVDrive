@@ -1,5 +1,5 @@
 from pyvdrive.lib import datatypeutility
-from vbin import VBin
+from pyvdrive.interface.vdrive_commands.vbin import VBin
 
 
 class VdriveMerge(VBin):
@@ -14,7 +14,7 @@ class VdriveMerge(VBin):
     def __init__(self, controller, command_args):
         """ Initialization
         """
-        VBin.__init__(self, controller, command_args)
+        super(VBin, self).__init__(controller, command_args)
 
         self._commandName = 'MERGE'
 

@@ -1,5 +1,5 @@
 import os
-from process_vcommand import VDriveCommand
+from pyvdrive.interface.vdrive_commands.process_vcommand import VDriveCommand
 try:
     from PyQt5.QtCore import pyqtSignal
 except (ImportError, RuntimeError) as import_err:

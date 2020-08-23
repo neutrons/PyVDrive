@@ -23,14 +23,14 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-import gui.GuiUtility as GuiUtility
+from pyvdrive.interface.gui import GuiUtility
 from pyvdrive.interface.gui.vdrivetreewidgets import VdriveRunManagerTree
 from pyvdrive.interface.gui.samplelogview import LogGraphicsView
 from pyvdrive.lib import datatypeutility
-import ReducedDataView
-import LoadMTSLogWindow
-import QuickChopDialog
-import ManualSlicerSetupDialog
+from pyvdrive.interface import ReducedDataView
+from pyvdrive.interface import LoadMTSLogWindow
+from pyvdrive.interface import QuickChopDialog
+from pyvdrive.interface import ManualSlicerSetupDialog
 from pyvdrive.lib import file_utilities
 
 OUT_PICKER = 0

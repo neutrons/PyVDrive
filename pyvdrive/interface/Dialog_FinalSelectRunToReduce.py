@@ -18,7 +18,7 @@ try:
 except AttributeError:
     def _fromUtf8(s): return s
 
-import gui.GuiUtility as gutil
+from pyvdrive.interface.gui import GuiUtility
 
 
 class FinalSelectRunToReduceDialog(QMainWindow):
@@ -148,10 +148,10 @@ class FinalSelectRunToReduceDialog(QMainWindow):
         self._currRowIndex += 1
         irow = self._currRowIndex
 
-        gutil.setTextToQTableCell(self.ui.tableWidget, irow, 0, run)
-        gutil.setTextToQTableCell(self.ui.tableWidget, irow, 1, ipts)
-        gutil.setTextToQTableCell(self.ui.tableWidget, irow, 2, vanrun)
-        gutil.addCheckboxToWSTCell(self.ui.tableWidget, irow, 3, select)
+        GuiUtility.setTextToQTableCell(self.ui.tableWidget, irow, 0, run)
+        GuiUtility.setTextToQTableCell(self.ui.tableWidget, irow, 1, ipts)
+        GuiUtility.setTextToQTableCell(self.ui.tableWidget, irow, 2, vanrun)
+        GuiUtility.addCheckboxToWSTCell(self.ui.tableWidget, irow, 3, select)
 
         # Resize column width
         self.ui.tableWidget.resizeColumnsToContents()

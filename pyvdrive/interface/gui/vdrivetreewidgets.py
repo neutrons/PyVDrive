@@ -12,12 +12,11 @@ except ImportError:
     from PyQt4 import QtCore
     from PyQt4.QtGui import QTreeView, QAbstractItemView, QFileSystemModel, QStandardItem
     from PyQt4.QtGui import QAction
-import ndav_widgets.CustomizedTreeView as treeView
+from pyvdrive.interface.gui.ndav_widgets import CustomizedTreeView
 
 
 class FileSystemTreeView(QTreeView):
-    """
-
+    """Tree view for file system
     """
     def __init__(self, parent):
         """
@@ -68,7 +67,7 @@ class FileSystemTreeView(QTreeView):
         return
 
 
-class SinglePeakFitManageTree(treeView.CustomizedTreeView):
+class SinglePeakFitManageTree(CustomizedTreeView.CustomizedTreeView):
     """
     Extended tree view widgets to manage single peak fit runs
     """
@@ -81,7 +80,7 @@ class SinglePeakFitManageTree(treeView.CustomizedTreeView):
         assert parent is not None
 
         # Initialize parent
-        treeView.CustomizedTreeView.__init__(self, parent)
+        CustomizedTreeView.CustomizedTreeView.__init__(self, parent)
 
         self.init_setup(['IPTS-Run'])
 
@@ -218,7 +217,7 @@ class SinglePeakFitManageTree(treeView.CustomizedTreeView):
         return
 
 
-class VdriveRunManagerTree(treeView.CustomizedTreeView):
+class VdriveRunManagerTree(CustomizedTreeView.CustomizedTreeView):
     """
     """
     def __init__(self, parent):
@@ -227,7 +226,7 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
         :param parent:
         :return:
         """
-        treeView.CustomizedTreeView.__init__(self, parent)
+        CustomizedTreeView.CustomizedTreeView.__init__(self, parent)
 
         self.init_setup(['IPTS-Run'])
 

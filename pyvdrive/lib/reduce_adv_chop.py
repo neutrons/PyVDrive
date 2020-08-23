@@ -5,15 +5,15 @@ import math
 import pandas as pd
 import numpy
 import datetime
-import save_vulcan_gsas
+from pyvdrive.lib import save_vulcan_gsas
 import mantid.simpleapi as mantidsimple
 from mantid.api import AnalysisDataService, ITableWorkspace, MatrixWorkspace
 from mantid.dataobjects import SplittersWorkspace
-import reduce_VULCAN
-import chop_utility
-import mantid_helper
-import vulcan_slice_reduce
-import datatypeutility
+from pyvdrive.lib import reduce_VULCAN
+from pyvdrive.lib import chop_utility
+from pyvdrive.lib import mantid_helper
+from pyvdrive.lib import vulcan_slice_reduce
+from pyvdrive.lib import datatypeutility
 
 MAX_ALLOWED_WORKSPACES = 200
 MAX_CHOPPED_WORKSPACE_IN_MEM = 200

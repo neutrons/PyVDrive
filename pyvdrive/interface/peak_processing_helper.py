@@ -6,7 +6,7 @@ try:
 except ImportError:
     from PyQt4.QtGui import QMainWindow, QVBoxLayout, QDialog, QLineEdit, QComboBox, QCheckBox  # noqa: F401
     from PyQt4.uic import loadUi as load_ui
-from gui import GuiUtility
+from pyvdrive.interface.gui import GuiUtility
 
 # List of supported unit cell
 UnitCellList = [('BCC', 'I m -3 m'),

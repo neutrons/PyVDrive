@@ -8,15 +8,15 @@
 #####
 import os
 
-import ProjectManager as ProjectMrg
-import archivemanager
-import vdrivehelper
-import mantid_helper
-import crystal_helper
-import io_peak_file
-import reduce_VULCAN
-import chop_utility
-import datatypeutility
+from pyvdrive.lib import ProjectManager
+from pyvdrive.lib import archivemanager
+from pyvdrive.lib import vdrivehelper
+from pyvdrive.lib import mantid_helper
+from pyvdrive.lib import crystal_helper
+from pyvdrive.lib import io_peak_file
+from pyvdrive.lib import reduce_VULCAN
+from pyvdrive.lib import chop_utility
+from pyvdrive.lib import datatypeutility
 
 SUPPORTED_INSTRUMENT = ['VULCAN']
 
@@ -54,7 +54,7 @@ class VDriveAPI(object):
         self._myInstrument = instrument_name
 
         # initialize (1) vdrive project for reducing data, (2) data archiving manager, and (3) slicing manager
-        self._myProject = ProjectMrg.ProjectManager(self, 'New Project', 'VULCAN')
+        self._myProject = ProjectManager.ProjectManager(self, 'New Project', 'VULCAN')
 
         # construct the data location
         # if module_location is not None:

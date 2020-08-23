@@ -45,7 +45,7 @@
 #     1. To be Python3 compatible
 #
 ################################################################################
-import save_vulcan_gsas
+from pyvdrive.lib import save_vulcan_gsas
 from mantid.api import AnalysisDataService
 import mantid
 import mantid.simpleapi as mantidsimple

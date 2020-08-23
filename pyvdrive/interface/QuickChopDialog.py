@@ -20,7 +20,7 @@ except AttributeError:
         return s
 
 
-import gui.GuiUtility as GuiUtility
+import pyvdrive.interface.gui.GuiUtility as GuiUtility
 
 
 class QuickChopDialog(QDialog):

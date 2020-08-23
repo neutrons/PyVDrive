@@ -8,6 +8,7 @@ try:
 except (ImportError, RuntimeError) as import_err:
     print('Process_VCommand: {}'.format(import_err))
     from PyQt4.QtCore import QObject
+from typing import List, Dict
 
 
 def convert_string_to(string, datatype):
@@ -44,8 +45,8 @@ class VDriveCommand(QObject):
     """
     Base class to process VDRIVE commands
     """
-    SupportedArgs = list()
-    ArgsDocDict = dict()
+    SupportedArgs: List[str] = list()
+    ArgsDocDict: Dict[str, str] = dict()
 
     def __init__(self, controller, command_args):
         """

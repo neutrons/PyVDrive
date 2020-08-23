@@ -2,9 +2,9 @@
 import os
 import random
 import numpy
-import mantid_helper
+from pyvdrive.lib import mantid_helper
+from pyvdrive.lib import datatypeutility
 from mantid.api import ITableWorkspace
-import datatypeutility
 
 FifteenYearsInSecond = 15*356*24*3600
 # MAX_CHOPPED_WORKSPACE_IN_MEM = 40

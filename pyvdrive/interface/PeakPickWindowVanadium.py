@@ -1,5 +1,5 @@
 from pyvdrive.lib import datatypeutility
-from gui import GuiUtility
+from pyvdrive.interface.gui import GuiUtility
 import os
 import numpy
 

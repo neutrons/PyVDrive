@@ -1,5 +1,5 @@
 # This module contains algorithms to process peaks
-import numpy
+import numpy  # type: ignore
 
 
 class PeakGroupCollection(object):

@@ -1,7 +1,7 @@
 import numpy as np
-import mplgraphicsview
-import mplgraphicsview2d
-import mplgraphicsview3d
+from pyvdrive.interface.gui import mplgraphicsview
+from pyvdrive.interface.gui import mplgraphicsview2d
+from pyvdrive.interface.gui import mplgraphicsview3d
 
 
 class GeneralRunView(mplgraphicsview.MplGraphicsView):

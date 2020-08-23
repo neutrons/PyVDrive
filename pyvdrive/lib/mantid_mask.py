@@ -1,6 +1,6 @@
 # Module contains a set of static methods to mask detectors as ROI and/mask
-import mantid_helper
-import datatypeutility
+from pyvdrive.lib import mantid_helper
+from pyvdrive.lib import datatypeutility
 
 
 class MantidMaskingManager(object):

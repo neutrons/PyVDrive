@@ -4,11 +4,11 @@ import pyvdrive
 from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget  # noqa: F401
 import os
 try:
-    from PyQt5.QtWidgets import QDialog, QApplication
-    from PyQt5.uic import loadUi as load_ui
+    from PyQt5.QtWidgets import QDialog, QApplication  # type: ignore
+    from PyQt5.uic import loadUi as load_ui  # type: ignore
 except ImportError:
-    from PyQt4.QtGui import QDialog, QApplication
-    from PyQt4.uic import loadUi as load_ui
+    from PyQt4.QtGui import QDialog, QApplication  # type: ignore
+    from PyQt4.uic import loadUi as load_ui  # type: ignore
 
 # from pyvdrive.interface.gui import ui_LaunchManager
 from pyvdrive.interface.VDrivePlot import VdriveMainWindow
