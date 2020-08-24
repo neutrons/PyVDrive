@@ -8,7 +8,7 @@ def test_load_modules():
     print('Hello world!')
     import os
     print(f'Current workspace directory: {os.getcwd()}')
-    print(f'dir: {os.listdir}')
+    print(f'dir: {os.listdir()}')
 
     from pyvdrive.lib import vulcan_slice_reduce
     assert vulcan_slice_reduce
