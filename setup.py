@@ -132,7 +132,7 @@ if __name__ == "__main__":
                     'tests/workflow/performance_combined_test.py',
                     'tests/workflow/gui_test_slice_assistant.py',
                     'tests/workflow/gui_test_peak_process.py',
-                    'tests/unit/vulcan_slice_reduce_test.py']
+                    'tests/unit/test_vulcan_slice_reduce.py']
     scripts.extend(test_scripts)
 
     setup(
