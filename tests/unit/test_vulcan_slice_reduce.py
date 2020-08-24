@@ -1,7 +1,7 @@
 # Test pyvdrive.lib.vulcan_slice_reduce.SliceFocusVulcan
 import pytest
 import os
-import pyvdrive.lib.vulcan_slice_reduce as vulcan_slice_reduce
+from pyvdrive.lib import vulcan_slice_reduce
 
 
 def test_load_modules():
