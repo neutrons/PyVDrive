@@ -1,5 +1,6 @@
 import pytest
 import os
+import sys
 
 
 def test_load_modules():
@@ -12,6 +13,9 @@ def test_load_modules():
 
     pydrive_dir = os.path.join(os.getcwd(), 'pyvdrive')
     print(f'pyvdrive dir: {os.listdir(pydrive_dir)}')
+    print(f'python path: {sys.path}')
+
+    # Failed here!
     import pyvdrive
     assert pyvdrive
     core_dir = os.path.join(os.getcwd(), 'pyvdrive', 'core')
