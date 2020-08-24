@@ -10,6 +10,14 @@ def test_load_modules():
     print(f'Current workspace directory: {os.getcwd()}')
     print(f'dir: {os.listdir()}')
 
+    pydrive_dir = os.path.join(os.getcwd(), 'pyvdrive')
+    print(f'pyvdrive dir: {os.listdir(pydrive_dir)}')
+    import pyvdrive
+    assert pyvdrive
+    core_dir = os.path.join(os.getcwd(), 'pyvdrive', 'core')
+    print(f'core dir: {os.listdir(core_dir)}')
+    import pyvdrive.core
+    assert pyvdrive.core
     from pyvdrive.core import vulcan_slice_reduce
     assert vulcan_slice_reduce
 
