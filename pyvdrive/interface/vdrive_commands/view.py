@@ -9,7 +9,7 @@
 # VIEW, IPTS=####, RUNS=####, RUNE=#### [,CHOPRUN=####] [, MinV=#.#, MaxV=#.#,
 # RUNV=####, NORM=1 , PCSENV=1]
 from pyvdrive.interface.vdrive_commands.process_vcommand import VDriveCommand
-from pyvdrive.lib import vulcan_util
+from pyvdrive.core import vulcan_util
 
 
 # TODO - TONIGHT - No more blabla and better doc!

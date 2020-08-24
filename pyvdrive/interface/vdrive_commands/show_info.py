@@ -1,6 +1,6 @@
 # Goal 1: show information about vanadium with automatic vanadium locator!
 from pyvdrive.interface.vdrive_commands.process_vcommand import VDriveCommand
-import pyvdrive.lib.datatypeutility
+import pyvdrive.core.datatypeutility
 
 
 # TEST ME - 20180730 - Newly Implemented
@@ -90,10 +90,10 @@ class RunsInfoQuery(VDriveCommand):
         :return:
         """
         # check inputs
-        pyvdrive.lib.datatypeutility.check_list('Run information dictionary list', info_dict_list)
+        pyvdrive.core.datatypeutility.check_list('Run information dictionary list', info_dict_list)
         if len(info_dict_list) == 0:
             return 'Input run information dictionary list is empty'
-        pyvdrive.lib.datatypeutility.check_list('Column name list', keys)
+        pyvdrive.core.datatypeutility.check_list('Column name list', keys)
         if len(keys) == 0:
             raise RuntimeError('It is not allowed to input an empty column name list')
 
@@ -107,7 +107,7 @@ class RunsInfoQuery(VDriveCommand):
 
         for info_dict in info_dict_list:
             # check
-            pyvdrive.lib.datatypeutility.check_dict('Run information dictionary', info_dict)
+            pyvdrive.core.datatypeutility.check_dict('Run information dictionary', info_dict)
             # if it fails due to KeyError, let it be
             for col_name in keys:
                 col_value = '{}'.format(info_dict[col_name])

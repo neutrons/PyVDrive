@@ -1,6 +1,6 @@
 # A collection of methods and constants for VULCAN instrument geometry
-from pyvdrive.lib import datatypeutility
-from pyvdrive.lib import mantid_helper
+from pyvdrive.core import datatypeutility
+from pyvdrive.core import mantid_helper
 import bisect
 
 

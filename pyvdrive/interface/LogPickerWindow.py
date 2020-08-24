@@ -26,12 +26,12 @@ except AttributeError:
 from pyvdrive.interface.gui import GuiUtility
 from pyvdrive.interface.gui.vdrivetreewidgets import VdriveRunManagerTree
 from pyvdrive.interface.gui.samplelogview import LogGraphicsView
-from pyvdrive.lib import datatypeutility
+from pyvdrive.core import datatypeutility
 from pyvdrive.interface import ReducedDataView
 from pyvdrive.interface import LoadMTSLogWindow
 from pyvdrive.interface import QuickChopDialog
 from pyvdrive.interface import ManualSlicerSetupDialog
-from pyvdrive.lib import file_utilities
+from pyvdrive.core import file_utilities
 
 OUT_PICKER = 0
 IN_PICKER = 1
@@ -651,7 +651,7 @@ class WindowLogPicker(QMainWindow):
         """ Load sample log file in HDF5 format
         :return:
         """
-        from pyvdrive.lib import file_utilities
+        from pyvdrive.core import file_utilities
 
         h5_log_name = GuiUtility.get_load_file_by_dialog(self, title='Sample log file in HDF5 format',
                                                          default_dir=self.get_controller().working_dir(),

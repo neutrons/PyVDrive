@@ -19,8 +19,8 @@ except ImportError:
     from PyQt4.uic import loadUi as load_ui
     from PyQt4 import QtCore
 from pyvdrive.interface.gui import GuiUtility
-from pyvdrive.lib import vulcan_util
-from pyvdrive.lib import file_utilities
+from pyvdrive.core import vulcan_util
+from pyvdrive.core import file_utilities
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
@@ -28,11 +28,11 @@ except AttributeError:
         return s
 
 from pyvdrive.interface.gui.generalrunview import GeneralRunView
-import pyvdrive.lib.datatypeutility
-from pyvdrive.lib import datatypeutility
+import pyvdrive.core.datatypeutility
+from pyvdrive.core import datatypeutility
 from pyvdrive.interface.gui.samplelogview import LogGraphicsView
-from pyvdrive.lib import reduce_VULCAN
-from pyvdrive.lib import vdrive_constants
+from pyvdrive.core import reduce_VULCAN
+from pyvdrive.core import vdrive_constants
 from pyvdrive.interface.atomic_data_viewers import PlotInformation, AtomicReduced1DViewer, AtomicReduction2DViewer,\
     AtomicReduction3DViewer
 
@@ -2070,7 +2070,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
     def get_vanadium_spectrum(self, van_run, bank_id):
 
-        from pyvdrive.lib import mantid_helper
+        from pyvdrive.core import mantid_helper
         print('[DB...BAT] Vanadium workspace = {}'.format(self._vanadium_dict[van_run]))
         van_ws_name = self._vanadium_dict[van_run]
         mantid_helper.mtd_convert_units(van_ws_name, 'dSpacing')
@@ -2485,7 +2485,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :return:
         """
         # check inputs
-        pyvdrive.lib.datatypeutility.check_string_variable('Unit', unit)
+        pyvdrive.core.datatypeutility.check_string_variable('Unit', unit)
         unit = unit.lower()
 
         ui_supported_units = list()

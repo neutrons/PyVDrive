@@ -12,12 +12,12 @@
 #
 # Output: 2theta-summed counts (or normalized intensity)
 import numpy
-from pyvdrive.lib import datatypeutility
-from pyvdrive.lib import mantid_helper
-from pyvdrive.lib import mantid_reduction
-from pyvdrive.lib import reductionmanager
-from pyvdrive.lib import vulcan_util
-from pyvdrive.lib import file_utilities
+from pyvdrive.core import datatypeutility
+from pyvdrive.core import mantid_helper
+from pyvdrive.core import mantid_reduction
+from pyvdrive.core import reductionmanager
+from pyvdrive.core import vulcan_util
+from pyvdrive.core import file_utilities
 
 
 class Collimator(object):

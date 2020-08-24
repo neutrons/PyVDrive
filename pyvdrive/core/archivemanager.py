@@ -5,10 +5,10 @@ import os
 import time
 import pickle
 import pandas
-from pyvdrive.lib import mantid_helper
-from pyvdrive.lib import vdrivehelper
-from pyvdrive.lib import vulcan_util
-from pyvdrive.lib import datatypeutility
+from pyvdrive.core import mantid_helper
+from pyvdrive.core import vdrivehelper
+from pyvdrive.core import vulcan_util
+from pyvdrive.core import datatypeutility
 
 SUPPORTED_INSTRUMENT = {'VULCAN': 'VULCAN'}
 SUPPORTED_INSTRUMENT_SHORT = {'VUL': 'VULCAN'}

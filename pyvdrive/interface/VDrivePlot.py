@@ -32,7 +32,7 @@ from pyvdrive.interface.gui.mplgraphicsview import MplGraphicsView
 from pyvdrive.interface.gui.vdrivetreewidgets import FileSystemTreeView
 from pyvdrive.interface.gui.vdrivetablewidgets import VdriveRunTableWidget
 from pyvdrive.interface.gui.vdrivetablewidgets import TimeSegmentsTable
-from pyvdrive.lib import file_utilities
+from pyvdrive.core import file_utilities
 from pyvdrive.interface import PeakPickWindow
 from pyvdrive.interface import snapgraphicsview
 from pyvdrive.interface import ReducedDataView
@@ -48,7 +48,7 @@ from pyvdrive.interface.gui.workspaceviewwidget import WorkspaceViewWidget
 
 """ import PyVDrive library """
 import pyvdrive as PyVDrive
-import pyvdrive.lib.VDriveAPI as VdriveAPI
+import pyvdrive.core.VDriveAPI as VdriveAPI
 
 __author__ = 'wzz'
 

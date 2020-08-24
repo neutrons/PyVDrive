@@ -8,8 +8,8 @@ import mantid.dataobjects
 import mantid.geometry
 import mantid.simpleapi as mantidapi
 from mantid.api import AnalysisDataService as ADS
-from pyvdrive.lib import vdrivehelper
-from pyvdrive.lib import datatypeutility
+from pyvdrive.core import vdrivehelper
+from pyvdrive.core import datatypeutility
 import datetime
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
@@ -1565,7 +1565,7 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     :param standard_bin_workspace: binning template workspace. It can be None for not aligning
     :return: output workspace name
     """
-    from pyvdrive.lib import reduce_VULCAN
+    from pyvdrive.core import reduce_VULCAN
 
     # TEST/ISSUE/NOW - Implement feature with standard_bin_workspace...
     # Check
@@ -2044,7 +2044,7 @@ def map_sample_logs(meta_ws_name, log_name_x, log_name_y):
                                         TimeZone='UTC',
                                         Header='')
 
-    from pyvdrive.lib import vulcan_util
+    from pyvdrive.core import vulcan_util
 
     log_set = vulcan_util.import_vulcan_log('/tmp/test.dat', header=None)  # no header
 

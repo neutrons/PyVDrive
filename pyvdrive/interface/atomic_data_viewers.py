@@ -20,8 +20,8 @@ except AttributeError:
 from pyvdrive.interface.gui.generalrunview import GeneralRunView
 from pyvdrive.interface.gui.generalrunview import ContourPlotView
 from pyvdrive.interface.gui.generalrunview import LinePlot3DView
-from pyvdrive.lib import datatypeutility
-from pyvdrive.lib import vdrive_constants
+from pyvdrive.core import datatypeutility
+from pyvdrive.core import vdrive_constants
 import numpy as np
 """
 Containing a set of "atomic" data viewers used by VIEW

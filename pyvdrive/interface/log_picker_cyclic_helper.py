@@ -1,7 +1,7 @@
-from pyvdrive.lib import datatypeutility
+from pyvdrive.core import datatypeutility
 from pyvdrive.interface.gui import GuiUtility
 from mantid.simpleapi import CreateWorkspace, SmoothData, mtd
-from pyvdrive.lib import mantid_helper
+from pyvdrive.core import mantid_helper
 from numpy import argrelextrema
 import numpy
 import h5py

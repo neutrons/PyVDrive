@@ -2,8 +2,8 @@
 import os
 import random
 import numpy
-from pyvdrive.lib import mantid_helper
-from pyvdrive.lib import datatypeutility
+from pyvdrive.core import mantid_helper
+from pyvdrive.core import datatypeutility
 from mantid.api import ITableWorkspace
 
 FifteenYearsInSecond = 15*356*24*3600

@@ -5,7 +5,7 @@ import os
 import time
 from pyvdrive.interface.vdrive_commands.process_vcommand import VDriveCommand
 from pyvdrive.interface.vdrive_commands.process_vcommand import convert_string_to
-from pyvdrive.lib import datatypeutility
+from pyvdrive.core import datatypeutility
 try:
     from PyQt5 import QtCore
     # from PyQt5.QtCore import pyqtSignal
@@ -757,7 +757,7 @@ class VdriveChop(VDriveCommand):
                 try:
                     # TODO FIXME - NIGHT
                     """
-                      File "/home/wzz/Projects/PyVDrive/build/lib.linux-x86_64-2.7/pyvdrive/
+                      File "/home/wzz/Projects/PyVDrive/build/core.linux-x86_64-2.7/pyvdrive/
                       interface/vdrive_commands/chop.py", line 715, in exec_cmd
                       slicer_list = self.parse_pick_data(user_slice_file)
                       NameError: global name 'user_slice_file' is not defined
@@ -889,7 +889,7 @@ class VdriveChop(VDriveCommand):
         :param file_name:
         :return:
         """
-        from pyvdrive.lib import file_utilities
+        from pyvdrive.core import file_utilities
 
         split_list = file_utilities.load_event_slicers_file(file_name)
 

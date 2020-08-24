@@ -4,11 +4,11 @@
 import os
 import math
 import numpy
-from pyvdrive.lib import mantid_helper
+from pyvdrive.core import mantid_helper
 from mantid.simpleapi import CreateGroupingWorkspace
-from pyvdrive.lib import datatypeutility
+from pyvdrive.core import datatypeutility
 import pandas as pd
-from pyvdrive.lib import reduce_VULCAN
+from pyvdrive.core import reduce_VULCAN
 
 
 START_PIXEL_ID = {1: {1: 0, 2: 1, 3: (6468, 62500)},

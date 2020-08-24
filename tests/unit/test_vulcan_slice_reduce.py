@@ -10,7 +10,7 @@ def test_load_modules():
     print(f'Current workspace directory: {os.getcwd()}')
     print(f'dir: {os.listdir()}')
 
-    from pyvdrive.lib import vulcan_slice_reduce
+    from pyvdrive.core import vulcan_slice_reduce
     assert vulcan_slice_reduce
 
 
@@ -19,7 +19,7 @@ def test_vanadium():
     test main
     :return:
     """
-    from pyvdrive.lib import vulcan_slice_reduce
+    from pyvdrive.core import vulcan_slice_reduce
 
     # Test data definition
     detector_efficiency_file = 'tests/data/vulcan_eff_156473.hdf5'

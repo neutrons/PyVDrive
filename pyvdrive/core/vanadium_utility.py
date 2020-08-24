@@ -1,8 +1,8 @@
 # Methods for processing vanadiums
 import os
-from pyvdrive.lib import mantid_helper
-from pyvdrive.lib import datatypeutility
-from pyvdrive.lib import save_vulcan_gsas
+from pyvdrive.core import mantid_helper
+from pyvdrive.core import datatypeutility
+from pyvdrive.core import save_vulcan_gsas
 import shutil
 
 

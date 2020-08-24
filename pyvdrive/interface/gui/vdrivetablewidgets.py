@@ -1,5 +1,5 @@
 import pyvdrive.interface.gui.ndav_widgets.NTableWidget as NdavTable
-from pyvdrive.lib import datatypeutility
+from pyvdrive.core import datatypeutility
 
 
 class DataSlicerSegmentTable(NdavTable.NTableWidget):

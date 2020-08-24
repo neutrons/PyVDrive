@@ -29,8 +29,8 @@ from pyvdrive.interface.peak_processing_helper import PhaseWidgets, UnitCellList
 from pyvdrive.interface.gui.diffractionplotview import DiffractionPlotView
 from pyvdrive.interface.gui.vdrivetablewidgets import PeakParameterTable
 from pyvdrive.interface import vanadium_controller_dialog
-import pyvdrive.lib.peak_util as peak_util
-from pyvdrive.lib import datatypeutility
+import pyvdrive.core.peak_util as peak_util
+from pyvdrive.core import datatypeutility
 from pyvdrive.interface import PeakPickWindowVanadium
 
 

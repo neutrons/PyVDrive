@@ -1,6 +1,6 @@
 import pytest
 import os
-import pyvdrive.lib.VDriveAPI as vdapi
+import pyvdrive.core.VDriveAPI as vdapi
 
 
 class MyData:

@@ -18,7 +18,7 @@ try:
 except AttributeError:
     _fromUtf8 = lambda s: s  # noqa: E731
 
-from pyvdrive.lib import datatypeutility
+from pyvdrive.core import datatypeutility
 
 
 def add_runs_to_tree(treewidget, ipts, runlist):

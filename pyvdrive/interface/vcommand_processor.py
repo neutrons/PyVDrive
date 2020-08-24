@@ -16,9 +16,9 @@ from pyvdrive.interface.vdrive_commands import vmerge
 from pyvdrive.interface.vdrive_commands import view
 from pyvdrive.interface.vdrive_commands import vpeak
 from pyvdrive.interface.vdrive_commands import process_vcommand
-from pyvdrive.lib import datatypeutility
+from pyvdrive.core import datatypeutility
 import time
-from pyvdrive.lib import vulcan_util
+from pyvdrive.core import vulcan_util
 
 
 class VdriveCommandProcessor(object):

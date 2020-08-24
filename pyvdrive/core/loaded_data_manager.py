@@ -2,8 +2,8 @@ import os
 from os import listdir
 from os.path import isfile, join
 import math
-from pyvdrive.lib import mantid_helper
-from pyvdrive.lib import datatypeutility
+from pyvdrive.core import mantid_helper
+from pyvdrive.core import datatypeutility
 
 
 class LoadedDataManager(object):

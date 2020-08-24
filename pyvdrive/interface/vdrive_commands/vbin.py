@@ -1,7 +1,7 @@
 import os
 from pyvdrive.interface.vdrive_commands.process_vcommand import VDriveCommand
-import pyvdrive.lib.vulcan_util as vulcan_util
-from pyvdrive.lib import datatypeutility
+import pyvdrive.core.vulcan_util as vulcan_util
+from pyvdrive.core import datatypeutility
 
 # VDRIVEBIN, i.e., VBIN
 #

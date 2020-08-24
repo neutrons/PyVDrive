@@ -1,8 +1,8 @@
 # Set up path to PyVDrive
 import os
-import pyvdrive.lib.VDriveAPI as VdriveAPI
-from pyvdrive.lib import datatypeutility
-from pyvdrive.lib import file_utilities
+import pyvdrive.core.VDriveAPI as VdriveAPI
+from pyvdrive.core import datatypeutility
+from pyvdrive.core import file_utilities
 try:
     from PyQt5.QtCore import QObject
 except (ImportError, RuntimeError) as import_err:

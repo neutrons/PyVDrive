@@ -9,12 +9,12 @@ from setuptools import setup
 if sys.argv[-1] == 'pyuic':
     # copy UI files in designer to builds
     indir = 'designer'
-    if os.path.exists('build/lib.linux-x86_64-2.7'):
-        outdir1 = 'build/lib.linux-x86_64-2.7/pyvdrive/interface/gui'
+    if os.path.exists('build/core.linux-x86_64-2.7'):
+        outdir1 = 'build/core.linux-x86_64-2.7/pyvdrive/interface/gui'
     else:
         outdir1 = None
     if os.path.exists('build/lib'):
-        outdir2 = 'build/lib/pyvdrive/interface/gui'
+        outdir2 = 'build/core/pyvdrive/interface/gui'
     else:
         outdir2 = None
     files = os.listdir(indir)
@@ -57,7 +57,7 @@ if sys.argv[-1] == 'pyuic':
 
 NAME = "pyvdrive"
 # PACKAGES = find_packages(where="src")
-PACKAGES = ["pyvdrive", "pyvdrive/lib", "pyvdrive/interface", "pyvdrive/interface/gui",
+PACKAGES = ["pyvdrive", "pyvdrive/core", "pyvdrive/interface", "pyvdrive/interface/gui",
             "pyvdrive/interface/gui/ndav_widgets/", "pyvdrive/interface/vdrive_commands/", "pyvdrive/app/"]
 META_PATH = os.path.join("pyvdrive", "__init__.py")
 KEYWORDS = ["class", "attribute", "boilerplate"]
