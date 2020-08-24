@@ -394,7 +394,6 @@ def import_vulcan_log(log_file_name, header=0):
     :param log_file_name:
     :return: pandas pandas.core.frame.DataFrame
     """
-    import pandas as pd
     # check
     assert isinstance(log_file_name, str), 'Log file name %s must be a string but not of type %s.' \
                                            '' % (str(log_file_name), type(log_file_name))

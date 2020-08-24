@@ -1,4 +1,3 @@
-#!/usr/bin/python
 import sys
 import pyvdrive
 from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget  # noqa: F401
