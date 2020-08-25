@@ -21,12 +21,12 @@ from pyvdrive.interface.LiveDataChildWindows import LiveViewSetupDialog
 from pyvdrive.interface.gui.livedatagraphicswidgets import SingleBankView
 from pyvdrive.interface.gui.livedatagraphicswidgets import GeneralPurpose1DView
 from pyvdrive.interface.gui.livedatagraphicswidgets import Live2DView
-import pyvdrive.lib.LiveDataDriver as ld
-import pyvdrive.lib.optimize_utilities as optimize_utilities
-from pyvdrive.lib import mantid_helper
+import pyvdrive.core.LiveDataDriver as ld
+import pyvdrive.core.optimize_utilities as optimize_utilities
+from pyvdrive.core import mantid_helper
 from pyvdrive.interface.gui.pvipythonwidget import IPythonWorkspaceViewer
-from pyvdrive.lib import vdrivehelper
-from pyvdrive.lib import datatypeutility
+from pyvdrive.core import vdrivehelper
+from pyvdrive.core import datatypeutility
 from pyvdrive.interface.gui import GuiUtility
 
 # include this try/except block to remap QString needed when using IPython

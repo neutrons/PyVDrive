@@ -1,7 +1,7 @@
 import pytest
 import os
-import pyvdrive.lib.mantid_helper as mantid_helper
-import pyvdrive.lib.VDriveAPI as vdapi
+import pyvdrive.core.mantid_helper as mantid_helper
+import pyvdrive.core.VDriveAPI as vdapi
 
 
 def init_background():
@@ -97,4 +97,4 @@ def reduce_silicon():
 
 
 if __name__ == '__main__':
-    pytest.main(__file__)
+    pytest.main(__file__)  # type: ignore

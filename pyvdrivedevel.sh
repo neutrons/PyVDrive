@@ -1,6 +1,6 @@
 #!/bin/sh
-python setup.py pyuic
-python setup.py build
+python3 setup.py pyuic
+python3 setup.py build
 CMDS=''
 for file in "$@"
 do
@@ -15,4 +15,4 @@ MANTIDPATH=$MANTIDMACPATH:$MANTIDLOCALPATH:$MANTIDSNSPATH
 PYTHONPATH=$MANTIDPATH:$PYTHONPATH
 echo $PYTHONPATH
 
-PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH build/scripts-2.7/Lava.py $CMDS
+PYTHONPATH=build/lib:$PYTHONPATH python3 build/scripts-3.8/Lava.py $CMDS

@@ -9,8 +9,8 @@ except ImportError:
     from PyQt4 import QtCore
     from PyQt4.QtGui import QMenu, QAction, QCursor
 from pyvdrive.interface.gui import mplgraphicsview
-from pyvdrive.lib import datatypeutility
-from pyvdrive.lib import vdrivehelper
+from pyvdrive.core import datatypeutility
+from pyvdrive.core import vdrivehelper
 
 COLOR_LIST = ['red', 'green', 'black', 'cyan', 'magenta', 'yellow']
 

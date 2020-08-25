@@ -1,4 +1,4 @@
-from pyvdrive.lib import datatypeutility
+from pyvdrive.core import datatypeutility
 from pyvdrive.interface.gui import GuiUtility
 import os
 import numpy
@@ -506,7 +506,7 @@ class PeakPickerWindowChildVanadium(object):
         """ Save vanadium process parameters
         :return:
         """
-        # TODO - TONIGHT 2 - Shall be moved to pyvdrive.lib
+        # TODO - TONIGHT 2 - Shall be moved to pyvdrive.core
 
         setting_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
         if not os.path.exists(setting_dir) or not os.access(setting_dir, os.W_OK):

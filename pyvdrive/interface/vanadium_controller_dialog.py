@@ -21,7 +21,7 @@ except AttributeError:
     def _fromUtf8(s): return s
 
 from pyvdrive.interface.gui import GuiUtility
-from pyvdrive.lib import datatypeutility
+from pyvdrive.core import datatypeutility
 
 
 class VanadiumProcessControlDialog(QDialog):

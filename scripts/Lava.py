@@ -1,4 +1,3 @@
-#!/usr/bin/python
 import sys
 import pyvdrive
 from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget  # noqa: F401
@@ -34,7 +33,7 @@ class LauncherManager(QDialog):
         dir_names = os.listdir('{}/..'.format(script_dir))
         lib_dir = None
         for dir_name in dir_names:
-            if dir_name.startswith('lib'):
+            if dir_name.startswith('core'):
                 lib_dir = dir_name
         ui_dir = os.path.join(script_dir, '../{}/pyvdrive/interface/gui'.format(lib_dir))
         ui_path = os.path.join(ui_dir, 'LaunchManager.ui')

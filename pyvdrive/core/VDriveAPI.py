@@ -8,15 +8,15 @@
 #####
 import os
 
-from pyvdrive.lib import ProjectManager
-from pyvdrive.lib import archivemanager
-from pyvdrive.lib import vdrivehelper
-from pyvdrive.lib import mantid_helper
-from pyvdrive.lib import crystal_helper
-from pyvdrive.lib import io_peak_file
-from pyvdrive.lib import reduce_VULCAN
-from pyvdrive.lib import chop_utility
-from pyvdrive.lib import datatypeutility
+from pyvdrive.core import ProjectManager
+from pyvdrive.core import archivemanager
+from pyvdrive.core import vdrivehelper
+from pyvdrive.core import mantid_helper
+from pyvdrive.core import crystal_helper
+from pyvdrive.core import io_peak_file
+from pyvdrive.core import reduce_VULCAN
+from pyvdrive.core import chop_utility
+from pyvdrive.core import datatypeutility
 
 SUPPORTED_INSTRUMENT = ['VULCAN']
 
@@ -704,7 +704,7 @@ class VDriveAPI(object):
         :param chopped_data:
         :return:
         """
-        from pyvdrive.lib import vdrive_constants
+        from pyvdrive.core import vdrive_constants
         if chopped_data:
             # chopped data
             sns_dir = self.archive_manager.get_vulcan_chopped_gsas_dir(ipts_number, run_number)

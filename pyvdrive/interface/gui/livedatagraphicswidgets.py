@@ -4,7 +4,7 @@ import numpy
 from pyvdrive.interface.gui.mplgraphicsview import MplGraphicsView
 from pyvdrive.interface.gui.mplgraphicsview1d import MplGraphicsView1D
 from pyvdrive.interface.gui.mplgraphicsview2d import MplGraphicsView2D
-from pyvdrive.lib import datatypeutility
+from pyvdrive.core import datatypeutility
 
 
 class GeneralPurpose1DView(MplGraphicsView1D):

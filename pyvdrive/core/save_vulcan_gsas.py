@@ -3,8 +3,8 @@ import os
 import os.path
 import h5py
 import math
-from pyvdrive.lib import datatypeutility
-from pyvdrive.lib import mantid_helper
+from pyvdrive.core import datatypeutility
+from pyvdrive.core import mantid_helper
 from mantid.simpleapi import ConvertToHistogram, ConvertUnits, Rebin, Divide
 
 PHASE_NED = datetime(2017, 6, 1)

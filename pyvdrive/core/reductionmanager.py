@@ -3,13 +3,13 @@
 ################################################################################
 import os
 import datetime
-from pyvdrive.lib import reduce_VULCAN
-from pyvdrive.lib import mantid_helper
-from pyvdrive.lib import reduce_adv_chop
-from pyvdrive.lib import mantid_reduction
-from pyvdrive.lib import datatypeutility
-from pyvdrive.lib import save_vulcan_gsas
-from pyvdrive.lib import vulcan_util
+from pyvdrive.core import reduce_VULCAN
+from pyvdrive.core import mantid_helper
+from pyvdrive.core import reduce_adv_chop
+from pyvdrive.core import mantid_reduction
+from pyvdrive.core import datatypeutility
+from pyvdrive.core import save_vulcan_gsas
+from pyvdrive.core import vulcan_util
 import mantid.simpleapi as mantid_api
 
 EVENT_WORKSPACE_ID = "EventWorkspace"

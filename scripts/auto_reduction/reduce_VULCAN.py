@@ -61,7 +61,7 @@ import bisect
 import h5py  # type: ignore
 
 sys.path.insert(0, "/opt/mantid50/bin")
-sys.path.insert(1, "/opt/mantid50/lib")
+sys.path.insert(1, "/opt/mantid50/core")
 
 CalibrationFilesList = [['/SNS/VULCAN/shared/CALIBRATION/2011_1_7/vulcan_foc_all_2bank_11p.cal',
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7/VULCAN_Characterization_2Banks_v2.txt',

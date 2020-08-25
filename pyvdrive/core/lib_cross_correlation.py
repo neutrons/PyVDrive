@@ -4,8 +4,8 @@ import math
 import bisect
 import numpy
 import datetime
-from pyvdrive.lib import datatypeutility
-from pyvdrive.lib import mantid_helper
+from pyvdrive.core import datatypeutility
+from pyvdrive.core import mantid_helper
 from mantid.api import AnalysisDataService as mtd
 from mantid.simpleapi import SaveCalFile, ConvertDiffCal, SaveDiffCal
 from mantid.simpleapi import RenameWorkspace, Plus, CreateWorkspace, CreateGroupingWorkspace

@@ -1,7 +1,7 @@
 import pytest
 import os
 import os.path
-import pyvdrive.lib.VDriveAPI as vdapi
+import pyvdrive.core.VDriveAPI as vdapi
 
 
 class MyData:
@@ -243,4 +243,4 @@ def test_workflow():
 
 
 if __name__ == "__main__":
-    pytest.main(__file__)
+    pytest.main(__file__)  # type: ignore

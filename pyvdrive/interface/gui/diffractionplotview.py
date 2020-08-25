@@ -11,7 +11,7 @@ except ImportError:
 
 from pyvdrive.interface.gui import mplgraphicsview
 from pyvdrive.interface.gui import peaksmanager
-from pyvdrive.lib import datatypeutility
+from pyvdrive.core import datatypeutility
 
 __author__ = 'wzz'
 

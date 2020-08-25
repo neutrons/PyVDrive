@@ -4,8 +4,8 @@ Mantid reduction scripts
 import mantid.simpleapi as mantidapi
 import numpy
 import os
-from pyvdrive.lib import datatypeutility
-from pyvdrive.lib import mantid_helper
+from pyvdrive.core import datatypeutility
+from pyvdrive.core import mantid_helper
 
 
 class VulcanBinningHelper(object):

@@ -1,4 +1,4 @@
-from pyvdrive.lib import datatypeutility
+from pyvdrive.core import datatypeutility
 from pyvdrive.interface.vdrive_commands.vbin import VBin
 
 

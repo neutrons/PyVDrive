@@ -9,12 +9,12 @@ from setuptools import setup
 if sys.argv[-1] == 'pyuic':
     # copy UI files in designer to builds
     indir = 'designer'
-    if os.path.exists('build/lib.linux-x86_64-2.7'):
-        outdir1 = 'build/lib.linux-x86_64-2.7/pyvdrive/interface/gui'
+    if os.path.exists('build/core.linux-x86_64-2.7'):
+        outdir1 = 'build/core.linux-x86_64-2.7/pyvdrive/interface/gui'
     else:
         outdir1 = None
     if os.path.exists('build/lib'):
-        outdir2 = 'build/lib/pyvdrive/interface/gui'
+        outdir2 = 'build/core/pyvdrive/interface/gui'
     else:
         outdir2 = None
     files = os.listdir(indir)
@@ -57,9 +57,9 @@ if sys.argv[-1] == 'pyuic':
 
 NAME = "pyvdrive"
 # PACKAGES = find_packages(where="src")
-PACKAGES = ["pyvdrive", "pyvdrive/lib", "pyvdrive/interface", "pyvdrive/interface/gui",
+PACKAGES = ["pyvdrive", "pyvdrive/core", "pyvdrive/interface", "pyvdrive/interface/gui",
             "pyvdrive/interface/gui/ndav_widgets/", "pyvdrive/interface/vdrive_commands/", "pyvdrive/app/"]
-META_PATH = os.path.join("src", "pyvdrive", "__init__.py")
+META_PATH = os.path.join("pyvdrive", "__init__.py")
 KEYWORDS = ["class", "attribute", "boilerplate"]
 CLASSIFIERS = [
     "Development Status :: 5 - Production/Stable",
@@ -132,7 +132,7 @@ if __name__ == "__main__":
                     'tests/workflow/performance_combined_test.py',
                     'tests/workflow/gui_test_slice_assistant.py',
                     'tests/workflow/gui_test_peak_process.py',
-                    'tests/unit/vulcan_slice_reduce_test.py']
+                    'tests/unit/test_vulcan_slice_reduce.py']
     scripts.extend(test_scripts)
 
     setup(
@@ -140,7 +140,7 @@ if __name__ == "__main__":
         description=find_meta("description"),
         license=find_meta("license"),
         url=find_meta("url"),
-        version=find_meta("version"),
+        version=versioneer.get_version(),
         author=find_meta("author"),
         author_email=find_meta("email"),
         maintainer=find_meta("author"),
@@ -151,8 +151,7 @@ if __name__ == "__main__":
         zip_safe=False,
         classifiers=CLASSIFIERS,
         install_requires=INSTALL_REQUIRES,
-        # from ours
-        package_dir={},  # {"": "src"},
+        package_dir={},
         scripts=scripts,
         cmdclass=versioneer.get_cmdclass(),
     )
