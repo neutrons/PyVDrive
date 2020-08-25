@@ -31,12 +31,15 @@ class LauncherManager(QDialog):
         # set up UI: it is tricky
         script_dir = os.path.dirname(__file__)
         dir_names = os.listdir('{}/..'.format(script_dir))
+        print('current dir names: {dir_names}')
         lib_dir = None
         for dir_name in dir_names:
-            if dir_name.startswith('core'):
+            if dir_name.startswith('lib'):
                 lib_dir = dir_name
+        print(f'.......................  Current dir: {os.getcwd()}')
         ui_dir = os.path.join(script_dir, '../{}/pyvdrive/interface/gui'.format(lib_dir))
         ui_path = os.path.join(ui_dir, 'LaunchManager.ui')
+        print(f'.......................  UI         : {ui_path}')
         self.ui = load_ui(ui_path, baseinstance=self)
 
         # init widgets

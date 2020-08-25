@@ -4,3 +4,5 @@ qtpy
 h5py
 pytz
 pandas
+qtconsole
+pygments
