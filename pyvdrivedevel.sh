@@ -15,4 +15,24 @@ MANTIDPATH=$MANTIDMACPATH:$MANTIDLOCALPATH:$MANTIDSNSPATH
 PYTHONPATH=$MANTIDPATH:$PYTHONPATH
 echo $PYTHONPATH
 
-PYTHONPATH=build/lib:$PYTHONPATH python3 build/scripts-3.8/Lava.py $CMDS
+PYTHONVERSION=$(python --version)
+echo $PYTHONVERSION
+
+# Identify pythn path to be 3.6, 3.7 or 3.8
+VER='3.8'
+SUB37='3.7'
+case $PYTHONVERSION in
+  *"$SUB37"*)
+    echo -n "It's there."
+    VER='3.7'
+    ;;
+esac
+SUB36='3.6'
+case $PYTHONVERSION in
+  *"$SUB36"*)
+    echo -n "It's there."
+    VER='3.6'
+    ;;
+esac
+
+PYTHONPATH=build/lib:$PYTHONPATH python3 build/scripts-$VER/Lava.py $CMDS

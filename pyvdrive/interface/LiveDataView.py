@@ -87,7 +87,7 @@ class VulcanLiveDataView(QMainWindow):
         # decide whether a new workspace shall be started
         self._myMaxIncrementalNumber = self._myAccumulationTime / self._myUpdateTimePeriod
         # containing 2 sets of incremental workspaces for safe
-        self._myIncrementalWorkspaceNumber = self._myAccumulationTime / self._myUpdateTimePeriod * 2
+        self._myIncrementalWorkspaceNumber = self._myAccumulationTime // self._myUpdateTimePeriod * 2
         # incremental workspace list
         self._myIncrementalWorkspaceList = [
             None] * self._myIncrementalWorkspaceNumber  # a holder for workspace names
