@@ -33,10 +33,10 @@ from qtconsole.inprocess import QtInProcessKernelManager  # noqa: E402
 print('mantidipythonwidget: import PyQt5')
 from mantid.api import AnalysisDataService as mtd  # noqa: E402
 
-try:
-    from PyQt5.QtWidgets import QApplication
-except ImportError:
-    from PyQt4.QtGui import QApplication
+# try:
+#     from PyQt5.QtWidgets import QApplication
+# except ImportError:
+#     from PyQt4.QtGui import QApplication
 
 
 # Use a singleton to parse variable to our_run_code()
@@ -159,10 +159,8 @@ class MantidIPythonWidget(RichIPythonWidget):
             script = script.split('Run: ')[1]
 
         # main application is workspace viewer
-        is_reserved_command = False
         if self._mainApplication.is_reserved_command(script):
             # reserved command: main application executes the command and return the message
-            is_reserved_command = True
             # call main app/parent to execute the reserved command ***
             exec_message = self._mainApplication.execute_reserved_command(script)
             # create a fake command for IPython console (a do-nothing string)
