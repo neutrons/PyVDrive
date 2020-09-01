@@ -37,7 +37,7 @@ class LauncherManager(QDialog):
             if dir_name.startswith('lib'):
                 lib_dir = dir_name
         if lib_dir is None:
-            ui_dir = os.path.join(script_dir, '../pyvdrive/interface/gui'.format(lib_dir))
+            ui_dir = os.path.join(script_dir, '../pyvdrive/interface/gui')
         else:
             ui_dir = os.path.join(script_dir, '../{}/pyvdrive/interface/gui'.format(lib_dir))
         ui_path = os.path.join(ui_dir, 'LaunchManager.ui')

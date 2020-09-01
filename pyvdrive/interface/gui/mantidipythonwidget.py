@@ -1,4 +1,3 @@
-import threading
 import types
 import inspect
 from os import path
@@ -29,8 +28,8 @@ from pygments.lexer import RegexLexer
 RegexLexer.get_tokens_unprocessed_unpatched = RegexLexer.get_tokens_unprocessed
 
 # This is PyQt5 compatible
-from qtconsole.rich_ipython_widget import RichIPythonWidget
-from qtconsole.inprocess import QtInProcessKernelManager
+from qtconsole.rich_ipython_widget import RichIPythonWidget  # noqa: E402
+from qtconsole.inprocess import QtInProcessKernelManager  # noqa: E402
 print('mantidipythonwidget: import PyQt5')
 from mantid.api import AnalysisDataService as mtd  # noqa: E402
 
@@ -70,7 +69,9 @@ def our_run_code(self, code_obj, result=None, async_=False):
     if 'result' in run_code_args.args:
         if hasattr(run_code_args, 'kwonlyargs') and 'async_' in run_code_args.kwonlyargs:
             # That is python 3.5 and later
-            print(f'[DEBUG] New coroutine from ipython_run_code\nSingletone = {IPythonConsoleBuffer.content}')
+            # print(f'[DEBUG] New coroutine from ipython_run_code\nSingletone = {IPythonConsoleBuffer.content}')
+
+            # At this stage, the content will be printed to the IPython console
             if IPythonConsoleBuffer.content is not None:
                 print(f'{IPythonConsoleBuffer.content}')
             return self.ipython_run_code(code_obj, result, async_=async_)  # return coroutine to be awaited
@@ -81,12 +82,12 @@ def our_run_code(self, code_obj, result=None, async_=False):
     else:
         raise RuntimeError('Python 2')
         # t = threading.Thread(target=self.ipython_run_code, args=[code_obj])
-    t.start()
-    while t.is_alive():
-        QApplication.processEvents()
+    # t.start()
+    # while t.is_alive():
+    #     QApplication.processEvents()
     # We don't capture the return value of the ipython_run_code method but as far as I can tell
     #   it doesn't make any difference what's returned
-    return 0
+    # return 0
 
 
 class MantidIPythonWidget(RichIPythonWidget):
@@ -174,16 +175,17 @@ class MantidIPythonWidget(RichIPythonWidget):
             exec_message = None
         # Set to singleton
         IPythonConsoleBuffer.content = exec_message
-        print(f'Before exect: IPYTHON_BUFFER = {IPythonConsoleBuffer.content}')
 
         # call base class to execute
         super(RichIPythonWidget, self).execute(source, hidden, interactive)
 
         # result message: append plain text to the console
-        if is_reserved_command:
-            # append plain test to output console
-            print('[DEBUG] DO NOT Append Plain Text To Console: {}'.format(exec_message))
-            # self._append_plain_text('\n%s\n' % exec_message)
+        # This is replaced by the singleton, IPythonConsoleBuffer.content,
+        # that will be printed to console directly
+        # if is_reserved_command:
+        #     # append plain test to output console
+        #     print('[DEBUG] DO NOT Append Plain Text To Console: {}'.format(exec_message))
+        #     # self._append_plain_text('\n%s\n' % exec_message)
 
         # update workspaces for inline workspace operation
         if self._mainApplication is not None:
