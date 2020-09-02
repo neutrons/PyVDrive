@@ -1,4 +1,3 @@
-import threading
 import types
 import inspect
 from os import path
@@ -28,26 +27,24 @@ from pygments.lexer import RegexLexer
 # Monkeypatch!
 RegexLexer.get_tokens_unprocessed_unpatched = RegexLexer.get_tokens_unprocessed
 
-try:
-    # This is PyQt5 compatible
-    from qtconsole.rich_ipython_widget import RichIPythonWidget
-    from qtconsole.inprocess import QtInProcessKernelManager
-    print('mantidipythonwidget: import PyQt5')
-except ImportError as import_err:
-    # This is PyQt4 compatible
-    print('mantidipythonwidget import PyQt5 error: {}'.format(import_err))
-    from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
-    from IPython.qt.inprocess import QtInProcessKernelManager
-    print('mantidipythonwidget: import PyQt4')
+# This is PyQt5 compatible
+from qtconsole.rich_ipython_widget import RichIPythonWidget  # noqa: E402
+from qtconsole.inprocess import QtInProcessKernelManager  # noqa: E402
+print('mantidipythonwidget: import PyQt5')
 from mantid.api import AnalysisDataService as mtd  # noqa: E402
 
-try:
-    from PyQt5.QtWidgets import QApplication
-except ImportError:
-    from PyQt4.QtGui import QApplication
+# try:
+#     from PyQt5.QtWidgets import QApplication
+# except ImportError:
+#     from PyQt4.QtGui import QApplication
 
 
-def our_run_code(self, code_obj, result=None):
+# Use a singleton to parse variable to our_run_code()
+class IPythonConsoleBuffer(object):
+    content = None
+
+
+def our_run_code(self, code_obj, result=None, async_=False):
     """
     Method with which we replace the run_code method of IPython's InteractiveShell class.
         It calls the original method (renamed to ipython_run_code) on a separate thread
@@ -59,19 +56,38 @@ def our_run_code(self, code_obj, result=None):
           An object to store exceptions that occur during execution.
     :return: False : Always, as it doesn't seem to matter.
     """
-    t = threading.Thread()
+    # # DEBUG -------------------------------------------------------->
+    # print(f'................ parse key word async = {async_}')
+    # print(f'python run code: {self.ipython_run_code}')
+    # x = inspect.getfullargspec(self.ipython_run_code)
+    # print(f'{type(x)}: {x}')
+    # print(f'number of args = {x.args}')
+    # # -------------------------------------------------------> DEBUG
+
+    run_code_args = inspect.getfullargspec(self.ipython_run_code)
     # ipython 3.0 introduces a third argument named result
-    nargs = len(inspect.getargspec(self.ipython_run_code).args)
-    if nargs == 3:
-        t = threading.Thread(target=self.ipython_run_code, args=[code_obj, result])
+    if 'result' in run_code_args.args:
+        if hasattr(run_code_args, 'kwonlyargs') and 'async_' in run_code_args.kwonlyargs:
+            # That is python 3.5 and later
+            # print(f'[DEBUG] New coroutine from ipython_run_code\nSingletone = {IPythonConsoleBuffer.content}')
+
+            # At this stage, the content will be printed to the IPython console
+            if IPythonConsoleBuffer.content is not None:
+                print(f'{IPythonConsoleBuffer.content}')
+            return self.ipython_run_code(code_obj, result, async_=async_)  # return coroutine to be awaited
+        else:
+            raise RuntimeError('Python 3.0 without async_')
+            # t = threading.Thread(target=self.ipython_run_code, args=(code_obj, result))
+            # t = threading.Thread(target=self.ipython_run_code, args=[code_obj, result])
     else:
-        t = threading.Thread(target=self.ipython_run_code, args=[code_obj])
-    t.start()
-    while t.is_alive():
-        QApplication.processEvents()
+        raise RuntimeError('Python 2')
+        # t = threading.Thread(target=self.ipython_run_code, args=[code_obj])
+    # t.start()
+    # while t.is_alive():
+    #     QApplication.processEvents()
     # We don't capture the return value of the ipython_run_code method but as far as I can tell
     #   it doesn't make any difference what's returned
-    return 0
+    # return 0
 
 
 class MantidIPythonWidget(RichIPythonWidget):
@@ -143,27 +159,31 @@ class MantidIPythonWidget(RichIPythonWidget):
             script = script.split('Run: ')[1]
 
         # main application is workspace viewer
-        is_reserved_command = False
         if self._mainApplication.is_reserved_command(script):
             # reserved command: main application executes the command and return the message
-            is_reserved_command = True
             # call main app/parent to execute the reserved command ***
             exec_message = self._mainApplication.execute_reserved_command(script)
             # create a fake command for IPython console (a do-nothing string)
             script_transformed = script[:]
             script_transformed = script_transformed.replace('"', "'")
-            source = '\"Run: %s\"' % script_transformed
+            source = '\"%s\"' % script_transformed
+
+            print(f'Reserved command source = {source}')
         else:
             exec_message = None
+        # Set to singleton
+        IPythonConsoleBuffer.content = exec_message
 
         # call base class to execute
         super(RichIPythonWidget, self).execute(source, hidden, interactive)
 
         # result message: append plain text to the console
-        if is_reserved_command:
-            #
-            print('[DB...BAT] Append Plain Text To Console: {}'.format(exec_message))
-            self._append_plain_text('\n%s\n' % exec_message)
+        # This is replaced by the singleton, IPythonConsoleBuffer.content,
+        # that will be printed to console directly
+        # if is_reserved_command:
+        #     # append plain test to output console
+        #     print('[DEBUG] DO NOT Append Plain Text To Console: {}'.format(exec_message))
+        #     # self._append_plain_text('\n%s\n' % exec_message)
 
         # update workspaces for inline workspace operation
         if self._mainApplication is not None:
